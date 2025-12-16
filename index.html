@@ -2,511 +2,298 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Proofy – Dokumentverifiering för redovisningsbyråer</title>
-  <meta name="description" content="Proofy hjälper redovisningsbyråer att visa att underlag inte har ändrats sedan en viss tidpunkt – utan att lagra dokumentinnehåll." />
-  <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://proofy.se/" />
-  <meta name="theme-color" content="#0b1220" />
+  <meta name="description" content="Verifiera om ett dokument är oförändrat med ett verifierings‑ID. Proofy lagrar inte dokumentinnehåll." />
   <style>
-:root{
-  --bg:#0b1220;
-  --panel: rgba(255,255,255,.06);
-  --panel2: rgba(255,255,255,.04);
-  --text:#eaf0ff;
-  --muted:#a9b7d3;
-  --border: rgba(255,255,255,.12);
-  --brand:#6ea8ff;
-  --brand2:#7cf1c6;
-  --shadow: 0 18px 60px rgba(0,0,0,.38);
-  --r: 18px;
-  --max: 1140px;
-}
-*{ box-sizing:border-box }
-body{
-  margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  color: var(--text);
-  background:
-    radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
-    radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
-    radial-gradient(900px 600px at 40% 100%, rgba(110,168,255,.10), transparent 60%),
-    var(--bg);
-  line-height:1.55;
-}
-a{ color:inherit }
-.wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
-header{
-  position: sticky; top:0; z-index:50;
-  backdrop-filter: blur(12px) saturate(160%);
-  background: rgba(11,18,32,.70);
-  border-bottom: 1px solid var(--border);
-}
-.nav{
-  display:flex; align-items:center; justify-content:space-between;
-  gap: 14px; padding: 14px 0;
-}
-.brand{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight: 900; letter-spacing:.2px }
-.logo{
-  width: 34px; height: 34px; border-radius: 10px;
-  background: linear-gradient(135deg, var(--brand), var(--brand2));
-  box-shadow: 0 16px 40px rgba(110,168,255,.22);
-  position: relative;
-}
-.logo:after{
-  content:"";
-  position:absolute; inset: 9px 10px;
-  border-radius: 7px;
-  background: rgba(11,18,32,.65);
-  border: 1px solid rgba(255,255,255,.20);
-}
-nav{ display:flex; gap: 10px; align-items:center; color: var(--muted); font-weight: 700; }
-nav a{ text-decoration:none; padding: 8px 10px; border-radius: 12px; }
-nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:10px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  text-decoration:none;
-  font-weight: 900;
-  transition: transform .08s ease, background .15s ease;
-  white-space: nowrap;
-}
-.btn:hover{ background: rgba(255,255,255,.10) }
-.btn:active{ transform: translateY(1px) }
-.btn.primary{
-  border: none;
-  color: #08101e;
-  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-  box-shadow: 0 18px 45px rgba(110,168,255,.22);
-}
-main{ padding: 34px 0 22px; }
-.card{
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
-  box-shadow: var(--shadow);
-}
-.pageTitle{
-  margin: 18px 0 10px;
-  font-size: clamp(28px, 3.2vw, 52px);
-  letter-spacing: -.5px;
-  line-height:1.1;
-}
-.lead{ color: rgba(234,240,255,.92); max-width: 90ch; margin: 0 0 18px; font-size: 16.8px; }
-.small{ font-size: 12.5px; color: rgba(169,183,211,.92); max-width: 92ch; }
-.content{ padding: 18px; }
-.content h2{ font-size: 20px; margin: 18px 0 8px; letter-spacing: -.2px; }
-.content p, .content li{ color: var(--muted); }
-.badge{
-  display:inline-flex; align-items:center; gap: 8px;
-  padding: 8px 10px; border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  font-size: 12.5px; color: rgba(234,240,255,.92);
-}
-.hr{ height:1px; background: var(--border); margin: 14px 0; }
-.grid3{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-@media (max-width: 920px){ nav{ display:none; } .grid3{ grid-template-columns: 1fr; } }
-.tile{ padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,.10); background: rgba(11,18,32,.25); }
-.tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
-details{ border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.04); }
-summary{ cursor:pointer; font-weight: 950; list-style: none; }
-summary::-webkit-details-marker{ display:none; }
-details p{ color: var(--muted); margin: 10px 0 0; }
-footer{
-  padding: 26px 0 44px; color: var(--muted);
-  border-top: 1px solid var(--border);
-  background: rgba(11,18,32,.45);
-}
-.foot{ display:flex; align-items:flex-start; justify-content:space-between; gap: 16px; flex-wrap: wrap; }
-.links a{ color: rgba(169,183,211,.95); text-decoration:none; margin-right: 12px; }
-.links a:hover{ color: var(--text); }
-input, textarea{
-  width: 100%;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(11,18,32,.35);
-  color: var(--text);
-  outline: none;
-  font: inherit;
-}
-textarea{ min-height: 120px; resize: vertical; }
-</style>
+    :root {
+      --bg1:#0b1220; --bg2:#07101c;
+      --card:rgba(255,255,255,.06); --border:rgba(255,255,255,.12);
+      --text:#eaf0ff; --muted:rgba(169,183,211,.92);
+      --accent1:rgba(110,168,255,.95); --accent2:rgba(124,241,198,.85);
+      --shadow:0 18px 60px rgba(0,0,0,.45);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:
+      radial-gradient(1000px 500px at 20% 10%, rgba(110,168,255,.25), transparent 60%),
+      radial-gradient(900px 500px at 80% 15%, rgba(124,241,198,.18), transparent 55%),
+      linear-gradient(180deg,var(--bg1),var(--bg2)); color:var(--text);}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 18px}
+    .nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);
+      background:rgba(8,14,26,.7);border-bottom:1px solid rgba(255,255,255,.08)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.2px}
+    .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent1),var(--accent2));
+      box-shadow:0 14px 40px rgba(110,168,255,.22)}
+    .links{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+    .links a{color:var(--muted);font-weight:800;font-size:14px;padding:8px 10px;border-radius:12px}
+    .links a:hover{background:rgba(255,255,255,.06);color:var(--text)}
+    .cta{padding:10px 14px;border-radius:14px;font-weight:900;border:0;cursor:pointer;color:#08101e;
+      background:linear-gradient(135deg,var(--accent1),var(--accent2))}
+    .hero{padding:42px 0 18px}
+    .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:stretch}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .hero-card{padding:28px}
+    h1{margin:0 0 10px;font-size:44px;line-height:1.05;letter-spacing:-.6px}
+    .sub{color:var(--muted);font-size:16px;line-height:1.6;max-width:60ch}
+    .pill-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 18px}
+    .pill{padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);
+      font-weight:800;color:rgba(226,236,255,.92);font-size:13px}
+    .hero-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);
+      color:var(--text);font-weight:900;cursor:pointer}
+    .btn:hover{background:rgba(255,255,255,.09)}
+    .btn.primary{border:0;color:#08101e;background:linear-gradient(135deg,var(--accent1),var(--accent2))}
+    .side{padding:22px}
+    .side h3{margin:0 0 10px}
+    .side p{margin:0;color:var(--muted);line-height:1.6}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+    .mini{padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05)}
+    .mini b{display:block;margin-bottom:6px}
+    section{padding:26px 0}
+    .section-title{font-size:26px;margin:0 0 8px;letter-spacing:-.2px}
+    .section-desc{color:var(--muted);line-height:1.7;margin:0 0 16px;max-width:80ch}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .list{margin:0;padding-left:18px;color:var(--muted);line-height:1.7}
+    .faq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    details{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:14px}
+    summary{cursor:pointer;font-weight:900}
+    details p{margin:10px 0 0;color:var(--muted);line-height:1.7}
+    .contact{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    label{display:block;font-weight:800;color:rgba(226,236,255,.92);font-size:13px;margin:10px 0 6px}
+    input,textarea{width:100%;padding:12px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(11,18,32,.35);color:var(--text);outline:none}
+    textarea{min-height:110px;resize:vertical}
+    .note{color:var(--muted);font-size:13px;line-height:1.6}
+    footer{padding:26px 0 40px;border-top:1px solid rgba(255,255,255,.08);color:var(--muted)}
+    .foot{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .foot a{color:var(--muted);font-weight:800;margin-left:12px}
+    .foot a:hover{color:var(--text)}
+    .anchor{position:relative;top:-90px}
+    @media (max-width: 900px) {
+      .hero-grid,.two,.contact{grid-template-columns:1fr}
+      h1{font-size:36px}
+      .grid3{grid-template-columns:1fr}
+      .faq{grid-template-columns:1fr}
+      .links{display:none}
+    }
+  </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo" aria-hidden="true"></span>
-        <span>Proofy</span>
-      </a>
-      <nav aria-label="Navigation">
-        <a href="/#forbyraer">För byråer</a>
-        <a href="/#hur">Hur det fungerar</a>
-        <a href="/#trygghet">Säkerhet</a>
-        <a href="/#faq">FAQ</a>
-        <a href="/#kontakt">Kontakt</a>
-      </nav>
-      <a class="btn primary" href="/#kontakt">Boka demo</a>
+  <div class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/"><span class="logo" aria-hidden="true"></span> Proofy</a>
+      <div class="links" role="navigation" aria-label="Primary">
+        <a href="#forbyraer">För byråer</a>
+        <a href="#hur">Hur det fungerar</a>
+        <a href="#trygghet">Säkerhet</a>
+        <a href="#faq">FAQ</a>
+        <a href="#kontakt">Kontakt</a>
+      </div>
+      <a class="cta" href="#kontakt">Boka demo</a>
     </div>
   </div>
-</header>
-<main>
-  <div class="wrap">
-    <div class="badge">För redovisningsbyråer · revision · granskning</div>
 
-    <h1 class="pageTitle">Ett enkelt sätt att visa att underlag inte har ändrats – när det faktiskt spelar roll.</h1>
-
-    <p class="lead">
-      När ett underlag ifrågasätts i efterhand uppstår onödiga diskussioner.
-      Proofy ger dig ett <strong>verifierings-ID</strong> som gör det enkelt att kontrollera om en fil
-      är <strong>oförändrad</strong> sedan en viss tidpunkt. <strong>Vi lagrar inte dokumentinnehåll.</strong>
-    </p>
-
-    <div class="card" style="padding:18px; margin-top:14px;">
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <a class="btn primary" href="/pilot.html">Starta pilot</a>
-        <a class="btn" href="#varfor">Varför behövs detta?</a>
-        <a class="btn" href="#hur">Hur det fungerar</a>
-        <a class="btn" href="/security.html">Säkerhet & integritet</a>
-      </div>
-
-      <div class="hr"></div>
-
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <span class="badge">🔒 Inget dokumentinnehåll lagras</span>
-        <span class="badge">🧾 Verifiering med ID</span>
-        <span class="badge">⚡ 1–2 min att testa</span>
-      </div>
-
-      <p class="small" style="margin-top:12px;">
-        Proofy är ett tekniskt verifieringsunderlag. Inte e‑signering, inte filarkiv och inte juridisk rådgivning.
-      </p>
-    </div>
-
-    <section id="varfor" style="margin-top:28px;">
-      <h2>Varför behövs detta?</h2>
-      <div class="card content">
-        <p>
-          I byråvardagen händer det att någon säger: <em>“Den där PDF:en har ändrats”</em> eller <em>“Det var inte den versionen vi skickade in”</em>.
-          Utan ett objektivt sätt att kontrollera versionen blir det lätt ord‑mot‑ord.
-        </p>
-
-        <div class="grid3" style="margin-top:14px;">
-          <div class="tile">
-            <b>Dialog med kund</b>
-            <span class="small">Visa att underlaget ni arbetade på är samma som kunden skickade vid ett visst datum.</span>
+  <main class="wrap">
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="card hero-card">
+          <div class="pill-row">
+            <span class="pill">För redovisningsbyråer</span>
+            <span class="pill">Revision · granskning</span>
+            <span class="pill">Verifiering med ID</span>
           </div>
-          <div class="tile">
-            <b>Granskning / revision</b>
-            <span class="small">Stärk er interna dokumentation genom att kunna verifiera att en fil är oförändrad.</span>
-          </div>
-          <div class="tile">
-            <b>Tvist & efterfrågor</b>
-            <span class="small">Minska tiden på “bevisa version” när en part ifrågasätter ett dokument i efterhand.</span>
+          <h1>Ett enkelt sätt att visa att underlag inte har ändrats – när det faktiskt spelar roll.</h1>
+          <p class="sub">När ett underlag ifrågasätts i efterhand uppstår onödiga diskussioner. Proofy ger dig ett verifierings‑ID som gör det enkelt att kontrollera om en fil är oförändrad sedan en viss tidpunkt. <b>Vi lagrar inte dokumentinnehåll.</b></p>
+          <div class="hero-actions">
+            <a class="btn primary" href="/pilot.html">Starta pilot</a>
+            <a class="btn" href="#kontakt">Boka demo</a>
+            <a class="btn" href="#hur">Se hur det funkar</a>
           </div>
         </div>
-
-        <div class="hr"></div>
-        <p class="small">
-          <b>Kärnan:</b> Proofy gör det enkelt att kontrollera om en fil är samma som den som registrerades – utan att någon behöver “lita på” e‑posttrådar eller filnamn.
-        </p>
-      </div>
-    </section>
-
-    <section id="vad" style="margin-top:28px;">
-      <h2>Vad Proofy gör</h2>
-      <div class="card content">
-        <ul>
-          <li><b>Skapar ett verifierings-ID</b> för ett dokument vid registrering.</li>
-          <li><b>Ger en tidsstämplad post</b> kopplad till dokumentets fingeravtryck.</li>
-          <li><b>Låter dig verifiera</b> senare: match / ingen match.</li>
-          <li><b>Lagrar inte dokumentinnehåll</b> (Proofy är inte ett arkiv).</li>
-        </ul>
-
-        <div class="hr"></div>
-
-        <details>
-          <summary>Tekniska detaljer (för den som vill)</summary>
-          <p>
-            Proofy beräknar ett kryptografiskt fingeravtryck (hash) av filens bytes.
-            Minsta ändring i filen ger ett helt annat fingeravtryck. Fingeravtrycket kan inte användas för att återskapa dokumentet.
-          </p>
-        </details>
-      </div>
-    </section>
-
-    <section id="hur" style="margin-top:28px;">
-      <h2>Hur det fungerar</h2>
-      <div class="card content">
-        <div class="grid3">
-          <div class="tile">
-            <b>1) Registrera</b>
-            <span class="small">Registrera en fil och få ett verifierings‑ID.</span>
-          </div>
-          <div class="tile">
-            <b>2) Referera</b>
-            <span class="small">Spara ID i ärendet/noteringar eller i er rutin.</span>
-          </div>
-          <div class="tile">
-            <b>3) Verifiera</b>
-            <span class="small">Kontrollera vid behov om filen matchar posten.</span>
+        <div class="card side">
+          <h3>Proofy i korthet</h3>
+          <p>Proofy är ett tekniskt verifieringsunderlag. Inte e‑signering, inte filarkiv och inte juridisk rådgivning.</p>
+          <div class="grid3">
+            <div class="mini"><b>🔒 Inget dokumentinnehåll</b><span class="note">Designat för att inte bli ett “dataskåp”.</span></div>
+            <div class="mini"><b>🧾 Verifierings‑ID</b><span class="note">Spara i ärendet och verifiera vid behov.</span></div>
+            <div class="mini"><b>⚡ 1–2 min att testa</b><span class="note">Pilot ger snabb verklighetscheck.</span></div>
           </div>
         </div>
-        <div class="hr"></div>
-        <p class="small">
-          <b>Viktigt:</b> Proofy säger inget om vem som skapade dokumentet eller om innehållet är “rätt” – bara om filen är oförändrad jämfört med registrerad version.
-        </p>
       </div>
     </section>
 
-    <section id="trygghet" style="margin-top:28px;">
-      <h2>Säkerhet & integritet</h2>
-      <div class="card content">
-        <ul>
-          <li><b>Inget dokumentinnehåll lagras.</b> Proofy är byggt för att inte bli ett “dataskåp”.</li>
-          <li><b>Minimal attackyta.</b> Fokus på registrering och verifiering – inga PDF‑renderingar/OCR i MVP.</li>
-          <li><b>Kontrollerbarhet.</b> Verifieringen bygger på jämförelse av fingeravtryck.</li>
-        </ul>
-        <p class="small">Mer: <a href="/security.html">Säkerhet & integritet</a>.</p>
+    <div id="forbyraer" class="anchor"></div>
+    <section>
+      <h2 class="section-title">Varför behövs detta?</h2>
+      <p class="section-desc">I byråvardagen händer det att någon säger: “Den där PDF:en har ändrats” eller “Det var inte den versionen vi skickade in”. Utan ett objektivt sätt att kontrollera versionen blir det lätt ord‑mot‑ord.</p>
+      <div class="two">
+        <div class="card" style="padding:18px">
+          <b>Dialog med kund</b>
+          <p class="section-desc" style="margin:8px 0 0">Visa att underlaget ni arbetade på är samma som kunden skickade vid ett visst datum.</p>
+        </div>
+        <div class="card" style="padding:18px">
+          <b>Granskning / revision</b>
+          <p class="section-desc" style="margin:8px 0 0">Stärk er interna dokumentation genom att kunna verifiera att en fil är oförändrad.</p>
+        </div>
+        <div class="card" style="padding:18px">
+          <b>Tvist & efterfrågor</b>
+          <p class="section-desc" style="margin:8px 0 0">Minska tiden på “bevisa version” när en part ifrågasätter ett dokument i efterhand.</p>
+        </div>
+        <div class="card" style="padding:18px">
+          <b>Kärnan</b>
+          <p class="section-desc" style="margin:8px 0 0">Proofy gör det enkelt att kontrollera om en fil är samma som den som registrerades – utan att någon behöver “lita på” e‑posttrådar eller filnamn.</p>
+        </div>
       </div>
     </section>
 
-    <section id="invandningar" style="margin-top:28px;">
-      <h2>Vanliga invändningar</h2>
-      <div class="card content">
-        <details>
-          <summary>“Vad händer om någon skapar en ny PDF och påstår att den är originalet?”</summary>
-          <p>En ny fil får ett annat fingeravtryck och matchar inte den registrerade posten. Proofy visar om filen du verifierar är samma som den registrerade versionen.</p>
-        </details>
-        <div style="height:10px"></div>
-        <details>
-          <summary>“Är detta juridiskt bindande?”</summary>
-          <p>Proofy är ett tekniskt verifieringsunderlag. Det ersätter inte juridisk bedömning, men kan användas som en del av dokumentation vid granskning eller tvist.</p>
-        </details>
-        <div style="height:10px"></div>
-        <details>
+    <div id="hur" class="anchor"></div>
+    <section>
+      <h2 class="section-title">Hur det fungerar</h2>
+      <p class="section-desc">Proofy beräknar ett kryptografiskt fingeravtryck (hash) av filens bytes. Minsta ändring i filen ger ett helt annat fingeravtryck. Fingeravtrycket kan inte användas för att återskapa dokumentet.</p>
+      <div class="two">
+        <div class="card" style="padding:18px">
+          <b>1) Registrera</b>
+          <ul class="list">
+            <li>Registrera en fil</li>
+            <li>Få ett verifierings‑ID</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:18px">
+          <b>2) Referera</b>
+          <ul class="list">
+            <li>Spara ID i ärende/noteringar</li>
+            <li>Gör det till en rutin</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:18px">
+          <b>3) Verifiera</b>
+          <ul class="list">
+            <li>Kontrollera vid behov</li>
+            <li>Match / ingen match</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:18px">
+          <b>Viktigt</b>
+          <p class="section-desc" style="margin:8px 0 0">Proofy säger inget om vem som skapade dokumentet eller om innehållet är “rätt” – bara om filen är oförändrad jämfört med registrerad version.</p>
+        </div>
+      </div>
+    </section>
+
+    <div id="trygghet" class="anchor"></div>
+    <section>
+      <h2 class="section-title">Säkerhet & integritet</h2>
+      <p class="section-desc">Proofy är designat för byråers verklighet: känsliga underlag, höga krav och minimal tolerans för överdrifter. Därför bygger vi för minimal risk.</p>
+      <div class="two">
+        <div class="card" style="padding:18px">
+          <b>Princip: minimera vad som kan läcka</b>
+          <ul class="list">
+            <li>Dokumentinnehåll lagras inte</li>
+            <li>Fingeravtryck kan inte återskapa dokument</li>
+            <li>Minimal attackyta (ingen OCR/PDF‑rendering i MVP)</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:18px">
+          <b>Skydd & drift</b>
+          <ul class="list">
+            <li>Filstorleksgränser och begränsningar per kund/pilot</li>
+            <li>Rate limiting / API‑nycklar</li>
+            <li>Tekniska loggar för felsökning och missbruksdetektion</li>
+            <li>Nycklar & hemligheter via miljövariabler</li>
+          </ul>
+          <p class="note" style="margin:10px 0 0">Läs mer: <a href="/security.html" style="text-decoration:underline">Säkerhet & integritet</a></p>
+        </div>
+      </div>
+    </section>
+
+    <div id="faq" class="anchor"></div>
+    <section>
+      <h2 class="section-title">FAQ & vanliga invändningar</h2>
+      <p class="section-desc">Här är svar på det vi oftast får höra. Om något blir juridiskt: vi kan förklara tjänsten, men inte ge juridisk rådgivning.</p>
+      <div class="faq">
+        <details open>
           <summary>“Ser ni våra dokument?”</summary>
           <p>Nej. Proofy är byggt för att inte lagra dokumentinnehåll. Endast tekniska referenser som krävs för verifiering lagras.</p>
         </details>
+        <details>
+          <summary>“Är detta juridiskt bindande?”</summary>
+          <p>Proofy är ett tekniskt verifieringsunderlag och utgör inte juridisk rådgivning. Hur det används i en juridisk bedömning beror på sammanhanget.</p>
+        </details>
+        <details>
+          <summary>“Kunden kan exportera om PDF:en – blir det ‘ingen match’ fast innehållet ser samma ut?”</summary>
+          <p>Ja, det kan hända. Proofy verifierar filens bytes. Ny export/omskanning/omkomprimering kan skapa en ny fil tekniskt.</p>
+        </details>
+        <details>
+          <summary>“Kan man fejka en match?”</summary>
+          <p>Match betyder att filen du verifierar matchar den registrerade referensen. Att skapa en annan fil som ger exakt samma moderna kryptografiska fingeravtryck är i praktiken extremt svårt.</p>
+        </details>
       </div>
     </section>
 
-    <section id="kontakt" style="margin-top:28px;">
-  <h2>Kontakta oss</h2>
-  <div class="card content">
-    <p class="lead" style="font-size:16px; margin:0 0 10px;">
-      Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
-    </p>
+    <div id="kontakt" class="anchor"></div>
+    <section>
+      <h2 class="section-title">Kontakta oss</h2>
+      <p class="section-desc">Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag. Om det är brådskande: mejla <b>kontakt@proofy.se</b>.</p>
 
-    <!-- Netlify form: sends submission to Netlify (no mail app popup) -->
-    <form name="demo" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/thanks.html">
-      <input type="hidden" name="form-name" value="demo" />
-      <p style="display:none;">
-        <label>Don’t fill this out: <input name="bot-field" /></label>
-      </p>
+      <div class="contact">
+        <form class="card" style="padding:18px" name="contact" method="POST" data-netlify="true" action="/thanks.html">
+          <input type="hidden" name="form-name" value="contact" />
+          <p class="note" style="margin:0 0 8px">Don’t fill this out: <input name="bot-field" /></p>
 
-      <div style="display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); margin-top:12px;">
+          <label for="name">Namn *</label>
+          <input id="name" name="name" required />
+
+          <label for="email">E‑post *</label>
+          <input id="email" name="email" type="email" required />
+
+          <label for="company">Företag</label>
+          <input id="company" name="company" />
+
+          <label for="volume">Ca dokument/månad</label>
+          <input id="volume" name="volume" />
+
+          <label for="message">Meddelande *</label>
+          <textarea id="message" name="message" required></textarea>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+            <button class="btn primary" type="submit">Skicka</button>
+            <a class="btn" href="/pilot.html">Se pilotupplägg</a>
+          </div>
+        </form>
+
+        <div class="card" style="padding:18px">
+          <b>Snabba länkar</b>
+          <ul class="list" style="margin-top:10px">
+            <li><a href="/pilot.html" style="text-decoration:underline">Pilotupplägg</a></li>
+            <li><a href="/security.html" style="text-decoration:underline">Säkerhet & integritet</a></li>
+            <li><a href="/privacy.html" style="text-decoration:underline">Integritetspolicy</a></li>
+            <li><a href="/terms.html" style="text-decoration:underline">Allmänna villkor</a></li>
+          </ul>
+          <p class="note" style="margin-top:12px">OBS: Proofy är en digital tjänst för dokumentverifiering och spårbarhet. Vi ersätter inte juridisk rådgivning eller revision.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="foot">
         <div>
-          <label class="small" for="name">Namn *</label>
-          <input id="name" name="name" type="text" autocomplete="name" required />
+          <b style="color:var(--text)">Proofy</b><br/>
+          © 2025 Proofy. Alla rättigheter förbehållna.<br/>
+          <span class="note">Proofy tillhandahåller teknisk tidsstämpling och verifiering av dokument. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.</span>
         </div>
         <div>
-          <label class="small" for="email">E‑post *</label>
-          <input id="email" name="email" type="email" autocomplete="email" required />
-        </div>
-        <div>
-          <label class="small" for="company">Företag</label>
-          <input id="company" name="company" type="text" autocomplete="organization" />
-        </div>
-        <div>
-          <label class="small" for="volume">Ca dokument/månad</label>
-          <input id="volume" name="volume" type="text" placeholder="t.ex. 50–200" />
+          <a href="/security.html">Säkerhet</a>
+          <a href="/privacy.html">Integritet</a>
+          <a href="/terms.html">Villkor</a>
+          <a href="mailto:kontakt@proofy.se">Kontakt</a>
         </div>
       </div>
+    </footer>
+  </main>
 
-      <div style="margin-top:12px;">
-        <label class="small" for="message">Meddelande *</label>
-        <textarea id="message" name="message" rows="5" required placeholder="Skriv kort vad ni vill verifiera (t.ex. avtal, underlag, beslut) och när ni vill ses."></textarea>
-      </div>
-
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px;">
-        <button class="btn primary" type="submit">Skicka</button>
-        <a class="btn" href="/pilot.html">Se pilotupplägg</a>
-        <span class="small">Eller maila oss på <strong>kontakt@proofy.se</strong></span>
-      </div>
-    </form>
-
-    <div class="hr"></div>
-    <p class="small" style="margin:0;">
-      OBS: Proofy är en digital tjänst för dokumentverifiering och spårbarhet. Vi ersätter inte juridisk rådgivning eller revision.
-    </p>
-  </div>
-</section>
-
-  </div>
-</main>
-<footer>
-  <div class="wrap">
-    <div class="foot">
-      <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av dokument. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
-        </div>
-      </div>
-      <div class="links">
-        <a href="/security.html">Säkerhet</a>
-        <a href="/privacy.html">Integritet</a>
-        <a href="/terms.html">Villkor</a>
-        <a href="/#kontakt">Kontakt</a>
-      </div>
-    </div>
-  </div>
-</footer>
-
-<!-- Proofy Concierge Widget (SV/EN) -->
-<style>
-#pcFab{position:fixed;right:18px;bottom:18px;z-index:99999;border:0;border-radius:999px;padding:12px 14px;font:800 14px system-ui;background:linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));color:#08101e;box-shadow:0 18px 45px rgba(110,168,255,.22);cursor:pointer}
-#pcBox{position:fixed;right:18px;bottom:72px;z-index:99999;width:380px;max-width:calc(100vw - 36px);border-radius:18px;overflow:hidden;display:none;
-  background:rgba(11,18,32,.92);backdrop-filter: blur(14px) saturate(160%);border:1px solid rgba(255,255,255,.12);box-shadow:0 22px 70px rgba(0,0,0,.55);font-family:system-ui;color:#eaf0ff}
-#pcHead{display:flex;align-items:center;justify-content:space-between;padding:12px 12px;border-bottom:1px solid rgba(255,255,255,.10)}
-#pcHead b{display:flex;gap:10px;align-items:center}
-#pcHead .dot{width:10px;height:10px;border-radius:99px;background:linear-gradient(135deg, #6ea8ff, #7cf1c6)}
-#pcClose{border:0;background:transparent;color:#eaf0ff;font-size:18px;cursor:pointer;padding:6px 10px;border-radius:10px}
-#pcClose:hover{background:rgba(255,255,255,.06)}
-#pcLog{height:320px;overflow:auto;padding:12px}
-.pcMsg{margin:0 0 10px;font-size:13.5px;line-height:1.45}
-.pcUser{color:#7cf1c6;font-weight:800}
-.pcBot{color:#eaf0ff}
-.pcMeta{color:rgba(169,183,211,.92);font-size:12px;margin-top:2px}
-#pcForm{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
-#pcInput{flex:1;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;background:rgba(11,18,32,.35);color:#eaf0ff;outline:none}
-#pcSend{border:0;border-radius:14px;padding:10px 12px;font-weight:900;background:rgba(255,255,255,.08);color:#eaf0ff;cursor:pointer}
-#pcSend:hover{background:rgba(255,255,255,.12)}
-#pcActions{display:flex;gap:8px;flex-wrap:wrap;padding:0 12px 12px}
-.pcBtn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#eaf0ff;border-radius:14px;padding:8px 10px;font:800 12.5px system-ui;cursor:pointer}
-.pcBtn:hover{background:rgba(255,255,255,.10)}
-</style>
-
-<button id="pcFab" aria-label="Open Proofy Concierge">Proofy Concierge</button>
-<div id="pcBox" role="dialog" aria-label="Proofy Concierge chat">
-  <div id="pcHead">
-    <b><span class="dot" aria-hidden="true"></span> Proofy Concierge</b>
-    <button id="pcClose" aria-label="Close">✕</button>
-  </div>
-  <div id="pcLog"></div>
-  <div id="pcActions">
-    <button class="pcBtn" id="pcDemoBtn" type="button">Boka demo</button>
-    <button class="pcBtn" id="pcMailBtn" type="button">Maila oss</button>
-  </div>
-  <form id="pcForm">
-    <input id="pcInput" placeholder="Skriv din fråga…" autocomplete="off" required />
-    <button id="pcSend" type="submit">Skicka</button>
-  </form>
-</div>
-
-<script>
-(() => {
-  const fab = document.getElementById("pcFab");
-  const box = document.getElementById("pcBox");
-  const close = document.getElementById("pcClose");
-  const log = document.getElementById("pcLog");
-  const form = document.getElementById("pcForm");
-  const input = document.getElementById("pcInput");
-  const demoBtn = document.getElementById("pcDemoBtn");
-  const mailBtn = document.getElementById("pcMailBtn");
-
-  const isSV = (navigator.language || "").toLowerCase().startsWith("sv");
-  fab.textContent = isSV ? "Proofy Concierge" : "Proofy Concierge";
-  demoBtn.textContent = isSV ? "Boka demo" : "Book a demo";
-  mailBtn.textContent = isSV ? "Maila oss" : "Email us";
-  input.placeholder = isSV ? "Skriv din fråga…" : "Ask a question…";
-
-  function esc(s){
-    return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  }
-  function add(role, text){
-    const p = document.createElement("p");
-    p.className = "pcMsg " + (role === "user" ? "pcUser" : "pcBot");
-    p.innerHTML = (role === "user" ? (isSV ? "Du: " : "You: ") : "Proofy: ") + esc(text).replace(/\n/g,"<br>");
-    log.appendChild(p);
-    log.scrollTop = log.scrollHeight;
-  }
-  function meta(text){
-    const p = document.createElement("p");
-    p.className = "pcMsg pcMeta";
-    p.textContent = text;
-    log.appendChild(p);
-    log.scrollTop = log.scrollHeight;
-  }
-  function openBox(){
-    box.style.display = "block";
-    setTimeout(() => input.focus(), 50);
-  }
-  function closeBox(){ box.style.display = "none"; }
-
-  fab.addEventListener("click", openBox);
-  close.addEventListener("click", closeBox);
-
-  demoBtn.addEventListener("click", () => {
-    // Prefer scrolling on current page if #kontakt exists; otherwise go to home contact section.
-    const el = document.getElementById("kontakt");
-    if (el) { el.scrollIntoView({behavior:"smooth"}); openBox(); return; }
-    window.location.href = "/#kontakt";
-  });
-
-  mailBtn.addEventListener("click", () => {
-    window.location.href = "mailto:kontakt@proofy.se";
-  });
-
-  // Greeting once
-  meta(isSV
-    ? "Hej! Jag kan svara på frågor om Proofy (FAQ, säkerhet, integritet, villkor och pilot). Jag ger inte juridisk rådgivning."
-    : "Hi! I can answer questions about Proofy (FAQ, security, privacy, terms and pilot). I don’t provide legal advice."
-  );
-  meta(isSV
-    ? "Tips: Fråga t.ex. “Hur vet man att en fil inte har ändrats?”"
-    : "Tip: Ask e.g. “How can you tell a file hasn’t changed?”"
-  );
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const msg = input.value.trim();
-    if (!msg) return;
-    input.value = "";
-    add("user", msg);
-    meta(isSV ? "Tänker…" : "Thinking…");
-
-    try {
-      const res = await fetch("/.netlify/functions/chat", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ message: msg, locale: isSV ? "sv" : "en" })
-      });
-      const data = await res.json();
-      // remove last meta line ("Thinking…")
-      if (log.lastElementChild && log.lastElementChild.classList.contains("pcMeta")) {
-        log.removeChild(log.lastElementChild);
-      }
-      add("bot", (data && data.reply) ? data.reply : (isSV ? "Jag kan tyvärr inte svara på det just nu." : "I can’t answer that right now."));
-    } catch (err) {
-      if (log.lastElementChild && log.lastElementChild.classList.contains("pcMeta")) {
-        log.removeChild(log.lastElementChild);
-      }
-      add("bot", isSV ? "Tekniskt fel. Försök igen senare." : "Technical error. Please try again later.");
-    }
-  });
-})();
-</script>
-<!-- /Proofy Concierge Widget -->
-<!-- redeploy -->
+  <script defer src="/chat-widget.js"></script>
 </body>
 </html>
+
