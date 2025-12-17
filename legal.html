@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy – Juridisk information</title>
+  <meta name="description" content="Juridisk information om Proofy och hur dokumentverifiering via hash och tidsstämpling fungerar." />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+      color: #111;
+    }
+    h1 { margin-bottom: 10px; }
+    h2 { margin-top: 28px; }
+    p { line-height: 1.6; color:#333; }
+    ul { margin-left: 18px; }
+    li { margin: 8px 0; }
+    .card {
+      border: 1px solid #e3e3e3;
+      border-radius: 16px;
+      padding: 18px;
+      margin: 18px 0;
+    }
+    .muted { color:#666; font-size:14px; }
+    nav {
+      margin-bottom: 28px;
+      padding: 14px 16px;
+      border: 1px solid #e3e3e3;
+      border-radius: 16px;
+    }
+    nav a {
+      margin-right: 16px;
+      text-decoration: none;
+      font-weight: 700;
+      color: #0b57d0;
+    }
+    footer {
+      margin-top: 48px;
+      padding-top: 18px;
+      border-top: 1px solid #e3e3e3;
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/index.html">Start</a>
+  <a href="/verify.html">Verifiera</a>
+  <a href="/register.html">Registrera</a>
+</nav>
+
+<h1>Juridisk information</h1>
+<p class="muted">
+  Denna sida beskriver vad Proofy är, hur tjänsten fungerar samt dess juridiska begränsningar.
+</p>
+
+<div class="card">
+  <h2>Vad Proofy är</h2>
+  <p>
+    Proofy är en teknisk tjänst för dokumentverifiering genom kryptografisk hash
+    och tidsstämpling via blockkedjeteknik.
+    Tjänsten gör det möjligt att verifiera om ett dokument med ett visst hashvärde
+    har registrerats vid en given tidpunkt.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Vad Proofy inte är</h2>
+  <p>
+    Proofy är inte ett arkiv, inte en signeringstjänst och inte ett juridiskt ombud.
+    Proofy verifierar inte innehåll, identitet, upphov eller äkthet i juridisk mening.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Hur verifiering fungerar</h2>
+  <p>
+    Vid verifiering beräknas en SHA-256-hash lokalt i användarens webbläsare.
+    Dokumentet lämnar aldrig användarens dator.
+    Hashvärdet används för att kontrollera om samma hash har registrerats
+    i ett smart kontrakt vid en tidigare tidpunkt.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Bevisvärde och begränsningar</h2>
+  <p>
+    En registrering i Proofy visar att ett dokument med ett visst hashvärde
+    existerade senast vid den tidpunkt då hashvärdet registrerades on-chain.
+  </p>
+  <ul>
+    <li>Proofy kan inte fastställa vem som skapade dokumentet.</li>
+    <li>Proofy kan inte avgöra när dokumentet ursprungligen skapades.</li>
+    <li>Proofy kan inte verifiera dokumentets innehåll.</li>
+    <li>Bevisvärdet avgörs ytterst av tillämplig lag och rättstillämpning.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>Tidsstämpling</h2>
+  <p>
+    Tidsangivelser som visas som “Registrerad (UTC)” härrör från blockkedjans
+    tidsstämpling och är avsedda att vara entydiga och internationellt jämförbara.
+    Eventuell lokal tid visas endast som en omräkning.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Dataskydd och integritet</h2>
+  <p>
+    Proofy lagrar inte dokument, personuppgifter eller innehåll.
+    Endast kryptografiska hashvärden behandlas.
+    Ett hashvärde kan inte återskapas till dokumentets innehåll.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Ansvarsbegränsning</h2>
+  <p>
+    Proofy tillhandahålls i befintligt skick.
+    Tjänsten lämnar inga garantier avseende juridiskt utfall,
+    bevisvärdering eller användning i rättsliga processer.
+  </p>
+</div>
+
+<footer>
+  <div>
+    © Proofy — Dokumentverifiering via kryptografisk hash.
+  </div>
+</footer>
+
+</body>
+</html>
