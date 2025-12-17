@@ -54,11 +54,14 @@
 
   <div class="card">
     <div class="grid">
+      <div class="k">Utfärdad (UTC)</div>
+      <div class="v" id="issuedOut">—</div>
+
       <div class="k">Dokumenthash (SHA-256 / bytes32)</div>
       <div class="v" id="hashOut">—</div>
 
-      <div class="k">Tidsstämpel (UTC)</div>
-      <div class="v" id="timeOut">—</div>
+      <div class="k">Registrerad (UTC)</div>
+      <div class="v" id="registeredOut">—</div>
 
       <div class="k">Blockchain / nätverk</div>
       <div class="muted" id="networkOut">—</div>
@@ -82,14 +85,15 @@
   </div>
 
 <script>
-  // Håll detta “minimalt men verifierbart”
+  // Minimal men verifierbart
   const CONTRACT = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
   const NETWORK_LABEL = "Polygon Amoy (testnet)";
   const EXPLORER_CONTRACT_URL = `https://www.oklink.com/amoy/address/${CONTRACT}`;
 
   const statusBadge = document.getElementById("statusBadge");
+  const issuedOut = document.getElementById("issuedOut");
   const hashOut = document.getElementById("hashOut");
-  const timeOut = document.getElementById("timeOut");
+  const registeredOut = document.getElementById("registeredOut");
   const networkOut = document.getElementById("networkOut");
   const contractOut = document.getElementById("contractOut");
   const externalOut = document.getElementById("externalOut");
@@ -104,9 +108,13 @@
     return (p.get("hash") || "").trim();
   }
 
-  function toUtc(ts) {
-    const d = new Date(Number(ts) * 1000);
-    // ISO men mer läsbart
+  function toUtc(tsSeconds) {
+    const d = new Date(Number(tsSeconds) * 1000);
+    return d.toISOString().replace("T", " ").replace(".000Z", " UTC");
+  }
+
+  function nowUtc() {
+    const d = new Date();
     return d.toISOString().replace("T", " ").replace(".000Z", " UTC");
   }
 
@@ -118,6 +126,9 @@
   }
 
   async function main() {
+    // Utfärdad = när certifikatet genererades/visades
+    issuedOut.textContent = nowUtc();
+
     const hash = getHashFromUrl();
     hashOut.textContent = hash || "—";
     networkOut.textContent = NETWORK_LABEL;
@@ -127,6 +138,7 @@
     if (!hash || !hash.startsWith("0x") || hash.length !== 66) {
       statusBadge.className = "badge bad";
       statusBadge.textContent = "Ogiltig hash";
+      registeredOut.textContent = "—";
       statementOut.textContent =
         "Ingen verifiering kunde göras eftersom hash-parametern saknas eller är ogiltig. " +
         "Öppna sidan med ?hash=0x... (66 tecken).";
@@ -145,7 +157,7 @@
       if (!exists) {
         statusBadge.className = "badge bad";
         statusBadge.textContent = "Inte registrerad";
-        timeOut.textContent = "—";
+        registeredOut.textContent = "—";
         statementOut.textContent =
           "Den angivna SHA-256-hash:en hittades inte i Proofy-kontraktet vid kontrolltillfället. " +
           "Proofy kan därför inte styrka en tidigare registrering av denna hash på angivet nätverk.";
@@ -156,12 +168,13 @@
       statusBadge.textContent = "Registrerad";
 
       const ts = Number(data.timestamp || 0);
-      timeOut.textContent = ts ? toUtc(ts) : "—";
+      registeredOut.textContent = ts ? toUtc(ts) : "—";
 
       statementOut.textContent =
         "Detta certifikat visar att en SHA-256-hash har registrerats i Proofys smarta kontrakt på angivet nätverk. " +
-        "Registreringen innebär att ett dokument med exakt detta hashvärde existerade senast vid angiven tidsstämpel (UTC). " +
-        "Proofy lagrar inte dokumentets innehåll; endast hashvärde och tidsstämpel är registrerade on-chain.";
+        "Registreringen innebär att ett dokument med exakt detta hashvärde existerade senast vid angiven registreringstid (UTC). " +
+        "Proofy lagrar inte dokumentets innehåll; endast hashvärde och registreringstid är registrerade on-chain. " +
+        "Utfärdad-tiden anger när detta certifikat genererades/visades och är inte en on-chain-tidsstämpel.";
 
     } catch (e) {
       setError(String(e?.message || e));
