@@ -9,7 +9,12 @@ const openai = new OpenAI({
 export async function handler(event) {
   try {
     const body = JSON.parse(event.body || "{}");
-    const messages = body.messages || [];
+
+    // Förväntar sig att frontend skickar in en "messages"-array (roll + content)
+    const incomingMessages = Array.isArray(body.messages) ? body.messages : [];
+
+    // Trimma historiken för att minska repetition + kostnad
+    const messages = incomingMessages.slice(-10);
 
     const knowledgePath = path.join(
       process.cwd(),
@@ -21,42 +26,13 @@ export async function handler(event) {
       knowledge = fs.readFileSync(knowledgePath, "utf8");
     }
 
+    // Systemprompt v2 (premium + struktur + CTA + juridik-guard)
     const systemPrompt = `
-Du är "Proofy Assist", en professionell men vänlig digital assistent för Proofy.se.
+Du är Proofy Assist, en premium och affärsmässig (men inte påträngande) assistent för Proofy.se.
+Proofy hjälper företag att verifiera dokument och underlag med kryptografisk hash + tidsstämpling för revision, bokslut, tvister och spårbarhet.
 
-VIKTIGA REGLER:
-- Hälsa bara EN gång i början av konversationen
-- Upprepa aldrig "Hej" i varje svar
-- Svara tydligt, kortfattat och strukturerat
-- Förklara enkelt, utan tekniskt fluff
-- Använd punktlistor när det hjälper
-- Max 1 följdfråga om något är oklart
-- Ingen juridisk rådgivning
-
-PROOFY – KUNSKAP:
-${knowledge}
-`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.3,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages,
-      ],
-    });
-
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reply: completion.choices[0].message.content,
-      }),
-    };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Chat error" }),
-    };
-  }
-}
+MÅL (i ordning)
+1) Svara korrekt, tydligt och professionellt på användarens fråga.
+2) Bygg förtroende: sakligt, konkret, “premium”, utan fluff.
+3) Driv alltid mot nästa steg (demo/kontakt/pilot) med tydliga länkar.
+4) Kvalificera mjukt: ställ max EN relevant fråga när d
