@@ -4,178 +4,108 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Proof Certificate</title>
-
   <style>
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      max-width: 900px;
-      margin: 32px auto;
-      padding: 0 16px;
-      color: #111;
-    }
-    nav {
-      margin-bottom: 18px;
-      padding: 14px 16px;
-      border: 1px solid #e3e3e3;
-      border-radius: 16px;
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    nav a {
-      text-decoration: none;
-      font-weight: 700;
-      color: #0b57d0;
-    }
-    .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    h1 {
-      margin: 0 0 6px;
-      font-size: 28px;
-    }
-    .muted {
-      color: #555;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-    .card {
-      border: 1px solid #e3e3e3;
-      border-radius: 16px;
-      padding: 16px;
-      margin: 14px 0;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      gap: 10px 14px;
-    }
-    .k {
-      color: #666;
-      font-size: 13px;
-    }
-    .v {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 13px;
-      word-break: break-all;
-    }
-    .badge {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: 13px;
-    }
-    .ok {
-      background: #e8f6ee;
-      color: #0a7a2f;
-    }
-    .bad {
-      background: #fdecec;
-      color: #b00020;
-    }
-    button {
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid #ccc;
-      background: #fff;
-      cursor: pointer;
-    }
-    .printHint {
-      font-size: 13px;
-      color: #555;
-    }
-    a {
-      color: #0b57d0;
-      text-decoration: none;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
+    :root { --bg:#0b0d12; --card:#ffffff; --text:#111; --muted:#555; --line:#e3e3e3; --blue:#4f7cff; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f6f7fb; color:var(--text); }
+    .topbar { background:var(--bg); color:#fff; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 18px 16px; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:0.2px; }
+    .dot { width:10px; height:10px; border-radius:999px; background:var(--blue); display:inline-block; }
+    .nav { margin-left:auto; display:flex; gap:14px; flex-wrap:wrap; }
+    .nav a { color:#d7deff; text-decoration:none; font-weight:700; }
+    .nav a:hover { text-decoration:underline; }
+
+    h1 { margin: 18px 0 6px; }
+    .muted { color:var(--muted); font-size:14px; line-height:1.5; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin:14px 0; }
+    .grid { display:grid; grid-template-columns: 240px 1fr; gap:10px 14px; }
+    .k { color:#666; font-size:13px; }
+    .v { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; word-break:break-all; }
+    .badge { display:inline-block; padding:6px 10px; border-radius:999px; font-weight:800; font-size:13px; }
+    .ok { background:#e8f6ee; color:#0a7a2f; }
+    .bad { background:#fdecec; color:#b00020; }
+    button { padding:10px 12px; border-radius:12px; border:1px solid #ccc; background:#fff; cursor:pointer; font-weight:800; }
+    a { color:#0b57d0; text-decoration:none; font-weight:700; }
+    a:hover { text-decoration:underline; }
     @media print {
-      nav,
-      button,
-      .printHint {
-        display: none !important;
-      }
-      body {
-        margin: 0;
-      }
-      .card {
-        border-color: #bbb;
-      }
+      .topbar, button { display:none !important; }
+      body { background:#fff; }
+      .card { border-color:#bbb; }
+      .wrap { max-width: 900px; }
     }
   </style>
 </head>
-
 <body>
 
-<nav>
-  <a href="/index.html">Start</a>
-  <a href="/verify.html">Verifiera</a>
-  <a href="/register.html">Registrera</a>
-  <a href="/legal.html">Juridik</a>
-</nav>
-
-<div class="top">
-  <div>
-    <h1>Proof Certificate</h1>
-    <div class="muted">
-      Detta certifikat visar om en SHA-256-hash har registrerats on-chain och vid vilken tidpunkt.
-      Proofy lagrar inte dokumentets innehåll.
-    </div>
-  </div>
-
-  <div style="text-align:right;">
-    <button id="printBtn">Skriv ut / Spara som PDF</button>
-    <div class="printHint" style="margin-top:8px;">
-      Tips: Välj “Spara som PDF” i utskriftsdialogen.
+<div class="topbar">
+  <div class="wrap" style="display:flex; align-items:center; gap:16px;">
+    <div class="brand"><span class="dot"></span> Proofy</div>
+    <div class="nav">
+      <a href="/">Start</a>
+      <a href="/verify.html">Verifiera</a>
+      <a href="/register.html">Registrera</a>
+      <a href="/legal.html">Juridik</a>
     </div>
   </div>
 </div>
 
-<div class="card">
-  <span id="statusBadge" class="badge bad">Laddar…</span>
-</div>
-
-<div class="card">
-  <div class="grid">
-    <div class="k">Utfärdad (UTC)</div>
-    <div class="v" id="issuedOut">—</div>
-
-    <div class="k">Dokumenthash (SHA-256 / bytes32)</div>
-    <div class="v" id="hashOut">—</div>
-
-    <div class="k">Registrerad (UTC)</div>
-    <div class="v" id="registeredOut">—</div>
-
-    <div class="k">Blockchain / nätverk</div>
-    <div class="muted" id="networkOut">—</div>
-
-    <div class="k">Smart contract</div>
-    <div class="v" id="contractOut">—</div>
-
-    <div class="k">Extern kontroll</div>
-    <div class="muted" id="externalOut">—</div>
+<div class="wrap">
+  <div style="display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:flex-start;">
+    <div>
+      <h1>Proof Certificate</h1>
+      <div class="muted">
+        Detta certifikat visar om en SHA-256-hash har registrerats on-chain och vid vilken tidpunkt.
+        Proofy lagrar inte dokumentets innehåll.
+      </div>
+    </div>
+    <div style="text-align:right; margin-top:18px;">
+      <button id="printBtn">Skriv ut / Spara som PDF</button>
+      <div class="muted" style="margin-top:8px;">Tips: Välj “Spara som PDF” i utskriftsdialogen.</div>
+    </div>
   </div>
-</div>
 
-<div class="card">
-  <div style="font-weight:700; margin-bottom:8px;">Statement</div>
-  <div class="muted" id="statementOut">—</div>
-</div>
+  <div class="card">
+    <span id="statusBadge" class="badge bad">Laddar…</span>
+  </div>
 
-<div class="card" id="errorCard" style="display:none;">
-  <div style="font-weight:700; color:#b00020; margin-bottom:6px;">Fel</div>
-  <div class="v" id="errOut"></div>
+  <div class="card">
+    <div class="grid">
+      <div class="k">Utfärdad (UTC)</div>
+      <div class="v" id="issuedOut">—</div>
+
+      <div class="k">Dokumenthash (SHA-256 / bytes32)</div>
+      <div class="v" id="hashOut">—</div>
+
+      <div class="k">Registrerad (UTC)</div>
+      <div class="v" id="registeredOut">—</div>
+
+      <div class="k">Nätverk</div>
+      <div class="muted" id="networkOut">—</div>
+
+      <div class="k">Smart contract</div>
+      <div class="v" id="contractOut">—</div>
+
+      <div class="k">Extern kontroll</div>
+      <div class="muted" id="externalOut">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:800; margin-bottom:8px;">Statement</div>
+    <div class="muted" id="statementOut">—</div>
+  </div>
+
+  <div class="card" id="errorCard" style="display:none;">
+    <div style="font-weight:800; color:#b00020; margin-bottom:6px;">Fel</div>
+    <div class="v" id="errOut"></div>
+  </div>
 </div>
 
 <script>
+  const NETWORK_LABEL = "Polygon Amoy (testnet)";
+  const CONTRACT = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
+  const EXPLORER_CONTRACT_URL = `https://www.oklink.com/amoy/address/${CONTRACT}`;
+
   const statusBadge = document.getElementById("statusBadge");
   const issuedOut = document.getElementById("issuedOut");
   const hashOut = document.getElementById("hashOut");
@@ -190,27 +120,15 @@
   document.getElementById("printBtn").onclick = () => window.print();
 
   function nowUtc() {
-    return new Date().toISOString().replace("T", " ").replace(".000Z", " UTC");
+    return new Date().toISOString().replace("T"," ").replace(".000Z"," UTC");
   }
-
   function toUtc(ts) {
-    return new Date(Number(ts) * 1000)
-      .toISOString()
-      .replace("T", " ")
-      .replace(".000Z", " UTC");
+    return new Date(Number(ts) * 1000).toISOString().replace("T"," ").replace(".000Z"," UTC");
   }
-
   function getHashFromUrl() {
     const p = new URLSearchParams(location.search);
     return (p.get("hash") || "").trim();
   }
-
-  async function loadConfig() {
-    const res = await fetch("/config.json", { cache: "no-store" });
-    if (!res.ok) throw new Error("Kunde inte läsa config.json");
-    return await res.json();
-  }
-
   function setError(msg) {
     errorCard.style.display = "block";
     errOut.textContent = msg;
@@ -220,28 +138,12 @@
 
   async function main() {
     issuedOut.textContent = nowUtc();
-
-    let cfg;
-    try {
-      cfg = await loadConfig();
-    } catch (e) {
-      setError(String(e?.message || e));
-      return;
-    }
+    networkOut.textContent = NETWORK_LABEL;
+    contractOut.textContent = CONTRACT;
+    externalOut.innerHTML = `Kontraktet kan kontrolleras via explorer: <a href="${EXPLORER_CONTRACT_URL}" target="_blank" rel="noopener">öppna</a>`;
 
     const hash = getHashFromUrl();
     hashOut.textContent = hash || "—";
-
-    networkOut.textContent = cfg.networkLabel || "—";
-    contractOut.textContent = cfg.contractAddress || "—";
-
-    if (cfg.contractAddress && cfg.explorer?.contractUrlBase) {
-      externalOut.innerHTML =
-        `Kontraktet kan kontrolleras via explorer: ` +
-        `<a href="${cfg.explorer.contractUrlBase + cfg.contractAddress}" target="_blank" rel="noopener">öppna</a>`;
-    } else {
-      externalOut.textContent = "—";
-    }
 
     if (!hash || !hash.startsWith("0x") || hash.length !== 66) {
       statusBadge.className = "badge bad";
@@ -259,11 +161,9 @@
 
       const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(hash)}`);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) {
-        throw new Error(data.error || `Verify failed (HTTP ${res.status})`);
-      }
+      if (!res.ok || data.ok === false) throw new Error(data.error || `Verify failed (HTTP ${res.status})`);
 
-      if (!data.exists) {
+      if (data.exists !== true) {
         statusBadge.className = "badge bad";
         statusBadge.textContent = "Inte registrerad";
         registeredOut.textContent = "—";
@@ -285,8 +185,7 @@
 
     } catch (e) {
       setError(String(e?.message || e));
-      statementOut.textContent =
-        "Verifiering kunde inte genomföras på grund av ett tekniskt fel vid anropet.";
+      statementOut.textContent = "Verifiering kunde inte genomföras på grund av ett tekniskt fel vid anropet.";
     }
   }
 
