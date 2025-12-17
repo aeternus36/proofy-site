@@ -109,10 +109,10 @@
   function showError(msg) { errorCard.style.display="block"; errOut.textContent = msg; }
   function hideError() { errorCard.style.display="none"; errOut.textContent = "—"; }
   function hideResult() { resultCard.style.display="none"; }
+  function hideCertLink(){ certLink.style.display = "none"; certLink.href = "#"; }
 
   fileInput.addEventListener("change", async () => {
-    hideError(); hideResult();
-    certLink.style.display = "none";
+    hideError(); hideResult(); hideCertLink();
 
     const f = fileInput.files?.[0];
     if (!f) return;
@@ -124,9 +124,6 @@
       lastHash = await sha256File(f);
       hashOut.textContent = lastHash;
 
-      certLink.href = `/certificate.html?hash=${encodeURIComponent(lastHash)}`;
-      certLink.style.display = "inline";
-
       statusEl.textContent = "Redo att registrera";
       btnRegister.disabled = false;
     } catch (e) {
@@ -137,7 +134,7 @@
 
   btnRegister.addEventListener("click", async () => {
     if (!lastHash) return;
-    hideError(); hideResult();
+    hideError(); hideResult(); hideCertLink();
 
     statusEl.textContent = "Registrerar…";
     btnRegister.disabled = true;
@@ -154,10 +151,14 @@
 
       resultCard.style.display = "block";
 
+      // Visa cert-länk först när registreringen är OK (oavsett om den redan fanns)
+      certLink.href = `/certificate.html?hash=${encodeURIComponent(lastHash)}`;
+      certLink.style.display = "inline";
+
       if (data.alreadyExists) {
         resultLine.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="muted">(ingen ny registrering behövdes)</span>`;
-        txOut.textContent = "—";
-        blockOut.textContent = "—";
+        txOut.textContent = data.txHash || "—";
+        blockOut.textContent = (data.blockNumber ?? "—");
       } else {
         resultLine.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="muted">(on-chain)</span>`;
         txOut.textContent = data.txHash || "—";
