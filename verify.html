@@ -3,65 +3,70 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Verifiera</title>
+  <title>Proofy – Verifiera dokument</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 860px; margin: 40px auto; padding: 0 16px; }
-    h1 { margin: 0 0 8px; }
-    p { color: #333; line-height: 1.5; }
-    .card { border: 1px solid #e3e3e3; border-radius: 14px; padding: 16px; margin: 14px 0; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; background: #fff; }
-    button:disabled { opacity: .6; cursor: not-allowed; }
-    code { background: #f6f6f6; border-radius: 10px; padding: 10px; overflow: auto; display: block; }
-    .muted { color: #666; font-size: 14px; }
-    .ok { color: #0a7a2f; font-weight: 700; }
-    .bad { color: #b00020; font-weight: 700; }
-    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; background:#f2f2f2; font-size: 13px; }
-    a { color: #0b57d0; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 13px; word-break: break-all; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 900px; margin: 40px auto; padding: 0 16px; }
+    h1 { margin-bottom: 6px; }
+    p { color:#333; line-height:1.5; }
+    .card { border:1px solid #e3e3e3; border-radius:16px; padding:16px; margin:14px 0; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    button { padding:10px 14px; border-radius:10px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .pill { padding:4px 10px; border-radius:999px; background:#f2f2f2; font-size:13px; }
+    .ok { color:#0a7a2f; font-weight:700; }
+    .bad { color:#b00020; font-weight:700; }
+    .muted { color:#666; font-size:14px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; word-break:break-all; }
+    code { background:#f6f6f6; padding:10px; border-radius:10px; display:block; }
+    a { color:#0b57d0; text-decoration:none; }
+    a:hover { text-decoration:underline; }
   </style>
 </head>
 <body>
 
-  <h1>Verifiera dokument</h1>
-  <p>
-    Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256</strong>-hash lokalt och kontrollerar om hash:en är registrerad on-chain.
-  </p>
+<h1>Verifiera dokument</h1>
+<p>
+  Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256</strong>-hash lokalt
+  och kontrollerar om hash:en är registrerad on-chain.
+</p>
 
-  <div class="card">
-    <div class="row">
-      <input id="file" type="file" />
-      <button id="btnVerify" disabled>Verifiera</button>
-      <a id="certLink" href="#" target="_blank" rel="noopener" style="display:none;">Öppna certifikat</a>
-      <span id="status" class="pill">Välj en fil</span>
-    </div>
-    <div class="muted" style="margin-top:10px;">
-      Tips: stora filer kan ta några sekunder – hash sker i webbläsaren.
-    </div>
+<div class="card">
+  <div class="row">
+    <input id="file" type="file" />
+    <button id="btnVerify" disabled>Verifiera</button>
+    <a id="certLink" href="#" target="_blank" style="display:none;">Öppna certifikat</a>
+    <span id="status" class="pill">Välj en fil</span>
   </div>
-
-  <div class="card">
-    <div class="muted">SHA-256 (bytes32)</div>
-    <code id="hashOut" class="mono">—</code>
+  <div class="muted" style="margin-top:8px;">
+    Tips: stora filer kan ta några sekunder – hash beräknas i webbläsaren.
   </div>
+</div>
 
-  <div class="card" id="resultCard" style="display:none;">
-    <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
+<div class="card">
+  <div class="muted">SHA-256 (bytes32)</div>
+  <code id="hashOut" class="mono">—</code>
+</div>
 
-    <div class="muted">Tidsstämpel (UTC)</div>
-    <div id="timeOut" class="mono">—</div>
+<div class="card" id="resultCard" style="display:none;">
+  <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
 
-    <div class="muted" style="margin-top:10px;">Övrigt</div>
-    <div class="muted" id="metaOut">—</div>
-  </div>
+  <div class="muted">Tidsstämpel (UTC)</div>
+  <div id="timeOut" class="mono">—</div>
 
-  <div class="card" id="errorCard" style="display:none;">
-    <div class="bad">Fel</div>
-    <div id="errOut" class="mono">—</div>
-  </div>
+  <div class="muted" style="margin-top:10px;">Beviskälla</div>
+  <div id="metaOut" class="muted">—</div>
+</div>
+
+<div class="card" id="errorCard" style="display:none;">
+  <div class="bad">Fel</div>
+  <div id="errOut" class="mono">—</div>
+</div>
 
 <script>
+  const NETWORK_LABEL = "Polygon Amoy (testnet)";
+  const CONTRACT = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
+  const EXPLORER_URL = `https://www.oklink.com/amoy/address/${CONTRACT}`;
+
   const fileInput = document.getElementById("file");
   const btnVerify = document.getElementById("btnVerify");
   const statusEl = document.getElementById("status");
@@ -82,59 +87,38 @@
   fileInput.addEventListener("change", async () => {
     hideError(); hideResult();
     certLink.style.display = "none";
-    certLink.href = "#";
 
     const f = fileInput.files?.[0];
-    if (!f) {
-      btnVerify.disabled = true;
-      statusEl.textContent = "Välj en fil";
-      hashOut.textContent = "—";
-      lastHash = null;
-      return;
-    }
+    if (!f) return;
 
-    btnVerify.disabled = true;
     statusEl.textContent = "Beräknar SHA-256…";
-    hashOut.textContent = "—";
+    btnVerify.disabled = true;
 
     try {
-      const hashHex = await sha256FileToBytes32Hex(f);
-      lastHash = hashHex;
-      hashOut.textContent = hashHex;
-
-      // gör certifikat-länken direkt
-      certLink.href = `/certificate.html?hash=${encodeURIComponent(hashHex)}`;
+      lastHash = await sha256File(f);
+      hashOut.textContent = lastHash;
+      certLink.href = `/certificate.html?hash=${encodeURIComponent(lastHash)}`;
       certLink.style.display = "inline";
-
       statusEl.textContent = "Redo att verifiera";
       btnVerify.disabled = false;
     } catch (e) {
-      showError(String(e?.message || e));
-      statusEl.textContent = "Fel vid hashning";
-      btnVerify.disabled = true;
+      showError(e.message || e);
     }
   });
 
   btnVerify.addEventListener("click", async () => {
-    hideError(); hideResult();
     if (!lastHash) return;
-
+    hideError(); hideResult();
+    statusEl.textContent = "Verifierar…";
     btnVerify.disabled = true;
-    statusEl.textContent = "Kontrollerar…";
 
     try {
-      const url = `/.netlify/functions/verify?hash=${encodeURIComponent(lastHash)}`;
-      const res = await fetch(url, { method: "GET" });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || data.ok === false) {
-        throw new Error(data.error || `Verify failed (HTTP ${res.status})`);
-      }
-
+      const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(lastHash)}`);
+      const data = await res.json();
       renderResult(data);
       statusEl.textContent = "Klar";
     } catch (e) {
-      showError(String(e?.message || e));
+      showError(e.message || e);
       statusEl.textContent = "Fel";
     } finally {
       btnVerify.disabled = false;
@@ -143,23 +127,21 @@
 
   function renderResult(data) {
     resultCard.style.display = "block";
+    const exists = data.exists === true;
 
-    const exists = (data.exists === true);
+    metaOut.innerHTML =
+      `Nätverk: <strong>${NETWORK_LABEL}</strong> · ` +
+      `Smart contract: <span class="mono">${CONTRACT}</span> · ` +
+      `<a href="${EXPLORER_URL}" target="_blank">Extern kontroll</a>`;
 
     if (exists) {
-      resultLine.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="muted">(hash hittad)</span>`;
-      const ts = Number(data.timestamp || 0);
-      timeOut.textContent = ts ? toUtc(ts) : "—";
-      metaOut.textContent = "Verifiering utförd mot Proofy-kontraktet.";
+      resultLine.innerHTML = `<span class="ok">✅ Registrerad</span>`;
+      timeOut.textContent = new Date(data.timestamp * 1000)
+        .toISOString().replace("T"," ").replace(".000Z"," UTC");
     } else {
-      resultLine.innerHTML = `<span class="bad">❌ Inte registrerad</span> <span class="muted">(hash saknas)</span>`;
+      resultLine.innerHTML = `<span class="bad">❌ Inte registrerad</span>`;
       timeOut.textContent = "—";
-      metaOut.textContent = "Verifiering utförd mot Proofy-kontraktet.";
     }
-  }
-
-  function toUtc(ts) {
-    return new Date(ts * 1000).toISOString().replace("T", " ").replace(".000Z", " UTC");
   }
 
   function showError(msg) {
@@ -168,16 +150,15 @@
   }
   function hideError() {
     errorCard.style.display = "none";
-    errOut.textContent = "—";
   }
   function hideResult() {
     resultCard.style.display = "none";
   }
 
-  async function sha256FileToBytes32Hex(file) {
+  async function sha256File(file) {
     const buf = await file.arrayBuffer();
-    const digest = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+    const hash = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2,"0")).join("");
   }
 </script>
 
