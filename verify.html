@@ -2,165 +2,224 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Proofy – Verifiera dokument</title>
+  <meta name="robots" content="noindex,nofollow" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 900px; margin: 40px auto; padding: 0 16px; }
-    h1 { margin-bottom: 6px; }
-    p { color:#333; line-height:1.5; }
-    .card { border:1px solid #e3e3e3; border-radius:16px; padding:16px; margin:14px 0; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    button { padding:10px 14px; border-radius:10px; border:1px solid #ccc; background:#fff; cursor:pointer; }
-    button:disabled { opacity:.6; cursor:not-allowed; }
-    .pill { padding:4px 10px; border-radius:999px; background:#f2f2f2; font-size:13px; }
-    .ok { color:#0a7a2f; font-weight:700; }
-    .bad { color:#b00020; font-weight:700; }
-    .muted { color:#666; font-size:14px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; word-break:break-all; }
-    code { background:#f6f6f6; padding:10px; border-radius:10px; display:block; }
-    a { color:#0b57d0; text-decoration:none; }
-    a:hover { text-decoration:underline; }
+    :root { color-scheme: light; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #fff; color: #111; }
+    header { border-bottom: 1px solid #e5e5e5; padding: 18px 16px; }
+    main { max-width: 880px; margin: 0 auto; padding: 18px 16px 44px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    p { margin: 10px 0; line-height: 1.45; }
+    .muted { color: #555; font-size: 14px; }
+    .box { border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px; margin: 14px 0; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1 1 260px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input[type="file"] { width: 100%; }
+    button { appearance: none; border: 1px solid #111; background: #111; color: #fff; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 13px; }
+    pre { background: #fafafa; border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; overflow: auto; }
+    .status { display: inline-block; padding: 6px 10px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+    .ok { background: #e7f7ee; color: #0c5b2d; border: 1px solid #bfead0; }
+    .no { background: #fff6e6; color: #6a3d00; border: 1px solid #ffe1b0; }
+    .err { background: #fdecec; color: #7a0b0b; border: 1px solid #f7b8b8; }
+    .kv { display: grid; grid-template-columns: 200px 1fr; gap: 8px 12px; margin-top: 10px; }
+    .kv div { padding: 6px 0; border-bottom: 1px dashed #eee; }
+    .kv div:nth-child(odd) { color: #444; }
+    a { color: #111; }
+    footer { border-top: 1px solid #e5e5e5; padding: 16px; }
   </style>
 </head>
+
 <body>
+  <header>
+    <h1>Verifiera dokument</h1>
+    <div class="muted">Teknisk verktygssida (ingen fil laddas upp – hash beräknas lokalt).</div>
+  </header>
 
-<h1>Verifiera dokument</h1>
-<p>
-  Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256</strong>-hash lokalt
-  och kontrollerar om hash:en är registrerad on-chain.
-</p>
+  <main>
+    <div class="box">
+      <p>
+        Välj en fil för att beräkna dess <strong>SHA-256</strong> lokalt i webbläsaren och kontrollera om hashvärdet är
+        registrerat on-chain via Proofys verifieringsfunktion.
+      </p>
+      <div class="row">
+        <div>
+          <label for="fileInput">Dokument</label>
+          <input id="fileInput" type="file" />
+          <div class="muted" style="margin-top:6px;">Tips: samma fil måste ge exakt samma hash.</div>
+        </div>
+        <div style="flex: 0 0 auto;">
+          <label>&nbsp;</label>
+          <button id="verifyBtn" disabled>Verifiera</button>
+        </div>
+      </div>
+    </div>
 
-<div class="card">
-  <div class="row">
-    <input id="file" type="file" />
-    <button id="btnVerify" disabled>Verifiera</button>
-    <a id="certLink" href="#" target="_blank" style="display:none;">Öppna certifikat</a>
-    <span id="status" class="pill">Välj en fil</span>
-  </div>
-  <div class="muted" style="margin-top:8px;">
-    Tips: stora filer kan ta några sekunder – hash beräknas i webbläsaren.
-  </div>
-</div>
+    <div class="box" id="resultBox" style="display:none;">
+      <div id="statusPill" class="status">—</div>
 
-<div class="card">
-  <div class="muted">SHA-256 (bytes32)</div>
-  <code id="hashOut" class="mono">—</code>
-</div>
+      <div class="kv" id="kvGrid" style="margin-top:10px;">
+        <div>Hash (bytes32)</div><div><code id="hashOut">—</code></div>
 
-<div class="card" id="resultCard" style="display:none;">
-  <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
+        <div>Status</div><div id="existsOut">—</div>
 
-  <div class="muted">Tidsstämpel (UTC)</div>
-  <div id="timeOut" class="mono">—</div>
+        <div>Registreringstid (Sverige)</div><div id="timeSeOut">—</div>
 
-  <div class="muted" style="margin-top:10px;">Beviskälla</div>
-  <div id="metaOut" class="muted">—</div>
-</div>
+        <div>Registreringstid (UTC)</div><div id="timeUtcOut">—</div>
 
-<div class="card" id="errorCard" style="display:none;">
-  <div class="bad">Fel</div>
-  <div id="errOut" class="mono">—</div>
-</div>
+        <div>Submitter-adress</div><div><code id="submitterOut">—</code></div>
+      </div>
 
-<script>
-  const NETWORK_LABEL = "Polygon Amoy (testnet)";
-  const CONTRACT = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
-  const EXPLORER_URL = `https://www.oklink.com/amoy/address/${CONTRACT}`;
+      <div class="muted" style="margin-top:10px;">
+        Juridisk anmärkning: Resultatet är en teknisk kontroll av huruvida ett hashvärde (fingeravtryck) finns registrerat.
+        Proofy lagrar inte dokumentet. Själva bevisvärdet beror på att den presenterade filen ger samma hash som den registrerade posten.
+      </div>
 
-  const fileInput = document.getElementById("file");
-  const btnVerify = document.getElementById("btnVerify");
-  const statusEl = document.getElementById("status");
-  const hashOut = document.getElementById("hashOut");
+      <p style="margin-top:10px;">
+        <a id="certLink" href="#" style="display:none;">Öppna Proof Certificate</a>
+      </p>
 
-  const resultCard = document.getElementById("resultCard");
-  const resultLine = document.getElementById("resultLine");
-  const timeOut = document.getElementById("timeOut");
-  const metaOut = document.getElementById("metaOut");
+      <details style="margin-top:10px;">
+        <summary>Visa tekniskt svar (JSON)</summary>
+        <pre id="rawJson">—</pre>
+      </details>
+    </div>
 
-  const errorCard = document.getElementById("errorCard");
-  const errOut = document.getElementById("errOut");
+    <div class="box" id="errorBox" style="display:none;">
+      <div class="status err">Fel</div>
+      <p id="errorMsg" style="margin-top:10px;">—</p>
+    </div>
+  </main>
 
-  const certLink = document.getElementById("certLink");
+  <footer class="muted">
+    Proofy – tekniskt verifieringsverktyg. <span id="nowLine"></span>
+  </footer>
 
-  let lastHash = null;
-
-  fileInput.addEventListener("change", async () => {
-    hideError(); hideResult();
-    certLink.style.display = "none";
-
-    const f = fileInput.files?.[0];
-    if (!f) return;
-
-    statusEl.textContent = "Beräknar SHA-256…";
-    btnVerify.disabled = true;
-
-    try {
-      lastHash = await sha256File(f);
-      hashOut.textContent = lastHash;
-      certLink.href = `/certificate.html?hash=${encodeURIComponent(lastHash)}`;
-      certLink.style.display = "inline";
-      statusEl.textContent = "Redo att verifiera";
-      btnVerify.disabled = false;
-    } catch (e) {
-      showError(e.message || e);
+  <script>
+    // --- Helpers ---
+    function bytesToHex(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let hex = "";
+      for (let i = 0; i < bytes.length; i++) {
+        hex += bytes[i].toString(16).padStart(2, "0");
+      }
+      return "0x" + hex;
     }
-  });
 
-  btnVerify.addEventListener("click", async () => {
-    if (!lastHash) return;
-    hideError(); hideResult();
-    statusEl.textContent = "Verifierar…";
-    btnVerify.disabled = true;
-
-    try {
-      const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(lastHash)}`);
-      const data = await res.json();
-      renderResult(data);
-      statusEl.textContent = "Klar";
-    } catch (e) {
-      showError(e.message || e);
-      statusEl.textContent = "Fel";
-    } finally {
-      btnVerify.disabled = false;
+    function formatSe(tsSeconds) {
+      if (!tsSeconds || tsSeconds <= 0) return "—";
+      const d = new Date(tsSeconds * 1000);
+      return d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
     }
-  });
 
-  function renderResult(data) {
-    resultCard.style.display = "block";
-    const exists = data.exists === true;
-
-    metaOut.innerHTML =
-      `Nätverk: <strong>${NETWORK_LABEL}</strong> · ` +
-      `Smart contract: <span class="mono">${CONTRACT}</span> · ` +
-      `<a href="${EXPLORER_URL}" target="_blank">Extern kontroll</a>`;
-
-    if (exists) {
-      resultLine.innerHTML = `<span class="ok">✅ Registrerad</span>`;
-      timeOut.textContent = new Date(data.timestamp * 1000)
-        .toISOString().replace("T"," ").replace(".000Z"," UTC");
-    } else {
-      resultLine.innerHTML = `<span class="bad">❌ Inte registrerad</span>`;
-      timeOut.textContent = "—";
+    function formatUtc(tsSeconds) {
+      if (!tsSeconds || tsSeconds <= 0) return "—";
+      const d = new Date(tsSeconds * 1000);
+      return d.toISOString().replace("T", " ").replace("Z", " UTC");
     }
-  }
 
-  function showError(msg) {
-    errorCard.style.display = "block";
-    errOut.textContent = msg;
-  }
-  function hideError() {
-    errorCard.style.display = "none";
-  }
-  function hideResult() {
-    resultCard.style.display = "none";
-  }
+    function show(el) { el.style.display = ""; }
+    function hide(el) { el.style.display = "none"; }
 
-  async function sha256File(file) {
-    const buf = await file.arrayBuffer();
-    const hash = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2,"0")).join("");
-  }
-</script>
+    // --- UI refs ---
+    const fileInput = document.getElementById("fileInput");
+    const verifyBtn = document.getElementById("verifyBtn");
 
+    const resultBox = document.getElementById("resultBox");
+    const statusPill = document.getElementById("statusPill");
+
+    const hashOut = document.getElementById("hashOut");
+    const existsOut = document.getElementById("existsOut");
+    const timeSeOut = document.getElementById("timeSeOut");
+    const timeUtcOut = document.getElementById("timeUtcOut");
+    const submitterOut = document.getElementById("submitterOut");
+    const rawJson = document.getElementById("rawJson");
+
+    const certLink = document.getElementById("certLink");
+
+    const errorBox = document.getElementById("errorBox");
+    const errorMsg = document.getElementById("errorMsg");
+    const nowLine = document.getElementById("nowLine");
+
+    nowLine.textContent = "Nu: " + new Date().toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
+
+    // --- Logic ---
+    fileInput.addEventListener("change", () => {
+      verifyBtn.disabled = !(fileInput.files && fileInput.files.length > 0);
+      hide(errorBox);
+      hide(resultBox);
+    });
+
+    verifyBtn.addEventListener("click", async () => {
+      hide(errorBox);
+      hide(resultBox);
+
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        errorMsg.textContent = "Ingen fil vald.";
+        show(errorBox);
+        return;
+      }
+
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = "Verifierar…";
+
+      try {
+        // 1) Local SHA-256
+        const buf = await file.arrayBuffer();
+        const digest = await crypto.subtle.digest("SHA-256", buf);
+        const hashHex = bytesToHex(digest);
+
+        // 2) Call verify function
+        const url = "/.netlify/functions/verify?hash=" + encodeURIComponent(hashHex);
+        const res = await fetch(url, { method: "GET" });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error("Verifieringsanrop misslyckades (HTTP " + res.status + "). " + (text ? "Svar: " + text : ""));
+        }
+
+        const data = await res.json();
+
+        // 3) Basic sanity checks (do not change backend behavior)
+        if (!data || data.ok !== true) {
+          throw new Error("Ogiltigt svar från verifieringstjänsten.");
+        }
+
+        // 4) Render
+        hashOut.textContent = data.hashHex || hashHex;
+
+        const exists = !!data.exists;
+        existsOut.textContent = exists ? "Registrerad" : "Ej registrerad";
+
+        const ts = Number(data.timestamp || 0);
+        timeSeOut.textContent = exists ? formatSe(ts) : "—";
+        timeUtcOut.textContent = exists ? formatUtc(ts) : "—";
+
+        submitterOut.textContent = exists ? (data.submitter || "—") : "—";
+
+        rawJson.textContent = JSON.stringify(data, null, 2);
+
+        statusPill.className = "status " + (exists ? "ok" : "no");
+        statusPill.textContent = exists ? "REGISTRERAD" : "INTE REGISTRERAD";
+
+        // Certificate link always available (shows status inside certificate too)
+        certLink.href = "/certificate.html?hash=" + encodeURIComponent(data.hashHex || hashHex);
+        certLink.style.display = "";
+
+        show(resultBox);
+      } catch (err) {
+        errorMsg.textContent = (err && err.message) ? err.message : String(err);
+        show(errorBox);
+      } finally {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = "Verifiera";
+      }
+    });
+  </script>
 </body>
 </html>
