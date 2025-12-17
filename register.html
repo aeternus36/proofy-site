@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy – Registrera</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 860px; margin: 40px auto; padding: 0 16px; }
+    h1 { margin: 0 0 8px; }
+    p { color: #333; line-height: 1.5; }
+    .card { border: 1px solid #e3e3e3; border-radius: 14px; padding: 16px; margin: 14px 0; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor:pointer; background:#fff; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    code, pre { background:#f6f6f6; border-radius:10px; padding:10px; overflow:auto; display:block; }
+    .muted { color:#666; font-size:14px; }
+    .ok { color:#0a7a2f; font-weight:700; }
+    .bad { color:#b00020; font-weight:700; }
+    .pill { display:inline-block; padding:4px 10px; border-radius:999px; background:#f2f2f2; font-size:13px; }
+    a { color:#0b57d0; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+
+  <h1>Registrera dokument</h1>
+  <p>
+    Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256</strong>-hash lokalt och registrerar endast hash:en on-chain.
+  </p>
+
+  <div class="card">
+    <div class="row">
+      <input id="file" type="file" />
+      <button id="btnRegister" disabled>Registrera</button>
+      <span id="status" class="pill">Välj en fil</span>
+    </div>
+    <div class="muted" style="margin-top:10px;">
+      Tips: stora filer kan ta några sekunder – hash sker i webbläsaren.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="muted">SHA-256 (bytes32)</div>
+    <code id="hashOut">—</code>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
+
+    <div class="muted">Transaction</div>
+    <code id="txOut">—</code>
+
+    <div class="muted" style="margin-top:10px;">Blocknummer</div>
+    <code id="blockOut">—</code>
+
+    <div class="muted" style="margin-top:10px;">Länkar</div>
+    <div id="linksOut" class="muted">—</div>
+  </div>
+
+  <div class="card" id="errorCard" style="display:none;">
+    <div class="bad">Fel</div>
+    <code id="errOut">—</code>
+  </div>
+
+<script>
+  const fileInput = document.getElementById("file");
+  const btnRegister = document.getElementById("btnRegister");
+  const statusEl = document.getElementById("status");
+  const hashOut = document.getElementById("hashOut");
+
+  const resultCard = document.getElementById("resultCard");
+  const resultLine = document.getElementById("resultLine");
+  const txOut = document.getElementById("txOut");
+  const blockOut = document.getElementById("blockOut");
+  const linksOut = document.getElementById("linksOut");
+
+  const errorCard = document.getElementById("errorCard");
+  const errOut = document.getElementById("errOut");
+
+  let lastHash = null;
+
+  fileInput.addEventListener("change", async () => {
+    hideError();
+    hideResult();
+
+    const f = fileInput.files?.[0];
+    if (!f) {
+      btnRegister.disabled = true;
+      statusEl.textContent = "Välj en fil";
+      hashOut.textContent = "—";
+      lastHash = null;
+      return;
+    }
+
+    btnRegister.disabled = true;
+    statusEl.textContent = "Beräknar SHA-256…";
+    hashOut.textContent = "—";
+
+    try {
+      const hashHex = await sha256FileToBytes32Hex(f);
+      lastHash = hashHex;
+      hashOut.textContent = hashHex;
+      statusEl.textContent = "Redo att registrera";
+      btnRegister.disabled = false;
+    } catch (e) {
+      showError(String(e?.message || e));
+      statusEl.textContent = "Fel vid hashning";
+      btnRegister.disabled = true;
+    }
+  });
+
+  btnRegister.addEventListener("click", async () => {
+    hideError();
+    hideResult();
+
+    if (!lastHash) return;
+
+    btnRegister.disabled = true;
+    statusEl.textContent = "Registrerar…";
+
+    try {
+      const res = await fetch("/.netlify/functions/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ hash: lastHash }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || `Register failed (HTTP ${res.status})`);
+      }
+
+      renderResult(data);
+      statusEl.textContent = "Klar";
+    } catch (e) {
+      showError(String(e?.message || e));
+      statusEl.textContent = "Fel";
+    } finally {
+      btnRegister.disabled = false;
+    }
+  });
+
+  function renderResult(data) {
+    resultCard.style.display = "block";
+
+    if (data.alreadyExists) {
+      resultLine.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="muted">(ingen ny registrering behövdes)</span>`;
+    } else {
+      resultLine.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="muted">(on-chain)</span>`;
+    }
+
+    txOut.textContent = data.txHash || "—";
+    blockOut.textContent = (data.blockNumber ?? "—");
+
+    const contract = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
+    const hash = data.hashHex || lastHash;
+
+    linksOut.innerHTML = `
+      <div>Tx: ${data.txHash ? `<a href="https://www.oklink.com/amoy/tx/${data.txHash}" target="_blank" rel="noopener">oklink</a>` : "—"}</div>
+      <div>Kontrakt: <a href="https://www.oklink.com/amoy/address/${contract}" target="_blank" rel="noopener">oklink</a></div>
+      <div>Verifiera denna hash: <a href="/verify.html" target="_blank" rel="noopener">öppna verify.html</a> <span class="muted">(ladda upp samma fil)</span></div>
+      <div class="muted">Hash: ${hash}</div>
+    `;
+  }
+
+  function showError(msg) {
+    errorCard.style.display = "block";
+    errOut.textContent = msg;
+  }
+  function hideError() {
+    errorCard.style.display = "none";
+    errOut.textContent = "—";
+  }
+  function hideResult() {
+    resultCard.style.display = "none";
+  }
+
+  async function sha256FileToBytes32Hex(file) {
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+</script>
+
+</body>
+</html>
