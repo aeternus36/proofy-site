@@ -23,7 +23,7 @@ export async function handler(event) {
     if (fs.existsSync(knowledgePath)) {
       const raw = fs.readFileSync(knowledgePath, "utf8");
 
-      // Skicka bara SV-delen (så boten inte plockar engelska)
+      // Ta bara svenska delen (allt före EN-sektionen)
       const splitToken = "\n---\n\n# Proofy Concierge – Knowledge Base (EN)";
       knowledge = raw.split(splitToken)[0].trim();
     }
@@ -34,7 +34,7 @@ Proofy ger ett verifierings-ID kopplat till filens hash för att visa match/inge
 
 Regler:
 - Svara sakligt och tydligt. Kort när det räcker.
-- Undvik upprepningar och mall-fraser.
+- Undvik upprepningar.
 - Ingen juridisk rådgivning och inga löften om juridiska utfall.
 - Hitta inte på funktioner, priser, standarder eller certifieringar som inte står i kunskapsbasen.
 - Avsluta alltid med 2–3 tydliga CTA.
@@ -71,13 +71,14 @@ ${knowledge}
 
     const raw = completion?.choices?.[0]?.message?.content?.trim() || "";
 
-    // Parse JSON med fallback
     let payload;
     try {
       payload = JSON.parse(raw);
     } catch {
       payload = {
-        answer: raw || "Vill du beskriva vilket underlag det gäller, så föreslår jag rätt upplägg?",
+        answer:
+          raw ||
+          "Jag fick inget svar just nu. Vill du boka en demo så hjälper vi dig direkt.",
         ctas: [
           { label: "Boka demo", url: "https://proofy.se/boka-demo" },
           { label: "Starta pilot", url: "https://proofy.se/pilot" },
@@ -87,7 +88,6 @@ ${knowledge}
       };
     }
 
-    // Guard: CTA måste finnas
     if (!Array.isArray(payload.ctas) || payload.ctas.length < 2) {
       payload.ctas = [
         { label: "Boka demo", url: "https://proofy.se/boka-demo" },
@@ -97,26 +97,6 @@ ${knowledge}
     }
 
     if (!("lead" in payload)) payload.lead = null;
-    if (!payload.answer) payload.answer = "Vill du berätta lite mer om vad du vill verifiera?";
+    if (!payload.answer) payload.answer = "Vill du beskriva vad du vill verifiera?";
 
     return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        answer:
-          "Det blev ett tekniskt fel. Försök igen, eller kontakta oss så hjälper vi dig direkt.",
-        ctas: [
-          { label: "Kontakta oss", url: "https://proofy.se/kontakt" },
-          { label: "Boka demo", url: "https://proofy.se/boka-demo" },
-        ],
-        lead: null,
-      }),
-    };
-  }
-}
