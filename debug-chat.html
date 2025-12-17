@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy Chat Debug</title>
+  <style>
+    body{font-family:system-ui;margin:20px;max-width:900px}
+    input,button{font:inherit;padding:10px}
+    pre{background:#111;color:#0f0;padding:12px;overflow:auto;border-radius:10px}
+  </style>
+</head>
+<body>
+  <h1>Chat debug</h1>
+
+  <input id="msg" value="Lagrar ni dokument?" style="width:100%"/>
+  <p><button id="go">Skicka</button></p>
+
+  <h3>Status</h3>
+  <pre id="status">-</pre>
+
+  <h3>Rå response</h3>
+  <pre id="raw">-</pre>
+
+  <script>
+    document.getElementById("go").onclick = async () => {
+      const msg = document.getElementById("msg").value.trim();
+      const res = await fetch("/.netlify/functions/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: msg }] })
+      });
+
+      document.getElementById("status").textContent = String(res.status);
+      const text = await res.text();
+      document.getElementById("raw").textContent = text;
+    };
+  </script>
+</body>
+</html>
