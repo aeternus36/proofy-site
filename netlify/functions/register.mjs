@@ -1,128 +1,110 @@
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  isHex,
-  publicActions,
-} from "viem";
+import { createPublicClient, createWalletClient, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { polygonAmoy } from "viem/chains";
 
-const amoy = {
-  id: Number(process.env.CHAIN_ID || 80002),
-  name: "Polygon Amoy",
-  nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
-  rpcUrls: { default: { http: [process.env.AMOY_RPC_URL] } },
-};
+/**
+ * ENV VARS som krävs i Netlify:
+ * - AMOY_RPC_URL
+ * - PROOFY_PRIVATE_KEY
+ * - PROOFY_CONTRACT_ADDRESS
+ */
 
-const abi = [
-  {
-    type: "function",
-    name: "register",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "hash", type: "bytes32" }],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "getProof",
-    stateMutability: "view",
-    inputs: [{ name: "hash", type: "bytes32" }],
-    outputs: [
-      { name: "exists_", type: "bool" },
-      { name: "timestamp", type: "uint64" },
-      { name: "submitter", type: "address" },
-    ],
-  },
-];
-
-function corsHeaders() {
-  const origin = process.env.ALLOW_ORIGIN || "*";
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-}
-
-function assertBytes32(hex) {
-  if (!isHex(hex)) throw new Error("Invalid hex");
-  if (hex.length !== 66) throw new Error("Hash must be 32 bytes (0x + 64 hex chars)");
-}
-
-export async function handler(event) {
+export default async function handler(req) {
   try {
-    if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: corsHeaders(), body: "" };
-    if (event.httpMethod !== "POST") return { statusCode: 405, headers: corsHeaders(), body: "Method Not Allowed" };
-
-    const contractAddress = process.env.CONTRACT_ADDRESS;
-    const rpcUrl = process.env.AMOY_RPC_URL;
-    const pk = process.env.PROOFY_PRIVATE_KEY;
-
-    if (!contractAddress) throw new Error("Missing CONTRACT_ADDRESS");
-    if (!rpcUrl) throw new Error("Missing AMOY_RPC_URL");
-    if (!pk) throw new Error("Missing PROOFY_PRIVATE_KEY");
-
-    const body = event.body ? JSON.parse(event.body) : {};
-    const hashHex = (body.hash || "").trim();
-    assertBytes32(hashHex);
-
-    const publicClient = createPublicClient({ chain: amoy, transport: http(rpcUrl) });
-
-    // Idempotent: om redan registrerad -> returnera direkt
-    const [exists_, timestamp, submitter] = await publicClient.readContract({
-      address: contractAddress,
-      abi,
-      functionName: "getProof",
-      args: [hashHex],
-    });
-
-    if (exists_) {
-      return {
-        statusCode: 200,
-        headers: { ...corsHeaders(), "content-type": "application/json" },
-        body: JSON.stringify({
-          ok: true,
-          alreadyExists: true,
-          hashHex,
-          timestamp: Number(timestamp),
-          submitter,
-        }),
-      };
+    // 1. Tillåt endast POST
+    if (req.method !== "POST") {
+      return json(405, { ok: false, error: "Method not allowed" });
     }
 
+    // 2. Läs body
+    const { hash } = JSON.parse(req.body || "{}");
+
+    if (!hash || typeof hash !== "string" || !hash.startsWith("0x") || hash.length !== 66) {
+      return json(400, {
+        ok: false,
+        error: "Invalid hash. Must be bytes32 hex (0x + 64 chars)"
+      });
+    }
+
+    // 3. Läs och SANERA private key
+    let pk = process.env.PROOFY_PRIVATE_KEY || "";
+    pk = pk.trim();
+    pk = pk.replace(/^"+|"+$/g, "").replace(/^'+|'+$/g, "");
+
+    if (!pk.startsWith("0x")) pk = "0x" + pk;
+
+    if (pk.length !== 66) {
+      return json(500, {
+        ok: false,
+        error: `Invalid private key length (${pk.length}). Expected 66 incl 0x.`
+      });
+    }
+
+    // 4. Läs övriga env vars
+    const rpcUrl = process.env.AMOY_RPC_URL;
+    const contractAddress = process.env.PROOFY_CONTRACT_ADDRESS;
+
+    if (!rpcUrl || !contractAddress) {
+      return json(500, {
+        ok: false,
+        error: "Missing AMOY_RPC_URL or PROOFY_CONTRACT_ADDRESS"
+      });
+    }
+
+    // 5. Skapa konto + clients
     const account = privateKeyToAccount(pk);
+
+    const publicClient = createPublicClient({
+      chain: polygonAmoy,
+      transport: http(rpcUrl)
+    });
+
     const walletClient = createWalletClient({
       account,
-      chain: amoy,
-      transport: http(rpcUrl),
-    }).extend(publicActions);
+      chain: polygonAmoy,
+      transport: http(rpcUrl)
+    });
 
+    // 6. Kontrakts-ABI (MINIMAL & SÄKER)
+    const abi = parseAbi([
+      "function register(bytes32 hash)"
+    ]);
+
+    // 7. Skicka transaktion
     const txHash = await walletClient.writeContract({
       address: contractAddress,
       abi,
       functionName: "register",
-      args: [hashHex],
+      args: [hash]
     });
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    // 8. Vänta på kvitto
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash
+    });
 
-    return {
-      statusCode: 200,
-      headers: { ...corsHeaders(), "content-type": "application/json" },
-      body: JSON.stringify({
-        ok: true,
-        alreadyExists: false,
-        hashHex,
-        txHash,
-        status: receipt.status,
-        blockNumber: receipt.blockNumber ? Number(receipt.blockNumber) : null,
-      }),
-    };
-  } catch (e) {
-    return {
-      statusCode: 400,
-      headers: { ...corsHeaders(), "content-type": "application/json" },
-      body: JSON.stringify({ ok: false, error: String(e?.message || e) }),
-    };
+    return json(200, {
+      ok: true,
+      txHash,
+      blockNumber: receipt.blockNumber
+    });
+
+  } catch (err) {
+    return json(500, {
+      ok: false,
+      error: err.message || String(err)
+    });
   }
+}
+
+/* ---------- helpers ---------- */
+function json(status, body) {
+  return {
+    statusCode: status,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    body: JSON.stringify(body)
+  };
 }
