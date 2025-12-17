@@ -37,24 +37,16 @@ function corsHeaders() {
 
 export async function handler(event) {
   try {
-    if (event.httpMethod === "OPTIONS") {
-      return { statusCode: 204, headers: corsHeaders(), body: "" };
-    }
-    if (event.httpMethod !== "GET") {
-      return { statusCode: 405, headers: corsHeaders(), body: "Method Not Allowed" };
-    }
+    if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: corsHeaders(), body: "" };
+    if (event.httpMethod !== "GET") return { statusCode: 405, headers: corsHeaders(), body: "Method Not Allowed" };
 
     const hashHex = (event.queryStringParameters?.hash || "").trim();
     assertBytes32(hashHex);
 
     const contractAddress = process.env.CONTRACT_ADDRESS;
     if (!contractAddress) throw new Error("Missing CONTRACT_ADDRESS");
-    if (!process.env.AMOY_RPC_URL) throw new Error("Missing AMOY_RPC_URL");
 
-    const publicClient = createPublicClient({
-      chain: amoy,
-      transport: http(process.env.AMOY_RPC_URL),
-    });
+    const publicClient = createPublicClient({ chain: amoy, transport: http(process.env.AMOY_RPC_URL) });
 
     const [exists_, timestamp, submitter] = await publicClient.readContract({
       address: contractAddress,
