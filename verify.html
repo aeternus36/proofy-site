@@ -1,121 +1,225 @@
-import { createPublicClient, http, isHex, zeroAddress } from "viem";
-import { polygonAmoy } from "viem/chains";
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Proofy – Verifiera dokument</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #fff; color: #111; }
+    header { border-bottom: 1px solid #e5e5e5; padding: 18px 16px; }
+    main { max-width: 880px; margin: 0 auto; padding: 18px 16px 44px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    p { margin: 10px 0; line-height: 1.45; }
+    .muted { color: #555; font-size: 14px; }
+    .box { border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px; margin: 14px 0; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1 1 260px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input[type="file"] { width: 100%; }
+    button { appearance: none; border: 1px solid #111; background: #111; color: #fff; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 13px; }
+    pre { background: #fafafa; border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; overflow: auto; }
+    .status { display: inline-block; padding: 6px 10px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+    .ok { background: #e7f7ee; color: #0c5b2d; border: 1px solid #bfead0; }
+    .no { background: #fff6e6; color: #6a3d00; border: 1px solid #ffe1b0; }
+    .err { background: #fdecec; color: #7a0b0b; border: 1px solid #f7b8b8; }
+    .kv { display: grid; grid-template-columns: 200px 1fr; gap: 8px 12px; margin-top: 10px; }
+    .kv div { padding: 6px 0; border-bottom: 1px dashed #eee; }
+    .kv div:nth-child(odd) { color: #444; }
+    a { color: #111; }
+    footer { border-top: 1px solid #e5e5e5; padding: 16px; }
+  </style>
+</head>
 
-const CONTRACT_ADDRESS =
-  process.env.PROOFY_CONTRACT_ADDRESS ||
-  "0x1C14960C4dAD90047ea91d224539311c69EAB261";
+<body>
+  <header>
+    <h1>Verifiera dokument</h1>
+    <div class="muted">Teknisk verktygssida (ingen fil laddas upp – hash beräknas lokalt).</div>
+  </header>
 
-const RPC_URL = process.env.AMOY_RPC_URL;
+  <main>
+    <div class="box">
+      <p>
+        Välj en fil för att beräkna dess <strong>SHA-256</strong> lokalt i webbläsaren och kontrollera om hashvärdet är
+        registrerat on-chain via Proofys verifieringsfunktion.
+      </p>
+      <div class="row">
+        <div>
+          <label for="fileInput">Dokument</label>
+          <input id="fileInput" type="file" />
+          <div class="muted" style="margin-top:6px;">Tips: samma fil måste ge exakt samma hash.</div>
+        </div>
+        <div style="flex: 0 0 auto;">
+          <label>&nbsp;</label>
+          <button id="verifyBtn" disabled>Verifiera</button>
+        </div>
+      </div>
+    </div>
 
-// Minimal ABI för ditt kontrakt (baserat på tidigare svar: timestamp + submitter)
-const ABI = [
-  {
-    type: "function",
-    name: "getProof",
-    stateMutability: "view",
-    inputs: [{ name: "hash", type: "bytes32" }],
-    outputs: [
-      { name: "timestamp", type: "uint256" },
-      { name: "submitter", type: "address" },
-    ],
-  },
-];
+    <div class="box" id="resultBox" style="display:none;">
+      <div id="statusPill" class="status">—</div>
 
-function json(statusCode, obj) {
-  return new Response(JSON.stringify(obj), {
-    status: statusCode,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "access-control-allow-origin": "*",
-      "access-control-allow-headers": "content-type",
-      "access-control-allow-methods": "GET,OPTIONS",
-    },
-  });
-}
+      <div class="kv" id="kvGrid" style="margin-top:10px;">
+        <div>Hash (bytes32)</div><div><code id="hashOut">—</code></div>
 
-function isBytes32Hash(h) {
-  // exakt 32 bytes: 0x + 64 hex
-  return typeof h === "string" && /^0x[a-fA-F0-9]{64}$/.test(h);
-}
+        <div>Status</div><div id="existsOut">—</div>
 
-export default async (request) => {
-  try {
-    if (request.method === "OPTIONS") return json(204, {});
-    if (request.method !== "GET") return json(405, { ok: false, error: "Use GET" });
+        <div>Registreringstid (Sverige)</div><div id="timeSeOut">—</div>
 
-    const url = new URL(request.url);
-    const hash = url.searchParams.get("hash") || "";
+        <div>Registreringstid (UTC)</div><div id="timeUtcOut">—</div>
 
-    if (!isBytes32Hash(hash)) {
-      return json(400, {
-        ok: false,
-        error: "Invalid hash. Expected bytes32 hex (0x + 64 hex).",
-      });
+        <div>Submitter-adress</div><div><code id="submitterOut">—</code></div>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        Juridisk anmärkning: Resultatet är en teknisk kontroll av huruvida ett hashvärde (fingeravtryck) finns registrerat.
+        Proofy lagrar inte dokumentet. Själva bevisvärdet beror på att den presenterade filen ger samma hash som den registrerade posten.
+      </div>
+
+      <p style="margin-top:10px;">
+        <a id="certLink" href="#" style="display:none;">Öppna Proof Certificate</a>
+      </p>
+
+      <details style="margin-top:10px;">
+        <summary>Visa tekniskt svar (JSON)</summary>
+        <pre id="rawJson">—</pre>
+      </details>
+    </div>
+
+    <div class="box" id="errorBox" style="display:none;">
+      <div class="status err">Fel</div>
+      <p id="errorMsg" style="margin-top:10px;">—</p>
+    </div>
+  </main>
+
+  <footer class="muted">
+    Proofy – tekniskt verifieringsverktyg. <span id="nowLine"></span>
+  </footer>
+
+  <script>
+    // --- Helpers ---
+    function bytesToHex(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let hex = "";
+      for (let i = 0; i < bytes.length; i++) {
+        hex += bytes[i].toString(16).padStart(2, "0");
+      }
+      return "0x" + hex;
     }
 
-    if (!RPC_URL) {
-      return json(500, { ok: false, error: "Missing AMOY_RPC_URL in environment variables." });
+    function formatSe(tsSeconds) {
+      if (!tsSeconds || tsSeconds <= 0) return "—";
+      const d = new Date(tsSeconds * 1000);
+      return d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
     }
 
-    const client = createPublicClient({
-      chain: polygonAmoy,
-      transport: http(RPC_URL),
+    function formatUtc(tsSeconds) {
+      if (!tsSeconds || tsSeconds <= 0) return "—";
+      const d = new Date(tsSeconds * 1000);
+      return d.toISOString().replace("T", " ").replace("Z", " UTC");
+    }
+
+    function show(el) { el.style.display = ""; }
+    function hide(el) { el.style.display = "none"; }
+
+    // --- UI refs ---
+    const fileInput = document.getElementById("fileInput");
+    const verifyBtn = document.getElementById("verifyBtn");
+
+    const resultBox = document.getElementById("resultBox");
+    const statusPill = document.getElementById("statusPill");
+
+    const hashOut = document.getElementById("hashOut");
+    const existsOut = document.getElementById("existsOut");
+    const timeSeOut = document.getElementById("timeSeOut");
+    const timeUtcOut = document.getElementById("timeUtcOut");
+    const submitterOut = document.getElementById("submitterOut");
+    const rawJson = document.getElementById("rawJson");
+
+    const certLink = document.getElementById("certLink");
+
+    const errorBox = document.getElementById("errorBox");
+    const errorMsg = document.getElementById("errorMsg");
+    const nowLine = document.getElementById("nowLine");
+
+    nowLine.textContent = "Nu: " + new Date().toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
+
+    // --- Logic ---
+    fileInput.addEventListener("change", () => {
+      verifyBtn.disabled = !(fileInput.files && fileInput.files.length > 0);
+      hide(errorBox);
+      hide(resultBox);
     });
 
-    // Default: inte registrerad (vi uppgraderar till exists:true om vi får data)
-    let exists = false;
-    let timestamp = 0;
-    let submitter = null;
+    verifyBtn.addEventListener("click", async () => {
+      hide(errorBox);
+      hide(resultBox);
 
-    try {
-      const res = await client.readContract({
-        address: CONTRACT_ADDRESS,
-        abi: ABI,
-        functionName: "getProof",
-        args: [hash],
-      });
-
-      // res kan vara array [timestamp, submitter] eller objekt beroende på viem-version
-      if (Array.isArray(res)) {
-        timestamp = Number(res[0] ?? 0);
-        submitter = res[1] ?? null;
-      } else {
-        timestamp = Number(res?.timestamp ?? 0);
-        submitter = res?.submitter ?? null;
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        errorMsg.textContent = "Ingen fil vald.";
+        show(errorBox);
+        return;
       }
 
-      // Om kontraktet returnerar 0/zeroAddress för "saknas"
-      if (timestamp > 0 && submitter && submitter !== zeroAddress) {
-        exists = true;
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = "Verifierar…";
+
+      try {
+        // 1) Local SHA-256
+        const buf = await file.arrayBuffer();
+        const digest = await crypto.subtle.digest("SHA-256", buf);
+        const hashHex = bytesToHex(digest);
+
+        // 2) Call verify function
+        const url = "/.netlify/functions/verify?hash=" + encodeURIComponent(hashHex);
+        const res = await fetch(url, { method: "GET" });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error("Verifieringsanrop misslyckades (HTTP " + res.status + "). " + (text ? "Svar: " + text : ""));
+        }
+
+        const data = await res.json();
+
+        // 3) Basic sanity checks (do not change backend behavior)
+        if (!data || data.ok !== true) {
+          throw new Error("Ogiltigt svar från verifieringstjänsten.");
+        }
+
+        // 4) Render
+        hashOut.textContent = data.hashHex || hashHex;
+
+        const exists = !!data.exists;
+        existsOut.textContent = exists ? "Registrerad" : "Ej registrerad";
+
+        const ts = Number(data.timestamp || 0);
+        timeSeOut.textContent = exists ? formatSe(ts) : "—";
+        timeUtcOut.textContent = exists ? formatUtc(ts) : "—";
+
+        submitterOut.textContent = exists ? (data.submitter || "—") : "—";
+
+        rawJson.textContent = JSON.stringify(data, null, 2);
+
+        statusPill.className = "status " + (exists ? "ok" : "no");
+        statusPill.textContent = exists ? "REGISTRERAD" : "INTE REGISTRERAD";
+
+        // Certificate link always available (shows status inside certificate too)
+        certLink.href = "/certificate.html?hash=" + encodeURIComponent(data.hashHex || hashHex);
+        certLink.style.display = "";
+
+        show(resultBox);
+      } catch (err) {
+        errorMsg.textContent = (err && err.message) ? err.message : String(err);
+        show(errorBox);
+      } finally {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = "Verifiera";
       }
-    } catch (e) {
-      // VIKTIGT: "no data (0x)" eller revert = betyder normalt "saknas"
-      const msg = String(e?.shortMessage || e?.message || e);
-      const looksLikeMissing =
-        msg.includes("returned no data") ||
-        msg.includes("0x") ||
-        msg.toLowerCase().includes("execution reverted");
-
-      if (!looksLikeMissing) {
-        return json(500, { ok: false, error: msg });
-      }
-
-      // Saknas → exists=false (ingen error)
-      exists = false;
-      timestamp = 0;
-      submitter = null;
-    }
-
-    return json(200, {
-      ok: true,
-      hashHex: hash,
-      exists,
-      timestamp: exists ? timestamp : 0,
-      submitter: exists ? submitter : null,
     });
-  } catch (e) {
-    const msg = String(e?.shortMessage || e?.message || e);
-    return json(500, { ok: false, error: msg });
-  }
-};
+  </script>
+</body>
+</html>
