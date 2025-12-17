@@ -1,0 +1,11 @@
+{
+  "name": "proofy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo \"No build step (static site)\""
+  },
+  "dependencies": {
+    "openai": "^4.0.0"
+  }
+}
