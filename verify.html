@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy – Verifiera</title>
+  <style>
+    body { font-family: system-ui, Arial; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 16px 0; }
+    code, pre { background: #f6f6f6; padding: 8px; border-radius: 8px; display: block; overflow:auto; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <h1>Verifiera dokument</h1>
+  <p>Filen lämnar aldrig din dator. Vi beräknar en SHA-256-hash lokalt och kontrollerar om den finns registrerad.</p>
+
+  <div class="card">
+    <input id="file" type="file" />
+    <button id="verifyBtn">Verifiera</button>
+  </div>
+
+  <div class="card">
+    <strong>SHA-256 (bytes32)</strong>
+    <code id="hashOut">—</code>
+  </div>
+
+  <div class="card">
+    <strong>Resultat</strong>
+    <pre id="resultOut">—</pre>
+  </div>
+
+<script>
+async function sha256Hex(file) {
+  const buf = await file.arrayBuffer();
+  const hashBuf = await crypto.subtle.digest("SHA-256", buf);
+  const bytes = new Uint8Array(hashBuf);
+  let hex = "0x";
+  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+function toUtcString(tsSeconds) {
+  const d = new Date(tsSeconds * 1000);
+  return d.toISOString().replace(".000Z", "Z");
+}
+
+document.getElementById("verifyBtn").onclick = async () => {
+  const f = document.getElementById("file").files[0];
+  if (!f) return alert("Välj en fil först.");
+
+  document.getElementById("resultOut").textContent = "Beräknar hash…";
+  const hashHex = await sha256Hex(f);
+  document.getElementById("hashOut").textContent = hashHex;
+
+  const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(hashHex)}`);
+  const json = await res.json();
+
+  if (!json.ok) {
+    document.getElementById("resultOut").textContent = "Fel:\n" + JSON.stringify(json, null, 2);
+    return;
+  }
+
+  if (!json.exists) {
+    document.getElementById("resultOut").textContent =
+      `❌ Inte registrerad\n\nHash: ${json.hashHex}`;
+    return;
+  }
+
+  document.getElementById("resultOut").textContent =
+    `✅ Registrerad\n\n` +
+    `Registrerad (UTC): ${toUtcString(json.timestamp)}\n` +
+    `Submitter: ${json.submitter}\n` +
+    `Hash: ${json.hashHex}`;
+};
+</script>
+
+</body>
+</html>
