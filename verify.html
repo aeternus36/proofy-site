@@ -12,13 +12,14 @@
     .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; background: #fff; }
     button:disabled { opacity: .6; cursor: not-allowed; }
-    code, pre { background: #f6f6f6; border-radius: 10px; padding: 10px; overflow: auto; display: block; }
+    code { background: #f6f6f6; border-radius: 10px; padding: 10px; overflow: auto; display: block; }
     .muted { color: #666; font-size: 14px; }
     .ok { color: #0a7a2f; font-weight: 700; }
     .bad { color: #b00020; font-weight: 700; }
     .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; background:#f2f2f2; font-size: 13px; }
     a { color: #0b57d0; text-decoration: none; }
     a:hover { text-decoration: underline; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 13px; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -32,6 +33,7 @@
     <div class="row">
       <input id="file" type="file" />
       <button id="btnVerify" disabled>Verifiera</button>
+      <a id="certLink" href="#" target="_blank" rel="noopener" style="display:none;">Öppna certifikat</a>
       <span id="status" class="pill">Välj en fil</span>
     </div>
     <div class="muted" style="margin-top:10px;">
@@ -41,25 +43,22 @@
 
   <div class="card">
     <div class="muted">SHA-256 (bytes32)</div>
-    <code id="hashOut">—</code>
+    <code id="hashOut" class="mono">—</code>
   </div>
 
   <div class="card" id="resultCard" style="display:none;">
     <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
 
     <div class="muted">Tidsstämpel (UTC)</div>
-    <code id="timeOut">—</code>
+    <div id="timeOut" class="mono">—</div>
 
-    <div class="muted" style="margin-top:10px;">Submitter</div>
-    <code id="subOut">—</code>
-
-    <div class="muted" style="margin-top:10px;">Källor</div>
-    <div id="linksOut" class="muted">—</div>
+    <div class="muted" style="margin-top:10px;">Övrigt</div>
+    <div class="muted" id="metaOut">—</div>
   </div>
 
   <div class="card" id="errorCard" style="display:none;">
     <div class="bad">Fel</div>
-    <code id="errOut">—</code>
+    <div id="errOut" class="mono">—</div>
   </div>
 
 <script>
@@ -71,17 +70,19 @@
   const resultCard = document.getElementById("resultCard");
   const resultLine = document.getElementById("resultLine");
   const timeOut = document.getElementById("timeOut");
-  const subOut = document.getElementById("subOut");
-  const linksOut = document.getElementById("linksOut");
+  const metaOut = document.getElementById("metaOut");
 
   const errorCard = document.getElementById("errorCard");
   const errOut = document.getElementById("errOut");
 
+  const certLink = document.getElementById("certLink");
+
   let lastHash = null;
 
   fileInput.addEventListener("change", async () => {
-    hideError();
-    hideResult();
+    hideError(); hideResult();
+    certLink.style.display = "none";
+    certLink.href = "#";
 
     const f = fileInput.files?.[0];
     if (!f) {
@@ -100,6 +101,11 @@
       const hashHex = await sha256FileToBytes32Hex(f);
       lastHash = hashHex;
       hashOut.textContent = hashHex;
+
+      // gör certifikat-länken direkt
+      certLink.href = `/certificate.html?hash=${encodeURIComponent(hashHex)}`;
+      certLink.style.display = "inline";
+
       statusEl.textContent = "Redo att verifiera";
       btnVerify.disabled = false;
     } catch (e) {
@@ -110,9 +116,7 @@
   });
 
   btnVerify.addEventListener("click", async () => {
-    hideError();
-    hideResult();
-
+    hideError(); hideResult();
     if (!lastHash) return;
 
     btnVerify.disabled = true;
@@ -127,7 +131,6 @@
         throw new Error(data.error || `Verify failed (HTTP ${res.status})`);
       }
 
-      // data: { ok, hashHex, exists, timestamp, submitter }
       renderResult(data);
       statusEl.textContent = "Klar";
     } catch (e) {
@@ -141,34 +144,22 @@
   function renderResult(data) {
     resultCard.style.display = "block";
 
-    const exists = !!data.exists;
+    const exists = (data.exists === true);
+
     if (exists) {
       resultLine.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="muted">(hash hittad)</span>`;
+      const ts = Number(data.timestamp || 0);
+      timeOut.textContent = ts ? toUtc(ts) : "—";
+      metaOut.textContent = "Verifiering utförd mot Proofy-kontraktet.";
     } else {
       resultLine.innerHTML = `<span class="bad">❌ Inte registrerad</span> <span class="muted">(hash saknas)</span>`;
-    }
-
-    if (!exists) {
       timeOut.textContent = "—";
-      subOut.textContent = "—";
-      linksOut.innerHTML = `Du kan registrera hash:en via registreringsflödet.`;
-      return;
+      metaOut.textContent = "Verifiering utförd mot Proofy-kontraktet.";
     }
+  }
 
-    const ts = Number(data.timestamp || 0);
-    const utc = ts ? new Date(ts * 1000).toISOString().replace("T", " ").replace(".000Z", " UTC") : "—";
-
-    timeOut.textContent = utc;
-    subOut.textContent = data.submitter || "—";
-
-    // Explorer-länkar (Amoy)
-    // Tx-hash finns inte i verify-svar (view call), men vi kan länka till kontrakt + address
-    const contract = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
-    const submitter = data.submitter || "";
-    linksOut.innerHTML = `
-      <div>Kontrakt: <a href="https://www.oklink.com/amoy/address/${contract}" target="_blank" rel="noopener">oklink</a></div>
-      ${submitter ? `<div>Submitter: <a href="https://www.oklink.com/amoy/address/${submitter}" target="_blank" rel="noopener">oklink</a></div>` : ""}
-    `;
+  function toUtc(ts) {
+    return new Date(ts * 1000).toISOString().replace("T", " ").replace(".000Z", " UTC");
   }
 
   function showError(msg) {
@@ -183,7 +174,6 @@
     resultCard.style.display = "none";
   }
 
-  // SHA-256 => bytes32 hex (0x + 64)
   async function sha256FileToBytes32Hex(file) {
     const buf = await file.arrayBuffer();
     const digest = await crypto.subtle.digest("SHA-256", buf);
