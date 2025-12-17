@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy – Proof Certificate</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 900px; margin: 32px auto; padding: 0 16px; color:#111; }
+    .top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+    h1 { margin: 0 0 6px; font-size: 28px; }
+    .muted { color:#555; font-size: 14px; line-height:1.5; }
+    .card { border:1px solid #e3e3e3; border-radius:16px; padding:16px; margin:14px 0; }
+    .grid { display:grid; grid-template-columns: 220px 1fr; gap:10px 14px; }
+    .k { color:#666; font-size: 13px; }
+    .v { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 13px; word-break: break-all; }
+    .badge { display:inline-block; padding:6px 10px; border-radius:999px; font-weight:700; font-size:13px; }
+    .ok { background:#e8f6ee; color:#0a7a2f; }
+    .bad { background:#fdecec; color:#b00020; }
+    button { padding:10px 12px; border-radius:12px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+    a { color:#0b57d0; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .printHint { font-size:13px; color:#555; }
+    @media print {
+      button, .printHint { display:none !important; }
+      body { margin:0; }
+      .card { border-color:#bbb; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top">
+    <div>
+      <h1>Proof Certificate</h1>
+      <div class="muted">
+        Detta certifikat visar om en SHA-256-hash har registrerats on-chain och vid vilken tidpunkt.
+        Dokumentets innehåll lagras inte av Proofy.
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <button id="printBtn">Skriv ut / Exportera PDF</button>
+      <div class="printHint" style="margin-top:8px;">
+        Tips: Välj “Spara som PDF” i utskriftsdialogen.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <span id="statusBadge" class="badge bad">Laddar…</span>
+      <span class="muted">Chain: <strong>Polygon Amoy (testnet)</strong></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div class="k">Dokumenthash (SHA-256 / bytes32)</div>
+      <div class="v" id="hashOut">—</div>
+
+      <div class="k">Registrerad (on-chain)</div>
+      <div class="v" id="existsOut">—</div>
+
+      <div class="k">Tidsstämpel (UTC)</div>
+      <div class="v" id="timeOut">—</div>
+
+      <div class="k">Submitter</div>
+      <div class="v" id="subOut">—</div>
+
+      <div class="k">Kontraktadress</div>
+      <div class="v" id="contractOut">0x1C14960C4dAD90047ea91d224539311c69EAB261</div>
+
+      <div class="k">Källor</div>
+      <div class="muted" id="linksOut">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:700; margin-bottom:8px;">Statement</div>
+    <div class="muted" id="statementOut">
+      — 
+    </div>
+  </div>
+
+  <div class="card" id="errorCard" style="display:none;">
+    <div style="font-weight:700; color:#b00020; margin-bottom:6px;">Fel</div>
+    <div class="v" id="errOut"></div>
+  </div>
+
+<script>
+  const CONTRACT = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
+  const CHAIN_LABEL = "Polygon Amoy (testnet)";
+
+  const statusBadge = document.getElementById("statusBadge");
+  const hashOut = document.getElementById("hashOut");
+  const existsOut = document.getElementById("existsOut");
+  const timeOut = document.getElementById("timeOut");
+  const subOut = document.getElementById("subOut");
+  const linksOut = document.getElementById("linksOut");
+  const statementOut = document.getElementById("statementOut");
+  const errorCard = document.getElementById("errorCard");
+  const errOut = document.getElementById("errOut");
+
+  document.getElementById("printBtn").onclick = () => window.print();
+
+  function getHashFromUrl() {
+    const p = new URLSearchParams(location.search);
+    const h = (p.get("hash") || "").trim();
+    return h;
+  }
+
+  function setError(msg) {
+    errorCard.style.display = "block";
+    errOut.textContent = msg;
+    statusBadge.className = "badge bad";
+    statusBadge.textContent = "Fel";
+  }
+
+  function toUtc(ts) {
+    const d = new Date(Number(ts) * 1000);
+    return d.toISOString().replace("T", " ").replace(".000Z", " UTC");
+  }
+
+  async function main() {
+    const hash = getHashFromUrl();
+    hashOut.textContent = hash || "—";
+
+    if (!hash || !hash.startsWith("0x") || hash.length !== 66) {
+      setError("Ogiltig eller saknad hash. Öppna sidan med ?hash=0x... (66 tecken).");
+      statementOut.textContent =
+        "Ingen verifiering kunde göras eftersom hash-parametern saknas eller är ogiltig.";
+      return;
+    }
+
+    try {
+      statusBadge.textContent = "Kontrollerar…";
+      statusBadge.className = "badge bad";
+
+      const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(hash)}`);
+      const data = await res.json();
+
+      const exists = (data.exists === true);
+      existsOut.textContent = exists ? "true" : "false";
+
+      if (!exists) {
+        statusBadge.className = "badge bad";
+        statusBadge.textContent = "Inte registrerad";
+        timeOut.textContent = "—";
+        subOut.textContent = "—";
+        linksOut.innerHTML = `Verifiering utförd mot smart contract på ${CHAIN_LABEL}.`;
+        statementOut.textContent =
+          `Den angivna hash:en hittades inte i Proofy-kontraktet vid kontrolltillfället. ` +
+          `Detta betyder att Proofy inte kan styrka en tidigare registrering av denna hash på ${CHAIN_LABEL}.`;
+        return;
+      }
+
+      statusBadge.className = "badge ok";
+      statusBadge.textContent = "Registrerad";
+
+      const ts = Number(data.timestamp || 0);
+      timeOut.textContent = ts ? toUtc(ts) : "—";
+      subOut.textContent = data.submitter || "—";
+
+      linksOut.innerHTML = `
+        <div>Kontrakt: <a href="https://www.oklink.com/amoy/address/${CONTRACT}" target="_blank" rel="noopener">oklink</a></div>
+        <div>Verifiering: <a href="/.netlify/functions/verify?hash=${hash}" target="_blank" rel="noopener">API-svar</a></div>
+      `;
+
+      statementOut.textContent =
+        `Denna SHA-256-hash är registrerad i Proofy-kontraktet på ${CHAIN_LABEL}. ` +
+        `Registreringen visar att ett dokument med exakt detta hashvärde existerade senast vid angiven tidsstämpel (UTC). ` +
+        `Proofy lagrar inte dokumentet; endast hash och tidsstämpel är registrerade.`;
+
+    } catch (e) {
+      setError(String(e?.message || e));
+      statementOut.textContent =
+        "Verifiering kunde inte genomföras på grund av ett tekniskt fel vid API-anropet.";
+    }
+  }
+
+  main();
+</script>
+
+</body>
+</html>
