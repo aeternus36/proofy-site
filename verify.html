@@ -5,75 +5,190 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera</title>
   <style>
-    body { font-family: system-ui, Arial; max-width: 720px; margin: 40px auto; padding: 0 16px; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 16px 0; }
-    code, pre { background: #f6f6f6; padding: 8px; border-radius: 8px; display: block; overflow:auto; }
-    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width: 860px; margin: 40px auto; padding: 0 16px; }
+    h1 { margin: 0 0 8px; }
+    p { color: #333; line-height: 1.5; }
+    .card { border: 1px solid #e3e3e3; border-radius: 14px; padding: 16px; margin: 14px 0; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; background: #fff; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    code, pre { background: #f6f6f6; border-radius: 10px; padding: 10px; overflow: auto; display: block; }
+    .muted { color: #666; font-size: 14px; }
+    .ok { color: #0a7a2f; font-weight: 700; }
+    .bad { color: #b00020; font-weight: 700; }
+    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; background:#f2f2f2; font-size: 13px; }
+    a { color: #0b57d0; text-decoration: none; }
+    a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
 
   <h1>Verifiera dokument</h1>
-  <p>Filen lämnar aldrig din dator. Vi beräknar en SHA-256-hash lokalt och kontrollerar om den finns registrerad.</p>
+  <p>
+    Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256</strong>-hash lokalt och kontrollerar om hash:en är registrerad on-chain.
+  </p>
 
   <div class="card">
-    <input id="file" type="file" />
-    <button id="verifyBtn">Verifiera</button>
+    <div class="row">
+      <input id="file" type="file" />
+      <button id="btnVerify" disabled>Verifiera</button>
+      <span id="status" class="pill">Välj en fil</span>
+    </div>
+    <div class="muted" style="margin-top:10px;">
+      Tips: stora filer kan ta några sekunder – hash sker i webbläsaren.
+    </div>
   </div>
 
   <div class="card">
-    <strong>SHA-256 (bytes32)</strong>
+    <div class="muted">SHA-256 (bytes32)</div>
     <code id="hashOut">—</code>
   </div>
 
-  <div class="card">
-    <strong>Resultat</strong>
-    <pre id="resultOut">—</pre>
+  <div class="card" id="resultCard" style="display:none;">
+    <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
+
+    <div class="muted">Tidsstämpel (UTC)</div>
+    <code id="timeOut">—</code>
+
+    <div class="muted" style="margin-top:10px;">Submitter</div>
+    <code id="subOut">—</code>
+
+    <div class="muted" style="margin-top:10px;">Källor</div>
+    <div id="linksOut" class="muted">—</div>
+  </div>
+
+  <div class="card" id="errorCard" style="display:none;">
+    <div class="bad">Fel</div>
+    <code id="errOut">—</code>
   </div>
 
 <script>
-async function sha256Hex(file) {
-  const buf = await file.arrayBuffer();
-  const hashBuf = await crypto.subtle.digest("SHA-256", buf);
-  const bytes = new Uint8Array(hashBuf);
-  let hex = "0x";
-  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
-  return hex;
-}
+  const fileInput = document.getElementById("file");
+  const btnVerify = document.getElementById("btnVerify");
+  const statusEl = document.getElementById("status");
+  const hashOut = document.getElementById("hashOut");
 
-function toUtcString(tsSeconds) {
-  const d = new Date(tsSeconds * 1000);
-  return d.toISOString().replace(".000Z", "Z");
-}
+  const resultCard = document.getElementById("resultCard");
+  const resultLine = document.getElementById("resultLine");
+  const timeOut = document.getElementById("timeOut");
+  const subOut = document.getElementById("subOut");
+  const linksOut = document.getElementById("linksOut");
 
-document.getElementById("verifyBtn").onclick = async () => {
-  const f = document.getElementById("file").files[0];
-  if (!f) return alert("Välj en fil först.");
+  const errorCard = document.getElementById("errorCard");
+  const errOut = document.getElementById("errOut");
 
-  document.getElementById("resultOut").textContent = "Beräknar hash…";
-  const hashHex = await sha256Hex(f);
-  document.getElementById("hashOut").textContent = hashHex;
+  let lastHash = null;
 
-  const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(hashHex)}`);
-  const json = await res.json();
+  fileInput.addEventListener("change", async () => {
+    hideError();
+    hideResult();
 
-  if (!json.ok) {
-    document.getElementById("resultOut").textContent = "Fel:\n" + JSON.stringify(json, null, 2);
-    return;
+    const f = fileInput.files?.[0];
+    if (!f) {
+      btnVerify.disabled = true;
+      statusEl.textContent = "Välj en fil";
+      hashOut.textContent = "—";
+      lastHash = null;
+      return;
+    }
+
+    btnVerify.disabled = true;
+    statusEl.textContent = "Beräknar SHA-256…";
+    hashOut.textContent = "—";
+
+    try {
+      const hashHex = await sha256FileToBytes32Hex(f);
+      lastHash = hashHex;
+      hashOut.textContent = hashHex;
+      statusEl.textContent = "Redo att verifiera";
+      btnVerify.disabled = false;
+    } catch (e) {
+      showError(String(e?.message || e));
+      statusEl.textContent = "Fel vid hashning";
+      btnVerify.disabled = true;
+    }
+  });
+
+  btnVerify.addEventListener("click", async () => {
+    hideError();
+    hideResult();
+
+    if (!lastHash) return;
+
+    btnVerify.disabled = true;
+    statusEl.textContent = "Kontrollerar…";
+
+    try {
+      const url = `/.netlify/functions/verify?hash=${encodeURIComponent(lastHash)}`;
+      const res = await fetch(url, { method: "GET" });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || `Verify failed (HTTP ${res.status})`);
+      }
+
+      // data: { ok, hashHex, exists, timestamp, submitter }
+      renderResult(data);
+      statusEl.textContent = "Klar";
+    } catch (e) {
+      showError(String(e?.message || e));
+      statusEl.textContent = "Fel";
+    } finally {
+      btnVerify.disabled = false;
+    }
+  });
+
+  function renderResult(data) {
+    resultCard.style.display = "block";
+
+    const exists = !!data.exists;
+    if (exists) {
+      resultLine.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="muted">(hash hittad)</span>`;
+    } else {
+      resultLine.innerHTML = `<span class="bad">❌ Inte registrerad</span> <span class="muted">(hash saknas)</span>`;
+    }
+
+    if (!exists) {
+      timeOut.textContent = "—";
+      subOut.textContent = "—";
+      linksOut.innerHTML = `Du kan registrera hash:en via registreringsflödet.`;
+      return;
+    }
+
+    const ts = Number(data.timestamp || 0);
+    const utc = ts ? new Date(ts * 1000).toISOString().replace("T", " ").replace(".000Z", " UTC") : "—";
+
+    timeOut.textContent = utc;
+    subOut.textContent = data.submitter || "—";
+
+    // Explorer-länkar (Amoy)
+    // Tx-hash finns inte i verify-svar (view call), men vi kan länka till kontrakt + address
+    const contract = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
+    const submitter = data.submitter || "";
+    linksOut.innerHTML = `
+      <div>Kontrakt: <a href="https://www.oklink.com/amoy/address/${contract}" target="_blank" rel="noopener">oklink</a></div>
+      ${submitter ? `<div>Submitter: <a href="https://www.oklink.com/amoy/address/${submitter}" target="_blank" rel="noopener">oklink</a></div>` : ""}
+    `;
   }
 
-  if (!json.exists) {
-    document.getElementById("resultOut").textContent =
-      `❌ Inte registrerad\n\nHash: ${json.hashHex}`;
-    return;
+  function showError(msg) {
+    errorCard.style.display = "block";
+    errOut.textContent = msg;
+  }
+  function hideError() {
+    errorCard.style.display = "none";
+    errOut.textContent = "—";
+  }
+  function hideResult() {
+    resultCard.style.display = "none";
   }
 
-  document.getElementById("resultOut").textContent =
-    `✅ Registrerad\n\n` +
-    `Registrerad (UTC): ${toUtcString(json.timestamp)}\n` +
-    `Submitter: ${json.submitter}\n` +
-    `Hash: ${json.hashHex}`;
-};
+  // SHA-256 => bytes32 hex (0x + 64)
+  async function sha256FileToBytes32Hex(file) {
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
 </script>
 
 </body>
