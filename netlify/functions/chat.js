@@ -10,8 +10,6 @@ export async function handler(event) {
   try {
     const body = JSON.parse(event.body || "{}");
     const incomingMessages = Array.isArray(body.messages) ? body.messages : [];
-
-    // Trimma historik: mindre repetition + lägre kostnad
     const messages = incomingMessages.slice(-10);
 
     const knowledgePath = path.join(
@@ -22,33 +20,23 @@ export async function handler(event) {
     let knowledge = "";
     if (fs.existsSync(knowledgePath)) {
       const raw = fs.readFileSync(knowledgePath, "utf8");
-
-      // Ta bara svenska delen (allt före EN-sektionen)
       const splitToken = "\n---\n\n# Proofy Concierge – Knowledge Base (EN)";
       knowledge = raw.split(splitToken)[0].trim();
     }
 
     const systemPrompt = `
-Du är Proofy Assist för Proofy.se. Du skriver på naturlig, professionell svenska.
-Proofy ger ett verifierings-ID kopplat till filens hash för att visa match/ingen match i efterhand. Proofy lagrar inte dokumentinnehåll.
+Du är Proofy Assist för Proofy.se.
+Skriv professionell, tydlig svenska. Ingen juridisk rådgivning.
 
-Regler:
-- Svara sakligt och tydligt. Kort när det räcker.
-- Undvik upprepningar.
-- Ingen juridisk rådgivning och inga löften om juridiska utfall.
-- Hitta inte på funktioner, priser, standarder eller certifieringar som inte står i kunskapsbasen.
-- Avsluta alltid med 2–3 tydliga CTA.
-- Ställ max en följdfråga när det hjälper.
+Du MÅSTE svara i giltig JSON enligt exakt detta schema – inget före, inget efter:
 
-Du måste returnera ENDAST giltig JSON:
 {
   "answer": "text",
   "ctas": [
     {"label":"Starta pilot","url":"https://proofy.se/pilot"},
-    {"label":"Boka demo","url":"https://proofy.se/boka-demo"},
-    {"label":"Kontakta oss","url":"https://proofy.se/kontakt"}
+    {"label":"Boka demo","url":"https://proofy.se/boka-demo"}
   ],
-  "lead": {"question":"text"} eller null
+  "lead": null
 }
 
 Kunskapsbas:
@@ -57,46 +45,57 @@ ${knowledge}
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.25,
+      temperature: 0.2,
       messages: [
         { role: "system", content: systemPrompt },
-        {
-          role: "system",
-          content:
-            "Upprepa inte samma formuleringar. Om du redan förklarat något: sammanfatta kort eller ge ett konkret exempel.",
-        },
         ...messages,
       ],
     });
 
-    const raw = completion?.choices?.[0]?.message?.content?.trim() || "";
+    const raw = completion.choices[0].message.content.trim();
 
     let payload;
     try {
       payload = JSON.parse(raw);
     } catch {
+      // ABSOLUT fallback – aldrig tomt svar
       payload = {
-        answer:
-          raw ||
-          "Jag fick inget svar just nu. Vill du boka en demo så hjälper vi dig direkt.",
+        answer: raw || "Vill du berätta lite mer om vad du vill verifiera?",
         ctas: [
           { label: "Boka demo", url: "https://proofy.se/boka-demo" },
           { label: "Starta pilot", url: "https://proofy.se/pilot" },
-          { label: "Kontakta oss", url: "https://proofy.se/kontakt" },
         ],
         lead: null,
       };
     }
 
-    if (!Array.isArray(payload.ctas) || payload.ctas.length < 2) {
+    if (!payload.answer || typeof payload.answer !== "string") {
+      payload.answer = "Vill du beskriva vilket underlag det gäller?";
+    }
+
+    if (!Array.isArray(payload.ctas)) {
       payload.ctas = [
         { label: "Boka demo", url: "https://proofy.se/boka-demo" },
         { label: "Starta pilot", url: "https://proofy.se/pilot" },
-        { label: "Kontakta oss", url: "https://proofy.se/kontakt" },
       ];
     }
 
-    if (!("lead" in payload)) payload.lead = null;
-    if (!payload.answer) payload.answer = "Vill du beskriva vad du vill verifiera?";
-
     return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    };
+  } catch (err) {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        answer: "Det blev ett tekniskt fel. Vill du att vi tar det via demo?",
+        ctas: [
+          { label: "Boka demo", url: "https://proofy.se/boka-demo" },
+        ],
+        lead: null,
+      }),
+    };
+  }
+}
