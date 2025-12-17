@@ -1,110 +1,138 @@
-import { createPublicClient, createWalletClient, http, parseAbi } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  isHex,
+  publicActions,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { polygonAmoy } from "viem/chains";
 
-/**
- * ENV VARS som krävs i Netlify:
- * - AMOY_RPC_URL
- * - PROOFY_PRIVATE_KEY
- * - PROOFY_CONTRACT_ADDRESS
- */
+const amoy = {
+  id: Number(process.env.CHAIN_ID || 80002),
+  name: "Polygon Amoy",
+  nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+  rpcUrls: { default: { http: [process.env.AMOY_RPC_URL] } },
+};
 
-export default async function handler(req) {
+const abi = [
+  {
+    type: "function",
+    name: "register",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "hash", type: "bytes32" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "getProof",
+    stateMutability: "view",
+    inputs: [{ name: "hash", type: "bytes32" }],
+    outputs: [
+      { name: "exists_", type: "bool" },
+      { name: "timestamp", type: "uint64" },
+      { name: "submitter", type: "address" },
+    ],
+  },
+];
+
+function corsHeaders() {
+  const origin = process.env.ALLOW_ORIGIN || "*";
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-headers": "content-type",
+    "access-control-allow-methods": "POST, OPTIONS",
+  };
+}
+
+function json(status, obj) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {
+      ...corsHeaders(),
+      "content-type": "application/json; charset=utf-8",
+    },
+  });
+}
+
+function assertBytes32(hex) {
+  if (!isHex(hex)) throw new Error("Invalid hex");
+  if (hex.length !== 66) throw new Error("Hash must be bytes32 (0x + 64 hex chars)");
+}
+
+function sanitizePrivateKey(raw) {
+  let pk = (raw || "").trim();
+  pk = pk.replace(/^"+|"+$/g, "").replace(/^'+|'+$/g, "");
+  if (pk && !pk.startsWith("0x")) pk = "0x" + pk;
+  return pk;
+}
+
+export default async (request) => {
   try {
-    // 1. Tillåt endast POST
-    if (req.method !== "POST") {
-      return json(405, { ok: false, error: "Method not allowed" });
-    }
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
+    if (request.method !== "POST") return json(405, { ok: false, error: "Method Not Allowed" });
 
-    // 2. Läs body
-    const { hash } = JSON.parse(req.body || "{}");
-
-    if (!hash || typeof hash !== "string" || !hash.startsWith("0x") || hash.length !== 66) {
-      return json(400, {
-        ok: false,
-        error: "Invalid hash. Must be bytes32 hex (0x + 64 chars)"
-      });
-    }
-
-    // 3. Läs och SANERA private key
-    let pk = process.env.PROOFY_PRIVATE_KEY || "";
-    pk = pk.trim();
-    pk = pk.replace(/^"+|"+$/g, "").replace(/^'+|'+$/g, "");
-
-    if (!pk.startsWith("0x")) pk = "0x" + pk;
-
-    if (pk.length !== 66) {
-      return json(500, {
-        ok: false,
-        error: `Invalid private key length (${pk.length}). Expected 66 incl 0x.`
-      });
-    }
-
-    // 4. Läs övriga env vars
+    const contractAddress = process.env.CONTRACT_ADDRESS;
     const rpcUrl = process.env.AMOY_RPC_URL;
-    const contractAddress = process.env.PROOFY_CONTRACT_ADDRESS;
+    const pk = sanitizePrivateKey(process.env.PROOFY_PRIVATE_KEY);
 
-    if (!rpcUrl || !contractAddress) {
-      return json(500, {
-        ok: false,
-        error: "Missing AMOY_RPC_URL or PROOFY_CONTRACT_ADDRESS"
+    if (!contractAddress) throw new Error("Missing CONTRACT_ADDRESS");
+    if (!rpcUrl) throw new Error("Missing AMOY_RPC_URL");
+    if (!pk) throw new Error("Missing PROOFY_PRIVATE_KEY");
+
+    if (!/^0x[0-9a-fA-F]{64}$/.test(pk)) {
+      throw new Error(`Invalid private key format. Expected 0x + 64 hex chars. Got length=${pk.length}`);
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const hashHex = (body.hash || "").trim();
+    assertBytes32(hashHex);
+
+    const publicClient = createPublicClient({ chain: amoy, transport: http(rpcUrl) });
+
+    // Idempotent: returnera om redan finns
+    const [exists_, timestamp, submitter] = await publicClient.readContract({
+      address: contractAddress,
+      abi,
+      functionName: "getProof",
+      args: [hashHex],
+    });
+
+    if (exists_) {
+      return json(200, {
+        ok: true,
+        alreadyExists: true,
+        hashHex,
+        timestamp: Number(timestamp),
+        submitter,
       });
     }
 
-    // 5. Skapa konto + clients
     const account = privateKeyToAccount(pk);
-
-    const publicClient = createPublicClient({
-      chain: polygonAmoy,
-      transport: http(rpcUrl)
-    });
 
     const walletClient = createWalletClient({
       account,
-      chain: polygonAmoy,
-      transport: http(rpcUrl)
-    });
+      chain: amoy,
+      transport: http(rpcUrl),
+    }).extend(publicActions);
 
-    // 6. Kontrakts-ABI (MINIMAL & SÄKER)
-    const abi = parseAbi([
-      "function register(bytes32 hash)"
-    ]);
-
-    // 7. Skicka transaktion
     const txHash = await walletClient.writeContract({
       address: contractAddress,
       abi,
       functionName: "register",
-      args: [hash]
+      args: [hashHex],
     });
 
-    // 8. Vänta på kvitto
-    const receipt = await publicClient.waitForTransactionReceipt({
-      hash: txHash
-    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
     return json(200, {
       ok: true,
+      alreadyExists: false,
+      hashHex,
       txHash,
-      blockNumber: receipt.blockNumber
+      status: receipt.status,
+      blockNumber: receipt.blockNumber ? Number(receipt.blockNumber) : null,
     });
-
-  } catch (err) {
-    return json(500, {
-      ok: false,
-      error: err.message || String(err)
-    });
+  } catch (e) {
+    return json(400, { ok: false, error: String(e?.message || e) });
   }
-}
-
-/* ---------- helpers ---------- */
-function json(status, body) {
-  return {
-    statusCode: status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*"
-    },
-    body: JSON.stringify(body)
-  };
-}
+};
