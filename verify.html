@@ -1,315 +1,121 @@
-<!doctype html>
-<html lang="sv">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Verifiera dokument</title>
+import { createPublicClient, http, isHex, zeroAddress } from "viem";
+import { polygonAmoy } from "viem/chains";
 
-  <style>
-    :root {
-      --bg:#0b0d12;
-      --card:#ffffff;
-      --text:#111;
-      --muted:#555;
-      --line:#e3e3e3;
-      --blue:#4f7cff;
-      --ok:#0a7a2f;
-      --bad:#b00020;
-    }
+const CONTRACT_ADDRESS =
+  process.env.PROOFY_CONTRACT_ADDRESS ||
+  "0x1C14960C4dAD90047ea91d224539311c69EAB261";
 
-    body {
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background:#f6f7fb;
-      color:var(--text);
-    }
+const RPC_URL = process.env.AMOY_RPC_URL;
 
-    .topbar {
-      background:var(--bg);
-      color:#fff;
-    }
+// Minimal ABI för ditt kontrakt (baserat på tidigare svar: timestamp + submitter)
+const ABI = [
+  {
+    type: "function",
+    name: "getProof",
+    stateMutability: "view",
+    inputs: [{ name: "hash", type: "bytes32" }],
+    outputs: [
+      { name: "timestamp", type: "uint256" },
+      { name: "submitter", type: "address" },
+    ],
+  },
+];
 
-    .wrap {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 18px 16px;
-    }
-
-    .brand {
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-weight:800;
-    }
-
-    .dot {
-      width:10px;
-      height:10px;
-      border-radius:999px;
-      background:var(--blue);
-      display:inline-block;
-    }
-
-    .nav {
-      margin-left:auto;
-      display:flex;
-      gap:14px;
-      flex-wrap:wrap;
-    }
-
-    .nav a {
-      color:#d7deff;
-      text-decoration:none;
-      font-weight:700;
-    }
-
-    .nav a:hover {
-      text-decoration:underline;
-    }
-
-    h1 {
-      margin: 18px 0 6px;
-    }
-
-    p {
-      margin:0 0 14px;
-      line-height:1.6;
-      color:#333;
-    }
-
-    .card {
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:16px;
-      margin:14px 0;
-    }
-
-    .row {
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-
-    button {
-      padding:10px 14px;
-      border-radius:12px;
-      border:1px solid #ccc;
-      background:#fff;
-      cursor:pointer;
-      font-weight:800;
-    }
-
-    button:disabled {
-      opacity:.6;
-      cursor:not-allowed;
-    }
-
-    .pill {
-      padding:4px 10px;
-      border-radius:999px;
-      background:#f2f2f2;
-      font-size:13px;
-    }
-
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size:13px;
-      word-break:break-all;
-    }
-
-    code {
-      background:#f6f6f6;
-      padding:10px;
-      border-radius:12px;
-      display:block;
-    }
-
-    .ok { color:var(--ok); font-weight:800; }
-    .bad { color:var(--bad); font-weight:800; }
-
-    a {
-      color:#0b57d0;
-      text-decoration:none;
-      font-weight:700;
-    }
-
-    a:hover { text-decoration:underline; }
-  </style>
-</head>
-<body>
-
-<div class="topbar">
-  <div class="wrap" style="display:flex; align-items:center; gap:16px;">
-    <div class="brand"><span class="dot"></span> Proofy</div>
-    <div class="nav">
-      <a href="/">Start</a>
-      <a href="/verify.html">Verifiera</a>
-      <a href="/register.html">Registrera</a>
-      <a href="/legal.html">Juridik</a>
-    </div>
-  </div>
-</div>
-
-<div class="wrap">
-  <h1>Verifiera dokument</h1>
-
-  <p>
-    Dokumentet lämnar aldrig din dator. Proofy beräknar en
-    <strong>SHA-256-hash</strong> lokalt i webbläsaren och kontrollerar
-    om hashvärdet finns registrerat on-chain.
-  </p>
-
-  <div class="card">
-    <div class="row">
-      <input id="file" type="file" />
-      <button id="btnVerify" disabled>Verifiera</button>
-      <a id="certLink" href="#" target="_blank" rel="noopener" style="display:none;">
-        Öppna certifikat
-      </a>
-      <span id="status" class="pill">Välj en fil</span>
-    </div>
-
-    <div class="pill" style="margin-top:8px;">
-      Hash beräknas lokalt i webbläsaren
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="pill">SHA-256 (bytes32)</div>
-    <code id="hashOut" class="mono">—</code>
-  </div>
-
-  <div class="card" id="resultCard" style="display:none;">
-    <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
-
-    <div class="pill">Registreringstid (UTC)</div>
-    <div id="timeOut" class="mono">—</div>
-
-    <div class="pill" style="margin-top:10px;">Teknisk källa</div>
-    <div id="metaOut" class="mono">—</div>
-  </div>
-
-  <div class="card" id="errorCard" style="display:none;">
-    <div class="bad">Tekniskt fel</div>
-    <div id="errOut" class="mono">—</div>
-  </div>
-
-  <p class="pill" style="margin-top:18px;">
-    Detta är en teknisk verifiering av om ett dokument med exakt detta hashvärde
-    existerade senast vid angiven tidpunkt. Proofy lagrar inte dokument.
-  </p>
-</div>
-
-<script>
-  const CONTRACT = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
-  const NETWORK_LABEL = "Polygon Amoy (testnet)";
-  const EXPLORER_URL =
-    "https://www.oklink.com/amoy/address/" + CONTRACT;
-
-  const fileInput = document.getElementById("file");
-  const btnVerify = document.getElementById("btnVerify");
-  const statusEl = document.getElementById("status");
-  const hashOut = document.getElementById("hashOut");
-
-  const resultCard = document.getElementById("resultCard");
-  const resultLine = document.getElementById("resultLine");
-  const timeOut = document.getElementById("timeOut");
-  const metaOut = document.getElementById("metaOut");
-
-  const errorCard = document.getElementById("errorCard");
-  const errOut = document.getElementById("errOut");
-
-  const certLink = document.getElementById("certLink");
-
-  let lastHash = null;
-
-  function toUtc(ts) {
-    return new Date(Number(ts) * 1000)
-      .toISOString()
-      .replace("T"," ")
-      .replace(".000Z"," UTC");
-  }
-
-  function resetUI() {
-    resultCard.style.display = "none";
-    errorCard.style.display = "none";
-    certLink.style.display = "none";
-  }
-
-  fileInput.addEventListener("change", async () => {
-    resetUI();
-
-    const f = fileInput.files?.[0];
-    if (!f) return;
-
-    statusEl.textContent = "Beräknar SHA-256…";
-    btnVerify.disabled = true;
-
-    try {
-      lastHash = await sha256File(f);
-      hashOut.textContent = lastHash;
-      statusEl.textContent = "Redo att verifiera";
-      btnVerify.disabled = false;
-    } catch (e) {
-      errorCard.style.display = "block";
-      errOut.textContent = String(e);
-      statusEl.textContent = "Fel";
-    }
+function json(statusCode, obj) {
+  return new Response(JSON.stringify(obj), {
+    status: statusCode,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*",
+      "access-control-allow-headers": "content-type",
+      "access-control-allow-methods": "GET,OPTIONS",
+    },
   });
+}
 
-  btnVerify.addEventListener("click", async () => {
-    if (!lastHash) return;
-    resetUI();
+function isBytes32Hash(h) {
+  // exakt 32 bytes: 0x + 64 hex
+  return typeof h === "string" && /^0x[a-fA-F0-9]{64}$/.test(h);
+}
 
-    statusEl.textContent = "Verifierar…";
-    btnVerify.disabled = true;
+export default async (request) => {
+  try {
+    if (request.method === "OPTIONS") return json(204, {});
+    if (request.method !== "GET") return json(405, { ok: false, error: "Use GET" });
+
+    const url = new URL(request.url);
+    const hash = url.searchParams.get("hash") || "";
+
+    if (!isBytes32Hash(hash)) {
+      return json(400, {
+        ok: false,
+        error: "Invalid hash. Expected bytes32 hex (0x + 64 hex).",
+      });
+    }
+
+    if (!RPC_URL) {
+      return json(500, { ok: false, error: "Missing AMOY_RPC_URL in environment variables." });
+    }
+
+    const client = createPublicClient({
+      chain: polygonAmoy,
+      transport: http(RPC_URL),
+    });
+
+    // Default: inte registrerad (vi uppgraderar till exists:true om vi får data)
+    let exists = false;
+    let timestamp = 0;
+    let submitter = null;
 
     try {
-      const res = await fetch(
-        `/.netlify/functions/verify?hash=${encodeURIComponent(lastHash)}`
-      );
+      const res = await client.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: ABI,
+        functionName: "getProof",
+        args: [hash],
+      });
 
-      const data = await res.json();
-      if (!res.ok || data.ok === false)
-        throw new Error(data.error || "Verify failed");
-
-      metaOut.textContent =
-        `${NETWORK_LABEL} · Kontrakt ${CONTRACT}`;
-
-      if (data.exists) {
-        resultLine.innerHTML = `<span class="ok">✔ Registrerad</span>`;
-        timeOut.textContent = toUtc(data.timestamp);
-
-        certLink.href =
-          `/certificate.html?hash=${encodeURIComponent(lastHash)}`;
-        certLink.style.display = "inline";
+      // res kan vara array [timestamp, submitter] eller objekt beroende på viem-version
+      if (Array.isArray(res)) {
+        timestamp = Number(res[0] ?? 0);
+        submitter = res[1] ?? null;
       } else {
-        resultLine.innerHTML =
-          `<span class="bad">✖ Inte registrerad</span>`;
-        timeOut.textContent = "—";
+        timestamp = Number(res?.timestamp ?? 0);
+        submitter = res?.submitter ?? null;
       }
 
-      resultCard.style.display = "block";
-      statusEl.textContent = "Klar";
+      // Om kontraktet returnerar 0/zeroAddress för "saknas"
+      if (timestamp > 0 && submitter && submitter !== zeroAddress) {
+        exists = true;
+      }
     } catch (e) {
-      errorCard.style.display = "block";
-      errOut.textContent = String(e);
-      statusEl.textContent = "Fel";
-    } finally {
-      btnVerify.disabled = false;
+      // VIKTIGT: "no data (0x)" eller revert = betyder normalt "saknas"
+      const msg = String(e?.shortMessage || e?.message || e);
+      const looksLikeMissing =
+        msg.includes("returned no data") ||
+        msg.includes("0x") ||
+        msg.toLowerCase().includes("execution reverted");
+
+      if (!looksLikeMissing) {
+        return json(500, { ok: false, error: msg });
+      }
+
+      // Saknas → exists=false (ingen error)
+      exists = false;
+      timestamp = 0;
+      submitter = null;
     }
-  });
 
-  async function sha256File(file) {
-    const buf = await file.arrayBuffer();
-    const digest = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + [...new Uint8Array(digest)]
-      .map(b => b.toString(16).padStart(2,"0"))
-      .join("");
+    return json(200, {
+      ok: true,
+      hashHex: hash,
+      exists,
+      timestamp: exists ? timestamp : 0,
+      submitter: exists ? submitter : null,
+    });
+  } catch (e) {
+    const msg = String(e?.shortMessage || e?.message || e);
+    return json(500, { ok: false, error: msg });
   }
-</script>
-
-</body>
-</html>
+};
