@@ -96,9 +96,6 @@
   <div class="card" id="softErrorCard" style="display:none;">
     <div class="bad" style="font-size:18px;">Kan inte verifiera just nu</div>
     <div class="muted" id="softErrText" style="margin-top:8px;"></div>
-    <div class="muted" style="margin-top:10px;">
-      Det här beror oftast på konfiguration eller tillfälliga nätverksproblem. Försök igen om en stund.
-    </div>
   </div>
 
   <footer>
@@ -158,38 +155,28 @@
     btnVerify.disabled = true;
 
     try {
-      // Cloudflare Pages Functions: /functions/api/verify => /api/verify
       const url = `/api/verify?hash=${encodeURIComponent(lastHash)}`;
       const res = await fetch(url, { method: "GET" });
 
-      // Försök tolka JSON, men krascha inte om svaret inte är JSON
       const data = await res.json().catch(() => ({}));
 
-      // Vi behandlar ALLT som inte är ett tydligt ok-svar som "kan inte verifiera just nu"
       if (!res.ok || data.ok === false) {
-        const msg = (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${res.status}`;
-        showSoftError(normalize(msg));
+        const userMsg = data?.userMessage;
+        const msg = userMsg || "Verifieringstjänsten svarade oväntat. Försök igen om en stund.";
+        showSoftError(msg);
         statusEl.textContent = "Fel";
         return;
       }
 
-      // Ok-svar
       resultCard.style.display = "block";
 
       if (data.exists) {
         headline.innerHTML = `<span class="ok">✅ Dokumentet är registrerat</span>`;
         const ts = Number(data.timestamp || 0);
+        const d = new Date(ts * 1000);
 
-        // Om timestamp saknas/är 0: visa ändå "registrerad", men utan tider
-        if (ts > 0) {
-          const d = new Date(ts * 1000);
-          tsUtc.textContent = d.toISOString();
-          tsSe.textContent = d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
-        } else {
-          tsUtc.textContent = "—";
-          tsSe.textContent = "—";
-        }
-
+        tsUtc.textContent = d.toISOString();
+        tsSe.textContent = d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
         submitter.textContent = data.submitter || "—";
       } else {
         headline.innerHTML = `<span class="bad">❌ Dokumentet är inte registrerat</span>`;
@@ -209,26 +196,7 @@
 
   function showSoftError(msg) {
     softErrorCard.style.display = "block";
-    softErrText.textContent = msg;
-  }
-
-  function normalize(msg) {
-    // Gör vanliga backend-/konfigmeddelanden mer begripliga (utan att visa råa tekniska fel)
-    const s = String(msg || "");
-
-    if (s.toLowerCase().includes("missing contract_address") || s.toLowerCase().includes("missing proofy_contract_address")) {
-      return "Tjänsten är inte korrekt konfigurerad: kontraktsadress saknas. Kontrollera miljövariabler i Cloudflare och publicera om.";
-    }
-    if (s.toLowerCase().includes("missing amoy_rpc_url") || s.toLowerCase().includes("missing rpc")) {
-      return "Tjänsten är inte korrekt konfigurerad: RPC-anslutning saknas. Kontrollera miljövariabler i Cloudflare och publicera om.";
-    }
-    if (s.toLowerCase().includes("chain_id")) {
-      return "Tjänsten är inte korrekt konfigurerad: nätverksinställning saknas eller är felaktig. Kontrollera Chain ID och publicera om.";
-    }
-
-    // Standard: visa en lugn text istället för intern detalj
-    if (s.startsWith("HTTP ")) return "Tjänsten svarar inte som förväntat just nu. Försök igen om en stund.";
-    return "Det gick inte att verifiera just nu. Försök igen om en stund.";
+    softErrText.textContent = String(msg || "");
   }
 
   async function sha256File(file) {
