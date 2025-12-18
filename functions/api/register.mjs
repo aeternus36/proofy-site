@@ -3,8 +3,7 @@ import { createPublicClient, createWalletClient, http, zeroAddress } from "viem"
 import { privateKeyToAccount } from "viem/accounts";
 
 function pickAllowOrigin(env) {
-  const configured = (env?.ALLOW_ORIGIN || "").trim();
-  return configured || "*";
+  return (env?.ALLOW_ORIGIN || "").trim() || "*";
 }
 
 function json(statusCode, obj, origin) {
@@ -169,17 +168,11 @@ export async function onRequest(context) {
         });
         chosenFn = fn;
         break;
-      } catch (_) {
-        // prova nästa
-      }
+      } catch (_) {}
     }
 
     if (!chosenFn || !sim) {
-      return json(
-        500,
-        { ok: false, error: "Could not simulate any register function on contract. Check function name / ABI." },
-        origin
-      );
+      return json(500, { ok: false, error: "Could not simulate any register function on contract. Check function name / ABI." }, origin);
     }
 
     const txHash = await walletClient.writeContract(sim.request);
