@@ -3,206 +3,107 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Verifiera dokument</title>
-
+  <title>Proofy – Verifiera</title>
   <style>
-    :root {
-      --bg-dark:#0b0d12;
-      --bg:#f6f7fb;
-      --card:#ffffff;
-      --text:#111;
-      --muted:#666;
-      --line:#e3e3e3;
-      --blue:#4f7cff;
-      --green:#0a7a2f;
-      --red:#b00020;
-    }
-
-    body {
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background:var(--bg);
-      color:var(--text);
-    }
-
-    /* Header */
-    .topbar {
-      background:var(--bg-dark);
-      color:#fff;
-    }
-    .topbar .wrap {
-      max-width:1100px;
-      margin:0 auto;
-      padding:16px;
-      display:flex;
-      align-items:center;
-      gap:16px;
-    }
-    .brand {
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-weight:800;
-    }
-    .dot {
-      width:10px;
-      height:10px;
-      border-radius:50%;
-      background:var(--blue);
-    }
-    .nav {
-      margin-left:auto;
-      display:flex;
-      gap:16px;
-      flex-wrap:wrap;
-    }
-    .nav a {
-      color:#d7deff;
-      text-decoration:none;
-      font-weight:700;
-    }
-
-    /* Layout */
-    .wrap {
-      max-width:900px;
-      margin:0 auto;
-      padding:32px 16px;
-    }
-
-    h1 {
-      margin:0 0 8px;
-    }
-
-    p {
-      margin:0 0 16px;
-      color:#333;
-      line-height:1.6;
-    }
-
-    .card {
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:18px;
-      margin:18px 0;
-    }
-
-    .row {
-      display:flex;
-      gap:12px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-
-    button {
-      padding:10px 16px;
-      border-radius:12px;
-      border:1px solid #ccc;
-      background:#fff;
-      font-weight:800;
-      cursor:pointer;
-    }
-
-    button:disabled {
-      opacity:.6;
-      cursor:not-allowed;
-    }
-
-    .pill {
-      padding:6px 12px;
-      border-radius:999px;
-      font-size:13px;
-      background:#f1f1f1;
-    }
-
-    .ok { color:var(--green); font-weight:800; }
-    .bad { color:var(--red); font-weight:800; }
-
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size:13px;
-      word-break:break-all;
-      background:#f6f6f6;
-      padding:12px;
-      border-radius:12px;
-    }
-
-    footer {
-      margin-top:40px;
-      padding-top:16px;
-      border-top:1px solid var(--line);
-      font-size:14px;
-      color:var(--muted);
-    }
+    :root { --bg:#0b0d12; --card:#ffffff; --text:#111; --muted:#666; --line:#e3e3e3; --blue:#4f7cff; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f6f7fb; color:var(--text); }
+    .topbar { background:var(--bg); color:#fff; position:sticky; top:0; z-index:50; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 18px 16px; }
+    .toprow { display:flex; align-items:center; gap:16px; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:0.2px; }
+    .dot { width:10px; height:10px; border-radius:999px; background:var(--blue); display:inline-block; }
+    .nav { margin-left:auto; display:flex; gap:18px; flex-wrap:wrap; }
+    .nav a { color:#d7deff; text-decoration:none; font-weight:800; }
+    .nav a:hover { text-decoration:underline; }
+    h1 { margin: 22px 0 8px; font-size:42px; letter-spacing:-0.02em; }
+    p { margin:0 0 14px; line-height:1.6; color:#333; font-size:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; margin:14px 0; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    button { padding:10px 14px; border-radius:12px; border:1px solid #cfcfcf; background:#fff; cursor:pointer; font-weight:900; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .pill { padding:6px 10px; border-radius:999px; background:#f2f2f2; font-size:13px; font-weight:800; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; word-break:break-all; }
+    code { background:#f6f6f6; padding:10px 12px; border-radius:12px; display:block; }
+    .ok { color:#0a7a2f; font-weight:900; }
+    .bad { color:#b00020; font-weight:900; }
+    .muted { color:var(--muted); font-size:14px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } h1{font-size:34px;} }
+    a { color:#0b57d0; text-decoration:none; font-weight:800; }
+    a:hover { text-decoration:underline; }
+    footer { border-top:1px solid var(--line); margin-top:28px; padding:16px 0 28px; color:#666; font-size:14px; }
   </style>
 </head>
-
 <body>
 
-<!-- HEADER -->
 <div class="topbar">
-  <div class="wrap">
+  <div class="wrap toprow">
     <div class="brand"><span class="dot"></span> Proofy</div>
-    <nav class="nav">
+    <div class="nav">
       <a href="/">Start</a>
       <a href="/verify.html">Verifiera</a>
       <a href="/register.html">Registrera</a>
       <a href="/legal.html">Juridik</a>
-    </nav>
+    </div>
   </div>
 </div>
 
-<!-- CONTENT -->
 <div class="wrap">
-
   <h1>Verifiera dokument</h1>
   <p>
-    Dokumentet lämnar aldrig din dator. Proofy beräknar en
-    <strong>SHA-256-hash lokalt</strong> i webbläsaren och kontrollerar
-    om hashvärdet är registrerat on-chain.
+    Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256-hash lokalt</strong> i webbläsaren
+    och kontrollerar om hashvärdet är registrerat on-chain.
   </p>
 
-  <!-- Upload -->
   <div class="card">
     <div class="row">
-      <input type="file" id="file" />
+      <input id="file" type="file" />
       <button id="btnVerify" disabled>Verifiera</button>
       <span id="status" class="pill">Välj en fil</span>
     </div>
-    <p class="muted" style="margin-top:8px;">
-      Tips: Samma fil måste ge exakt samma hash.
-    </p>
+    <div class="muted" style="margin-top:10px;">
+      Tips: samma fil måste ge exakt samma hash.
+    </div>
   </div>
 
-  <!-- Hash -->
   <div class="card">
     <div class="muted">SHA-256 (bytes32)</div>
-    <div id="hashOut" class="mono">—</div>
+    <code id="hashOut" class="mono">—</code>
   </div>
 
-  <!-- Result -->
-  <div class="card" id="result" style="display:none;">
-    <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
-
-    <div class="muted">Tidsstämpel (UTC)</div>
-    <div id="timeOut" class="mono">—</div>
-
-    <div class="muted" style="margin-top:10px;">Submitter</div>
-    <div id="submitterOut" class="mono">—</div>
+  <div class="card" id="resultCard" style="display:none;">
+    <div id="headline" style="font-size:20px; font-weight:900; margin-bottom:12px;"></div>
+    <div class="grid">
+      <div>
+        <div class="muted">On-chain tidsstämpel (Sverige)</div>
+        <code id="tsSe" class="mono">—</code>
+      </div>
+      <div>
+        <div class="muted">On-chain tidsstämpel (UTC)</div>
+        <code id="tsUtc" class="mono">—</code>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="muted">Submitter</div>
+      <code id="submitter" class="mono">—</code>
+    </div>
+    <div class="muted" style="margin-top:12px;">
+      För revisorer: “Registrerad” betyder att ett dokument med exakt detta hashvärde fanns senast vid on-chain-tiden.
+      Det säger inget om dokumentets innehåll, äkthet eller vem som skapat det.
+    </div>
   </div>
 
-  <!-- Error (only real technical errors) -->
-  <div class="card" id="error" style="display:none;">
-    <div class="bad">Tillfälligt tekniskt problem</div>
-    <div id="errorMsg" class="mono"></div>
+  <div class="card" id="softErrorCard" style="display:none;">
+    <div class="bad" style="font-size:18px;">Kan inte verifiera just nu</div>
+    <div class="muted" id="softErrText" style="margin-top:8px;"></div>
+    <div class="muted" style="margin-top:10px;">
+      (Det här är oftast en konfigurationsfråga: RPC/kontrakt i Netlify Environment variables.)
+    </div>
   </div>
 
   <footer>
-    Detta är ett tekniskt verifieringsunderlag som visar om ett dokument
-    med exakt detta hashvärde existerade vid en viss tidpunkt.
-    Proofy lagrar inte dokument.
+    Proofy – tekniskt verifieringsverktyg. Nu: <span id="now"></span>
   </footer>
-
 </div>
 
 <script>
@@ -211,81 +112,112 @@
   const statusEl = document.getElementById("status");
   const hashOut = document.getElementById("hashOut");
 
-  const resultBox = document.getElementById("result");
-  const resultLine = document.getElementById("resultLine");
-  const timeOut = document.getElementById("timeOut");
-  const submitterOut = document.getElementById("submitterOut");
+  const resultCard = document.getElementById("resultCard");
+  const headline = document.getElementById("headline");
+  const tsSe = document.getElementById("tsSe");
+  const tsUtc = document.getElementById("tsUtc");
+  const submitter = document.getElementById("submitter");
 
-  const errorBox = document.getElementById("error");
-  const errorMsg = document.getElementById("errorMsg");
+  const softErrorCard = document.getElementById("softErrorCard");
+  const softErrText = document.getElementById("softErrText");
 
-  let currentHash = null;
+  let lastHash = null;
 
-  function resetUI() {
-    resultBox.style.display = "none";
-    errorBox.style.display = "none";
+  document.getElementById("now").textContent =
+    new Date().toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
+
+  function hideAll() {
+    resultCard.style.display = "none";
+    softErrorCard.style.display = "none";
   }
 
   fileInput.addEventListener("change", async () => {
-    resetUI();
+    hideAll();
+    const f = fileInput.files?.[0];
+    if (!f) return;
+
+    statusEl.textContent = "Beräknar SHA-256…";
     btnVerify.disabled = true;
 
-    const file = fileInput.files?.[0];
-    if (!file) return;
-
-    statusEl.textContent = "Beräknar hash…";
-
     try {
-      currentHash = await sha256File(file);
-      hashOut.textContent = currentHash;
+      lastHash = await sha256File(f);
+      hashOut.textContent = lastHash;
       statusEl.textContent = "Redo att verifiera";
       btnVerify.disabled = false;
     } catch (e) {
-      errorBox.style.display = "block";
-      errorMsg.textContent = "Kunde inte beräkna hash.";
+      showSoftError("Kunde inte beräkna hash i webbläsaren.");
       statusEl.textContent = "Fel";
     }
   });
 
   btnVerify.addEventListener("click", async () => {
-    if (!currentHash) return;
-    resetUI();
+    if (!lastHash) return;
+    hideAll();
 
     statusEl.textContent = "Verifierar…";
     btnVerify.disabled = true;
 
     try {
-      const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(currentHash)}`);
-      const data = await res.json();
+      const url = `/.netlify/functions/verify?hash=${encodeURIComponent(lastHash)}`;
+      const res = await fetch(url, { method: "GET" });
 
-      resultBox.style.display = "block";
+      const data = await res.json().catch(() => ({}));
+
+      // Vi behandlar ALLT som inte är ett tydligt ok-svar som "kan inte verifiera just nu"
+      if (!res.ok || data.ok === false) {
+        const msg = (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${res.status}`;
+        showSoftError(normalize(msg));
+        statusEl.textContent = "Fel";
+        return;
+      }
+
+      // Ok-svar
+      resultCard.style.display = "block";
 
       if (data.exists) {
-        resultLine.innerHTML = `<span class="ok">✔️ Dokumentet är verifierat</span>`;
-        timeOut.textContent = new Date(data.timestamp * 1000).toISOString();
-        submitterOut.textContent = data.submitter;
+        headline.innerHTML = `<span class="ok">✅ Dokumentet är registrerat</span>`;
+        const ts = Number(data.timestamp || 0);
+        const d = new Date(ts * 1000);
+
+        tsUtc.textContent = d.toISOString();
+        tsSe.textContent = d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
+        submitter.textContent = data.submitter || "—";
       } else {
-        resultLine.innerHTML = `<span class="bad">❌ Dokumentet är inte registrerat</span>`;
-        timeOut.textContent = "—";
-        submitterOut.textContent = "—";
+        headline.innerHTML = `<span class="bad">❌ Dokumentet är inte registrerat</span>`;
+        tsUtc.textContent = "—";
+        tsSe.textContent = "—";
+        submitter.textContent = "—";
       }
 
       statusEl.textContent = "Klar";
     } catch (e) {
-      errorBox.style.display = "block";
-      errorMsg.textContent = "Verifieringstjänsten kunde inte nås just nu.";
+      showSoftError("Nätverksfel eller tillfälligt fel vid verifiering.");
       statusEl.textContent = "Fel";
     } finally {
       btnVerify.disabled = false;
     }
   });
 
+  function showSoftError(msg) {
+    softErrorCard.style.display = "block";
+    softErrText.textContent = msg;
+  }
+
+  function normalize(msg) {
+    // Gör vanliga backend-meddelanden mer begripliga
+    if (String(msg).includes("Missing CONTRACT_ADDRESS") || String(msg).includes("Missing PROOFY_CONTRACT_ADDRESS")) {
+      return "Konfiguration saknas: kontraktsadress är inte tillgänglig för Netlify Function. Kontrollera Environment variables och gör en ny deploy.";
+    }
+    if (String(msg).includes("Missing AMOY_RPC_URL")) {
+      return "Konfiguration saknas: AMOY_RPC_URL är inte tillgänglig för Netlify Function. Kontrollera Environment variables och gör en ny deploy.";
+    }
+    return String(msg);
+  }
+
   async function sha256File(file) {
     const buf = await file.arrayBuffer();
-    const hash = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + [...new Uint8Array(hash)]
-      .map(b => b.toString(16).padStart(2, "0"))
-      .join("");
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,"0")).join("");
   }
 </script>
 
