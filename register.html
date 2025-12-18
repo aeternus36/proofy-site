@@ -144,6 +144,29 @@
     errorBox.style.display = "none";
   }
 
+  function userFriendlyError(msg) {
+    const s = String(msg || "");
+
+    // Mild, revisionsvänlig normalisering. Vi visar inte interna stacktraces.
+    if (s.includes("Missing CONTRACT_ADDRESS") || s.includes("Missing PROOFY_CONTRACT_ADDRESS") || s.includes("Missing PROOFY_PRIVATE_KEY")) {
+      return "Registreringstjänsten är inte korrekt konfigurerad just nu. Försök igen senare.";
+    }
+    if (s.includes("Missing AMOY_RPC_URL")) {
+      return "Registreringstjänsten kan inte ansluta till nätverket just nu. Försök igen senare.";
+    }
+    if (s.includes("Invalid hash")) {
+      return "Hashvärdet kunde inte valideras. Kontrollera att du valt en fil och försök igen.";
+    }
+    if (s.includes("Could not simulate any register function")) {
+      return "Registrering är tillfälligt otillgänglig (kontraktets registreringsfunktion kunde inte anropas). Försök igen senare.";
+    }
+    if (s.includes("HTTP")) {
+      return "Registreringstjänsten svarar inte som förväntat just nu. Försök igen senare.";
+    }
+
+    return "Registreringstjänsten kunde inte nås just nu. Försök igen senare.";
+  }
+
   fileInput.addEventListener("change", async () => {
     resetUI();
     certLink.style.display = "none";
@@ -165,7 +188,7 @@
       btnRegister.disabled = false;
     } catch (e) {
       errorBox.style.display = "block";
-      errorMsg.textContent = "Kunde inte beräkna hash.";
+      errorMsg.textContent = "Kunde inte beräkna hash i webbläsaren.";
       statusEl.textContent = "Fel";
     }
   });
@@ -178,7 +201,7 @@
     btnRegister.disabled = true;
 
     try {
-      const res = await fetch("/.netlify/functions/register", {
+      const res = await fetch("/api/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ hash: currentHash })
@@ -186,9 +209,8 @@
 
       const data = await res.json().catch(() => ({}));
 
-      // Om servern svarar med ok:false eller HTTP-fel → visa som tekniskt problem
       if (!res.ok || data.ok === false) {
-        const msg = data?.error || `Registrering misslyckades (HTTP ${res.status}).`;
+        const msg = data?.error || `HTTP ${res.status}`;
         throw new Error(msg);
       }
 
@@ -207,7 +229,7 @@
       statusEl.textContent = "Klar";
     } catch (e) {
       errorBox.style.display = "block";
-      errorMsg.textContent = (e?.message || "Registreringstjänsten kunde inte nås just nu.");
+      errorMsg.textContent = userFriendlyError(e?.message || "");
       statusEl.textContent = "Fel";
     } finally {
       btnRegister.disabled = false;
