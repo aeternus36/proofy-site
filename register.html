@@ -3,89 +3,122 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Registrera</title>
+  <title>Proofy – Registrera dokument</title>
+
   <style>
-    :root { --bg:#0b0d12; --card:#ffffff; --text:#111; --muted:#666; --line:#e3e3e3; --blue:#4f7cff; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f6f7fb; color:var(--text); }
-    .topbar { background:var(--bg); color:#fff; }
-    .wrap { max-width: 900px; margin: 0 auto; padding: 18px 16px; }
-    .brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:0.2px; }
-    .dot { width:10px; height:10px; border-radius:999px; background:var(--blue); display:inline-block; }
-    .nav { margin-left:auto; display:flex; gap:14px; flex-wrap:wrap; }
-    .nav a { color:#d7deff; text-decoration:none; font-weight:700; }
-    .nav a:hover { text-decoration:underline; }
-    h1 { margin: 18px 0 6px; }
-    p { margin:0 0 14px; line-height:1.6; color:#333; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin:14px 0; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    button { padding:10px 14px; border-radius:12px; border:1px solid #ccc; background:#fff; cursor:pointer; font-weight:800; }
-    button:disabled { opacity:.6; cursor:not-allowed; }
-    .pill { padding:4px 10px; border-radius:999px; background:#f2f2f2; font-size:13px; }
-    .ok { color:#0a7a2f; font-weight:800; }
-    .bad { color:#b00020; font-weight:800; }
-    .muted { color:var(--muted); font-size:14px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; word-break:break-all; }
-    code { background:#f6f6f6; padding:10px; border-radius:12px; display:block; }
-    a { color:#0b57d0; text-decoration:none; font-weight:700; }
-    a:hover { text-decoration:underline; }
+    :root{
+      --bg-dark:#0b0d12;
+      --bg:#f6f7fb;
+      --card:#fff;
+      --text:#111;
+      --muted:#666;
+      --line:#e3e3e3;
+      --blue:#4f7cff;
+      --green:#0a7a2f;
+      --red:#b00020;
+    }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); }
+
+    .topbar{ background:var(--bg-dark); color:#fff; }
+    .topbar .wrap{
+      max-width:1100px; margin:0 auto; padding:16px;
+      display:flex; align-items:center; gap:16px;
+    }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; }
+    .dot{ width:10px; height:10px; border-radius:50%; background:var(--blue); }
+    .nav{ margin-left:auto; display:flex; gap:16px; flex-wrap:wrap; }
+    .nav a{ color:#d7deff; text-decoration:none; font-weight:700; }
+    .nav a:hover{ text-decoration:underline; }
+
+    .wrap{ max-width:900px; margin:0 auto; padding:32px 16px; }
+    h1{ margin:0 0 8px; }
+    p{ margin:0 0 16px; color:#333; line-height:1.6; }
+
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin:18px 0; }
+    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+
+    button{
+      padding:10px 16px; border-radius:12px; border:1px solid #ccc;
+      background:#fff; font-weight:800; cursor:pointer;
+    }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .pill{ padding:6px 12px; border-radius:999px; font-size:13px; background:#f1f1f1; }
+    .ok{ color:var(--green); font-weight:800; }
+    .bad{ color:var(--red); font-weight:800; }
+
+    .mono{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:13px; word-break:break-all;
+      background:#f6f6f6; padding:12px; border-radius:12px;
+    }
+
+    a{ color:#0b57d0; text-decoration:none; font-weight:700; }
+    a:hover{ text-decoration:underline; }
+
+    footer{
+      margin-top:40px; padding-top:16px; border-top:1px solid var(--line);
+      font-size:14px; color:var(--muted);
+    }
   </style>
 </head>
+
 <body>
 
 <div class="topbar">
-  <div class="wrap" style="display:flex; align-items:center; gap:16px;">
+  <div class="wrap">
     <div class="brand"><span class="dot"></span> Proofy</div>
-    <div class="nav">
+    <nav class="nav">
       <a href="/">Start</a>
       <a href="/verify.html">Verifiera</a>
       <a href="/register.html">Registrera</a>
       <a href="/legal.html">Juridik</a>
-    </div>
+    </nav>
   </div>
 </div>
 
 <div class="wrap">
   <h1>Registrera dokument</h1>
   <p>
-    Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256</strong>-hash lokalt
-    och registrerar endast hash:en on-chain.
+    Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256-hash lokalt</strong> i webbläsaren
+    och registrerar endast hashvärdet on-chain.
   </p>
 
   <div class="card">
     <div class="row">
-      <input id="file" type="file" />
+      <input type="file" id="file" />
       <button id="btnRegister" disabled>Registrera</button>
       <a id="certLink" href="#" target="_blank" rel="noopener" style="display:none;">Öppna certifikat</a>
       <span id="status" class="pill">Välj en fil</span>
     </div>
-    <div class="muted" style="margin-top:8px;">
+    <p class="muted" style="margin-top:8px;">
       Tips: stora filer kan ta några sekunder – hash beräknas i webbläsaren.
-    </div>
+    </p>
   </div>
 
   <div class="card">
     <div class="muted">SHA-256 (bytes32)</div>
-    <code id="hashOut" class="mono">—</code>
+    <div id="hashOut" class="mono">—</div>
   </div>
 
-  <div class="card" id="resultCard" style="display:none;">
+  <div class="card" id="result" style="display:none;">
     <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
 
-    <div class="muted">Transaction</div>
-    <code id="txOut" class="mono">—</code>
+    <div class="muted">Transaktion</div>
+    <div id="txOut" class="mono">—</div>
 
     <div class="muted" style="margin-top:10px;">Blocknummer</div>
-    <code id="blockOut" class="mono">—</code>
+    <div id="blockOut" class="mono">—</div>
   </div>
 
-  <div class="card" id="errorCard" style="display:none;">
-    <div class="bad">Fel</div>
-    <div id="errOut" class="mono">—</div>
+  <div class="card" id="error" style="display:none;">
+    <div class="bad">Tillfälligt tekniskt problem</div>
+    <div id="errorMsg" class="mono"></div>
   </div>
 
-  <div class="muted" style="margin: 18px 0 40px;">
+  <footer>
     Registrering innebär att hashvärdet lagras on-chain med tidsstämpling. Proofy lagrar inte dokument.
-  </div>
+  </footer>
 </div>
 
 <script>
@@ -94,47 +127,52 @@
   const statusEl = document.getElementById("status");
   const hashOut = document.getElementById("hashOut");
 
-  const resultCard = document.getElementById("resultCard");
+  const certLink = document.getElementById("certLink");
+
+  const resultBox = document.getElementById("result");
   const resultLine = document.getElementById("resultLine");
   const txOut = document.getElementById("txOut");
   const blockOut = document.getElementById("blockOut");
 
-  const errorCard = document.getElementById("errorCard");
-  const errOut = document.getElementById("errOut");
+  const errorBox = document.getElementById("error");
+  const errorMsg = document.getElementById("errorMsg");
 
-  const certLink = document.getElementById("certLink");
+  let currentHash = null;
 
-  let lastHash = null;
-
-  function showError(msg) { errorCard.style.display="block"; errOut.textContent = msg; }
-  function hideError() { errorCard.style.display="none"; errOut.textContent = "—"; }
-  function hideResult() { resultCard.style.display="none"; }
-  function hideCertLink(){ certLink.style.display = "none"; certLink.href = "#"; }
+  function resetUI(){
+    resultBox.style.display = "none";
+    errorBox.style.display = "none";
+  }
 
   fileInput.addEventListener("change", async () => {
-    hideError(); hideResult(); hideCertLink();
-
-    const f = fileInput.files?.[0];
-    if (!f) return;
-
-    statusEl.textContent = "Beräknar SHA-256…";
+    resetUI();
+    certLink.style.display = "none";
     btnRegister.disabled = true;
 
+    const file = fileInput.files?.[0];
+    if (!file) return;
+
+    statusEl.textContent = "Beräknar hash…";
+
     try {
-      lastHash = await sha256File(f);
-      hashOut.textContent = lastHash;
+      currentHash = await sha256File(file);
+      hashOut.textContent = currentHash;
+
+      certLink.href = `/certificate.html?hash=${encodeURIComponent(currentHash)}`;
+      certLink.style.display = "inline";
 
       statusEl.textContent = "Redo att registrera";
       btnRegister.disabled = false;
     } catch (e) {
-      showError(String(e?.message || e));
+      errorBox.style.display = "block";
+      errorMsg.textContent = "Kunde inte beräkna hash.";
       statusEl.textContent = "Fel";
     }
   });
 
   btnRegister.addEventListener("click", async () => {
-    if (!lastHash) return;
-    hideError(); hideResult(); hideCertLink();
+    if (!currentHash) return;
+    resetUI();
 
     statusEl.textContent = "Registrerar…";
     btnRegister.disabled = true;
@@ -143,38 +181,40 @@
       const res = await fetch("/.netlify/functions/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ hash: lastHash })
+        body: JSON.stringify({ hash: currentHash })
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) throw new Error(data.error || `Register failed (HTTP ${res.status})`);
 
-      resultCard.style.display = "block";
+      // Om servern svarar med ok:false eller HTTP-fel → visa som tekniskt problem
+      if (!res.ok || data.ok === false) {
+        const msg = data?.error || `Registrering misslyckades (HTTP ${res.status}).`;
+        throw new Error(msg);
+      }
 
-      // Visa cert-länk först när registreringen är OK (oavsett om den redan fanns)
-      certLink.href = `/certificate.html?hash=${encodeURIComponent(lastHash)}`;
-      certLink.style.display = "inline";
+      resultBox.style.display = "block";
 
       if (data.alreadyExists) {
-        resultLine.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="muted">(ingen ny registrering behövdes)</span>`;
-        txOut.textContent = data.txHash || "—";
-        blockOut.textContent = (data.blockNumber ?? "—");
+        resultLine.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span style="color:#666;">(ingen ny registrering behövdes)</span>`;
+        txOut.textContent = "—";
+        blockOut.textContent = "—";
       } else {
-        resultLine.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="muted">(on-chain)</span>`;
+        resultLine.innerHTML = `<span class="ok">✅ Registrerad</span> <span style="color:#666;">(on-chain)</span>`;
         txOut.textContent = data.txHash || "—";
         blockOut.textContent = (data.blockNumber ?? "—");
       }
 
       statusEl.textContent = "Klar";
     } catch (e) {
-      showError(String(e?.message || e));
+      errorBox.style.display = "block";
+      errorMsg.textContent = (e?.message || "Registreringstjänsten kunde inte nås just nu.");
       statusEl.textContent = "Fel";
     } finally {
       btnRegister.disabled = false;
     }
   });
 
-  async function sha256File(file) {
+  async function sha256File(file){
     const buf = await file.arrayBuffer();
     const digest = await crypto.subtle.digest("SHA-256", buf);
     return "0x" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,"0")).join("");
