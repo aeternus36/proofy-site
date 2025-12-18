@@ -60,6 +60,7 @@
       margin-top:40px; padding-top:16px; border-top:1px solid var(--line);
       font-size:14px; color:var(--muted);
     }
+    .muted{ color:var(--muted); }
   </style>
 </head>
 
@@ -144,29 +145,6 @@
     errorBox.style.display = "none";
   }
 
-  function userFriendlyError(msg) {
-    const s = String(msg || "");
-
-    // Mild, revisionsvänlig normalisering. Vi visar inte interna stacktraces.
-    if (s.includes("Missing CONTRACT_ADDRESS") || s.includes("Missing PROOFY_CONTRACT_ADDRESS") || s.includes("Missing PROOFY_PRIVATE_KEY")) {
-      return "Registreringstjänsten är inte korrekt konfigurerad just nu. Försök igen senare.";
-    }
-    if (s.includes("Missing AMOY_RPC_URL")) {
-      return "Registreringstjänsten kan inte ansluta till nätverket just nu. Försök igen senare.";
-    }
-    if (s.includes("Invalid hash")) {
-      return "Hashvärdet kunde inte valideras. Kontrollera att du valt en fil och försök igen.";
-    }
-    if (s.includes("Could not simulate any register function")) {
-      return "Registrering är tillfälligt otillgänglig (kontraktets registreringsfunktion kunde inte anropas). Försök igen senare.";
-    }
-    if (s.includes("HTTP")) {
-      return "Registreringstjänsten svarar inte som förväntat just nu. Försök igen senare.";
-    }
-
-    return "Registreringstjänsten kunde inte nås just nu. Försök igen senare.";
-  }
-
   fileInput.addEventListener("change", async () => {
     resetUI();
     certLink.style.display = "none";
@@ -188,7 +166,7 @@
       btnRegister.disabled = false;
     } catch (e) {
       errorBox.style.display = "block";
-      errorMsg.textContent = "Kunde inte beräkna hash i webbläsaren.";
+      errorMsg.textContent = "Kunde inte beräkna hash.";
       statusEl.textContent = "Fel";
     }
   });
@@ -207,10 +185,15 @@
         body: JSON.stringify({ hash: currentHash })
       });
 
-      const data = await res.json().catch(() => ({}));
+      const contentType = (res.headers.get("content-type") || "").toLowerCase();
+      const isJson = contentType.includes("application/json");
+
+      const data = isJson ? await res.json().catch(() => ({})) : {};
 
       if (!res.ok || data.ok === false) {
-        const msg = data?.error || `HTTP ${res.status}`;
+        const msg =
+          (data && (data.userMessage || data.error)) ||
+          "Registreringstjänsten kunde inte nås just nu. Försök igen senare.";
         throw new Error(msg);
       }
 
@@ -229,7 +212,7 @@
       statusEl.textContent = "Klar";
     } catch (e) {
       errorBox.style.display = "block";
-      errorMsg.textContent = userFriendlyError(e?.message || "");
+      errorMsg.textContent = (e?.message || "Registreringstjänsten kunde inte nås just nu. Försök igen senare.");
       statusEl.textContent = "Fel";
     } finally {
       btnRegister.disabled = false;
