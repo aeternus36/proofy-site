@@ -2,68 +2,59 @@ import {
   createWalletClient,
   createPublicClient,
   http,
+  hexToBytes,
 } from "viem";
-import { polygonAmoy } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 
-function json(statusCode, body) {
-  return new Response(JSON.stringify(body), {
-    status: statusCode,
-    headers: {
-      "content-type": "application/json",
-      "access-control-allow-origin": "*",
-    },
-  });
-}
-
-export async function onRequestPost({ request, env }) {
-  const { hash } = await request.json();
-
-  if (!hash || !/^0x[a-fA-F0-9]{64}$/.test(hash)) {
-    return json(400, { ok: false, error: "Invalid bytes32 hash" });
-  }
-
+export async function onRequest(context) {
   try {
-    const account = privateKeyToAccount(env.PROOFY_PRIVATE_KEY);
+    const { hash } = await context.request.json();
 
-    const publicClient = createPublicClient({
-      chain: polygonAmoy,
-      transport: http(env.AMOY_RPC_URL),
-    });
+    if (!hash) {
+      return json({ ok: false, error: "Missing hash" }, 400);
+    }
 
-    const walletClient = createWalletClient({
+    const rpcUrl = context.env.RPC_URL;
+    const contractAddress = context.env.CONTRACT_ADDRESS;
+    const privateKey = context.env.PRIVATE_KEY;
+
+    const account = privateKeyToAccount(privateKey);
+
+    const wallet = createWalletClient({
       account,
-      chain: polygonAmoy,
-      transport: http(env.AMOY_RPC_URL),
+      transport: http(rpcUrl),
     });
 
-    const ABI = [
-      {
-        type: "function",
-        name: "registerProof",
-        stateMutability: "nonpayable",
-        inputs: [{ name: "hash", type: "bytes32" }],
-        outputs: [],
-      },
-    ];
-
-    const txHash = await walletClient.writeContract({
-      address: env.CONTRACT_ADDRESS,
-      abi: ABI,
-      functionName: "registerProof",
+    const txHash = await wallet.writeContract({
+      address: contractAddress,
+      abi: [
+        {
+          name: "register",
+          type: "function",
+          stateMutability: "nonpayable",
+          inputs: [{ name: "hash", type: "bytes32" }],
+          outputs: [],
+        },
+      ],
+      functionName: "register",
       args: [hash],
     });
 
-    await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-    return json(200, {
+    return json({
       ok: true,
       txHash,
     });
   } catch (err) {
-    return json(500, {
+    return json({
       ok: false,
-      error: err.message || String(err),
-    });
+      error: err.message,
+    }, 500);
   }
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
