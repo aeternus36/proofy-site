@@ -1,17 +1,5 @@
-// functions/api/register.mjs
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  zeroAddress,
-  privateKeyToAccount,
-} from "viem";
-
-function pickAllowOrigin(request, env) {
-  const configured = (env?.ALLOW_ORIGIN || "").trim();
-  if (configured) return configured;
-  return "*";
-}
+// functions/api/verify.mjs
+import { createPublicClient, http, isHex, zeroAddress } from "viem";
 
 function json(statusCode, obj, origin) {
   return new Response(JSON.stringify(obj), {
@@ -21,7 +9,7 @@ function json(statusCode, obj, origin) {
       "cache-control": "no-store",
       "access-control-allow-origin": origin || "*",
       "access-control-allow-headers": "content-type",
-      "access-control-allow-methods": "POST,OPTIONS",
+      "access-control-allow-methods": "GET,OPTIONS",
     },
   });
 }
@@ -30,17 +18,13 @@ function isBytes32Hash(h) {
   return typeof h === "string" && /^0x[a-fA-F0-9]{64}$/.test(h);
 }
 
-function looksLikeNotFoundError(msg) {
-  const m = (msg || "").toLowerCase();
-  return (
-    m.includes("returned no data") ||
-    m.includes("(0x)") ||
-    m.includes("execution reverted") ||
-    m.includes("reverted")
-  );
+function pickAllowOrigin(request, env) {
+  const configured = (env?.ALLOW_ORIGIN || "").trim();
+  if (configured) return configured;
+  return "*";
 }
 
-// Lokal chain-definition (för att slippa import från "viem/chains")
+// Lokal chain-definition (slipper "viem/chains")
 function amoyChain(rpcUrl) {
   return {
     id: 80002,
@@ -54,47 +38,17 @@ function amoyChain(rpcUrl) {
   };
 }
 
-async function readExists(publicClient, contractAddress, abi, hash) {
-  try {
-    const res = await publicClient.readContract({
-      address: contractAddress,
-      abi,
-      functionName: "getProof",
-      args: [hash],
-    });
-
-    let ts, sub;
-    if (Array.isArray(res)) {
-      ts = Number(res[0] ?? 0);
-      sub = res[1] ?? null;
-    } else {
-      ts = Number(res?.timestamp ?? 0);
-      sub = res?.submitter ?? null;
-    }
-
-    const exists = ts > 0 && sub && sub !== zeroAddress;
-    return {
-      exists,
-      timestamp: exists ? ts : 0,
-      submitter: exists ? sub : null,
-    };
-  } catch (e) {
-    const msg = String(e?.shortMessage || e?.message || e);
-    if (looksLikeNotFoundError(msg)) return { exists: false, timestamp: 0, submitter: null };
-    throw e;
-  }
-}
-
 export async function onRequest(context) {
   const { request, env } = context;
   const origin = pickAllowOrigin(request, env);
 
   try {
     if (request.method === "OPTIONS") return json(204, {}, origin);
-    if (request.method !== "POST") return json(405, { ok: false, error: "Use POST" }, origin);
+    if (request.method !== "GET") return json(405, { ok: false, error: "Use GET" }, origin);
 
-    const body = await request.json().catch(() => ({}));
-    const hash = (body?.hash || "").trim();
+    const url = new URL(request.url);
+    const hash = (url.searchParams.get("hash") || "").trim();
+    const debug = (url.searchParams.get("debug") || "").trim() === "1";
 
     const CONTRACT_ADDRESS =
       (env?.PROOFY_CONTRACT_ADDRESS || "").trim() ||
@@ -106,19 +60,28 @@ export async function onRequest(context) {
       (env?.POLYGON_AMOY_RPC_URL || "").trim() ||
       (env?.RPC_URL || "").trim();
 
-    const PRIVATE_KEY =
-      (env?.PROOFY_PRIVATE_KEY || "").trim() ||
-      (env?.PRIVATE_KEY || "").trim();
+    if (debug) {
+      return json(
+        200,
+        {
+          ok: true,
+          debug: true,
+          hasHash: !!hash,
+          hasContractAddress: !!CONTRACT_ADDRESS,
+          hasRpcUrl: !!RPC_URL,
+          contractAddressLooksValid:
+            isHex(CONTRACT_ADDRESS || "0x") && (CONTRACT_ADDRESS || "").length === 42,
+          rpcUrlStartsWithHttps: (RPC_URL || "").startsWith("https://"),
+        },
+        origin
+      );
+    }
 
     if (!isBytes32Hash(hash)) {
       return json(400, { ok: false, error: "Invalid hash. Expected bytes32 hex (0x + 64 hex)." }, origin);
     }
-    if (!CONTRACT_ADDRESS) return json(500, { ok: false, error: "Missing CONTRACT_ADDRESS" }, origin);
-    if (!RPC_URL) return json(500, { ok: false, error: "Missing AMOY_RPC_URL" }, origin);
-    if (!PRIVATE_KEY) return json(500, { ok: false, error: "Missing PROOFY_PRIVATE_KEY" }, origin);
-    if (!/^0x[a-fA-F0-9]{64}$/.test(PRIVATE_KEY)) {
-      return json(400, { ok: false, error: "Invalid private key format. Must be 0x + 64 hex." }, origin);
-    }
+    if (!CONTRACT_ADDRESS) return json(400, { ok: false, error: "Missing CONTRACT_ADDRESS" }, origin);
+    if (!RPC_URL) return json(500, { ok: false, error: "Missing AMOY_RPC_URL in environment variables" }, origin);
 
     const ABI = [
       {
@@ -131,85 +94,58 @@ export async function onRequest(context) {
           { name: "submitter", type: "address" },
         ],
       },
-      { type: "function", name: "register", stateMutability: "nonpayable", inputs: [{ name: "hash", type: "bytes32" }], outputs: [] },
-      { type: "function", name: "registerHash", stateMutability: "nonpayable", inputs: [{ name: "hash", type: "bytes32" }], outputs: [] },
-      { type: "function", name: "addProof", stateMutability: "nonpayable", inputs: [{ name: "hash", type: "bytes32" }], outputs: [] },
-      { type: "function", name: "storeProof", stateMutability: "nonpayable", inputs: [{ name: "hash", type: "bytes32" }], outputs: [] },
     ];
 
-    const publicClient = createPublicClient({
+    const client = createPublicClient({
       chain: amoyChain(RPC_URL),
       transport: http(RPC_URL),
     });
 
-    const existing = await readExists(publicClient, CONTRACT_ADDRESS, ABI, hash);
-    if (existing.exists) {
-      return json(
-        200,
-        {
-          ok: true,
-          alreadyExists: true,
-          hashHex: hash,
-          timestamp: existing.timestamp,
-          submitter: existing.submitter,
-        },
-        origin
-      );
-    }
+    let exists = false;
+    let timestamp = 0;
+    let submitter = null;
 
-    const account = privateKeyToAccount(PRIVATE_KEY);
-    const walletClient = createWalletClient({
-      account,
-      chain: amoyChain(RPC_URL),
-      transport: http(RPC_URL),
-    });
+    try {
+      const res = await client.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: ABI,
+        functionName: "getProof",
+        args: [hash],
+      });
 
-    const candidates = ["register", "registerHash", "addProof", "storeProof"];
+      if (Array.isArray(res)) {
+        timestamp = Number(res[0] ?? 0);
+        submitter = res[1] ?? null;
+      } else {
+        timestamp = Number(res?.timestamp ?? 0);
+        submitter = res?.submitter ?? null;
+      }
 
-    let chosenFn = null;
-    let sim = null;
+      if (timestamp > 0 && submitter && submitter !== zeroAddress) exists = true;
+    } catch (e) {
+      const msg = String(e?.shortMessage || e?.message || e);
+      const looksLikeMissing =
+        msg.includes("returned no data") ||
+        msg.includes("(0x)") ||
+        msg.toLowerCase().includes("execution reverted");
 
-    for (const fn of candidates) {
-      try {
-        sim = await publicClient.simulateContract({
-          address: CONTRACT_ADDRESS,
-          abi: ABI,
-          functionName: fn,
-          args: [hash],
-          account,
-        });
-        chosenFn = fn;
-        break;
-      } catch (_) {
-        // prova nästa
+      if (!looksLikeMissing) {
+        return json(500, { ok: false, error: msg }, origin);
       }
     }
-
-    if (!chosenFn || !sim) {
-      return json(
-        500,
-        { ok: false, error: "Could not simulate any register function on contract. Check function name / ABI." },
-        origin
-      );
-    }
-
-    const txHash = await walletClient.writeContract(sim.request);
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
     return json(
       200,
       {
         ok: true,
-        alreadyExists: false,
         hashHex: hash,
-        txHash,
-        blockNumber: Number(receipt.blockNumber),
-        functionUsed: chosenFn,
+        exists,
+        timestamp: exists ? timestamp : 0,
+        submitter: exists ? submitter : null,
       },
       origin
     );
   } catch (e) {
-    const msg = String(e?.shortMessage || e?.message || e);
-    return json(500, { ok: false, error: msg }, origin);
+    return json(500, { ok: false, error: String(e?.message || e) }, origin);
   }
 }
