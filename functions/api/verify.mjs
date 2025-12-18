@@ -14,13 +14,12 @@ function json(statusCode, obj, origin) {
   });
 }
 
-function isBytes32Hash(h) {
-  return typeof h === "string" && /^0x[a-fA-F0-9]{64}$/.test(h);
+function pickAllowOrigin(env) {
+  return (env?.ALLOW_ORIGIN || "").trim() || "*";
 }
 
-function pickAllowOrigin(env) {
-  const configured = (env?.ALLOW_ORIGIN || "").trim();
-  return configured || "*";
+function isBytes32Hash(h) {
+  return typeof h === "string" && /^0x[a-fA-F0-9]{64}$/.test(h);
 }
 
 // Lokal chain-definition (slipper "viem/chains")
@@ -55,11 +54,9 @@ export async function onRequest(context) {
       (env?.VITE_PROOFY_CONTRACT_ADDRESS || "").trim();
 
     const RPC_URL =
-      (env?.AMOY_RPC_URL || privilegedTrim(env?.POLYGON_AMOY_RPC_URL) || privilegedTrim(env?.RPC_URL) || "").trim();
-
-    function privilegedTrim(v) {
-      return (v || "").trim();
-    }
+      (env?.AMOY_RPC_URL || "").trim() ||
+      (env?.POLYGON_AMOY_RPC_URL || "").trim() ||
+      (env?.RPC_URL || "").trim();
 
     if (debug) {
       return json(
