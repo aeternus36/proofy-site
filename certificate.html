@@ -2,222 +2,401 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Proof Certificate</title>
-  <meta name="robots" content="noindex,nofollow" />
+  <meta name="description" content="Proof Certificate för dokumentverifiering via SHA-256-hash och on-chain tidsstämpling." />
+
   <style>
-    :root { color-scheme: light; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #fff; color: #111; }
-    header { border-bottom: 1px solid #e5e5e5; padding: 18px 16px; }
-    main { max-width: 920px; margin: 0 auto; padding: 18px 16px 44px; }
-    h1 { font-size: 20px; margin: 0 0 6px; }
-    .muted { color: #555; font-size: 14px; line-height: 1.45; }
-    .box { border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px; margin: 14px 0; }
-    .status { display: inline-block; padding: 6px 10px; border-radius: 999px; font-weight: 800; font-size: 13px; letter-spacing: 0.02em; }
-    .ok { background: #e7f7ee; color: #0c5b2d; border: 1px solid #bfead0; }
-    .no { background: #fff6e6; color: #6a3d00; border: 1px solid #ffe1b0; }
-    .err { background: #fdecec; color: #7a0b0b; border: 1px solid #f7b8b8; }
-    .kv { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; margin-top: 10px; }
-    .kv div { padding: 6px 0; border-bottom: 1px dashed #eee; }
-    .kv div:nth-child(odd) { color: #444; }
-    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 13px; }
-    pre { background: #fafafa; border: 1px solid #e5e5e5; border-radius: 12px; padding: 12px; overflow: auto; }
-    button { appearance: none; border: 1px solid #111; background: #111; color: #fff; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: 650; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    a { color: #111; }
-    .toprow { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    :root{
+      --bg-dark:#0b0d12;
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#111;
+      --muted:#666;
+      --line:#e3e3e3;
+      --blue:#4f7cff;
+      --green:#0a7a2f;
+      --red:#b00020;
+    }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); }
+
+    /* Topbar (matchar era verktygssidor) */
+    .topbar{ background:var(--bg-dark); color:#fff; }
+    .topbar .wrap{
+      max-width:1100px; margin:0 auto; padding:16px;
+      display:flex; align-items:center; gap:16px;
+    }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; }
+    .dot{ width:10px; height:10px; border-radius:50%; background:var(--blue); }
+    .nav{ margin-left:auto; display:flex; gap:16px; flex-wrap:wrap; }
+    .nav a{ color:#d7deff; text-decoration:none; font-weight:700; }
+    .nav a:hover{ text-decoration:underline; }
+
+    /* Layout */
+    .wrap{ max-width:900px; margin:0 auto; padding:28px 16px 40px; }
+    .paper{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:22px;
+      margin-top:18px;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+    }
+
+    .hdr{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+    h1{ margin:0; font-size:28px; letter-spacing:-0.2px; }
+    .subtitle{ color:var(--muted); margin-top:6px; line-height:1.5; }
+
+    .badge{
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:13px;
+      font-weight:900;
+      border:1px solid var(--line);
+      background:#f3f3f3;
+      white-space:nowrap;
+    }
+    .ok{ color:var(--green); }
+    .bad{ color:var(--red); }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+      margin-top:18px;
+    }
+    @media (min-width: 860px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+    }
+
+    .card{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:16px;
+    }
+    .label{ color:var(--muted); font-size:13px; font-weight:800; margin-bottom:6px; }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:13px;
+      word-break: break-all;
+      background:#f6f6f6;
+      border:1px solid #eee;
+      border-radius:12px;
+      padding:12px;
+      margin:0;
+    }
+
+    .para{ color:#333; line-height:1.65; margin:10px 0 0; }
+    .muted{ color:var(--muted); }
+    a{ color:#0b57d0; text-decoration:none; font-weight:800; }
+    a:hover{ text-decoration:underline; }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+    button{
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid #ccc;
+      background:#fff;
+      font-weight:900;
+      cursor:pointer;
+    }
+
+    .hr{ height:1px; background:var(--line); margin:18px 0; }
+
+    /* Print */
+    @media print{
+      body{ background:#fff; }
+      .topbar, .actions, .note { display:none !important; }
+      .wrap{ padding:0; max-width:none; }
+      .paper{ border:none; border-radius:0; box-shadow:none; margin:0; }
+      a{ color:#000; text-decoration:none; }
+    }
   </style>
 </head>
 
 <body>
-  <header>
-    <div class="toprow">
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span> Proofy</div>
+    <nav class="nav">
+      <a href="/">Start</a>
+      <a href="/verify.html">Verifiera</a>
+      <a href="/register.html">Registrera</a>
+      <a href="/legal.html">Juridik</a>
+    </nav>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="note muted">
+    Certifikat öppnas via <span class="mono" style="display:inline; padding:2px 6px;">/certificate.html?hash=0x…</span>
+  </div>
+
+  <div class="paper">
+    <div class="hdr">
       <div>
         <h1>Proof Certificate</h1>
-        <div class="muted">Tekniskt intyg av on-chain-registrering av ett hashvärde (ingen fil lagras av Proofy).</div>
+        <div class="subtitle">
+          Teknisk verifiering av dokumentintegritet via SHA-256-hash och on-chain tidsstämpling.
+        </div>
       </div>
-      <div class="actions">
-        <button id="printBtn" type="button">Skriv ut / Spara som PDF</button>
-        <a class="muted" href="/verify.html">Tillbaka till verifiering</a>
-      </div>
+      <div id="statusBadge" class="badge">Laddar…</div>
     </div>
-  </header>
 
-  <main>
-    <div class="box">
-      <div id="statusPill" class="status">LADDAR…</div>
+    <div class="actions">
+      <button onclick="window.print()">Skriv ut / Spara som PDF</button>
+      <button id="btnRefresh" type="button">Uppdatera</button>
+      <a id="btnVerifyLink" href="/verify.html">Öppna verifieringssidan</a>
+    </div>
 
-      <div class="kv">
-        <div>Hash (bytes32)</div><div><code id="hashOut">—</code></div>
-
-        <div>Status</div><div id="existsOut">—</div>
-
-        <div>Registreringstid (Sverige)</div><div id="timeSeOut">—</div>
-
-        <div>Registreringstid (UTC)</div><div id="timeUtcOut">—</div>
-
-        <div>Submitter-adress</div><div><code id="submitterOut">—</code></div>
-
-        <div>Nätverk</div><div id="networkOut">—</div>
-
-        <div>Kontrakt</div><div><code id="contractOut">—</code></div>
-
-        <div>Verifieringskälla</div><div><code>/.netlify/functions/verify</code></div>
+    <div class="grid">
+      <div class="card">
+        <div class="label">Dokumentets SHA-256 (bytes32)</div>
+        <pre id="hashOut" class="mono">—</pre>
+        <div class="para muted">
+          Hashvärdet beräknas från dokumentet lokalt i webbläsaren vid verifiering/registrering.
+          Proofy lagrar inte dokumentet.
+        </div>
       </div>
 
-      <div class="muted" style="margin-top:12px;">
-        Detta certifikat bygger på en kontroll av att hashvärdet finns registrerat on-chain enligt Proofys verifieringsfunktion.
-        Hashvärdet är ett tekniskt fingeravtryck av ett dokument (t.ex. en PDF). Innehållet i dokumentet exponeras eller lagras inte av Proofy.
+      <div class="card">
+        <div class="label">Certifikat genererat</div>
+        <pre id="issuedOut" class="mono">—</pre>
+        <div class="para muted">
+          Detta är genereringstid för certifikatsidan (inte on-chain tid).
+        </div>
       </div>
     </div>
 
-    <div class="box">
-      <h2 style="font-size:16px;margin:0 0 8px;">Juridisk disclaimer (Sverige)</h2>
-      <div class="muted">
-        <p style="margin:0 0 10px;">
-          1) Ett hashvärde visar att <strong>en viss datamängd</strong> (ett dokument i exakt samma bytesekvens) ger samma kryptografiska fingerprint.
-          Det visar inte i sig vem som skapat dokumentet, vem som signerat det, eller dokumentets riktighet.
-        </p>
-        <p style="margin:0 0 10px;">
-          2) Tidsstämpeln avser tidpunkten då hashvärdet registrerades on-chain (så som den rapporteras av verifieringsfunktionen).
-          Den kan användas som teknisk indikation på att hashvärdet <strong>fanns registrerat senast</strong> vid den tidpunkten.
-        </p>
-        <p style="margin:0;">
-          3) Den som åberopar certifikatet ansvarar för att kunna uppvisa det dokument som påstås motsvara hashvärdet
-          samt för att förklara kedjan av hantering (chain of custody) vid behov.
-        </p>
+    <div class="grid">
+      <div class="card">
+        <div class="label">On-chain status</div>
+        <pre id="existsOut" class="mono">—</pre>
+
+        <div class="hr"></div>
+
+        <div class="label">On-chain tidsstämpel (Sverige)</div>
+        <pre id="tsSeOut" class="mono">—</pre>
+
+        <div class="label" style="margin-top:10px;">On-chain tidsstämpel (UTC)</div>
+        <pre id="tsUtcOut" class="mono">—</pre>
+      </div>
+
+      <div class="card">
+        <div class="label">Teknisk källa</div>
+        <pre id="sourceOut" class="mono">—</pre>
+
+        <div class="hr"></div>
+
+        <div class="label">Submitter (valfritt att använda)</div>
+        <pre id="submitterOut" class="mono">—</pre>
+
+        <div class="para muted" style="margin-top:10px;">
+          Submitter är den adress som registrerat hashvärdet. Den kan användas för spårbarhet,
+          men behövs inte för att verifiera integritet.
+        </div>
       </div>
     </div>
 
-    <div class="box">
-      <details>
-        <summary>Visa tekniskt svar (JSON)</summary>
-        <pre id="rawJson">—</pre>
-      </details>
-    </div>
+    <div class="card" style="margin-top:14px;">
+      <div class="label">Tolkning</div>
+      <div class="para" id="interpretation">
+        — 
+      </div>
 
-    <div class="box" id="errorBox" style="display:none;">
-      <div class="status err">Fel</div>
-      <p id="errorMsg" style="margin-top:10px;">—</p>
-      <div class="muted" style="margin-top:8px;">
-        Kontrollera att länken innehåller <code>?hash=0x…</code> och att verifieringsfunktionen är tillgänglig.
+      <div class="para muted" style="margin-top:10px;">
+        <b>Viktigt:</b> Ett “Verifierat/Registrerat”-utfall innebär att hashvärdet var registrerat vid angiven on-chain tid.
+        Det säger inget om dokumentets innehåll, äkthet, upphov eller vem som skapat dokumentet – endast att ett dokument med samma hashvärde existerade senast vid den tidpunkten.
       </div>
     </div>
-  </main>
 
-  <script>
-    // =========================
-    // CONFIG (frontend only)
-    // =========================
-    // Fyll i dessa så de syns på certifikatet, utan att ändra backend.
-    const PROOFY_NETWORK_LABEL = "—";   // t.ex. "Polygon Amoy" / "Ethereum Mainnet" / "Gnosis" etc.
-    const PROOFY_CONTRACT_ADDRESS = "—"; // t.ex. "0x1234..."
+    <div class="card" id="problemCard" style="display:none; margin-top:14px;">
+      <div class="label" style="color:var(--red); font-weight:900;">Tillfälligt tekniskt problem</div>
+      <div class="para muted" id="problemText">—</div>
+      <div class="para muted" style="margin-top:8px;">
+        Prova att klicka <b>Uppdatera</b>. Om problemet kvarstår: kontrollera Netlify Functions och att miljövariabler är satta (RPC/kontrakt).
+      </div>
+    </div>
 
-    function show(el) { el.style.display = ""; }
-    function hide(el) { el.style.display = "none"; }
+  </div>
+</div>
 
-    function formatSe(tsSeconds) {
-      if (!tsSeconds || tsSeconds <= 0) return "—";
-      const d = new Date(tsSeconds * 1000);
-      return d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" }) + " (Europe/Stockholm)";
+<script>
+  // Konfiguration (statiskt för tydlig revision)
+  const NETWORK_LABEL = "Polygon Amoy (testnet)";
+  const CHAIN_ID = 80002;
+  const CONTRACT = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
+  const CONTRACT_EXPLORER = "https://www.oklink.com/amoy/address/" + CONTRACT;
+
+  const el = (id) => document.getElementById(id);
+
+  const statusBadge = el("statusBadge");
+  const hashOut = el("hashOut");
+  const issuedOut = el("issuedOut");
+
+  const existsOut = el("existsOut");
+  const tsSeOut = el("tsSeOut");
+  const tsUtcOut = el("tsUtcOut");
+  const submitterOut = el("submitterOut");
+  const sourceOut = el("sourceOut");
+  const interpretation = el("interpretation");
+
+  const problemCard = el("problemCard");
+  const problemText = el("problemText");
+
+  const btnRefresh = el("btnRefresh");
+  const btnVerifyLink = el("btnVerifyLink");
+
+  function getHashFromQuery() {
+    const url = new URL(window.location.href);
+    const h = (url.searchParams.get("hash") || "").trim();
+    return h;
+  }
+
+  function isBytes32Hash(h) {
+    return /^0x[a-fA-F0-9]{64}$/.test(h);
+  }
+
+  function formatUtc(ts) {
+    const d = new Date(Number(ts) * 1000);
+    return d.toISOString().replace("T"," ").replace(".000Z"," UTC");
+  }
+
+  function formatSe(ts) {
+    const d = new Date(Number(ts) * 1000);
+    return new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Europe/Stockholm",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit"
+    }).format(d) + " (Europe/Stockholm)";
+  }
+
+  function setBadge(text, kind) {
+    statusBadge.textContent = text;
+    statusBadge.classList.remove("ok", "bad");
+    if (kind) statusBadge.classList.add(kind);
+  }
+
+  function showProblem(msg) {
+    problemCard.style.display = "block";
+    problemText.textContent = msg;
+  }
+
+  function hideProblem() {
+    problemCard.style.display = "none";
+    problemText.textContent = "—";
+  }
+
+  async function loadCertificate() {
+    hideProblem();
+
+    const hash = getHashFromQuery();
+    hashOut.textContent = hash || "—";
+
+    const issuedSe = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" });
+    const issuedUtc = new Date().toISOString().replace("T"," ").replace(".000Z"," UTC");
+    issuedOut.textContent = `${issuedSe} (Europe/Stockholm)\n${issuedUtc}`;
+
+    // Länka verifieringssidan för samma hash
+    if (hash) {
+      btnVerifyLink.href = "/verify.html";
     }
 
-    function formatUtc(tsSeconds) {
-      if (!tsSeconds || tsSeconds <= 0) return "—";
-      const d = new Date(tsSeconds * 1000);
-      return d.toISOString().replace("T", " ").replace("Z", " UTC");
+    sourceOut.textContent =
+      `${NETWORK_LABEL} · ChainId ${CHAIN_ID}\n` +
+      `Contract: ${CONTRACT}\n` +
+      `Explorer: ${CONTRACT_EXPLORER}`;
+
+    // Validera input
+    if (!hash) {
+      setBadge("Saknar hash", "bad");
+      existsOut.textContent = "—";
+      tsSeOut.textContent = "—";
+      tsUtcOut.textContent = "—";
+      submitterOut.textContent = "—";
+      interpretation.textContent =
+        "Ingen hash angavs. Öppna certifikatet med ?hash=0x… eller gå via verifierings-/registreringssidan.";
+      return;
     }
 
-    function getHashParam() {
-      const params = new URLSearchParams(window.location.search);
-      return (params.get("hash") || "").trim();
+    if (!isBytes32Hash(hash)) {
+      setBadge("Ogiltigt format", "bad");
+      existsOut.textContent = "—";
+      tsSeOut.textContent = "—";
+      tsUtcOut.textContent = "—";
+      submitterOut.textContent = "—";
+      interpretation.textContent =
+        "Hashvärdet har fel format. Det ska vara bytes32: 0x + 64 hex-tecken (SHA-256).";
+      return;
     }
 
-    function looksLikeBytes32Hex(h) {
-      // Expect 0x + 64 hex chars
-      return /^0x[0-9a-fA-F]{64}$/.test(h);
-    }
+    setBadge("Kontrollerar…");
 
-    // --- UI refs ---
-    const statusPill = document.getElementById("statusPill");
-    const hashOut = document.getElementById("hashOut");
-    const existsOut = document.getElementById("existsOut");
-    const timeSeOut = document.getElementById("timeSeOut");
-    const timeUtcOut = document.getElementById("timeUtcOut");
-    const submitterOut = document.getElementById("submitterOut");
-    const networkOut = document.getElementById("networkOut");
-    const contractOut = document.getElementById("contractOut");
-    const rawJson = document.getElementById("rawJson");
+    // Hämta on-chain status från din verify-function
+    try {
+      const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(hash)}`, { method: "GET" });
+      const data = await res.json().catch(() => ({}));
 
-    const errorBox = document.getElementById("errorBox");
-    const errorMsg = document.getElementById("errorMsg");
-
-    document.getElementById("printBtn").addEventListener("click", () => window.print());
-
-    // Render static config
-    networkOut.textContent = PROOFY_NETWORK_LABEL;
-    contractOut.textContent = PROOFY_CONTRACT_ADDRESS;
-
-    (async function init() {
-      hide(errorBox);
-
-      const hash = getHashParam();
-      hashOut.textContent = hash || "—";
-
-      if (!hash) {
-        statusPill.className = "status err";
-        statusPill.textContent = "OGILTIG LÄNK";
-        errorMsg.textContent = "Ingen hash angiven i URL. Exempel: /certificate.html?hash=0x…";
-        show(errorBox);
+      if (!res.ok || data.ok === false) {
+        // Här är det ett verkligt drift-/konfigproblem
+        setBadge("Kan ej verifiera just nu", "bad");
+        showProblem(String(data.error || `HTTP ${res.status}`));
+        existsOut.textContent = "—";
+        tsSeOut.textContent = "—";
+        tsUtcOut.textContent = "—";
+        submitterOut.textContent = "—";
+        interpretation.textContent =
+          "Verifiering kunde inte genomföras på grund av ett tillfälligt tekniskt problem. Prova igen senare.";
         return;
       }
 
-      if (!looksLikeBytes32Hex(hash)) {
-        statusPill.className = "status err";
-        statusPill.textContent = "OGILTIG HASH";
-        errorMsg.textContent = "Hash måste vara bytes32 i formatet 0x + 64 hex-tecken.";
-        show(errorBox);
-        return;
+      // Normal respons:
+      if (data.exists) {
+        setBadge("Verifierad", "ok");
+        existsOut.textContent = "Registrerad (hash finns on-chain)";
+        tsSeOut.textContent = data.timestamp ? formatSe(data.timestamp) : "—";
+        tsUtcOut.textContent = data.timestamp ? formatUtc(data.timestamp) : "—";
+        submitterOut.textContent = data.submitter || "—";
+        interpretation.textContent =
+          "Detta certifikat visar att ett dokument med exakt detta SHA-256-hashvärde var registrerat on-chain vid angiven tidpunkt.";
+      } else {
+        setBadge("Inte registrerad", "bad");
+        existsOut.textContent = "Inte registrerad (hash saknas)";
+        tsSeOut.textContent = "—";
+        tsUtcOut.textContent = "—";
+        submitterOut.textContent = "—";
+        interpretation.textContent =
+          "Detta certifikat visar att ingen on-chain-registrering hittades för angivet hashvärde vid kontrolltillfället.";
       }
+    } catch (e) {
+      setBadge("Kan ej verifiera just nu", "bad");
+      showProblem(String(e?.message || e));
+      existsOut.textContent = "—";
+      tsSeOut.textContent = "—";
+      tsUtcOut.textContent = "—";
+      submitterOut.textContent = "—";
+      interpretation.textContent =
+        "Verifiering kunde inte genomföras på grund av ett tillfälligt nätverks-/driftproblem. Prova igen.";
+    }
+  }
 
-      try {
-        const url = "/.netlify/functions/verify?hash=" + encodeURIComponent(hash);
-        const res = await fetch(url, { method: "GET" });
+  btnRefresh.addEventListener("click", () => loadCertificate());
 
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          throw new Error("Verifieringsanrop misslyckades (HTTP " + res.status + "). " + (text ? "Svar: " + text : ""));
-        }
+  loadCertificate();
+</script>
 
-        const data = await res.json();
-
-        if (!data || data.ok !== true) {
-          throw new Error("Ogiltigt svar från verifieringstjänsten.");
-        }
-
-        const exists = !!data.exists;
-        const ts = Number(data.timestamp || 0);
-
-        // Render
-        hashOut.textContent = data.hashHex || hash;
-
-        existsOut.textContent = exists ? "Registrerad" : "Ej registrerad";
-        timeSeOut.textContent = exists ? formatSe(ts) : "—";
-        timeUtcOut.textContent = exists ? formatUtc(ts) : "—";
-        submitterOut.textContent = exists ? (data.submitter || "—") : "—";
-
-        rawJson.textContent = JSON.stringify(data, null, 2);
-
-        statusPill.className = "status " + (exists ? "ok" : "no");
-        statusPill.textContent = exists ? "REGISTRERAD" : "INTE REGISTRERAD";
-      } catch (err) {
-        statusPill.className = "status err";
-        statusPill.textContent = "FEL VID VERIFIERING";
-        errorMsg.textContent = (err && err.message) ? err.message : String(err);
-        show(errorBox);
-      }
-    })();
-  </script>
 </body>
 </html>
