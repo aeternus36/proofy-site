@@ -1,76 +1,131 @@
-import { createPublicClient, http, isHex } from "viem";
+// netlify/functions/verify.mjs
+import { createPublicClient, http, isHex, zeroAddress } from "viem";
+import { polygonAmoy } from "viem/chains";
 
-const amoy = {
-  id: Number(process.env.CHAIN_ID || 80002),
-  name: "Polygon Amoy",
-  nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
-  rpcUrls: { default: { http: [process.env.AMOY_RPC_URL] } },
-};
-
-const proofyAbi = [
-  {
-    type: "function",
-    name: "getProof",
-    stateMutability: "view",
-    inputs: [{ name: "hash", type: "bytes32" }],
-    outputs: [
-      { name: "exists_", type: "bool" },
-      { name: "timestamp", type: "uint64" },
-      { name: "submitter", type: "address" },
-    ],
-  },
-];
-
-function assertBytes32(hex) {
-  if (!isHex(hex)) throw new Error("Invalid hex");
-  if (hex.length !== 66) throw new Error("Hash must be 32 bytes (0x + 64 hex chars)");
-}
-
-function corsHeaders() {
-  const origin = process.env.ALLOW_ORIGIN || "*";
+function json(statusCode, obj) {
   return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "content-type",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    statusCode,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*",
+      "access-control-allow-headers": "content-type",
+      "access-control-allow-methods": "GET,OPTIONS",
+    },
+    body: JSON.stringify(obj),
   };
 }
 
-export async function handler(event) {
+function isBytes32Hash(h) {
+  return typeof h === "string" && /^0x[a-fA-F0-9]{64}$/.test(h);
+}
+
+export const handler = async (event) => {
   try {
-    if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: corsHeaders(), body: "" };
-    if (event.httpMethod !== "GET") return { statusCode: 405, headers: corsHeaders(), body: "Method Not Allowed" };
+    if (event.httpMethod === "OPTIONS") return json(204, {});
+    if (event.httpMethod !== "GET") return json(405, { ok: false, error: "Use GET" });
 
-    const hashHex = (event.queryStringParameters?.hash || "").trim();
-    assertBytes32(hashHex);
+    const params = event.queryStringParameters || {};
+    const hash = (params.hash || "").trim();
+    const debug = (params.debug || "").trim() === "1";
 
-    const contractAddress = process.env.CONTRACT_ADDRESS;
-    if (!contractAddress) throw new Error("Missing CONTRACT_ADDRESS");
+    // Acceptera flera env-namn (för att undvika mismatch)
+    const CONTRACT_ADDRESS =
+      (process.env.PROOFY_CONTRACT_ADDRESS || "").trim() ||
+      (process.env.CONTRACT_ADDRESS || "").trim() ||
+      (process.env.VITE_PROOFY_CONTRACT_ADDRESS || "").trim();
 
-    const publicClient = createPublicClient({ chain: amoy, transport: http(process.env.AMOY_RPC_URL) });
+    const RPC_URL =
+      (process.env.AMOY_RPC_URL || "").trim() ||
+      (process.env.POLYGON_AMOY_RPC_URL || "").trim() ||
+      (process.env.RPC_URL || "").trim();
 
-    const [exists_, timestamp, submitter] = await publicClient.readContract({
-      address: contractAddress,
-      abi: proofyAbi,
-      functionName: "getProof",
-      args: [hashHex],
+    if (debug) {
+      return json(200, {
+        ok: true,
+        debug: true,
+        hasHash: !!hash,
+        hasContractAddress: !!CONTRACT_ADDRESS,
+        hasRpcUrl: !!RPC_URL,
+        contractAddressLooksValid: isHex(CONTRACT_ADDRESS || "0x") && (CONTRACT_ADDRESS || "").length === 42,
+        rpcUrlStartsWithHttps: (RPC_URL || "").startsWith("https://"),
+      });
+    }
+
+    if (!isBytes32Hash(hash)) {
+      return json(400, { ok: false, error: "Invalid hash. Expected bytes32 hex (0x + 64 hex)." });
+    }
+
+    if (!CONTRACT_ADDRESS) {
+      return json(400, { ok: false, error: "Missing CONTRACT_ADDRESS" });
+    }
+    if (!RPC_URL) {
+      return json(500, { ok: false, error: "Missing AMOY_RPC_URL in environment variables" });
+    }
+
+    const ABI = [
+      {
+        type: "function",
+        name: "getProof",
+        stateMutability: "view",
+        inputs: [{ name: "hash", type: "bytes32" }],
+        outputs: [
+          { name: "timestamp", type: "uint256" },
+          { name: "submitter", type: "address" },
+        ],
+      },
+    ];
+
+    const client = createPublicClient({
+      chain: polygonAmoy,
+      transport: http(RPC_URL),
     });
 
-    return {
-      statusCode: 200,
-      headers: { ...corsHeaders(), "content-type": "application/json" },
-      body: JSON.stringify({
-        ok: true,
-        hashHex,
-        exists: exists_,
-        timestamp: Number(timestamp),
-        submitter,
-      }),
-    };
+    // Default: saknas
+    let exists = false;
+    let timestamp = 0;
+    let submitter = null;
+
+    try {
+      const res = await client.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: ABI,
+        functionName: "getProof",
+        args: [hash],
+      });
+
+      // viem kan ge array eller objekt beroende på version
+      if (Array.isArray(res)) {
+        timestamp = Number(res[0] ?? 0);
+        submitter = res[1] ?? null;
+      } else {
+        timestamp = Number(res?.timestamp ?? 0);
+        submitter = res?.submitter ?? null;
+      }
+
+      // “Finns” om timestamp>0 och submitter inte är 0x0
+      if (timestamp > 0 && submitter && submitter !== zeroAddress) exists = true;
+    } catch (e) {
+      // Om kontraktet returnerar 0x/no data → tolka som “saknas”, INTE som krasch
+      const msg = String(e?.shortMessage || e?.message || e);
+      const looksLikeMissing =
+        msg.includes("returned no data") ||
+        msg.includes("(0x)") ||
+        msg.toLowerCase().includes("execution reverted");
+
+      if (!looksLikeMissing) {
+        return json(500, { ok: false, error: msg });
+      }
+    }
+
+    return json(200, {
+      ok: true,
+      hashHex: hash,
+      exists,
+      timestamp: exists ? timestamp : 0,
+      submitter: exists ? submitter : null,
+    });
   } catch (e) {
-    return {
-      statusCode: 400,
-      headers: { ...corsHeaders(), "content-type": "application/json" },
-      body: JSON.stringify({ ok: false, error: String(e?.message || e) }),
-    };
+    return json(500, { ok: false, error: String(e?.message || e) });
   }
-}
+};
