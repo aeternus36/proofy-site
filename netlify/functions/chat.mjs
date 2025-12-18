@@ -1,37 +1,43 @@
-// netlify/functions/chat.js
-const OpenAI = require("openai");
+// netlify/functions/chat.mjs
+import OpenAI from "openai";
 
-function json(statusCode, obj) {
-  return {
-    statusCode,
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
       "access-control-allow-origin": "*",
+      "access-control-allow-methods": "POST,OPTIONS",
+      "access-control-allow-headers": "content-type",
     },
-    body: JSON.stringify(obj),
-  };
+  });
 }
 
-exports.handler = async (event) => {
+export default async (request) => {
   try {
-    if (event.httpMethod !== "POST") {
-      return json(405, { ok: false, error: "Use POST" });
+    // CORS preflight
+    if (request.method === "OPTIONS") return json({ ok: true }, 204);
+
+    if (request.method !== "POST") {
+      return json({ ok: false, error: "Use POST" }, 405);
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return json(500, {
-        ok: false,
-        error: "OPENAI_API_KEY is missing",
-      });
+      return json({ ok: false, error: "OPENAI_API_KEY is missing" }, 500);
     }
 
-    const body = JSON.parse(event.body || "{}");
-    const message = (body.message || "").trim();
+    let body = {};
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
 
+    const message = String(body?.message ?? "").trim();
     if (!message) {
-      return json(400, { ok: false, error: "Missing message" });
+      return json({ ok: false, error: "Missing message" }, 400);
     }
 
     const client = new OpenAI({ apiKey });
@@ -42,21 +48,17 @@ exports.handler = async (event) => {
         {
           role: "system",
           content:
-            "Du är Proofy Assist, en svensk supportassistent för dokumentverifiering.",
+            "Du är Proofy Assist, en svensk supportassistent för dokumentverifiering. Svara kort, tydligt och praktiskt.",
         },
         { role: "user", content: message },
       ],
       temperature: 0.2,
     });
 
-    return json(200, {
-      ok: true,
-      reply: response.choices[0].message.content,
-    });
+    const reply = response?.choices?.[0]?.message?.content?.trim() || "";
+
+    return json({ ok: true, reply }, 200);
   } catch (e) {
-    return json(500, {
-      ok: false,
-      error: String(e.message || e),
-    });
+    return json({ ok: false, error: String(e?.message || e) }, 500);
   }
 };
