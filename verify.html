@@ -3,123 +3,207 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Verifiera</title>
-  <meta name="description" content="Verifiera dokument via kryptografisk SHA-256-hash. Dokumentet lämnar aldrig din dator." />
+  <title>Proofy – Verifiera dokument</title>
+
   <style>
     :root {
-      --bg:#0b0d12;
-      --blue:#4f7cff;
-      --page:#f6f7fb;
+      --bg-dark:#0b0d12;
+      --bg:#f6f7fb;
       --card:#ffffff;
       --text:#111;
       --muted:#666;
       --line:#e3e3e3;
-      --good:#0a7a2f;
-      --bad:#b00020;
+      --blue:#4f7cff;
+      --green:#0a7a2f;
+      --red:#b00020;
     }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--page); color:var(--text); }
-    .topbar { background:var(--bg); color:#fff; }
-    .wrap { max-width: 980px; margin: 0 auto; padding: 18px 16px; }
-    .toprow { display:flex; align-items:center; gap:16px; }
-    .brand { display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:0.2px; }
-    .dot { width:10px; height:10px; border-radius:999px; background:var(--blue); display:inline-block; }
-    .nav { margin-left:auto; display:flex; gap:16px; flex-wrap:wrap; }
-    .nav a { color:#d7deff; text-decoration:none; font-weight:800; }
-    .nav a:hover { text-decoration:underline; }
-    h1 { margin: 18px 0 8px; font-size: 44px; letter-spacing:-0.5px; }
-    p { margin:0 0 14px; line-height:1.6; color:#2b2b2b; max-width: 72ch; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin:14px 0; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    body {
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    /* Header */
+    .topbar {
+      background:var(--bg-dark);
+      color:#fff;
+    }
+    .topbar .wrap {
+      max-width:1100px;
+      margin:0 auto;
+      padding:16px;
+      display:flex;
+      align-items:center;
+      gap:16px;
+    }
+    .brand {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:800;
+    }
+    .dot {
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:var(--blue);
+    }
+    .nav {
+      margin-left:auto;
+      display:flex;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+    .nav a {
+      color:#d7deff;
+      text-decoration:none;
+      font-weight:700;
+    }
+
+    /* Layout */
+    .wrap {
+      max-width:900px;
+      margin:0 auto;
+      padding:32px 16px;
+    }
+
+    h1 {
+      margin:0 0 8px;
+    }
+
+    p {
+      margin:0 0 16px;
+      color:#333;
+      line-height:1.6;
+    }
+
+    .card {
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:18px;
+      margin:18px 0;
+    }
+
+    .row {
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
     button {
-      padding:10px 14px; border-radius:12px; border:1px solid #cfcfcf;
-      background:#fff; cursor:pointer; font-weight:900;
+      padding:10px 16px;
+      border-radius:12px;
+      border:1px solid #ccc;
+      background:#fff;
+      font-weight:800;
+      cursor:pointer;
     }
-    button:disabled { opacity:.6; cursor:not-allowed; }
-    .pill { padding:5px 10px; border-radius:999px; background:#f2f2f2; font-size:13px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; word-break:break-all; }
-    code { background:#f6f6f6; padding:10px; border-radius:12px; display:block; }
-    .muted { color:var(--muted); font-size:14px; }
-    .good { color:var(--good); font-weight:900; }
-    .bad { color:var(--bad); font-weight:900; }
-    .kv { display:grid; grid-template-columns: 180px 1fr; gap:10px; align-items:start; }
-    @media (max-width: 720px) { .kv { grid-template-columns: 1fr; } h1 { font-size: 34px; } }
-    a { color:#0b57d0; text-decoration:none; font-weight:800; }
-    a:hover { text-decoration:underline; }
-    .smallnote { margin-top: 10px; font-size: 13px; color:#5b5b5b; line-height:1.5; }
+
+    button:disabled {
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
+    .pill {
+      padding:6px 12px;
+      border-radius:999px;
+      font-size:13px;
+      background:#f1f1f1;
+    }
+
+    .ok { color:var(--green); font-weight:800; }
+    .bad { color:var(--red); font-weight:800; }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:13px;
+      word-break:break-all;
+      background:#f6f6f6;
+      padding:12px;
+      border-radius:12px;
+    }
+
+    footer {
+      margin-top:40px;
+      padding-top:16px;
+      border-top:1px solid var(--line);
+      font-size:14px;
+      color:var(--muted);
+    }
   </style>
 </head>
+
 <body>
 
-  <div class="topbar">
-    <div class="wrap toprow">
-      <div class="brand"><span class="dot"></span> Proofy</div>
-      <div class="nav">
-        <a href="/">Start</a>
-        <a href="/verify.html">Verifiera</a>
-        <a href="/register.html">Registrera</a>
-        <a href="/legal.html">Juridik</a>
-      </div>
-    </div>
-  </div>
-
+<!-- HEADER -->
+<div class="topbar">
   <div class="wrap">
-    <h1>Verifiera dokument</h1>
-    <p>
-      Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256-hash</strong> lokalt i webbläsaren
-      och kontrollerar om hashvärdet finns registrerat on-chain.
-    </p>
-
-    <div class="card">
-      <div class="row">
-        <input id="file" type="file" />
-        <button id="btnVerify" disabled>Verifiera</button>
-        <span id="status" class="pill">Välj en fil</span>
-      </div>
-      <div class="muted" style="margin-top:8px;">
-        Tips: stora filer kan ta några sekunder – hash beräknas i webbläsaren.
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="muted">SHA-256 (bytes32)</div>
-      <code id="hashOut" class="mono">—</code>
-    </div>
-
-    <div class="card" id="resultCard" style="display:none;">
-      <div id="headline" style="font-size:18px; margin-bottom:12px;"></div>
-
-      <div class="kv">
-        <div class="muted">Tid (Sverige)</div>
-        <code id="timeSe" class="mono">—</code>
-
-        <div class="muted">Tid (UTC)</div>
-        <code id="timeUtc" class="mono">—</code>
-
-        <div class="muted">Submitter</div>
-        <code id="submitter" class="mono">—</code>
-
-        <div class="muted">Länkar</div>
-        <div class="mono">
-          <div>Certifikat: <a id="certLink" href="#" target="_blank" rel="noopener">öppna</a></div>
-          <div>Kontrakt: <a id="contractLink" href="#" target="_blank" rel="noopener">oklink</a></div>
-        </div>
-      </div>
-
-      <div class="smallnote">
-        Detta är ett tekniskt verifieringsunderlag: det visar att <em>ett dokument med exakt detta hashvärde</em>
-        är registrerat (eller inte) vid den tidpunkt som blockkedjan anger. Proofy lagrar inte dokumentet.
-      </div>
-    </div>
-
-    <div class="card" id="errorCard" style="display:none;">
-      <div class="bad">Tekniskt fel</div>
-      <div id="errOut" class="mono" style="margin-top:8px;">—</div>
-      <div class="muted" style="margin-top:10px;">
-        Om felet är “Missing AMOY_RPC_URL” eller “OPENAI_API_KEY missing” → kontrollera Environment variables och gör en ny deploy.
-      </div>
-    </div>
-
+    <div class="brand"><span class="dot"></span> Proofy</div>
+    <nav class="nav">
+      <a href="/">Start</a>
+      <a href="/verify.html">Verifiera</a>
+      <a href="/register.html">Registrera</a>
+      <a href="/legal.html">Juridik</a>
+    </nav>
   </div>
+</div>
+
+<!-- CONTENT -->
+<div class="wrap">
+
+  <h1>Verifiera dokument</h1>
+  <p>
+    Dokumentet lämnar aldrig din dator. Proofy beräknar en
+    <strong>SHA-256-hash lokalt</strong> i webbläsaren och kontrollerar
+    om hashvärdet är registrerat on-chain.
+  </p>
+
+  <!-- Upload -->
+  <div class="card">
+    <div class="row">
+      <input type="file" id="file" />
+      <button id="btnVerify" disabled>Verifiera</button>
+      <span id="status" class="pill">Välj en fil</span>
+    </div>
+    <p class="muted" style="margin-top:8px;">
+      Tips: Samma fil måste ge exakt samma hash.
+    </p>
+  </div>
+
+  <!-- Hash -->
+  <div class="card">
+    <div class="muted">SHA-256 (bytes32)</div>
+    <div id="hashOut" class="mono">—</div>
+  </div>
+
+  <!-- Result -->
+  <div class="card" id="result" style="display:none;">
+    <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
+
+    <div class="muted">Tidsstämpel (UTC)</div>
+    <div id="timeOut" class="mono">—</div>
+
+    <div class="muted" style="margin-top:10px;">Submitter</div>
+    <div id="submitterOut" class="mono">—</div>
+  </div>
+
+  <!-- Error (only real technical errors) -->
+  <div class="card" id="error" style="display:none;">
+    <div class="bad">Tillfälligt tekniskt problem</div>
+    <div id="errorMsg" class="mono"></div>
+  </div>
+
+  <footer>
+    Detta är ett tekniskt verifieringsunderlag som visar om ett dokument
+    med exakt detta hashvärde existerade vid en viss tidpunkt.
+    Proofy lagrar inte dokument.
+  </footer>
+
+</div>
 
 <script>
   const fileInput = document.getElementById("file");
@@ -127,103 +211,69 @@
   const statusEl = document.getElementById("status");
   const hashOut = document.getElementById("hashOut");
 
-  const resultCard = document.getElementById("resultCard");
-  const headline = document.getElementById("headline");
-  const timeSe = document.getElementById("timeSe");
-  const timeUtc = document.getElementById("timeUtc");
-  const submitterEl = document.getElementById("submitter");
+  const resultBox = document.getElementById("result");
+  const resultLine = document.getElementById("resultLine");
+  const timeOut = document.getElementById("timeOut");
+  const submitterOut = document.getElementById("submitterOut");
 
-  const certLink = document.getElementById("certLink");
-  const contractLink = document.getElementById("contractLink");
+  const errorBox = document.getElementById("error");
+  const errorMsg = document.getElementById("errorMsg");
 
-  const errorCard = document.getElementById("errorCard");
-  const errOut = document.getElementById("errOut");
+  let currentHash = null;
 
-  // Kontrakt-länk (Amoy)
-  const CONTRACT_ADDR = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
-  contractLink.href = `https://www.oklink.com/amoy/address/${CONTRACT_ADDR}`;
-
-  let lastHash = null;
-
-  function showError(msg) {
-    errorCard.style.display = "block";
-    errOut.textContent = msg;
-  }
-  function hideError() {
-    errorCard.style.display = "none";
-    errOut.textContent = "—";
-  }
-  function hideResult() {
-    resultCard.style.display = "none";
+  function resetUI() {
+    resultBox.style.display = "none";
+    errorBox.style.display = "none";
   }
 
   fileInput.addEventListener("change", async () => {
-    hideError(); hideResult();
-    const f = fileInput.files?.[0];
-    if (!f) return;
-
-    statusEl.textContent = "Beräknar SHA-256…";
+    resetUI();
     btnVerify.disabled = true;
 
+    const file = fileInput.files?.[0];
+    if (!file) return;
+
+    statusEl.textContent = "Beräknar hash…";
+
     try {
-      lastHash = await sha256File(f);
-      hashOut.textContent = lastHash;
+      currentHash = await sha256File(file);
+      hashOut.textContent = currentHash;
       statusEl.textContent = "Redo att verifiera";
       btnVerify.disabled = false;
     } catch (e) {
-      showError(String(e?.message || e));
+      errorBox.style.display = "block";
+      errorMsg.textContent = "Kunde inte beräkna hash.";
       statusEl.textContent = "Fel";
     }
   });
 
   btnVerify.addEventListener("click", async () => {
-    if (!lastHash) return;
-    hideError(); hideResult();
+    if (!currentHash) return;
+    resetUI();
 
-    statusEl.textContent = "Kontrollerar on-chain…";
+    statusEl.textContent = "Verifierar…";
     btnVerify.disabled = true;
 
     try {
-      const url = `/.netlify/functions/verify?hash=${encodeURIComponent(lastHash)}`;
-      const res = await fetch(url, { method: "GET" });
-      const data = await res.json().catch(() => ({}));
+      const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(currentHash)}`);
+      const data = await res.json();
 
-      if (!res.ok || data.ok === false) {
-        throw new Error(data.error || `Verify failed (HTTP ${res.status})`);
-      }
-
-      // data: { ok:true, exists:true/false, timestamp, submitter, hashHex }
-      resultCard.style.display = "block";
-
-      certLink.href = `/certificate.html?hash=${encodeURIComponent(lastHash)}`;
+      resultBox.style.display = "block";
 
       if (data.exists) {
-        headline.innerHTML = `<span class="good">✅ Registrerad</span> <span class="muted">(hash finns on-chain)</span>`;
+        resultLine.innerHTML = `<span class="ok">✔️ Dokumentet är verifierat</span>`;
+        timeOut.textContent = new Date(data.timestamp * 1000).toISOString();
+        submitterOut.textContent = data.submitter;
       } else {
-        headline.innerHTML = `<span class="bad">❌ Inte registrerad</span> <span class="muted">(hash saknas)</span>`;
+        resultLine.innerHTML = `<span class="bad">❌ Dokumentet är inte registrerat</span>`;
+        timeOut.textContent = "—";
+        submitterOut.textContent = "—";
       }
 
-      const ts = Number(data.timestamp || 0);
-      if (data.exists && ts > 0) {
-        const d = new Date(ts * 1000);
-
-        timeUtc.textContent = d.toISOString().replace("T", " ").replace(".000Z", " UTC");
-
-        const se = new Intl.DateTimeFormat("sv-SE", {
-          timeZone: "Europe/Stockholm",
-          year: "numeric", month: "2-digit", day: "2-digit",
-          hour: "2-digit", minute: "2-digit", second: "2-digit"
-        }).format(d);
-        timeSe.textContent = `${se} (Europe/Stockholm)`;
-      } else {
-        timeSe.textContent = "—";
-        timeUtc.textContent = "—";
-      }
-
-      submitterEl.textContent = data.exists ? (data.submitter || "—") : "—";
       statusEl.textContent = "Klar";
     } catch (e) {
-      showError(String(e?.message || e));
+      errorBox.style.display = "block";
+      errorMsg.textContent = "Verifieringstjänsten kunde inte nås just nu.";
       statusEl.textContent = "Fel";
     } finally {
       btnVerify.disabled = false;
@@ -232,8 +282,10 @@
 
   async function sha256File(file) {
     const buf = await file.arrayBuffer();
-    const digest = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,"0")).join("");
+    const hash = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + [...new Uint8Array(hash)]
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
   }
 </script>
 
