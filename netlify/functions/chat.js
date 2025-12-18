@@ -1,97 +1,60 @@
-import fs from "fs";
-import path from "path";
+// netlify/functions/chat.mjs
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-export async function handler(event) {
-  try {
-    const body = JSON.parse(event.body || "{}");
-    const incomingMessages = Array.isArray(body.messages) ? body.messages : [];
-    const messages = incomingMessages.slice(-10);
-
-    const knowledgePath = path.join(process.cwd(), "netlify/functions/data/knowledge.md");
-
-    let knowledge = "";
-    if (fs.existsSync(knowledgePath)) {
-      const raw = fs.readFileSync(knowledgePath, "utf8");
-      const splitToken = "\n---\n\n# Proofy Concierge – Knowledge Base (EN)";
-      knowledge = raw.split(splitToken)[0].trim();
-    }
-
-    const systemPrompt = `
-Du är Proofy Assist för Proofy.se.
-Skriv professionell, tydlig svenska. Undvik AI-ton. Ingen juridisk rådgivning.
-
-Du MÅSTE svara med ENDAST giltig JSON (inget före/efter):
-{
-  "answer": "text",
-  "ctas": [
-    {"label":"Starta pilot","url":"https://proofy.se/pilot.html"},
-    {"label":"Boka demo","url":"https://proofy.se/#kontakt"},
-    {"label":"Mejla oss","url":"mailto:kontakt@proofy.se"}
-  ],
-  "lead": null
+function json(statusCode, obj) {
+  return new Response(JSON.stringify(obj), {
+    status: statusCode,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*",
+      "access-control-allow-headers": "content-type",
+      "access-control-allow-methods": "POST,OPTIONS",
+    },
+  });
 }
 
-Kunskapsbas:
-${knowledge}
-`.trim();
+export default async (request) => {
+  try {
+    if (request.method === "OPTIONS") return json(204, {});
+    if (request.method !== "POST") return json(405, { ok: false, error: "Use POST" });
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const apiKey = process.env.OPENAI_API_KEY || "";
+    if (!apiKey) {
+      return json(500, { ok: false, error: "OPENAI_API_KEY is missing" });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const userMessage = (body?.message || "").trim();
+
+    if (!userMessage) {
+      return json(400, { ok: false, error: "Missing message" });
+    }
+
+    const client = new OpenAI({ apiKey });
+
+    // Enkel, stabil chat – går att ändra till din exakta “persona”
+    const system = `
+Du är Proofy Assist, en hjälpsam svensk support-assistent för tjänsten Proofy.
+Du ska svara kort, tydligt och sakligt.
+Du får aldrig be om privata nycklar eller känslig data.
+Om frågan gäller verifiering: förklara att dokumentet aldrig laddas upp; endast hash används.
+`;
+
+    const resp = await client.chat.completions.create({
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      messages: [
+        { role: "system", content: system.trim() },
+        { role: "user", content: userMessage },
+      ],
       temperature: 0.2,
-      messages: [{ role: "system", content: systemPrompt }, ...messages],
     });
 
-    const raw = (completion.choices?.[0]?.message?.content || "").trim();
+    const text = resp.choices?.[0]?.message?.content || "";
 
-    let payload;
-    try {
-      payload = JSON.parse(raw);
-    } catch {
-      payload = {
-        answer: raw || "Vill du beskriva vilket underlag det gäller, så föreslår jag rätt upplägg?",
-        ctas: [
-          { label: "Starta pilot", url: "https://proofy.se/pilot.html" },
-          { label: "Boka demo", url: "https://proofy.se/#kontakt" },
-          { label: "Mejla oss", url: "mailto:kontakt@proofy.se" }
-        ],
-        lead: null
-      };
-    }
-
-    if (!payload || typeof payload !== "object") payload = {};
-    if (typeof payload.answer !== "string" || !payload.answer.trim()) {
-      payload.answer = "Vill du beskriva vilket underlag det gäller, så föreslår jag rätt upplägg?";
-    }
-    if (!Array.isArray(payload.ctas) || payload.ctas.length < 2) {
-      payload.ctas = [
-        { label: "Starta pilot", url: "https://proofy.se/pilot.html" },
-        { label: "Boka demo", url: "https://proofy.se/#kontakt" },
-        { label: "Mejla oss", url: "mailto:kontakt@proofy.se" }
-      ];
-    }
-    if (!("lead" in payload)) payload.lead = null;
-
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    };
-  } catch (err) {
-    // Viktigt: returnera 200 + JSON så frontend alltid kan visa ett begripligt svar
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        answer: "Tekniskt fel just nu. Mejla kontakt@proofy.se så hjälper vi dig direkt.",
-        ctas: [
-          { label: "Mejla oss", url: "mailto:kontakt@proofy.se" },
-          { label: "Boka demo", url: "https://proofy.se/#kontakt" }
-        ],
-        lead: null
-      }),
-    };
+    return json(200, { ok: true, reply: text });
+  } catch (e) {
+    const msg = String(e?.message || e);
+    return json(500, { ok: false, error: msg });
   }
-}
+};
