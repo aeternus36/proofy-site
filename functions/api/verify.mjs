@@ -1,107 +1,95 @@
 // functions/api/verify.mjs
 import { createPublicClient, http, isHex, zeroAddress } from "viem";
+import { polygonAmoy } from "viem/chains";
 
-function pickAllowOrigin(env) {
-  const v = (env?.ALLOW_ORIGIN || "").trim();
-  return v || "*";
-}
-
-function corsHeaders(origin, methods) {
+function corsHeaders(env) {
+  const allow = (env?.ALLOW_ORIGIN || process.env.ALLOW_ORIGIN || "*").trim() || "*";
   return {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
-    "access-control-allow-origin": origin,
+    "access-control-allow-origin": allow,
     "access-control-allow-headers": "content-type",
-    "access-control-allow-methods": methods,
+    "access-control-allow-methods": "GET,OPTIONS",
   };
 }
 
-function json(status, obj, origin, methods) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: corsHeaders(origin, methods),
-  });
+function json(env, status, obj) {
+  return new Response(JSON.stringify(obj), { status, headers: corsHeaders(env) });
+}
+
+function getEnv(context, key) {
+  return (context?.env?.[key] || process.env[key] || "").trim();
 }
 
 function isBytes32Hash(h) {
   return typeof h === "string" && /^0x[a-fA-F0-9]{64}$/.test(h);
 }
 
-// Lokal chain-definition (slipper "viem/chains")
-function amoyChain(rpcUrl) {
-  return {
-    id: 80002,
-    name: "Polygon Amoy",
-    network: "polygon-amoy",
-    nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 },
-    rpcUrls: {
-      default: { http: [rpcUrl] },
-      public: { http: [rpcUrl] },
-    },
-  };
+function errorToText(e) {
+  return String(e?.shortMessage || e?.message || e || "");
 }
 
-function softErrorMessage(msg) {
-  const m = String(msg || "");
-
-  if (m.includes("Missing CONTRACT_ADDRESS")) {
-    return "Tjänsten saknar kontraktsadress och kan inte verifiera just nu.";
-  }
-  if (m.includes("Missing AMOY_RPC_URL")) {
-    return "Tjänsten saknar RPC-konfiguration och kan inte verifiera just nu.";
-  }
-
-  // Generiskt, lugnt
-  return "Verifieringstjänsten är tillfälligt otillgänglig. Försök igen om en stund.";
+function looksLikeNotFoundOrRevert(msg) {
+  const m = (msg || "").toLowerCase();
+  // Viktigt: vissa kontrakt revert:ar vid "saknas" – det ska INTE bli driftstopp i UI.
+  return (
+    m.includes("reverted") ||
+    m.includes("execution reverted") ||
+    m.includes("returned no data") ||
+    m.includes("call exception") ||
+    m.includes("no data")
+  );
 }
 
 export async function onRequest(context) {
-  const { request, env } = context;
-  const origin = pickAllowOrigin(env);
+  const { request } = context;
 
   try {
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin, "GET,OPTIONS") });
-    if (request.method !== "GET") return json(405, { ok: false, error: "Use GET" }, origin, "GET,OPTIONS");
+    if (request.method === "OPTIONS") return json(context.env, 204, {});
+    if (request.method !== "GET") return json(context.env, 405, { ok: false, userMessage: "Metoden stöds inte." });
 
     const url = new URL(request.url);
     const hash = (url.searchParams.get("hash") || "").trim();
     const debug = (url.searchParams.get("debug") || "").trim() === "1";
 
     const CONTRACT_ADDRESS =
-      (env?.PROOFY_CONTRACT_ADDRESS || "").trim() ||
-      (env?.CONTRACT_ADDRESS || "").trim() ||
-      (env?.VITE_PROOFY_CONTRACT_ADDRESS || "").trim();
+      getEnv(context, "CONTRACT_ADDRESS") ||
+      getEnv(context, "PROOFY_CONTRACT_ADDRESS") ||
+      getEnv(context, "VITE_PROOFY_CONTRACT_ADDRESS");
 
     const RPC_URL =
-      (env?.AMOY_RPC_URL || "").trim() ||
-      (env?.POLYGON_AMOY_RPC_URL || "").trim() ||
-      (env?.RPC_URL || "").trim();
+      getEnv(context, "AMOY_RPC_URL") ||
+      getEnv(context, "POLYGON_AMOY_RPC_URL") ||
+      getEnv(context, "RPC_URL");
 
     if (debug) {
-      return json(
-        200,
-        {
-          ok: true,
-          debug: true,
-          hasHash: !!hash,
-          hasContractAddress: !!CONTRACT_ADDRESS,
-          hasRpcUrl: !!RPC_URL,
-          contractAddressLooksValid: isHex(CONTRACT_ADDRESS || "0x") && (CONTRACT_ADDRESS || "").length === 42,
-          rpcUrlStartsWithHttps: (RPC_URL || "").startsWith("https://"),
-        },
-        origin,
-        "GET,OPTIONS"
-      );
+      return json(context.env, 200, {
+        ok: true,
+        debug: true,
+        hasHash: !!hash,
+        hasContractAddress: !!CONTRACT_ADDRESS,
+        hasRpcUrl: !!RPC_URL,
+        contractAddressLooksValid: isHex(CONTRACT_ADDRESS || "0x") && (CONTRACT_ADDRESS || "").length === 42,
+        rpcUrlStartsWithHttps: (RPC_URL || "").startsWith("https://"),
+      });
     }
 
     if (!isBytes32Hash(hash)) {
-      return json(400, { ok: false, error: "Invalid hash. Expected bytes32 hex (0x + 64 hex)." }, origin, "GET,OPTIONS");
+      return json(context.env, 400, { ok: false, userMessage: "Ogiltig hash. Välj fil igen och försök på nytt." });
     }
-    if (!CONTRACT_ADDRESS) {
-      return json(500, { ok: false, error: "Missing CONTRACT_ADDRESS", userMessage: softErrorMessage("Missing CONTRACT_ADDRESS") }, origin, "GET,OPTIONS");
+
+    if (!CONTRACT_ADDRESS || !isHex(CONTRACT_ADDRESS) || CONTRACT_ADDRESS.length !== 42) {
+      return json(context.env, 500, {
+        ok: false,
+        userMessage: "Verifieringstjänsten är inte korrekt konfigurerad just nu. Försök igen senare.",
+      });
     }
-    if (!RPC_URL) {
-      return json(500, { ok: false, error: "Missing AMOY_RPC_URL", userMessage: softErrorMessage("Missing AMOY_RPC_URL") }, origin, "GET,OPTIONS");
+
+    if (!RPC_URL || !(RPC_URL.startsWith("http://") || RPC_URL.startsWith("https://"))) {
+      return json(context.env, 500, {
+        ok: false,
+        userMessage: "Verifieringstjänsten är inte korrekt konfigurerad just nu. Försök igen senare.",
+      });
     }
 
     const ABI = [
@@ -118,10 +106,11 @@ export async function onRequest(context) {
     ];
 
     const client = createPublicClient({
-      chain: amoyChain(RPC_URL),
+      chain: polygonAmoy,
       transport: http(RPC_URL),
     });
 
+    // Default: saknas
     let exists = false;
     let timestamp = 0;
     let submitter = null;
@@ -144,37 +133,35 @@ export async function onRequest(context) {
 
       if (timestamp > 0 && submitter && submitter !== zeroAddress) exists = true;
     } catch (e) {
-      // Revert/no data → tolkas som "saknas", inte krasch
-      const msg = String(e?.shortMessage || e?.message || e);
-      const looksLikeMissing =
-        msg.includes("returned no data") ||
-        msg.includes("(0x)") ||
-        msg.toLowerCase().includes("execution reverted");
+      const msg = errorToText(e);
 
-      if (!looksLikeMissing) {
-        return json(
-          500,
-          { ok: false, error: msg, userMessage: softErrorMessage(msg) },
-          origin,
-          "GET,OPTIONS"
-        );
+      // ✅ Viktig ändring: revert/no data tolkas som "saknas" (exists=false), inte som fel
+      if (looksLikeNotFoundOrRevert(msg)) {
+        exists = false;
+        timestamp = 0;
+        submitter = null;
+      } else {
+        // Riktigt fel (t.ex. RPC down) → lugnt meddelande
+        return json(context.env, 500, {
+          ok: false,
+          error: msg,
+          userMessage: "Verifieringstjänsten är tillfälligt otillgänglig. Försök igen om en stund.",
+        });
       }
     }
 
-    return json(
-      200,
-      {
-        ok: true,
-        hashHex: hash,
-        exists,
-        timestamp: exists ? timestamp : 0,
-        submitter: exists ? submitter : null,
-      },
-      origin,
-      "GET,OPTIONS"
-    );
+    return json(context.env, 200, {
+      ok: true,
+      hashHex: hash,
+      exists,
+      timestamp: exists ? timestamp : 0,
+      submitter: exists ? submitter : null,
+    });
   } catch (e) {
-    const msg = String(e?.message || e);
-    return json(500, { ok: false, error: msg, userMessage: softErrorMessage(msg) }, origin, "GET,OPTIONS");
+    return json(context.env, 500, {
+      ok: false,
+      error: errorToText(e),
+      userMessage: "Verifieringstjänsten är tillfälligt otillgänglig. Försök igen om en stund.",
+    });
   }
 }
