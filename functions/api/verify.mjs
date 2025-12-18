@@ -1,75 +1,71 @@
-import { createPublicClient, http, zeroAddress } from "viem";
-import { polygonAmoy } from "viem/chains";
+import { createPublicClient, http } from "viem";
 
-function json(statusCode, body) {
-  return new Response(JSON.stringify(body), {
-    status: statusCode,
-    headers: {
-      "content-type": "application/json",
-      "access-control-allow-origin": "*",
-    },
-  });
-}
-
-export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const hash = url.searchParams.get("hash");
-  const debug = url.searchParams.get("debug") === "1";
-
-  if (debug) {
-    return json(200, {
-      ok: true,
-      debug: true,
-      hasHash: !!hash,
-      hasRpcUrl: !!env.AMOY_RPC_URL,
-      hasContractAddress: !!env.CONTRACT_ADDRESS,
-    });
-  }
-
-  if (!hash || !/^0x[a-fA-F0-9]{64}$/.test(hash)) {
-    return json(400, { ok: false, error: "Invalid bytes32 hash" });
-  }
-
+export async function onRequest(context) {
   try {
+    const url = new URL(context.request.url);
+    const hash = url.searchParams.get("hash");
+
+    const rpcUrl = context.env.RPC_URL;
+    const contractAddress = context.env.CONTRACT_ADDRESS;
+
+    if (!hash) {
+      return json({
+        ok: true,
+        registered: false,
+        reason: "NO_HASH_PROVIDED",
+      });
+    }
+
     const client = createPublicClient({
-      chain: polygonAmoy,
-      transport: http(env.AMOY_RPC_URL),
+      transport: http(rpcUrl),
     });
 
-    const ABI = [
-      {
-        type: "function",
-        name: "getProof",
-        stateMutability: "view",
-        inputs: [{ name: "hash", type: "bytes32" }],
-        outputs: [
-          { name: "timestamp", type: "uint256" },
-          { name: "submitter", type: "address" },
+    let proof;
+    try {
+      proof = await client.readContract({
+        address: contractAddress,
+        abi: [
+          {
+            name: "getProof",
+            type: "function",
+            stateMutability: "view",
+            inputs: [{ name: "hash", type: "bytes32" }],
+            outputs: [
+              { name: "timestamp", type: "uint256" },
+              { name: "submitter", type: "address" },
+            ],
+          },
         ],
-      },
-    ];
+        functionName: "getProof",
+        args: [hash],
+      });
+    } catch (err) {
+      // 🔑 VIKTIGT: getProof revert = inte registrerad
+      return json({
+        ok: true,
+        registered: false,
+      });
+    }
 
-    const [timestamp, submitter] = await client.readContract({
-      address: env.CONTRACT_ADDRESS,
-      abi: ABI,
-      functionName: "getProof",
-      args: [hash],
-    });
+    const [timestamp, submitter] = proof;
 
-    const exists =
-      Number(timestamp) > 0 && submitter && submitter !== zeroAddress;
-
-    return json(200, {
+    return json({
       ok: true,
-      exists,
-      timestamp: exists ? Number(timestamp) : 0,
-      submitter: exists ? submitter : null,
+      registered: true,
+      timestamp: Number(timestamp),
+      submitter,
     });
   } catch (err) {
-    return json(200, {
-      ok: true,
-      exists: false,
-      reason: "not_registered",
-    });
+    return json({
+      ok: false,
+      error: err.message,
+    }, 500);
   }
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
