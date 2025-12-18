@@ -2,10 +2,9 @@
 import { createPublicClient, createWalletClient, http, zeroAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-function pickAllowOrigin(request, env) {
+function pickAllowOrigin(env) {
   const configured = (env?.ALLOW_ORIGIN || "").trim();
-  if (configured) return configured;
-  return "*";
+  return configured || "*";
 }
 
 function json(statusCode, obj, origin) {
@@ -35,7 +34,6 @@ function looksLikeNotFoundError(msg) {
   );
 }
 
-// Lokal chain-definition (slipper "viem/chains")
 function amoyChain(rpcUrl) {
   return {
     id: 80002,
@@ -68,11 +66,7 @@ async function readExists(publicClient, contractAddress, abi, hash) {
     }
 
     const exists = ts > 0 && sub && sub !== zeroAddress;
-    return {
-      exists,
-      timestamp: exists ? ts : 0,
-      submitter: exists ? sub : null,
-    };
+    return { exists, timestamp: exists ? ts : 0, submitter: exists ? sub : null };
   } catch (e) {
     const msg = String(e?.shortMessage || e?.message || e);
     if (looksLikeNotFoundError(msg)) return { exists: false, timestamp: 0, submitter: null };
@@ -82,7 +76,7 @@ async function readExists(publicClient, contractAddress, abi, hash) {
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = pickAllowOrigin(request, env);
+  const origin = pickAllowOrigin(env);
 
   try {
     if (request.method === "OPTIONS") return json(204, {}, origin);
@@ -137,7 +131,6 @@ export async function onRequest(context) {
       transport: http(RPC_URL),
     });
 
-    // 1) redan registrerad?
     const existing = await readExists(publicClient, CONTRACT_ADDRESS, ABI, hash);
     if (existing.exists) {
       return json(
@@ -153,7 +146,6 @@ export async function onRequest(context) {
       );
     }
 
-    // 2) skriv tx
     const account = privateKeyToAccount(PRIVATE_KEY);
     const walletClient = createWalletClient({
       account,
