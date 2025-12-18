@@ -1,60 +1,62 @@
-// netlify/functions/chat.mjs
-import OpenAI from "openai";
+// netlify/functions/chat.js
+const OpenAI = require("openai");
 
 function json(statusCode, obj) {
-  return new Response(JSON.stringify(obj), {
-    status: statusCode,
+  return {
+    statusCode,
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
       "access-control-allow-origin": "*",
-      "access-control-allow-headers": "content-type",
-      "access-control-allow-methods": "POST,OPTIONS",
     },
-  });
+    body: JSON.stringify(obj),
+  };
 }
 
-export default async (request) => {
+exports.handler = async (event) => {
   try {
-    if (request.method === "OPTIONS") return json(204, {});
-    if (request.method !== "POST") return json(405, { ok: false, error: "Use POST" });
-
-    const apiKey = process.env.OPENAI_API_KEY || "";
-    if (!apiKey) {
-      return json(500, { ok: false, error: "OPENAI_API_KEY is missing" });
+    if (event.httpMethod !== "POST") {
+      return json(405, { ok: false, error: "Use POST" });
     }
 
-    const body = await request.json().catch(() => ({}));
-    const userMessage = (body?.message || "").trim();
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return json(500, {
+        ok: false,
+        error: "OPENAI_API_KEY is missing",
+      });
+    }
 
-    if (!userMessage) {
+    const body = JSON.parse(event.body || "{}");
+    const message = (body.message || "").trim();
+
+    if (!message) {
       return json(400, { ok: false, error: "Missing message" });
     }
 
     const client = new OpenAI({ apiKey });
 
-    // Enkel, stabil chat – går att ändra till din exakta “persona”
-    const system = `
-Du är Proofy Assist, en hjälpsam svensk support-assistent för tjänsten Proofy.
-Du ska svara kort, tydligt och sakligt.
-Du får aldrig be om privata nycklar eller känslig data.
-Om frågan gäller verifiering: förklara att dokumentet aldrig laddas upp; endast hash används.
-`;
-
-    const resp = await client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: system.trim() },
-        { role: "user", content: userMessage },
+        {
+          role: "system",
+          content:
+            "Du är Proofy Assist, en svensk supportassistent för dokumentverifiering.",
+        },
+        { role: "user", content: message },
       ],
       temperature: 0.2,
     });
 
-    const text = resp.choices?.[0]?.message?.content || "";
-
-    return json(200, { ok: true, reply: text });
+    return json(200, {
+      ok: true,
+      reply: response.choices[0].message.content,
+    });
   } catch (e) {
-    const msg = String(e?.message || e);
-    return json(500, { ok: false, error: msg });
+    return json(500, {
+      ok: false,
+      error: String(e.message || e),
+    });
   }
 };
