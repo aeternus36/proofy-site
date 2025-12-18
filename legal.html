@@ -3,136 +3,205 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Juridisk information</title>
-  <meta name="description" content="Juridisk information om Proofy och hur dokumentverifiering via hash och tidsstämpling fungerar." />
+  <title>Proofy – Juridik & metod</title>
+  <meta name="description" content="Juridik, metod och begränsningar för Proofy dokumentverifiering via SHA-256 och tidsstämpling." />
+
   <style>
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 0 16px;
-      color: #111;
+    :root{
+      --bg-dark:#0b0d12;
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#111;
+      --muted:#666;
+      --line:#e3e3e3;
+      --blue:#4f7cff;
     }
-    h1 { margin-bottom: 10px; }
-    h2 { margin-top: 28px; }
-    p { line-height: 1.6; color:#333; }
-    ul { margin-left: 18px; }
-    li { margin: 8px 0; }
-    .card {
-      border: 1px solid #e3e3e3;
-      border-radius: 16px;
-      padding: 18px;
-      margin: 18px 0;
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); }
+
+    .topbar{ background:var(--bg-dark); color:#fff; }
+    .topbar .wrap{
+      max-width:1100px; margin:0 auto; padding:16px;
+      display:flex; align-items:center; gap:16px;
     }
-    .muted { color:#666; font-size:14px; }
-    nav {
-      margin-bottom: 28px;
-      padding: 14px 16px;
-      border: 1px solid #e3e3e3;
-      border-radius: 16px;
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; }
+    .dot{ width:10px; height:10px; border-radius:50%; background:var(--blue); }
+    .nav{ margin-left:auto; display:flex; gap:16px; flex-wrap:wrap; }
+    .nav a{ color:#d7deff; text-decoration:none; font-weight:700; }
+    .nav a:hover{ text-decoration:underline; }
+
+    .wrap{ max-width:900px; margin:0 auto; padding:32px 16px 46px; }
+
+    h1{ margin:0 0 10px; font-size:42px; letter-spacing:-0.4px; }
+    h2{ margin:24px 0 10px; font-size:20px; letter-spacing:-0.2px; }
+    p{ margin:0 0 14px; color:#333; line-height:1.7; max-width:75ch; }
+    ul{ margin:10px 0 14px 18px; color:#333; line-height:1.7; }
+    li{ margin:6px 0; }
+
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin:18px 0; }
+    .muted{ color:var(--muted); font-size:14px; line-height:1.6; }
+    .mono{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:13px; word-break:break-all;
+      background:#f6f6f6; padding:12px; border-radius:12px; border:1px solid #eee;
     }
-    nav a {
-      margin-right: 16px;
-      text-decoration: none;
-      font-weight: 700;
-      color: #0b57d0;
+    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    a{ color:#0b57d0; text-decoration:none; font-weight:800; }
+    a:hover{ text-decoration:underline; }
+
+    .callout{
+      border-left:4px solid #ddd;
+      background:#fbfbfb;
+      border-radius:12px;
+      padding:12px;
+      color:#333;
+      line-height:1.65;
+      font-size:14px;
     }
-    footer {
-      margin-top: 48px;
-      padding-top: 18px;
-      border-top: 1px solid #e3e3e3;
-      font-size: 14px;
-      color: #666;
+
+    footer{
+      margin-top:30px;
+      padding-top:16px;
+      border-top:1px solid var(--line);
+      color:var(--muted);
+      font-size:14px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    @media (max-width:720px){
+      h1{ font-size:32px; }
     }
   </style>
 </head>
+
 <body>
-
-<nav>
-  <a href="/index.html">Start</a>
-  <a href="/verify.html">Verifiera</a>
-  <a href="/register.html">Registrera</a>
-</nav>
-
-<h1>Juridisk information</h1>
-<p class="muted">
-  Denna sida beskriver vad Proofy är, hur tjänsten fungerar samt dess juridiska begränsningar.
-</p>
-
-<div class="card">
-  <h2>Vad Proofy är</h2>
-  <p>
-    Proofy är en teknisk tjänst för dokumentverifiering genom kryptografisk hash
-    och tidsstämpling via blockkedjeteknik.
-    Tjänsten gör det möjligt att verifiera om ett dokument med ett visst hashvärde
-    har registrerats vid en given tidpunkt.
-  </p>
-</div>
-
-<div class="card">
-  <h2>Vad Proofy inte är</h2>
-  <p>
-    Proofy är inte ett arkiv, inte en signeringstjänst och inte ett juridiskt ombud.
-    Proofy verifierar inte innehåll, identitet, upphov eller äkthet i juridisk mening.
-  </p>
-</div>
-
-<div class="card">
-  <h2>Hur verifiering fungerar</h2>
-  <p>
-    Vid verifiering beräknas en SHA-256-hash lokalt i användarens webbläsare.
-    Dokumentet lämnar aldrig användarens dator.
-    Hashvärdet används för att kontrollera om samma hash har registrerats
-    i ett smart kontrakt vid en tidigare tidpunkt.
-  </p>
-</div>
-
-<div class="card">
-  <h2>Bevisvärde och begränsningar</h2>
-  <p>
-    En registrering i Proofy visar att ett dokument med ett visst hashvärde
-    existerade senast vid den tidpunkt då hashvärdet registrerades on-chain.
-  </p>
-  <ul>
-    <li>Proofy kan inte fastställa vem som skapade dokumentet.</li>
-    <li>Proofy kan inte avgöra när dokumentet ursprungligen skapades.</li>
-    <li>Proofy kan inte verifiera dokumentets innehåll.</li>
-    <li>Bevisvärdet avgörs ytterst av tillämplig lag och rättstillämpning.</li>
-  </ul>
-</div>
-
-<div class="card">
-  <h2>Tidsstämpling</h2>
-  <p>
-    Tidsangivelser som visas som “Registrerad (UTC)” härrör från blockkedjans
-    tidsstämpling och är avsedda att vara entydiga och internationellt jämförbara.
-    Eventuell lokal tid visas endast som en omräkning.
-  </p>
-</div>
-
-<div class="card">
-  <h2>Dataskydd och integritet</h2>
-  <p>
-    Proofy lagrar inte dokument, personuppgifter eller innehåll.
-    Endast kryptografiska hashvärden behandlas.
-    Ett hashvärde kan inte återskapas till dokumentets innehåll.
-  </p>
-</div>
-
-<div class="card">
-  <h2>Ansvarsbegränsning</h2>
-  <p>
-    Proofy tillhandahålls i befintligt skick.
-    Tjänsten lämnar inga garantier avseende juridiskt utfall,
-    bevisvärdering eller användning i rättsliga processer.
-  </p>
-</div>
-
-<footer>
-  <div>
-    © Proofy — Dokumentverifiering via kryptografisk hash.
+  <div class="topbar">
+    <div class="wrap">
+      <div class="brand"><span class="dot"></span> Proofy</div>
+      <nav class="nav">
+        <a href="/">Start</a>
+        <a href="/verify.html">Verifiera</a>
+        <a href="/register.html">Registrera</a>
+        <a href="/certificate.html">Certifikat</a>
+      </nav>
+    </div>
   </div>
-</footer>
 
+  <div class="wrap">
+    <h1>Juridik & metod</h1>
+    <p>
+      Proofy är ett verktyg för <strong>teknisk verifiering av dokumentintegritet</strong>.
+      Vi lagrar inte dokument och analyserar inte innehåll. Bevisningen bygger på att ett dokument
+      kan representeras av en kryptografisk hash (SHA-256) som registreras med en tidsstämpel.
+    </p>
+
+    <div class="card">
+      <h2>Vad Proofy bevisar</h2>
+      <ul>
+        <li><strong>Oförändradhet:</strong> Om samma fil ger samma SHA-256-hash har filen (som bitström) inte ändrats.</li>
+        <li><strong>Existens vid tidpunkt:</strong> Om hashvärdet är registrerat on-chain finns ett verifierbart “senast vid”-bevis vid den on-chain tidsstämpeln.</li>
+        <li><strong>Spårbarhet:</strong> Registreringen kan knytas till en adress (submitter) om man behöver spåra vem som registrerat.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Vad Proofy inte bevisar</h2>
+      <ul>
+        <li><strong>Vem som skapat dokumentet</strong> eller äger rättigheter.</li>
+        <li><strong>Att innehållet är sant</strong>, korrekt eller uppfyller regler/standarder.</li>
+        <li><strong>Signering / godkännande</strong> (Proofy är inte e-signering).</li>
+        <li><strong>Identitet</strong> (utan separat identitets-/fullmaktsprocess).</li>
+      </ul>
+      <div class="callout">
+        Proofy ger tekniskt stöd för integritet och tidpunkt. Juridisk bevisvärdering beror alltid på sammanhang,
+        rutiner och kompletterande dokumentation.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Metod i korthet</h2>
+      <p class="muted">Så här är flödet uppbyggt, förenklat:</p>
+      <ul>
+        <li>Filen väljs i webbläsaren och SHA-256 beräknas lokalt.</li>
+        <li>Endast hashvärdet (bytes32) skickas för kontroll/registrering.</li>
+        <li>Vid registrering lagras hash + tidsstämpel i ett smart kontrakt.</li>
+        <li>Verifiering innebär att man kontrollerar om hash finns och läser ut tidsstämpeln.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Rekommenderad användning i revision/tvist</h2>
+      <p>
+        För bästa spårbarhet och revisionsvärde rekommenderas att du sparar/bifogar:
+      </p>
+      <ul>
+        <li>Proof Certificate (utskrift/PDF) med hash och tidsstämpel.</li>
+        <li>Den verifierade filen i originalformat (t.ex. PDF) i ditt ärende/akt.</li>
+        <li>Eventuella underlag som förklarar vem som registrerat och varför (policy/protokoll).</li>
+      </ul>
+      <div class="callout">
+        En bra rutin är att ha en intern instruktion: vem får registrera, när, och hur certifikat arkiveras.
+        Det ger högre bevisvärde än enstaka registreringar utan process.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tekniska parametrar (för transparens)</h2>
+      <div class="row">
+        <div style="flex:1 1 320px;">
+          <div class="muted">Hash-format</div>
+          <div class="mono">SHA-256 → bytes32 (0x + 64 hex)</div>
+        </div>
+        <div style="flex:1 1 320px;">
+          <div class="muted">Certifikat-url</div>
+          <div class="mono">/certificate.html?hash=0x…</div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div style="flex:1 1 320px;">
+          <div class="muted">Nätverk</div>
+          <div class="mono">Polygon Amoy (testnet) · ChainId 80002</div>
+        </div>
+        <div style="flex:1 1 320px;">
+          <div class="muted">Kontraktadress</div>
+          <div class="mono">0x1C14960C4dAD90047ea91d224539311c69EAB261</div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div style="flex:1 1 320px;">
+          <div class="muted">Explorer</div>
+          <div class="mono">https://www.oklink.com/amoy/address/0x1C14960C4dAD90047ea91d224539311c69EAB261</div>
+        </div>
+        <div style="flex:1 1 320px;">
+          <div class="muted">Submitter (om visat)</div>
+          <div class="mono">0xe29ee48692Ea4340bBfaBEed729E11FAc09CbeD1</div>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-top:12px;">
+        Notera: Testnet används för utveckling. Mainnet-beslut bör baseras på behov av starkare bevisvärde,
+        kostnad, drift och intern policy.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Ansvarsfriskrivning</h2>
+      <p class="muted">
+        Proofy tillhandahåller teknisk verifiering baserad på kryptografisk hashing och tidsstämpling.
+        Texterna på denna sida är generell information och utgör inte juridisk rådgivning.
+      </p>
+    </div>
+
+    <footer>
+      <div>Proofy lagrar inte dokument.</div>
+      <div>
+        <a href="/verify.html">Verifiera</a> · <a href="/register.html">Registrera</a> · <a href="/certificate.html">Certifikat</a>
+      </div>
+    </footer>
+  </div>
 </body>
 </html>
