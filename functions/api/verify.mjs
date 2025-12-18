@@ -1,21 +1,26 @@
 // functions/api/verify.mjs
 import { createPublicClient, http, isHex, zeroAddress } from "viem";
 
-function json(statusCode, obj, origin) {
-  return new Response(JSON.stringify(obj), {
-    status: statusCode,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "access-control-allow-origin": origin || "*",
-      "access-control-allow-headers": "content-type",
-      "access-control-allow-methods": "GET,OPTIONS",
-    },
-  });
+function pickAllowOrigin(env) {
+  const v = (env?.ALLOW_ORIGIN || "").trim();
+  return v || "*";
 }
 
-function pickAllowOrigin(env) {
-  return (env?.ALLOW_ORIGIN || "").trim() || "*";
+function corsHeaders(origin, methods) {
+  return {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    "access-control-allow-origin": origin,
+    "access-control-allow-headers": "content-type",
+    "access-control-allow-methods": methods,
+  };
+}
+
+function json(status, obj, origin, methods) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: corsHeaders(origin, methods),
+  });
 }
 
 function isBytes32Hash(h) {
@@ -36,13 +41,27 @@ function amoyChain(rpcUrl) {
   };
 }
 
+function softErrorMessage(msg) {
+  const m = String(msg || "");
+
+  if (m.includes("Missing CONTRACT_ADDRESS")) {
+    return "Tjänsten saknar kontraktsadress och kan inte verifiera just nu.";
+  }
+  if (m.includes("Missing AMOY_RPC_URL")) {
+    return "Tjänsten saknar RPC-konfiguration och kan inte verifiera just nu.";
+  }
+
+  // Generiskt, lugnt
+  return "Verifieringstjänsten är tillfälligt otillgänglig. Försök igen om en stund.";
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const origin = pickAllowOrigin(env);
 
   try {
-    if (request.method === "OPTIONS") return json(204, {}, origin);
-    if (request.method !== "GET") return json(405, { ok: false, error: "Use GET" }, origin);
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin, "GET,OPTIONS") });
+    if (request.method !== "GET") return json(405, { ok: false, error: "Use GET" }, origin, "GET,OPTIONS");
 
     const url = new URL(request.url);
     const hash = (url.searchParams.get("hash") || "").trim();
@@ -67,19 +86,23 @@ export async function onRequest(context) {
           hasHash: !!hash,
           hasContractAddress: !!CONTRACT_ADDRESS,
           hasRpcUrl: !!RPC_URL,
-          contractAddressLooksValid:
-            isHex(CONTRACT_ADDRESS || "0x") && (CONTRACT_ADDRESS || "").length === 42,
+          contractAddressLooksValid: isHex(CONTRACT_ADDRESS || "0x") && (CONTRACT_ADDRESS || "").length === 42,
           rpcUrlStartsWithHttps: (RPC_URL || "").startsWith("https://"),
         },
-        origin
+        origin,
+        "GET,OPTIONS"
       );
     }
 
     if (!isBytes32Hash(hash)) {
-      return json(400, { ok: false, error: "Invalid hash. Expected bytes32 hex (0x + 64 hex)." }, origin);
+      return json(400, { ok: false, error: "Invalid hash. Expected bytes32 hex (0x + 64 hex)." }, origin, "GET,OPTIONS");
     }
-    if (!CONTRACT_ADDRESS) return json(400, { ok: false, error: "Missing CONTRACT_ADDRESS" }, origin);
-    if (!RPC_URL) return json(500, { ok: false, error: "Missing AMOY_RPC_URL in environment variables" }, origin);
+    if (!CONTRACT_ADDRESS) {
+      return json(500, { ok: false, error: "Missing CONTRACT_ADDRESS", userMessage: softErrorMessage("Missing CONTRACT_ADDRESS") }, origin, "GET,OPTIONS");
+    }
+    if (!RPC_URL) {
+      return json(500, { ok: false, error: "Missing AMOY_RPC_URL", userMessage: softErrorMessage("Missing AMOY_RPC_URL") }, origin, "GET,OPTIONS");
+    }
 
     const ABI = [
       {
@@ -121,13 +144,21 @@ export async function onRequest(context) {
 
       if (timestamp > 0 && submitter && submitter !== zeroAddress) exists = true;
     } catch (e) {
+      // Revert/no data → tolkas som "saknas", inte krasch
       const msg = String(e?.shortMessage || e?.message || e);
       const looksLikeMissing =
         msg.includes("returned no data") ||
         msg.includes("(0x)") ||
         msg.toLowerCase().includes("execution reverted");
 
-      if (!looksLikeMissing) return json(500, { ok: false, error: msg }, origin);
+      if (!looksLikeMissing) {
+        return json(
+          500,
+          { ok: false, error: msg, userMessage: softErrorMessage(msg) },
+          origin,
+          "GET,OPTIONS"
+        );
+      }
     }
 
     return json(
@@ -139,9 +170,11 @@ export async function onRequest(context) {
         timestamp: exists ? timestamp : 0,
         submitter: exists ? submitter : null,
       },
-      origin
+      origin,
+      "GET,OPTIONS"
     );
   } catch (e) {
-    return json(500, { ok: false, error: String(e?.message || e) }, origin);
+    const msg = String(e?.message || e);
+    return json(500, { ok: false, error: msg, userMessage: softErrorMessage(msg) }, origin, "GET,OPTIONS");
   }
 }
