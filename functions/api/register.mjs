@@ -1,12 +1,6 @@
 // functions/api/register.mjs
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  zeroAddress,
-  privateKeyToAccount,
-} from "viem";
-import { polygonAmoy } from "viem/chains";
+import { createPublicClient, createWalletClient, http, zeroAddress } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 function pickAllowOrigin(request, env) {
   const configured = (env?.ALLOW_ORIGIN || "").trim();
@@ -41,8 +35,21 @@ function looksLikeNotFoundError(msg) {
   );
 }
 
+// Lokal chain-definition (slipper "viem/chains")
+function amoyChain(rpcUrl) {
+  return {
+    id: 80002,
+    name: "Polygon Amoy",
+    network: "polygon-amoy",
+    nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 },
+    rpcUrls: {
+      default: { http: [rpcUrl] },
+      public: { http: [rpcUrl] },
+    },
+  };
+}
+
 async function readExists(publicClient, contractAddress, abi, hash) {
-  // Returnerar { exists, timestamp, submitter } där revert/no data => exists=false
   try {
     const res = await publicClient.readContract({
       address: contractAddress,
@@ -68,9 +75,7 @@ async function readExists(publicClient, contractAddress, abi, hash) {
     };
   } catch (e) {
     const msg = String(e?.shortMessage || e?.message || e);
-    if (looksLikeNotFoundError(msg)) {
-      return { exists: false, timestamp: 0, submitter: null };
-    }
+    if (looksLikeNotFoundError(msg)) return { exists: false, timestamp: 0, submitter: null };
     throw e;
   }
 }
@@ -86,7 +91,6 @@ export async function onRequest(context) {
     const body = await request.json().catch(() => ({}));
     const hash = (body?.hash || "").trim();
 
-    // Env: acceptera flera namn (som i din Netlify-kod)
     const CONTRACT_ADDRESS =
       (env?.PROOFY_CONTRACT_ADDRESS || "").trim() ||
       (env?.CONTRACT_ADDRESS || "").trim() ||
@@ -102,26 +106,15 @@ export async function onRequest(context) {
       (env?.PRIVATE_KEY || "").trim();
 
     if (!isBytes32Hash(hash)) {
-      return json(
-        400,
-        { ok: false, error: "Invalid hash. Expected bytes32 hex (0x + 64 hex)." },
-        origin
-      );
+      return json(400, { ok: false, error: "Invalid hash. Expected bytes32 hex (0x + 64 hex)." }, origin);
     }
-    if (!CONTRACT_ADDRESS) {
-      return json(500, { ok: false, error: "Missing CONTRACT_ADDRESS" }, origin);
-    }
-    if (!RPC_URL) {
-      return json(500, { ok: false, error: "Missing AMOY_RPC_URL" }, origin);
-    }
-    if (!PRIVATE_KEY) {
-      return json(500, { ok: false, error: "Missing PROOFY_PRIVATE_KEY" }, origin);
-    }
+    if (!CONTRACT_ADDRESS) return json(500, { ok: false, error: "Missing CONTRACT_ADDRESS" }, origin);
+    if (!RPC_URL) return json(500, { ok: false, error: "Missing AMOY_RPC_URL" }, origin);
+    if (!PRIVATE_KEY) return json(500, { ok: false, error: "Missing PROOFY_PRIVATE_KEY" }, origin);
     if (!/^0x[a-fA-F0-9]{64}$/.test(PRIVATE_KEY)) {
       return json(400, { ok: false, error: "Invalid private key format. Must be 0x + 64 hex." }, origin);
     }
 
-    // ABI: read + write-kandidater (samma som din Netlify-version)
     const ABI = [
       {
         type: "function",
@@ -133,42 +126,18 @@ export async function onRequest(context) {
           { name: "submitter", type: "address" },
         ],
       },
-      {
-        type: "function",
-        name: "register",
-        stateMutability: "nonpayable",
-        inputs: [{ name: "hash", type: "bytes32" }],
-        outputs: [],
-      },
-      {
-        type: "function",
-        name: "registerHash",
-        stateMutability: "nonpayable",
-        inputs: [{ name: "hash", type: "bytes32" }],
-        outputs: [],
-      },
-      {
-        type: "function",
-        name: "addProof",
-        stateMutability: "nonpayable",
-        inputs: [{ name: "hash", type: "bytes32" }],
-        outputs: [],
-      },
-      {
-        type: "function",
-        name: "storeProof",
-        stateMutability: "nonpayable",
-        inputs: [{ name: "hash", type: "bytes32" }],
-        outputs: [],
-      },
+      { type: "function", name: "register", stateMutability: "nonpayable", inputs: [{ name: "hash", type: "bytes32" }], outputs: [] },
+      { type: "function", name: "registerHash", stateMutability: "nonpayable", inputs: [{ name: "hash", type: "bytes32" }], outputs: [] },
+      { type: "function", name: "addProof", stateMutability: "nonpayable", inputs: [{ name: "hash", type: "bytes32" }], outputs: [] },
+      { type: "function", name: "storeProof", stateMutability: "nonpayable", inputs: [{ name: "hash", type: "bytes32" }], outputs: [] },
     ];
 
     const publicClient = createPublicClient({
-      chain: polygonAmoy,
+      chain: amoyChain(RPC_URL),
       transport: http(RPC_URL),
     });
 
-    // 1) Kolla om redan finns
+    // 1) redan registrerad?
     const existing = await readExists(publicClient, CONTRACT_ADDRESS, ABI, hash);
     if (existing.exists) {
       return json(
@@ -184,11 +153,11 @@ export async function onRequest(context) {
       );
     }
 
-    // 2) Skriv transaktion
+    // 2) skriv tx
     const account = privateKeyToAccount(PRIVATE_KEY);
     const walletClient = createWalletClient({
       account,
-      chain: polygonAmoy,
+      chain: amoyChain(RPC_URL),
       transport: http(RPC_URL),
     });
 
@@ -208,7 +177,7 @@ export async function onRequest(context) {
         });
         chosenFn = fn;
         break;
-      } catch (e) {
+      } catch (_) {
         // prova nästa
       }
     }
@@ -216,10 +185,7 @@ export async function onRequest(context) {
     if (!chosenFn || !sim) {
       return json(
         500,
-        {
-          ok: false,
-          error: "Could not simulate any register function on contract. Check function name / ABI.",
-        },
+        { ok: false, error: "Could not simulate any register function on contract. Check function name / ABI." },
         origin
       );
     }
@@ -244,4 +210,3 @@ export async function onRequest(context) {
     return json(500, { ok: false, error: msg }, origin);
   }
 }
-
