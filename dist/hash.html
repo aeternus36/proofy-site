@@ -22,7 +22,7 @@ body{
     var(--bg);
 }
 .wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
-header{border-bottom:1px solid var(--border);background:rgba(11,18,32,.75)}
+header{border-bottom:1px solid var(--border);background:rgba(11,18,32,.75);position:sticky;top:0;z-index:10}
 .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0;gap:12px}
 .brand{display:flex;gap:10px;font-weight:900;text-decoration:none;align-items:center}
 .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2))}
@@ -50,6 +50,8 @@ input[type="file"]{
   width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
   background:rgba(11,18,32,.35);color:var(--text)
 }
+a.inline{color:#93c5fd;text-decoration:underline}
+.small{font-size:12.5px;color:rgba(169,183,211,.92)}
   </style>
 </head>
 
@@ -57,7 +59,10 @@ input[type="file"]{
 <header>
   <div class="wrap nav">
     <a class="brand" href="/"><span class="logo"></span>Proofy</a>
-    <a class="btn primary" href="/verify.html">Verifiera</a>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn" href="/verify.html">Verifiera</a>
+      <a class="btn primary" href="/#kontakt">Boka demo</a>
+    </div>
   </div>
 </header>
 
@@ -80,6 +85,7 @@ input[type="file"]{
           </div>
 
           <div id="localStatus" class="meta" style="margin-top:10px">Ingen fil vald.</div>
+          <div class="small" style="margin-top:8px">Tips: Minsta ändring i filen ger en helt annan hash.</div>
         </div>
 
         <!-- RIGHT -->
@@ -97,6 +103,8 @@ input[type="file"]{
           <div class="hr"></div>
 
           <div id="status" class="meta"></div>
+
+          <div id="txBox" style="display:none;margin-top:10px"></div>
           <div id="verifyBox" style="display:none;margin-top:10px"></div>
         </div>
 
@@ -121,25 +129,43 @@ input[type="file"]{
   const hashOut     = $("hashOut");
   const status      = $("status");
   const verifyBox   = $("verifyBox");
+  const txBox       = $("txBox");
 
   let currentFile = null;
   let currentHash = null;
 
-  // Anti-spam / låsning
+  // Låsning (anti-spam) + request-sekvens
   let busy = false;
-  const setBusy = (v) => {
+  let opId = 0; // ökar varje gång vi startar en operation, så gamla svar ignoreras
+
+  const setLocal = (msg, cls="meta") => { localStatus.textContent = msg || ""; localStatus.className = cls; };
+  const setStatus = (msg, cls="meta") => { status.textContent = msg || ""; status.className = cls; };
+
+  function setBusy(v) {
     busy = v;
-    // knappar som beror på hash
+    const hasFile = !!currentFile;
     const hasHash = !!currentHash;
-    hashBtn.disabled = !currentFile || busy;
+
+    // hash-knappen kräver fil
+    hashBtn.disabled = !hasFile || busy;
+
+    // resten kräver hash
     copyHashBtn.disabled = !hasHash || busy;
     registerBtn.disabled = !hasHash || busy;
     verifyBtn.disabled = !hasHash || busy;
     copyLinkBtn.disabled = !hasHash || busy;
-  };
+  }
 
-  const setLocal = (msg, cls="meta") => { localStatus.textContent = msg || ""; localStatus.className = cls; };
-  const setStatus = (msg, cls="meta") => { status.textContent = msg || ""; status.className = cls; };
+  function resetRightSide() {
+    currentHash = null;
+    hashOut.textContent = "—";
+    setStatus("");
+    verifyBox.style.display = "none";
+    verifyBox.innerHTML = "";
+    txBox.style.display = "none";
+    txBox.innerHTML = "";
+    setBusy(false);
+  }
 
   const bytesToHex = (b) => [...b].map(x => x.toString(16).padStart(2, "0")).join("");
 
@@ -149,20 +175,14 @@ input[type="file"]{
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
-  function resetRightSide() {
-    currentHash = null;
-    hashOut.textContent = "—";
-    setStatus("");
-    verifyBox.style.display = "none";
-    verifyBox.innerHTML = "";
-    setBusy(false);
+  function polyscanTxUrl(txHash) {
+    // Amoy explorer
+    return `https://amoy.polygonscan.com/tx/${txHash}`;
   }
 
-  // IMPORTANT: alltid reset när fil ändras (förhindrar "gammal grön text")
   fileInput.addEventListener("change", () => {
-    const f = fileInput.files?.[0] || null;
-    currentFile = f;
-
+    currentFile = fileInput.files?.[0] || null;
+    opId++; // invalidatera ev. pågående svar
     resetRightSide();
 
     if (!currentFile) {
@@ -177,6 +197,7 @@ input[type="file"]{
 
   hashBtn.addEventListener("click", async () => {
     if (!currentFile || busy) return;
+    const myOp = ++opId;
 
     try {
       setBusy(true);
@@ -184,6 +205,8 @@ input[type="file"]{
       setStatus("");
 
       const h = await sha256Bytes32Hex(currentFile);
+      if (myOp !== opId) return; // ignoreras om ny operation startat
+
       currentHash = h;
       hashOut.textContent = h;
 
@@ -191,10 +214,11 @@ input[type="file"]{
       setStatus("Redo: du kan registrera eller verifiera.");
     } catch (e) {
       console.error(e);
+      if (myOp !== opId) return;
       setLocal("Fel: kunde inte hasha filen.", "err");
       resetRightSide();
     } finally {
-      setBusy(false);
+      if (myOp === opId) setBusy(false);
     }
   });
 
@@ -208,11 +232,12 @@ input[type="file"]{
     }
   });
 
-  async function verify() {
+  async function verify(showStatus = true) {
     if (!currentHash || busy) return;
+    const myOp = ++opId;
 
     setBusy(true);
-    setStatus("Verifierar…");
+    if (showStatus) setStatus("Verifierar…");
     verifyBox.style.display = "none";
     verifyBox.innerHTML = "";
 
@@ -224,6 +249,7 @@ input[type="file"]{
       });
 
       const j = await r.json().catch(() => ({}));
+      if (myOp !== opId) return;
 
       if (!r.ok || !j.ok) {
         setStatus("Tekniskt fel vid verifiering.", "err");
@@ -245,18 +271,21 @@ input[type="file"]{
       verifyBox.style.display = "block";
       setStatus("");
     } finally {
-      setBusy(false);
+      if (myOp === opId) setBusy(false);
     }
   }
 
-  verifyBtn.addEventListener("click", verify);
+  verifyBtn.addEventListener("click", () => verify(true));
 
   registerBtn.addEventListener("click", async () => {
     if (!currentHash || busy) return;
+    const myOp = ++opId;
 
     setBusy(true);
     setStatus("Registrerar…");
-    // Låt verifyBox ligga kvar om det redan finns, men uppdatera status.
+    // Rensa txBox vid nytt försök
+    txBox.style.display = "none";
+    txBox.innerHTML = "";
 
     try {
       const r = await fetch("/api/register", {
@@ -266,26 +295,36 @@ input[type="file"]{
       });
 
       const j = await r.json().catch(() => ({}));
+      if (myOp !== opId) return;
 
-      // OK
+      // Lyckad tx
       if (r.ok && j.ok) {
         setStatus("Registrerad ✅", "ok");
+
+        if (j.txHash) {
+          const url = polyscanTxUrl(j.txHash);
+          txBox.innerHTML = `
+            <div class="meta">Transaktion:</div>
+            <div class="mono"><a class="inline" href="${url}" target="_blank" rel="noopener noreferrer">${j.txHash}</a></div>
+          `;
+          txBox.style.display = "block";
+        }
+
         return;
       }
 
       const err = String(j.error || j.message || "").toLowerCase();
 
-      // Snygg UX: already registered => behandla som info + auto-verify
+      // Already registered => visa 1 gång, sen verify (som ersätter status)
       if (err.includes("redan") || err.includes("already")) {
         setStatus("Hashen är redan registrerad. Visar registreringen…", "ok");
-        // Kör verify EN gång, men bara om vi inte redan visar resultat för samma hash
-        await verify();
+        await verify(false);
         return;
       }
 
       setStatus("Tekniskt fel vid registrering.", "err");
     } finally {
-      setBusy(false);
+      if (myOp === opId) setBusy(false);
     }
   });
 
@@ -300,7 +339,7 @@ input[type="file"]{
     }
   });
 
-  // Initial state
+  // initial
   resetRightSide();
   setBusy(false);
 })();
