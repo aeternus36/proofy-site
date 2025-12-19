@@ -1,6 +1,10 @@
 import { ethers } from "ethers";
 
-export async function onRequestPost({ env }) {
+export async function onRequest({ request, env }) {
+  if (request.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+
   const res = {
     hasKey: !!env.PROOFY_PRIVATE_KEY,
     hasRpc: !!env.AMOY_RPC_URL,
@@ -8,7 +12,6 @@ export async function onRequestPost({ env }) {
   };
 
   try {
-    if (!env.PROOFY_PRIVATE_KEY) throw new Error("Missing PROOFY_PRIVATE_KEY");
     const wallet = new ethers.Wallet(env.PROOFY_PRIVATE_KEY);
     res.signerAddress = wallet.address;
   } catch (e) {
