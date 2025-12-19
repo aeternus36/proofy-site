@@ -43,10 +43,6 @@ header{border-bottom:1px solid var(--border);background:rgba(11,18,32,.75)}
 .meta{color:var(--muted);font-size:13px}
 .ok{color:#7cf1c6;font-weight:900}
 .err{color:#ff8aa1;font-weight:900}
-input[type="file"]{
-  width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
-  background:rgba(11,18,32,.35);color:var(--text)
-}
 .hr{height:1px;background:rgba(255,255,255,.12);margin:14px 0}
   </style>
 </head>
@@ -63,26 +59,23 @@ input[type="file"]{
   <div class="wrap">
     <h1>Hasha, registrera & verifiera PDF</h1>
     <p class="meta">
-      Filen hash:as <b>lokalt i webbläsaren</b>. Endast hashvärdet används mot Proofys register.
+      Filen hash:as lokalt i webbläsaren. Endast hashvärdet används mot Proofys register.
     </p>
 
     <section class="card content">
       <div class="grid">
 
-        <!-- LEFT -->
         <div>
           <b>1) Välj PDF</b>
           <input id="fileInput" type="file" accept=".pdf,application/pdf" />
 
-          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+          <div style="margin-top:12px;display:flex;gap:10px">
             <button class="btn primary" id="hashBtn" disabled>Hasha</button>
-            <button class="btn" id="copyHashBtn" disabled>Kopiera hash</button>
           </div>
 
           <div id="localStatus" class="meta" style="margin-top:10px">Ingen fil vald.</div>
         </div>
 
-        <!-- RIGHT -->
         <div>
           <b>2) Resultat</b>
           <div class="meta" style="margin-top:8px">SHA-256 (bytes32)</div>
@@ -95,8 +88,7 @@ input[type="file"]{
           </div>
 
           <div class="hr"></div>
-
-          <div id="chainStatus" class="meta"></div>
+          <div id="status" class="meta"></div>
           <div id="verifyBox" style="display:none;margin-top:10px"></div>
         </div>
 
@@ -106,128 +98,86 @@ input[type="file"]{
 </main>
 
 <script>
-(() => {
-  const fileInput = document.getElementById("fileInput");
-  const hashBtn = document.getElementById("hashBtn");
-  const copyHashBtn = document.getElementById("copyHashBtn");
-  const registerBtn = document.getElementById("registerBtn");
-  const verifyBtn = document.getElementById("verifyBtn");
-  const copyLinkBtn = document.getElementById("copyLinkBtn");
+(async () => {
+  const $ = id => document.getElementById(id);
+  let file = null, hash = null;
 
-  const localStatus = document.getElementById("localStatus");
-  const hashOut = document.getElementById("hashOut");
-  const chainStatus = document.getElementById("chainStatus");
-  const verifyBox = document.getElementById("verifyBox");
+  const hex = b => [...b].map(x=>x.toString(16).padStart(2,"0")).join("");
+  const sha256 = async f =>
+    "0x" + hex(new Uint8Array(await crypto.subtle.digest("SHA-256", await f.arrayBuffer())));
 
-  let currentFile = null;
-  let currentHash = null;
-
-  const set = (el, txt, cls="meta") => { el.textContent = txt; el.className = cls; };
-
-  const bytesToHex = b => [...b].map(x => x.toString(16).padStart(2,"0")).join("");
-
-  async function sha256(file){
-    const buf = await file.arrayBuffer();
-    const dig = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + bytesToHex(new Uint8Array(dig));
-  }
-
-  fileInput.onchange = () => {
-    currentFile = fileInput.files?.[0] || null;
-    currentHash = null;
-    hashOut.textContent = "—";
-    verifyBox.style.display = "none";
-    chainStatus.textContent = "";
-    hashBtn.disabled = !currentFile;
-    copyHashBtn.disabled = true;
-    registerBtn.disabled = true;
-    verifyBtn.disabled = true;
-    copyLinkBtn.disabled = true;
-
-    if(currentFile){
-      localStatus.textContent = `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
-    } else {
-      localStatus.textContent = "Ingen fil vald.";
-    }
+  $("fileInput").onchange = e => {
+    file = e.target.files[0];
+    hash = null;
+    $("hashOut").textContent = "—";
+    $("hashBtn").disabled = !file;
+    $("registerBtn").disabled = true;
+    $("verifyBtn").disabled = true;
+    $("copyLinkBtn").disabled = true;
+    $("verifyBox").style.display = "none";
+    $("status").textContent = file ? `Vald fil: ${file.name}` : "Ingen fil vald.";
   };
 
-  hashBtn.onclick = async () => {
-    set(localStatus, "Hashar fil lokalt…");
-    currentHash = await sha256(currentFile);
-    hashOut.textContent = currentHash;
-
-    copyHashBtn.disabled = false;
-    registerBtn.disabled = false;
-    verifyBtn.disabled = false;
-    copyLinkBtn.disabled = false;
-
-    set(localStatus, "Klar ✅", "ok");
+  $("hashBtn").onclick = async () => {
+    $("status").textContent = "Hashar fil lokalt…";
+    hash = await sha256(file);
+    $("hashOut").textContent = hash;
+    $("registerBtn").disabled = false;
+    $("verifyBtn").disabled = false;
+    $("copyLinkBtn").disabled = false;
+    $("status").textContent = "Klar ✅";
   };
 
-  copyHashBtn.onclick = () => navigator.clipboard.writeText(currentHash);
-
-  verifyBtn.onclick = async () => {
-    set(chainStatus, "Verifierar…");
-    verifyBox.style.display = "none";
-
-    const r = await fetch("/api/verify",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash: currentHash })
+  async function verify() {
+    $("status").textContent = "Verifierar…";
+    const r = await fetch("/api/verify", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hash })
     });
     const j = await r.json();
-
     if(!j.ok){
-      set(chainStatus, "Tekniskt fel vid verifiering.", "err");
+      $("status").textContent = "Tekniskt fel vid verifiering.";
       return;
     }
-
     if(!j.exists){
-      verifyBox.innerHTML = "<div class='err'>❌ Hashen är inte registrerad</div>";
+      $("verifyBox").innerHTML = "<div class='err'>❌ Hashen är inte registrerad</div>";
     } else {
-      const date = new Date(j.timestamp*1000).toLocaleString("sv-SE");
-      verifyBox.innerHTML = `
+      $("verifyBox").innerHTML = `
         <div class="ok">✅ Hashen är registrerad</div>
-        <div class="meta">Datum: ${date}</div>
-        <div class="meta">Submitter:</div>
-        <div class="mono">${j.submitter}</div>
-      `;
+        <div class="meta">Datum: ${new Date(j.timestamp*1000).toLocaleString("sv-SE")}</div>
+        <div class="mono">${j.submitter}</div>`;
     }
+    $("verifyBox").style.display = "block";
+    $("status").textContent = "";
+  }
 
-    verifyBox.style.display = "block";
-    set(chainStatus, "");
-  };
+  $("verifyBtn").onclick = verify;
 
-  registerBtn.onclick = async () => {
-    set(chainStatus, "Registrerar…");
-
+  $("registerBtn").onclick = async () => {
+    $("status").textContent = "Registrerar…";
     const r = await fetch("/api/register",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash: currentHash })
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hash })
     });
-
     const j = await r.json().catch(()=>({}));
 
     if(r.ok && j.ok){
-      set(chainStatus, "Registrerad ✅", "ok");
+      $("status").textContent = "Registrerad ✅";
       return;
     }
 
-    const msg = (j.error || "").toLowerCase();
-    if(msg.includes("redan")){
-      set(chainStatus, "Hashen är redan registrerad. Visar registreringen…", "ok");
-      await verifyBtn.onclick();
+    if((j.error||"").toLowerCase().includes("redan")){
+      $("status").textContent = "Redan registrerad – visar verifiering…";
+      await verify();
       return;
     }
 
-    set(chainStatus, "Tekniskt fel vid registrering.", "err");
+    $("status").textContent = "Tekniskt fel vid registrering.";
   };
 
-  copyLinkBtn.onclick = () => {
-    const url = `${location.origin}/verify.html?hash=${currentHash}`;
-    navigator.clipboard.writeText(url);
-    set(chainStatus, "Verifierings-länk kopierad ✅", "ok");
+  $("copyLinkBtn").onclick = () => {
+    navigator.clipboard.writeText(`${location.origin}/verify.html?hash=${hash}`);
+    $("status").textContent = "Verifierings-länk kopierad ✅";
   };
 })();
 </script>
