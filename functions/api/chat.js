@@ -1,40 +1,53 @@
-export async function onRequestPost({ request, env }) {
+export async function onRequest({ request, env }) {
+  // Only allow POST
+  if (request.method !== "POST") {
+    return new Response(JSON.stringify({ ok: false, error: "Method Not Allowed" }), {
+      status: 405,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+
   try {
-    const body = await request.json().catch(() => ({}));
-    const messages = Array.isArray(body.messages) ? body.messages : [];
-
-    // Basic guardrails
-    const cleanMessages = messages
-      .slice(-20)
-      .map((m) => ({
-        role: m?.role === "assistant" ? "assistant" : "user",
-        content: String(m?.content || "").slice(0, 4000),
-      }));
-
     const apiKey = env.OPENAI_API_KEY;
     if (!apiKey) {
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "OPENAI_API_KEY saknas i Cloudflare Pages (Secrets).",
+          error: "OPENAI_API_KEY saknas i Cloudflare Pages → Settings → Variables and Secrets.",
         }),
-        { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+          },
+        }
       );
     }
 
-    // System prompt: matcha Proofy-ton och håll det kort.
+    const body = await request.json().catch(() => ({}));
+    const messages = Array.isArray(body.messages) ? body.messages : [];
+
+    // keep last 20 messages, trim content
+    const cleaned = messages.slice(-20).map((m) => ({
+      role: m?.role === "assistant" ? "assistant" : "user",
+      content: String(m?.content ?? "").slice(0, 4000),
+    }));
+
     const system = {
       role: "system",
       content:
-        "Du är Proofy Assist. Svara kort, tydligt och affärsmässigt på svenska. " +
-        "Fokusera på pilot, demo, säkerhet, och hur filverifiering fungerar. " +
-        "Om någon frågar om teknik: förklara enkelt. Om du är osäker: be om precisering.",
+        "Du är Proofy Assist. Svara på svenska, kort och tydligt. " +
+        "Hjälp med demo, pilot, säkerhet och hur filverifiering fungerar. " +
+        "Håll en professionell ton. Om något är oklart, föreslå nästa steg.",
     };
 
-    // Chat Completions API (stabilt och enkelt)
     const payload = {
       model: "gpt-4.1-mini",
-      messages: [system, ...cleanMessages],
+      messages: [system, ...cleaned],
       temperature: 0.4,
     };
 
@@ -53,16 +66,25 @@ export async function onRequestPost({ request, env }) {
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "OpenAI-fel",
+          error: "OpenAI request failed",
+          status: r.status,
           details: j,
         }),
-        { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+          },
+        }
       );
     }
 
-    const answer = j?.choices?.[0]?.message?.content || "Jag kunde tyvärr inte generera ett svar just nu.";
+    const answer =
+      j?.choices?.[0]?.message?.content ||
+      "Jag kunde tyvärr inte generera ett svar just nu.";
 
-    // CTAs som du använder i widgeten
+    // optional CTAs (din widget kan visa dem)
     const ctas = [
       { label: "Hasha & registrera fil", url: "/hash.html" },
       { label: "Verifiera fil", url: "/verify.html" },
@@ -76,17 +98,12 @@ export async function onRequestPost({ request, env }) {
       },
     });
   } catch (e) {
-    return new Response(
-      JSON.stringify({ ok: false, error: "Serverfel i /api/chat" }),
-      { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
-    );
+    return new Response(JSON.stringify({ ok: false, error: "Serverfel i /api/chat" }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    });
   }
-}
-
-export async function onRequest({ request, env }) {
-  if (request.method === "POST") return onRequestPost({ request, env });
-  return new Response(JSON.stringify({ ok: false, error: "Method Not Allowed" }), {
-    status: 405,
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-  });
 }
