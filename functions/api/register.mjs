@@ -1,20 +1,21 @@
+import { ethers } from "ethers";
+
 export async function onRequestPost({ env }) {
-  const pk = env.PROOFY_PRIVATE_KEY || "";
-  const looksLikePk =
-    pk.startsWith("0x") &&
-    pk.length === 66 &&
-    /^0x[0-9a-fA-F]{64}$/.test(pk);
+  const res = {
+    hasKey: !!env.PROOFY_PRIVATE_KEY,
+    hasRpc: !!env.AMOY_RPC_URL,
+    hasAddress: !!env.PROOFY_CONTRACT_ADDRESS,
+  };
 
-  const rpc = env.AMOY_RPC_URL || "";
-  const looksLikeAmoyRpc = rpc.includes("polygon-amoy");
+  try {
+    if (!env.PROOFY_PRIVATE_KEY) throw new Error("Missing PROOFY_PRIVATE_KEY");
+    const wallet = new ethers.Wallet(env.PROOFY_PRIVATE_KEY);
+    res.signerAddress = wallet.address;
+  } catch (e) {
+    res.signerError = e.message;
+  }
 
-  return new Response(
-    JSON.stringify({
-      hasKey: !!pk,
-      keyLooksValid: looksLikePk,
-      hasRpc: !!rpc,
-      rpcLooksAmoy: looksLikeAmoyRpc
-    }),
-    { headers: { "Content-Type": "application/json" } }
-  );
+  return new Response(JSON.stringify(res, null, 2), {
+    headers: { "Content-Type": "application/json" },
+  });
 }
