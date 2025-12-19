@@ -1,48 +1,20 @@
-export async function onRequest({ request, env }) {
-  const { method } = request;
+export async function onRequestPost({ env }) {
+  const pk = env.PROOFY_PRIVATE_KEY || "";
+  const looksLikePk =
+    pk.startsWith("0x") &&
+    pk.length === 66 &&
+    /^0x[0-9a-fA-F]{64}$/.test(pk);
 
-  // Låt browser/klienter preflighta om du senare kör från frontend
-  if (method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    });
-  }
+  const rpc = env.AMOY_RPC_URL || "";
+  const looksLikeAmoyRpc = rpc.includes("polygon-amoy");
 
-  if (method === "GET") {
-    return new Response("register endpoint up", {
-      headers: { "Content-Type": "text/plain" },
-    });
-  }
-
-  if (method === "POST") {
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return new Response("Invalid JSON", { status: 400 });
-    }
-
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        received: body,
-        hasAddress: !!env.PROOFY_CONTRACT_ADDRESS,
-        hasKey: !!env.PROOFY_PRIVATE_KEY,
-        hasRpc: !!env.AMOY_RPC_URL,
-      }),
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
-  }
-
-  return new Response("Method Not Allowed", { status: 405 });
+  return new Response(
+    JSON.stringify({
+      hasKey: !!pk,
+      keyLooksValid: looksLikePk,
+      hasRpc: !!rpc,
+      rpcLooksAmoy: looksLikeAmoyRpc
+    }),
+    { headers: { "Content-Type": "application/json" } }
+  );
 }
