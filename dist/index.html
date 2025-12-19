@@ -397,7 +397,7 @@ textarea{ min-height: 120px; resize: vertical; }
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <!-- Netlify form (behållen exakt som din) -->
+        <!-- Netlify form -->
         <form name="demo" method="POST" data-netlify="true" netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="demo" />
           <input type="hidden" name="redirect" value="/thanks.html" />
@@ -466,13 +466,10 @@ textarea{ min-height: 120px; resize: vertical; }
   </div>
 </footer>
 
-<!-- INLINE CHAT (behållen, men fixad endpoint + skydd mot dubbel-init) -->
+<!-- INLINE CHAT (kan inte försvinna pga publish/404) -->
 <script>
 (() => {
-  try {
-    if (window.__proofyInlineChatInit) return;
-    window.__proofyInlineChatInit = true;
-
+  function init() {
     const chatHistory = [];
     let isOpen = false;
 
@@ -584,7 +581,7 @@ textarea{ min-height: 120px; resize: vertical; }
           <button class="proofy-qbtn" data-q="Hur jobbar ni med säkerhet och GDPR när ni inte lagrar filinnehåll?">Säkerhet</button>
         </div>
         <div id="proofy-messages"></div>
-        <div class="proofy-hint">Exempel: “Hur fungerar verifierings-ID?”, “Kan en fil ändras vid ny export?”</div>
+        <div class="proofy-hint">Exempel: “Hur fungerar verifierings-ID?”, “Kan PDF re-export ge ingen match?”</div>
       </div>
       <div class="proofy-footer">
         <input class="proofy-input" placeholder="Skriv en fråga..." />
@@ -715,12 +712,15 @@ textarea{ min-height: 120px; resize: vertical; }
     const intro = "Hej. Skriv vad du vill verifiera, så föreslår jag ett bra upplägg.";
     addMessage("assistant", intro);
     chatHistory.push({ role: "assistant", content: intro });
-  } catch (e) {
-    // fail silent
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
   }
 })();
 </script>
-
-<script src="/chat-widget.js?v=2025-01" defer></script>
+<script src="/chat-widget.js?v=2025-01" defer></script> 
 </body>
 </html>
