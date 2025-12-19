@@ -1,58 +1,25 @@
 import { createPublicClient, createWalletClient, http, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-// Minimal ABI: vi antar att kontraktet har en funktion: register(string hash, string filename)
-// Om din contract-function heter något annat (t.ex. registerProof), byt bara "register" nedan.
 const PROOFY_ABI = [
   {
-    "type": "function",
-    "name": "register",
-    "stateMutability": "nonpayable",
-    "inputs": [
-      { "name": "hash", "type": "string" },
-      { "name": "filename", "type": "string" }
-    ],
-    "outputs": []
-  }
+    type: "function",
+    name: "register",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "hash", type: "bytes32" }],
+    outputs: [],
+  },
 ];
 
-function json(status, obj, extraHeaders = {}) {
+function json(status, obj) {
   return new Response(JSON.stringify(obj, null, 2), {
     status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      ...extraHeaders,
-    },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
-function cleanPrivateKey(pk) {
-  if (!pk) return "";
-  const trimmed = pk.trim();
-  // måste vara 0x + 64 hex
-  if (!trimmed.startsWith("0x")) return "0x" + trimmed;
-  return trimmed;
-}
-
-export async function onRequest(context) {
-  const { request, env } = context;
-
-  // CORS preflight
-  if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    });
-  }
-
-  // GET: visa debug (så du slipper “Method Not Allowed” i browser)
+export async function onRequest({ request, env }) {
+  // Tillåt GET för browser-test
   if (request.method === "GET") {
     return json(200, {
       ok: true,
@@ -65,61 +32,43 @@ export async function onRequest(context) {
     });
   }
 
-  // Bara POST får registrera
   if (request.method !== "POST") {
-    return json(405, { ok: false, error: "Method Not Allowed. Use POST." });
+    return json(405, { ok: false, error: "Use POST" });
   }
 
-  // 1) Läs body
+  // 1️⃣ Läs body
   let body;
   try {
     body = await request.json();
   } catch {
-    return json(400, { ok: false, error: "Body must be valid JSON" });
+    return json(400, { ok: false, error: "Invalid JSON body" });
   }
 
-  const hash = (body?.hash ?? "").toString().trim();
-  const filename = (body?.filename ?? "").toString().trim();
+  const hash = (body?.hash || "").trim();
 
-  if (!hash || !filename) {
+  // 2️⃣ Validera hash
+  if (!hash || !hash.startsWith("0x") || hash.length !== 66 || !isHex(hash)) {
     return json(400, {
       ok: false,
-      error: "Missing fields. Required: { hash, filename }",
-      received: body ?? null,
+      error: "hash must be bytes32 (0x + 64 hex chars)",
+      received: body,
     });
   }
 
-  // 2) Läs env
-  const rpcUrl = (env.AMOY_RPC_URL ?? "").trim();
-  const contractAddress = (env.PROOFY_CONTRACT_ADDRESS ?? "").trim();
-  const pkRaw = env.PROOFY_PRIVATE_KEY ?? "";
-  const privateKey = cleanPrivateKey(pkRaw);
+  // 3️⃣ Env
+  const rpcUrl = env.AMOY_RPC_URL;
+  const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
+  const privateKey = env.PROOFY_PRIVATE_KEY;
 
-  const envCheck = {
-    hasKey: !!privateKey,
-    hasRpc: !!rpcUrl,
-    hasAddress: !!contractAddress,
-    keyLooksValid: privateKey.startsWith("0x") && privateKey.length === 66 && isHex(privateKey),
-  };
-
-  if (!envCheck.hasRpc || !envCheck.hasAddress || !envCheck.hasKey) {
+  if (!rpcUrl || !contractAddress || !privateKey) {
     return json(500, {
       ok: false,
-      error: "Missing secrets in environment",
-      env: envCheck,
+      error: "Missing environment variables",
     });
   }
 
-  if (!envCheck.keyLooksValid) {
-    return json(500, {
-      ok: false,
-      error: "PROOFY_PRIVATE_KEY looks invalid. Must be 0x + 64 hex characters.",
-      env: envCheck,
-    });
-  }
-
-  // 3) Skapa client + gör tx
   try {
+    // 4️⃣ Skapa signer
     const account = privateKeyToAccount(privateKey);
 
     const publicClient = createPublicClient({
@@ -131,30 +80,27 @@ export async function onRequest(context) {
       transport: http(rpcUrl),
     });
 
-    // (Valfritt men bra) kolla att RPC svarar
+    // (valfritt men bra)
     const chainId = await publicClient.getChainId();
 
-    // Skicka tx: register(hash, filename)
+    // 5️⃣ Skicka tx
     const txHash = await walletClient.writeContract({
       address: contractAddress,
       abi: PROOFY_ABI,
       functionName: "register",
-      args: [hash, filename],
+      args: [hash],
     });
 
     return json(200, {
       ok: true,
       chainId,
       txHash,
-      received: { hash, filename },
-      env: envCheck,
+      hash,
     });
   } catch (e) {
     return json(500, {
       ok: false,
-      error: e?.message ?? String(e),
-      hint:
-        "Om felet säger 'function selector was not recognized' eller liknande: din contract-function heter inte 'register' eller har andra param-typer. Då måste vi ändra ABI/functionName.",
+      error: e.message,
     });
   }
 }
