@@ -1,13 +1,723 @@
 <!doctype html>
 <html lang="sv">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="stylesheet" href="/assets/proofy.css" />
-    <title>Proofy</title>
-  </head>
-  <body>
-    <h1>Proofy</h1>
-  </body>
-</html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy – Dokumentverifiering för redovisningsbyråer</title>
+  <meta name="description" content="Proofy hjälper redovisningsbyråer att visa att underlag inte har ändrats sedan en viss tidpunkt – utan att lagra dokumentinnehåll." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://proofy.se/" />
+  <meta name="theme-color" content="#0b1220" />
 
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Proofy" />
+  <meta property="og:title" content="Proofy – Dokumentverifiering för redovisningsbyråer" />
+  <meta property="og:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra dokumentinnehåll." />
+  <meta property="og:url" content="https://proofy.se/" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Proofy – Dokumentverifiering för redovisningsbyråer" />
+  <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra dokumentinnehåll." />
+
+  <style>
+:root{
+  --bg:#0b1220;
+  --panel: rgba(255,255,255,.06);
+  --panel2: rgba(255,255,255,.04);
+  --text:#eaf0ff;
+  --muted:#a9b7d3;
+  --border: rgba(255,255,255,.12);
+  --brand:#6ea8ff;
+  --brand2:#7cf1c6;
+  --shadow: 0 18px 60px rgba(0,0,0,.38);
+  --r: 18px;
+  --max: 1140px;
+}
+*{ box-sizing:border-box }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  color: var(--text);
+  background:
+    radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
+    radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
+    radial-gradient(900px 600px at 40% 100%, rgba(110,168,255,.10), transparent 60%),
+    var(--bg);
+  line-height:1.55;
+}
+a{ color:inherit }
+.wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
+header{
+  position: sticky; top:0; z-index:50;
+  backdrop-filter: blur(12px) saturate(160%);
+  background: rgba(11,18,32,.70);
+  border-bottom: 1px solid var(--border);
+}
+.nav{
+  display:flex; align-items:center; justify-content:space-between;
+  gap: 14px; padding: 14px 0;
+}
+.brand{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight: 900; letter-spacing:.2px }
+.logo{
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  box-shadow: 0 16px 40px rgba(110,168,255,.22);
+  position: relative;
+}
+.logo:after{
+  content:"";
+  position:absolute; inset: 9px 10px;
+  border-radius: 7px;
+  background: rgba(11,18,32,.65);
+  border: 1px solid rgba(255,255,255,.20);
+}
+nav{ display:flex; gap: 10px; align-items:center; color: var(--muted); font-weight: 700; }
+nav a{ text-decoration:none; padding: 8px 10px; border-radius: 12px; }
+nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:10px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  text-decoration:none;
+  font-weight: 900;
+  transition: transform .08s ease, background .15s ease;
+  white-space: nowrap;
+}
+.btn:hover{ background: rgba(255,255,255,.10) }
+.btn:active{ transform: translateY(1px) }
+.btn.primary{
+  border: none;
+  color: #08101e;
+  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
+  box-shadow: 0 18px 45px rgba(110,168,255,.22);
+}
+main{ padding: 34px 0 22px; }
+.card{
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  box-shadow: var(--shadow);
+}
+.pageTitle{
+  margin: 18px 0 10px;
+  font-size: clamp(28px, 3.2vw, 52px);
+  letter-spacing: -.5px;
+  line-height:1.1;
+}
+.lead{ color: rgba(234,240,255,.92); max-width: 90ch; margin: 0 0 18px; font-size: 16.8px; }
+.small{ font-size: 12.5px; color: rgba(169,183,211,.92); max-width: 92ch; }
+.content{ padding: 18px; }
+.content h2{ font-size: 20px; margin: 18px 0 8px; letter-spacing: -.2px; }
+.content p, .content li{ color: var(--muted); }
+.badge{
+  display:inline-flex; align-items:center; gap: 8px;
+  padding: 8px 10px; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  font-size: 12.5px; color: rgba(234,240,255,.92);
+}
+.hr{ height:1px; background: var(--border); margin: 14px 0; }
+.grid3{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 920px){ nav{ display:none; } .grid3{ grid-template-columns: 1fr; } }
+.tile{ padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,.10); background: rgba(11,18,32,.25); }
+.tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
+details{ border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.04); }
+summary{ cursor:pointer; font-weight: 950; list-style: none; }
+summary::-webkit-details-marker{ display:none; }
+details p{ color: var(--muted); margin: 10px 0 0; }
+footer{
+  padding: 26px 0 44px; color: var(--muted);
+  border-top: 1px solid var(--border);
+  background: rgba(11,18,32,.45);
+}
+.foot{ display:flex; align-items:flex-start; justify-content:space-between; gap: 16px; flex-wrap: wrap; }
+.links a{ color: rgba(169,183,211,.95); text-decoration:none; margin-right: 12px; }
+.links a:hover{ color: var(--text); }
+input, textarea{
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(11,18,32,.35);
+  color: var(--text);
+  outline: none;
+  font: inherit;
+}
+textarea{ min-height: 120px; resize: vertical; }
+  </style>
+
+  <!-- Structured data: Organization -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"Organization",
+    "name":"Proofy",
+    "url":"https://proofy.se/",
+    "email":"kontakt@proofy.se"
+  }
+  </script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="#top" aria-label="Proofy">
+        <span class="logo" aria-hidden="true"></span>
+        <span>Proofy</span>
+      </a>
+      <nav aria-label="Navigation">
+        <a href="#forbyraer">För byråer</a>
+        <a href="#hur">Hur det fungerar</a>
+        <a href="#trygghet">Säkerhet</a>
+        <a href="#faq">FAQ</a>
+        <a href="#kontakt">Kontakt</a>
+      </nav>
+      <a class="btn primary" href="#kontakt">Boka demo</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap">
+    <div class="badge">För redovisningsbyråer · revision · granskning</div>
+
+    <h1 class="pageTitle">Ett enkelt sätt att visa att underlag inte har ändrats – när det faktiskt spelar roll.</h1>
+
+    <p class="lead">
+      När ett underlag ifrågasätts i efterhand uppstår onödiga diskussioner.
+      Proofy ger dig ett <strong>verifierings-ID</strong> som gör det enkelt att kontrollera om en fil
+      är <strong>oförändrad</strong> sedan en viss tidpunkt. <strong>Vi lagrar inte dokumentinnehåll.</strong>
+    </p>
+
+    <div class="card" style="padding:18px; margin-top:14px;">
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a class="btn primary" href="/pilot.html">Starta pilot</a>
+        <a class="btn" href="#forbyraer">För byråer</a>
+        <a class="btn" href="#hur">Hur det fungerar</a>
+        <a class="btn" href="/security.html">Säkerhet & integritet</a>
+      </div>
+
+      <div class="hr"></div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <span class="badge">🔒 Inget dokumentinnehåll lagras</span>
+        <span class="badge">🧾 Verifiering med ID</span>
+        <span class="badge">⚡ 1–2 min att testa</span>
+      </div>
+
+      <p class="small" style="margin-top:12px;">
+        Proofy är ett tekniskt verifieringsunderlag. Inte e-signering, inte filarkiv och inte juridisk rådgivning.
+      </p>
+    </div>
+
+    <section id="forbyraer" style="margin-top:28px;">
+      <h2>För byråer</h2>
+      <div class="card content">
+        <p>
+          Proofy är byggt för byråers vardag: många ärenden, många versioner, och hög kostnad när någon ifrågasätter ett underlag i efterhand.
+          Du får ett verifierings-ID att spara i ärendet, som gör det lätt att visa om filen är samma som den registrerade versionen.
+        </p>
+        <div class="grid3" style="margin-top:14px;">
+          <div class="tile">
+            <b>Passar när</b>
+            <span class="small">Ni behöver ett objektivt sätt att visa att ett underlag inte ändrats efter ett visst datum.</span>
+          </div>
+          <div class="tile">
+            <b>Inte för</b>
+            <span class="small">Arkivering, e-signering eller juridisk rådgivning. Proofy är ett tekniskt komplement.</span>
+          </div>
+          <div class="tile">
+            <b>Snabb start</b>
+            <span class="small">Testa i pilot i verkliga ärenden med låg friktion och tydliga ramar.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="varfor" style="margin-top:28px;">
+      <h2>Varför behövs detta?</h2>
+      <div class="card content">
+        <p>
+          I byråvardagen händer det att någon säger: <em>“Den där PDF:en har ändrats”</em> eller <em>“Det var inte den versionen vi skickade in”</em>.
+          Utan ett objektivt sätt att kontrollera versionen blir det lätt ord-mot-ord.
+        </p>
+
+        <div class="grid3" style="margin-top:14px;">
+          <div class="tile">
+            <b>Dialog med kund</b>
+            <span class="small">Visa att underlaget ni arbetade på är samma som kunden skickade vid ett visst datum.</span>
+          </div>
+          <div class="tile">
+            <b>Granskning / revision</b>
+            <span class="small">Stärk er interna dokumentation genom att kunna verifiera att en fil är oförändrad.</span>
+          </div>
+          <div class="tile">
+            <b>Tvist & efterfrågor</b>
+            <span class="small">Minska tiden på “bevisa version” när en part ifrågasätter ett dokument i efterhand.</span>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <p class="small">
+          <b>Kärnan:</b> Proofy gör det enkelt att kontrollera om en fil är samma som den som registrerades – utan att någon behöver “lita på” e-posttrådar eller filnamn.
+        </p>
+      </div>
+    </section>
+
+    <section id="vad" style="margin-top:28px;">
+      <h2>Vad Proofy gör</h2>
+      <div class="card content">
+        <ul>
+          <li><b>Skapar ett verifierings-ID</b> för ett dokument vid registrering.</li>
+          <li><b>Ger en tidsstämplad post</b> kopplad till dokumentets fingeravtryck.</li>
+          <li><b>Låter dig verifiera</b> senare: match / ingen match.</li>
+          <li><b>Lagrar inte dokumentinnehåll</b> (Proofy är inte ett arkiv).</li>
+        </ul>
+
+        <div class="hr"></div>
+
+        <details>
+          <summary>Tekniska detaljer (för den som vill)</summary>
+          <p>
+            Proofy beräknar ett kryptografiskt fingeravtryck (hash) av filens bytes.
+            Minsta ändring i filen ger ett helt annat fingeravtryck. Fingeravtrycket kan inte användas för att återskapa dokumentet.
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <section id="hur" style="margin-top:28px;">
+      <h2>Hur det fungerar</h2>
+      <div class="card content">
+        <div class="grid3">
+          <div class="tile">
+            <b>1) Registrera</b>
+            <span class="small">Registrera en fil och få ett verifierings-ID.</span>
+          </div>
+          <div class="tile">
+            <b>2) Referera</b>
+            <span class="small">Spara ID i ärendet/noteringar eller i er rutin.</span>
+          </div>
+          <div class="tile">
+            <b>3) Verifiera</b>
+            <span class="small">Kontrollera vid behov om filen matchar posten.</span>
+          </div>
+        </div>
+        <div class="hr"></div>
+        <p class="small">
+          <b>Viktigt:</b> Proofy säger inget om vem som skapade dokumentet eller om innehållet är “rätt” – bara om filen är oförändrad jämfört med registrerad version.
+        </p>
+      </div>
+    </section>
+
+    <section id="trygghet" style="margin-top:28px;">
+      <h2>Säkerhet & integritet</h2>
+      <div class="card content">
+        <ul>
+          <li><b>Inget dokumentinnehåll lagras.</b> Proofy är byggt för att inte bli ett “dataskåp”.</li>
+          <li><b>Minimal attackyta.</b> Fokus på registrering och verifiering – inga PDF-renderingar/OCR i MVP.</li>
+          <li><b>Kontrollerbarhet.</b> Verifieringen bygger på jämförelse av fingeravtryck.</li>
+        </ul>
+        <p class="small">Mer: <a href="/security.html">Säkerhet & integritet</a>.</p>
+      </div>
+    </section>
+
+    <section id="invandningar" style="margin-top:28px;">
+      <h2>Vanliga invändningar</h2>
+      <div class="card content">
+        <details>
+          <summary>“Vad händer om någon skapar en ny PDF och påstår att den är originalet?”</summary>
+          <p>En ny fil får ett annat fingeravtryck och matchar inte den registrerade posten. Proofy visar om filen du verifierar är samma som den registrerade versionen.</p>
+        </details>
+        <div style="height:10px"></div>
+        <details>
+          <summary>“Är detta juridiskt bindande?”</summary>
+          <p>Proofy är ett tekniskt verifieringsunderlag. Det ersätter inte juridisk bedömning, men kan användas som en del av dokumentation vid granskning eller tvist.</p>
+        </details>
+        <div style="height:10px"></div>
+        <details>
+          <summary>“Ser ni våra dokument?”</summary>
+          <p>Nej. Proofy är byggt för att inte lagra dokumentinnehåll. Endast tekniska referenser som krävs för verifiering lagras.</p>
+        </details>
+      </div>
+    </section>
+
+    <section id="faq" style="margin-top:28px;">
+      <h2>FAQ</h2>
+      <div class="card content">
+        <details>
+          <summary>Vad är Proofy?</summary>
+          <p>Proofy hjälper dig att verifiera om ett dokument/underlag är oförändrat sedan det registrerades, genom ett verifierings-ID. Proofy är byggt för att inte lagra dokumentinnehåll.</p>
+        </details>
+        <div style="height:10px"></div>
+        <details>
+          <summary>Lagrar ni dokument?</summary>
+          <p>Nej. Dokumentet används bara tillfälligt för att beräkna ett kryptografiskt fingeravtryck och raderas därefter. Tjänsten lagrar tekniska referenser som behövs för verifiering.</p>
+        </details>
+        <div style="height:10px"></div>
+        <details>
+          <summary>Om kunden exporterar om en PDF – kan det bli “ingen match”?</summary>
+          <p>Ja. Proofy verifierar filens bytes. Om en process skapar en ny fil (ny export, omskanning, omkomprimering) kan den räknas som ny version tekniskt. I pilot sätter man rutiner för vilken fil som ska registreras.</p>
+        </details>
+        <div style="height:10px"></div>
+        <details>
+          <summary>Hur bokar vi en demo?</summary>
+          <p>Använd formuläret i kontaktsektionen nedan eller maila <b>kontakt@proofy.se</b>.</p>
+        </details>
+      </div>
+
+      <!-- FAQ structured data -->
+      <script type="application/ld+json">
+      {
+        "@context":"https://schema.org",
+        "@type":"FAQPage",
+        "mainEntity":[
+          {"@type":"Question","name":"Vad är Proofy?","acceptedAnswer":{"@type":"Answer","text":"Proofy hjälper dig att verifiera om ett dokument/underlag är oförändrat sedan det registrerades, genom ett verifierings-ID. Proofy är byggt för att inte lagra dokumentinnehåll."}},
+          {"@type":"Question","name":"Lagrar ni dokument?","acceptedAnswer":{"@type":"Answer","text":"Nej. Dokumentet används bara tillfälligt för att beräkna ett kryptografiskt fingeravtryck och raderas därefter. Tjänsten lagrar tekniska referenser som behövs för verifiering."}},
+          {"@type":"Question","name":"Om kunden exporterar om en PDF – kan det bli “ingen match”?","acceptedAnswer":{"@type":"Answer","text":"Ja. Proofy verifierar filens bytes. Om en process skapar en ny fil (ny export, omskanning, omkomprimering) kan den räknas som ny version tekniskt. I pilot sätter man rutiner för vilken fil som ska registreras."}},
+          {"@type":"Question","name":"Hur bokar vi en demo?","acceptedAnswer":{"@type":"Answer","text":"Använd formuläret i kontaktsektionen eller maila kontakt@proofy.se."}}
+        ]
+      }
+      </script>
+    </section>
+
+    <section id="kontakt" style="margin-top:28px;">
+      <h2>Kontakta oss</h2>
+      <div class="card content">
+        <p class="lead" style="font-size:16px; margin:0 0 10px;">
+          Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
+        </p>
+
+        <!-- Netlify form -->
+        <form name="demo" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="demo" />
+          <input type="hidden" name="redirect" value="/thanks.html" />
+          <p style="display:none;">
+            <label>Don’t fill this out: <input name="bot-field" /></label>
+          </p>
+
+          <div style="display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); margin-top:12px;">
+            <div>
+              <label class="small" for="name">Namn *</label>
+              <input id="name" name="name" type="text" autocomplete="name" required />
+            </div>
+            <div>
+              <label class="small" for="email">E-post *</label>
+              <input id="email" name="email" type="email" autocomplete="email" required />
+            </div>
+            <div>
+              <label class="small" for="company">Företag</label>
+              <input id="company" name="company" type="text" autocomplete="organization" />
+            </div>
+            <div>
+              <label class="small" for="volume">Ca dokument/månad</label>
+              <input id="volume" name="volume" type="text" placeholder="t.ex. 50–200" />
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <label class="small" for="message">Meddelande *</label>
+            <textarea id="message" name="message" rows="5" required placeholder="Skriv kort vad ni vill verifiera (t.ex. avtal, underlag, beslut) och när ni vill ses."></textarea>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px;">
+            <button class="btn primary" type="submit">Skicka</button>
+            <a class="btn" href="/pilot.html">Se pilotupplägg</a>
+            <span class="small">Eller maila oss på <strong>kontakt@proofy.se</strong></span>
+          </div>
+        </form>
+
+        <div class="hr"></div>
+        <p class="small" style="margin:0;">
+          OBS: Proofy är en digital tjänst för dokumentverifiering och spårbarhet. Vi ersätter inte juridisk rådgivning eller revision.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
+        <div class="small" style="margin-top:8px; max-width:92ch;">
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av dokument. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
+        </div>
+      </div>
+      <div class="links">
+        <a href="/security.html">Säkerhet</a>
+        <a href="/privacy.html">Integritet</a>
+        <a href="/terms.html">Villkor</a>
+        <a href="#kontakt">Kontakt</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- INLINE CHAT (kan inte försvinna pga publish/404) -->
+<script>
+(() => {
+  function init() {
+    const chatHistory = [];
+    let isOpen = false;
+
+    const style = document.createElement("style");
+    style.textContent = `
+      .proofy-chat-btn{
+        position:fixed;bottom:20px;right:20px;z-index:99999;
+        padding:12px 16px;border-radius:999px;border:none;cursor:pointer;
+        background:linear-gradient(135deg,#6ee7b7,#3b82f6);
+        color:#0b1020;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.25);
+      }
+      .proofy-panel{
+        position:fixed;bottom:86px;right:20px;z-index:99999;
+        width:min(380px, calc(100vw - 40px));
+        height:min(560px, calc(100vh - 140px));
+        background:rgba(10,16,32,.92);
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:18px;overflow:hidden;
+        box-shadow:0 20px 60px rgba(0,0,0,.45);
+        backdrop-filter: blur(10px);
+        display:none;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+        color:#eaf1ff;
+      }
+      .proofy-header{
+        display:flex;align-items:center;justify-content:space-between;
+        padding:12px 12px;border-bottom:1px solid rgba(255,255,255,.08);
+        background:rgba(255,255,255,.03);
+      }
+      .proofy-title{
+        font-weight:800;letter-spacing:.2px;font-size:14px;
+        display:flex;gap:10px;align-items:center;
+      }
+      .proofy-dot{
+        width:10px;height:10px;border-radius:999px;background:linear-gradient(135deg,#6ee7b7,#3b82f6);
+        box-shadow:0 0 0 3px rgba(110,231,183,.12);
+      }
+      .proofy-x{
+        width:34px;height:34px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
+        background:rgba(255,255,255,.04);color:#eaf1ff;cursor:pointer;
+      }
+      .proofy-body{
+        padding:12px;height:calc(100% - 56px - 64px);overflow:auto;
+      }
+      .proofy-quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+      .proofy-qbtn{
+        padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+        background:rgba(255,255,255,.04);color:#eaf1ff;cursor:pointer;font-weight:700;font-size:12px;
+      }
+      .proofy-msg{margin:10px 0;display:flex;flex-direction:column;gap:8px;}
+      .proofy-msg.user{align-items:flex-end;}
+      .proofy-msg.assistant{align-items:flex-start;}
+      .proofy-bubble{
+        max-width:85%;
+        padding:10px 12px;border-radius:14px;
+        border:1px solid rgba(255,255,255,.10);
+        background:rgba(255,255,255,.04);
+        line-height:1.35;font-size:13px;
+        white-space:pre-wrap;
+      }
+      .proofy-msg.user .proofy-bubble{
+        background:rgba(59,130,246,.20);
+        border-color:rgba(59,130,246,.25);
+      }
+      .proofy-bubble a{color:#93c5fd;text-decoration:underline;}
+      .proofy-footer{
+        display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.08);
+        background:rgba(255,255,255,.02);
+      }
+      .proofy-input{
+        flex:1;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);
+        background:rgba(0,0,0,.20);color:#eaf1ff;outline:none;
+      }
+      .proofy-send{
+        padding:10px 14px;border-radius:12px;border:none;cursor:pointer;
+        background:linear-gradient(135deg,#6ee7b7,#3b82f6);
+        color:#0b1020;font-weight:900;
+      }
+      .proofy-hint{margin-top:8px;font-size:11px;opacity:.75;}
+      .proofy-ctas{display:flex;gap:8px;flex-wrap:wrap;max-width:85%;}
+      .proofy-cta{
+        display:inline-flex;align-items:center;
+        padding:9px 12px;border-radius:999px;
+        border:1px solid rgba(255,255,255,.14);
+        background:rgba(255,255,255,.06);
+        color:#eaf1ff;text-decoration:none;font-weight:800;font-size:12px;
+        cursor:pointer;
+      }
+      .proofy-cta:hover{background:rgba(255,255,255,.10);}
+    `;
+    document.head.appendChild(style);
+
+    const button = document.createElement("button");
+    button.className = "proofy-chat-btn";
+    button.innerText = "Fråga oss";
+    document.body.appendChild(button);
+
+    const panel = document.createElement("div");
+    panel.className = "proofy-panel";
+    panel.innerHTML = `
+      <div class="proofy-header">
+        <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
+        <button class="proofy-x" aria-label="Stäng">✕</button>
+      </div>
+      <div class="proofy-body">
+        <div class="proofy-quick">
+          <button class="proofy-qbtn" data-q="Jag vill boka en demo. Hur går det till?">Boka demo</button>
+          <button class="proofy-qbtn" data-q="Jag vill starta en pilot. Vad är nästa steg?">Starta pilot</button>
+          <button class="proofy-qbtn" data-q="Hur jobbar ni med säkerhet och GDPR när ni inte lagrar dokumentinnehåll?">Säkerhet</button>
+        </div>
+        <div id="proofy-messages"></div>
+        <div class="proofy-hint">Exempel: “Hur fungerar verifierings-ID?”, “Kan PDF re-export ge ingen match?”</div>
+      </div>
+      <div class="proofy-footer">
+        <input class="proofy-input" placeholder="Skriv en fråga..." />
+        <button class="proofy-send">Skicka</button>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    const msgRoot = panel.querySelector("#proofy-messages");
+    const input = panel.querySelector(".proofy-input");
+    const sendBtn = panel.querySelector(".proofy-send");
+    const closeBtn = panel.querySelector(".proofy-x");
+
+    function toggle(open) {
+      isOpen = open ?? !isOpen;
+      panel.style.display = isOpen ? "block" : "none";
+      if (isOpen) input.focus();
+    }
+
+    button.onclick = () => toggle(true);
+    closeBtn.onclick = () => toggle(false);
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function linkify(text) {
+      const escaped = escapeHtml(text);
+      return escaped.replace(
+        /(\bhttps?:\/\/[^\s]+|\B\/[^\s]+)/g,
+        (m) => `<a href="${m}" target="_blank" rel="noopener noreferrer">${m}</a>`
+      );
+    }
+
+    function scrollToBottom() {
+      const body = panel.querySelector(".proofy-body");
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function addMessage(role, text) {
+      const wrapper = document.createElement("div");
+      wrapper.className = `proofy-msg ${role}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = "proofy-bubble";
+      bubble.innerHTML = linkify(text);
+
+      wrapper.appendChild(bubble);
+      msgRoot.appendChild(wrapper);
+      scrollToBottom();
+      return wrapper;
+    }
+
+    function addCtas(parentWrapper, ctas) {
+      if (!Array.isArray(ctas) || ctas.length === 0) return;
+      const row = document.createElement("div");
+      row.className = "proofy-ctas";
+
+      ctas.slice(0, 3).forEach((c) => {
+        if (!c?.label || !c?.url) return;
+        const a = document.createElement("a");
+        a.className = "proofy-cta";
+        a.href = c.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = c.label;
+        row.appendChild(a);
+      });
+
+      if (row.childElementCount > 0) {
+        parentWrapper.appendChild(row);
+        scrollToBottom();
+      }
+    }
+
+    async function send(text) {
+      const trimmed = (text || "").trim();
+      if (!trimmed) return;
+
+      addMessage("user", trimmed);
+      chatHistory.push({ role: "user", content: trimmed });
+
+      input.value = "";
+      input.focus();
+
+      try {
+        const res = await fetch("/.netlify/functions/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: chatHistory }),
+        });
+
+        const data = await res.json();
+        const answer =
+          data?.answer ||
+          data?.reply ||
+          "Jag fick inget svar. Testa igen eller mejla kontakt@proofy.se.";
+        const ctas = data?.ctas || null;
+        const leadQ = data?.lead?.question || null;
+
+        chatHistory.push({ role: "assistant", content: answer });
+
+        const wrapper = addMessage("assistant", answer);
+        if (ctas) addCtas(wrapper, ctas);
+
+        if (leadQ) {
+          const follow = `\n\n${leadQ}`;
+          chatHistory.push({ role: "assistant", content: follow });
+          addMessage("assistant", follow);
+        }
+      } catch (e) {
+        addMessage("assistant", "Det blev ett tekniskt fel. Försök igen, eller mejla kontakt@proofy.se.");
+      }
+    }
+
+    sendBtn.onclick = () => send(input.value);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") send(input.value);
+    });
+
+    panel.querySelectorAll(".proofy-qbtn").forEach((b) => {
+      b.addEventListener("click", () => send(b.getAttribute("data-q")));
+    });
+
+    const intro = "Hej. Skriv vad du vill verifiera, så föreslår jag ett bra upplägg.";
+    addMessage("assistant", intro);
+    chatHistory.push({ role: "assistant", content: intro });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+<script src="/chat-widget.js?v=2025-01" defer></script> 
+</body>
+</html>
