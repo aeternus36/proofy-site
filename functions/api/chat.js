@@ -1,9 +1,43 @@
-export async function onRequest({ request, env }) {
-  // Only allow POST
+export async function onRequest(context) {
+  const { request, env } = context;
+
+  // --- CORS (så widgeten alltid kan läsa svaret) ---
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+
+  // Preflight
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // Enkel test i webbläsaren: https://proofy.se/api/chat
+  if (request.method === "GET") {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        route: "/api/chat",
+        hint: "POST JSON {message:\"...\"} eller {messages:[{role,content}]}",
+        hasOpenAIKey: !!env.OPENAI_API_KEY,
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
+  }
+
   if (request.method !== "POST") {
     return new Response(JSON.stringify({ ok: false, error: "Method Not Allowed" }), {
       status: 405,
       headers: {
+        ...corsHeaders,
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
       },
@@ -16,11 +50,13 @@ export async function onRequest({ request, env }) {
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "OPENAI_API_KEY saknas i Cloudflare Pages → Settings → Variables and Secrets.",
+          error:
+            "OPENAI_API_KEY saknas i Cloudflare Pages → Settings → Variables and Secrets.",
         }),
         {
           status: 500,
           headers: {
+            ...corsHeaders,
             "Content-Type": "application/json; charset=utf-8",
             "Cache-Control": "no-store",
           },
@@ -28,14 +64,46 @@ export async function onRequest({ request, env }) {
       );
     }
 
+    // Läs body (stöd för flera format)
     const body = await request.json().catch(() => ({}));
-    const messages = Array.isArray(body.messages) ? body.messages : [];
 
-    // keep last 20 messages, trim content
-    const cleaned = messages.slice(-20).map((m) => ({
-      role: m?.role === "assistant" ? "assistant" : "user",
-      content: String(m?.content ?? "").slice(0, 4000),
-    }));
+    // Format A: { message: "hej" }
+    const singleMessage = typeof body?.message === "string" ? body.message.trim() : "";
+
+    // Format B: { messages: [{role, content}, ...] }
+    const incomingMessages = Array.isArray(body?.messages) ? body.messages : [];
+
+    // Bygg "cleaned" messages
+    let cleaned = [];
+
+    if (incomingMessages.length > 0) {
+      cleaned = incomingMessages.slice(-20).map((m) => ({
+        role: m?.role === "assistant" ? "assistant" : "user",
+        content: String(m?.content ?? "").slice(0, 4000),
+      }));
+    } else if (singleMessage) {
+      cleaned = [
+        {
+          role: "user",
+          content: singleMessage.slice(0, 4000),
+        },
+      ];
+    } else {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Body måste innehålla 'message' (string) eller 'messages' (array).",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
 
     const system = {
       role: "system",
@@ -46,7 +114,7 @@ export async function onRequest({ request, env }) {
     };
 
     const payload = {
-      model: "gpt-4.1-mini",
+      model: env.OPENAI_MODEL || "gpt-4.1-mini",
       messages: [system, ...cleaned],
       temperature: 0.4,
     };
@@ -73,6 +141,7 @@ export async function onRequest({ request, env }) {
         {
           status: 500,
           headers: {
+            ...corsHeaders,
             "Content-Type": "application/json; charset=utf-8",
             "Cache-Control": "no-store",
           },
@@ -80,30 +149,50 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    const answer =
+    const text =
       j?.choices?.[0]?.message?.content ||
       "Jag kunde tyvärr inte generera ett svar just nu.";
 
-    // optional CTAs (din widget kan visa dem)
+    // CTAs (valfritt)
     const ctas = [
       { label: "Hasha & registrera fil", url: "/hash.html" },
       { label: "Verifiera fil", url: "/verify.html" },
       { label: "Säkerhet", url: "/security.html" },
     ];
 
-    return new Response(JSON.stringify({ ok: true, answer, ctas }), {
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    });
+    // Returnera *både* answer och reply för maximal kompatibilitet med widgetar
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        answer: text,
+        reply: text,
+        message: text,
+        ctas,
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: "Serverfel i /api/chat" }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    });
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: "Serverfel i /api/chat",
+        details: String(e?.message || e),
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   }
 }
