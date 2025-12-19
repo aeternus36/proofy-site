@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proofy – Hasha PDF</title>
+
+    <!-- Använd samma styling som resten av siten -->
+    <link rel="stylesheet" href="/assets/proofy.css" />
+
+    <style>
+      /* Fallback om din CSS inte täcker allt */
+      .proofy-wrap { max-width: 960px; margin: 0 auto; padding: 24px; }
+      .proofy-card { border: 1px solid rgba(0,0,0,.12); border-radius: 14px; padding: 16px; }
+      .proofy-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      .proofy-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; word-break: break-all; }
+      .proofy-muted { opacity: .75; }
+      .proofy-ok { color: #0a7a2f; font-weight: 600; }
+      .proofy-err { color: #b00020; font-weight: 600; }
+      .proofy-drop { border: 2px dashed rgba(0,0,0,.25); border-radius: 14px; padding: 22px; text-align: center; }
+      .proofy-drop.drag { border-color: rgba(0,0,0,.6); }
+      button { cursor: pointer; }
+      button:disabled { opacity: .6; cursor: not-allowed; }
+      input[type="file"] { max-width: 100%; }
+    </style>
+  </head>
+
+  <body>
+    <div class="proofy-wrap">
+      <h1>Hasha PDF</h1>
+      <p class="proofy-muted">
+        Ladda upp en PDF. Vi räknar ut <b>SHA-256</b> i webbläsaren och visar den som <b>bytes32</b>
+        (<span class="proofy-mono">0x + 64 hex</span>).
+      </p>
+
+      <div class="proofy-card">
+        <div class="proofy-row">
+          <input id="fileInput" type="file" accept=".pdf,application/pdf" />
+          <button id="hashBtn" disabled>Hasha</button>
+          <button id="copyBtn" disabled>Kopiera hash</button>
+          <a href="/" class="proofy-muted">← Tillbaka</a>
+        </div>
+
+        <div style="height: 12px;"></div>
+
+        <div id="dropZone" class="proofy-drop">
+          Dra & släpp en PDF här (eller välj fil ovan)
+        </div>
+
+        <div style="height: 12px;"></div>
+
+        <div id="fileInfo" class="proofy-muted">Ingen fil vald.</div>
+        <div style="height: 8px;"></div>
+        <div id="status" class="proofy-muted"></div>
+
+        <div style="height: 12px;"></div>
+
+        <div class="proofy-muted">SHA-256 (bytes32):</div>
+        <div id="hashOut" class="proofy-mono">—</div>
+      </div>
+    </div>
+
+    <script>
+      const fileInput = document.getElementById("fileInput");
+      const hashBtn = document.getElementById("hashBtn");
+      const copyBtn = document.getElementById("copyBtn");
+      const hashOut = document.getElementById("hashOut");
+      const statusEl = document.getElementById("status");
+      const fileInfo = document.getElementById("fileInfo");
+      const dropZone = document.getElementById("dropZone");
+
+      let currentFile = null;
+      let currentHash = null;
+
+      function setStatus(msg, kind = "muted") {
+        statusEl.className = kind === "ok" ? "proofy-ok" : kind === "err" ? "proofy-err" : "proofy-muted";
+        statusEl.textContent = msg;
+      }
+
+      function bytesToHex(bytes) {
+        let hex = "";
+        for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, "0");
+        return hex;
+      }
+
+      async function sha256Bytes(file) {
+        const buf = await file.arrayBuffer();
+        const digest = await crypto.subtle.digest("SHA-256", buf);
+        return new Uint8Array(digest); // 32 bytes
+      }
+
+      function setFile(file) {
+        currentFile = file;
+        currentHash = null;
+        hashOut.textContent = "—";
+        copyBtn.disabled = true;
+
+        if (!file) {
+          fileInfo.textContent = "Ingen fil vald.";
+          hashBtn.disabled = true;
+          setStatus("");
+          return;
+        }
+
+        fileInfo.textContent = `Vald fil: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        hashBtn.disabled = false;
+        setStatus("Redo att hasha.");
+      }
+
+      fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] ?? null));
+
+      dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag");
+        const file = e.dataTransfer?.files?.[0];
+        if (file) setFile(file);
+      });
+
+      hashBtn.addEventListener("click", async () => {
+        if (!currentFile) return;
+        try {
+          hashBtn.disabled = true;
+          setStatus("Hashar…");
+
+          const bytes = await sha256Bytes(currentFile);
+          const bytes32 = "0x" + bytesToHex(bytes);
+
+          currentHash = bytes32;
+          hashOut.textContent = bytes32;
+
+          setStatus("Klar ✅", "ok");
+          copyBtn.disabled = false;
+        } catch (e) {
+          console.error(e);
+          setStatus("Fel: kunde inte hasha filen.", "err");
+          currentHash = null;
+          hashOut.textContent = "—";
+          copyBtn.disabled = true;
+        } finally {
+          hashBtn.disabled = !currentFile;
+        }
+      });
+
+      copyBtn.addEventListener("click", async () => {
+        if (!currentHash) return;
+        try {
+          await navigator.clipboard.writeText(currentHash);
+          setStatus("Hash kopierad ✅", "ok");
+        } catch {
+          setStatus("Kunde inte kopiera (tillåt clipboard i browsern).", "err");
+        }
+      });
+
+      setFile(null);
+    </script>
+
+    <!-- Om du använder chat-widget på andra sidor och vill ha samma här, avkommentera: -->
+    <!-- <script src="/chat-widget.js"></script> -->
+  </body>
+</html>
