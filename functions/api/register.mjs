@@ -4,9 +4,10 @@ import {
   createWalletClient,
   http,
   zeroAddress,
-  privateKeyToAccount,
 } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
+
 
 const ABI = [
   {
