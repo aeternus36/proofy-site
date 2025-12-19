@@ -3,397 +3,201 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Hasha & registrera PDF</title>
-  <meta name="description" content="Räkna SHA-256 på en PDF lokalt i webbläsaren och registrera hash på chain." />
+  <title>Proofy – Hasha, registrera & verifiera PDF</title>
   <meta name="theme-color" content="#0b1220" />
 
   <style>
 :root{
-  --bg:#0b1220;
-  --panel: rgba(255,255,255,.06);
-  --panel2: rgba(255,255,255,.04);
-  --text:#eaf0ff;
-  --muted:#a9b7d3;
-  --border: rgba(255,255,255,.12);
-  --brand:#6ea8ff;
-  --brand2:#7cf1c6;
-  --shadow: 0 18px 60px rgba(0,0,0,.38);
-  --r: 18px;
-  --max: 1140px;
+  --bg:#0b1220;--panel:rgba(255,255,255,.06);--text:#eaf0ff;--muted:#a9b7d3;
+  --border:rgba(255,255,255,.12);--brand:#6ea8ff;--brand2:#7cf1c6;
+  --shadow:0 18px 60px rgba(0,0,0,.38);--r:18px;--max:1140px;
 }
-*{ box-sizing:border-box }
-html{ scroll-behavior:smooth; }
+*{box-sizing:border-box}
 body{
-  margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  color: var(--text);
+  margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  color:var(--text);
   background:
     radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
     radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
-    radial-gradient(900px 600px at 40% 100%, rgba(110,168,255,.10), transparent 60%),
     var(--bg);
-  line-height:1.55;
 }
-a{ color:inherit }
-.wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
-header{
-  position: sticky; top:0; z-index:50;
-  backdrop-filter: blur(12px) saturate(160%);
-  background: rgba(11,18,32,.70);
-  border-bottom: 1px solid var(--border);
-}
-.nav{
-  display:flex; align-items:center; justify-content:space-between;
-  gap: 14px; padding: 14px 0;
-}
-.brand{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight: 900; letter-spacing:.2px }
-.logo{
-  width: 34px; height: 34px; border-radius: 10px;
-  background: linear-gradient(135deg, var(--brand), var(--brand2));
-  box-shadow: 0 16px 40px rgba(110,168,255,.22);
-  position: relative;
-}
-.logo:after{
-  content:"";
-  position:absolute; inset: 9px 10px;
-  border-radius: 7px;
-  background: rgba(11,18,32,.65);
-  border: 1px solid rgba(255,255,255,.20);
-}
-nav{ display:flex; gap: 10px; align-items:center; color: var(--muted); font-weight: 700; }
-nav a{ text-decoration:none; padding: 8px 10px; border-radius: 12px; }
-nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:10px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  text-decoration:none;
-  font-weight: 900;
-  transition: transform .08s ease, background .15s ease;
-  white-space: nowrap;
-}
-.btn:hover{ background: rgba(255,255,255,.10) }
-.btn:active{ transform: translateY(1px) }
-.btn.primary{
-  border: none;
-  color: #08101e;
-  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-  box-shadow: 0 18px 45px rgba(110,168,255,.22);
-}
-main{ padding: 34px 0 22px; }
-.card{
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
-  box-shadow: var(--shadow);
-}
-.pageTitle{
-  margin: 18px 0 10px;
-  font-size: clamp(28px, 3.2vw, 52px);
-  letter-spacing: -.5px;
-  line-height:1.1;
-}
-.lead{ color: rgba(234,240,255,.92); max-width: 90ch; margin: 0 0 18px; font-size: 16.8px; }
-.small{ font-size: 12.5px; color: rgba(169,183,211,.92); max-width: 92ch; }
-.content{ padding: 18px; }
-.badge{
-  display:inline-flex; align-items:center; gap: 8px;
-  padding: 8px 10px; border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  font-size: 12.5px; color: rgba(234,240,255,.92);
-}
-.hr{ height:1px; background: var(--border); margin: 14px 0; }
-.grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 920px){ nav{ display:none; } .grid2{ grid-template-columns: 1fr; } }
-.tile{ padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,.10); background: rgba(11,18,32,.25); }
-
-input{
-  width: 100%;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(11,18,32,.35);
-  color: var(--text);
-  outline: none;
-  font: inherit;
-}
-
-.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; word-break: break-all; }
-.ok{ color:#7cf1c6; font-weight:900; }
-.err{ color:#ff8aa1; font-weight:900; }
-.drop{
-  border: 2px dashed rgba(255,255,255,.18);
-  background: rgba(255,255,255,.03);
-  border-radius: 16px;
-  padding: 18px;
-  text-align:center;
-}
-.drop.drag{ border-color: rgba(255,255,255,.38); background: rgba(255,255,255,.05); }
-.meta{ color: var(--muted); font-size: 13px; }
+.wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.75);border-bottom:1px solid var(--border)}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0}
+.brand{display:flex;gap:10px;font-weight:900;text-decoration:none}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2))}
+.btn{padding:12px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:inherit;font-weight:900;cursor:pointer}
+.btn.primary{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#08101e}
+.card{border:1px solid var(--border);border-radius:var(--r);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));box-shadow:var(--shadow)}
+.content{padding:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.mono{font-family:ui-monospace,monospace;word-break:break-all}
+.meta{color:var(--muted);font-size:13px}
+.ok{color:#7cf1c6;font-weight:900}
+.err{color:#ff8aa1;font-weight:900}
   </style>
 </head>
 
 <body>
 <header>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo" aria-hidden="true"></span>
-        <span>Proofy</span>
-      </a>
-      <nav aria-label="Navigation">
-        <a href="/#forbyraer">För byråer</a>
-        <a href="/#hur">Hur det fungerar</a>
-        <a href="/security.html">Säkerhet</a>
-        <a href="/#faq">FAQ</a>
-        <a href="/#kontakt">Kontakt</a>
-      </nav>
-      <a class="btn primary" href="/#kontakt">Boka demo</a>
-    </div>
+  <div class="wrap nav">
+    <a class="brand" href="/"><span class="logo"></span>Proofy</a>
+    <a class="btn primary" href="/#kontakt">Boka demo</a>
   </div>
 </header>
 
 <main>
   <div class="wrap">
-    <div class="badge">Pilotverktyg · Hash lokalt · Ingen fil laddas upp</div>
-
-    <h1 class="pageTitle">Hasha en PDF (SHA-256 → bytes32)</h1>
-    <p class="lead">
-      Välj en PDF så räknar vi ut ett kryptografiskt fingeravtryck <b>lokalt i webbläsaren</b>.
-      Hashen kan användas för registrering i Proofy, utan att dokumentinnehåll lagras.
-    </p>
+    <h1>Hasha, registrera & verifiera PDF</h1>
 
     <section class="card content">
-      <div class="grid2">
-        <div class="tile">
-          <b>1) Välj eller släpp PDF</b>
-          <div style="margin-top:10px;">
-            <input id="fileInput" type="file" accept=".pdf,application/pdf" />
-          </div>
+      <div class="grid">
 
-          <div style="margin-top:12px;" id="dropZone" class="drop">
-            Dra & släpp PDF här
-          </div>
+        <!-- LEFT -->
+        <div>
+          <b>1) Välj PDF</b>
+          <input id="fileInput" type="file" accept=".pdf" />
+          <div class="meta" id="fileInfo">Ingen fil vald.</div>
 
-          <div style="margin-top:12px;" class="meta" id="fileInfo">Ingen fil vald.</div>
-
-          <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn primary" id="hashBtn" disabled>Hasha</button>
             <button class="btn" id="copyBtn" disabled>Kopiera hash</button>
-            <a class="btn" href="/pilot.html">Pilot</a>
           </div>
 
-          <div style="margin-top:12px;" class="meta" id="status"></div>
+          <div class="meta" id="status"></div>
         </div>
 
-        <div class="tile">
+        <!-- RIGHT -->
+        <div>
           <b>2) Resultat</b>
-          <div class="meta" style="margin-top:8px;">SHA-256 som bytes32:</div>
-          <div id="hashOut" class="mono" style="margin-top:8px;">—</div>
+          <div class="meta">SHA-256 (bytes32)</div>
+          <div id="hashOut" class="mono">—</div>
 
-          <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn primary" id="registerBtn" disabled>Registrera på chain</button>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn primary" id="registerBtn" disabled>Registrera</button>
+            <button class="btn" id="verifyBtn" disabled>Verifiera</button>
           </div>
 
-          <div style="margin-top:10px;" class="meta" id="registerStatus"></div>
+          <div class="meta" id="chainStatus"></div>
 
-          <div style="margin-top:10px; display:none;" id="txBox">
-            <div class="meta">Tx:</div>
-            <div class="mono" id="txHashOut">—</div>
-            <div style="margin-top:8px;">
-              <a class="btn" id="txLink" href="#" target="_blank" rel="noopener noreferrer">Öppna i Polygonscan (Amoy)</a>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="meta">
-            <b>Format:</b> <span class="mono">0x</span> + 64 hex (32 bytes).<br/>
-            <b>Obs:</b> Minsta ändring i filen ger helt annan hash.
+          <div id="verifyBox" style="display:none;margin-top:10px">
+            <div class="meta">Resultat</div>
+            <div id="verifyResult"></div>
           </div>
         </div>
+
       </div>
     </section>
-
-    <p class="small" style="margin-top:14px;">
-      Detta verktyg hashar filens bytes i din webbläsare. Inget dokumentinnehåll skickas iväg av hash-steget.
-    </p>
-
   </div>
 </main>
 
 <script>
 (() => {
   const fileInput = document.getElementById("fileInput");
-  const dropZone = document.getElementById("dropZone");
   const fileInfo = document.getElementById("fileInfo");
-  const statusEl = document.getElementById("status");
-  const hashOut = document.getElementById("hashOut");
   const hashBtn = document.getElementById("hashBtn");
   const copyBtn = document.getElementById("copyBtn");
-
   const registerBtn = document.getElementById("registerBtn");
-  const registerStatus = document.getElementById("registerStatus");
-  const txBox = document.getElementById("txBox");
-  const txHashOut = document.getElementById("txHashOut");
-  const txLink = document.getElementById("txLink");
+  const verifyBtn = document.getElementById("verifyBtn");
+  const status = document.getElementById("status");
+  const chainStatus = document.getElementById("chainStatus");
+  const hashOut = document.getElementById("hashOut");
+  const verifyBox = document.getElementById("verifyBox");
+  const verifyResult = document.getElementById("verifyResult");
 
   let currentFile = null;
   let currentHash = null;
 
-  function setStatus(msg, kind) {
-    statusEl.className = "meta " + (kind === "ok" ? "ok" : kind === "err" ? "err" : "");
-    statusEl.textContent = msg || "";
+  function set(el, txt, cls){
+    el.textContent = txt || "";
+    el.className = cls ? cls : "meta";
   }
 
-  function setRegisterStatus(msg, kind) {
-    registerStatus.className = "meta " + (kind === "ok" ? "ok" : kind === "err" ? "err" : "");
-    registerStatus.textContent = msg || "";
+  function bytesToHex(bytes){
+    return [...bytes].map(b=>b.toString(16).padStart(2,"0")).join("");
   }
 
-  function showTx(txHash) {
-    txBox.style.display = "block";
-    txHashOut.textContent = txHash;
-    txLink.href = `https://amoy.polygonscan.com/tx/${txHash}`;
-  }
-
-  function bytesToHex(bytes) {
-    let hex = "";
-    for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, "0");
-    return hex;
-  }
-
-  async function sha256Bytes(file) {
+  async function sha256(file){
     const buf = await file.arrayBuffer();
-    const digest = await crypto.subtle.digest("SHA-256", buf);
-    return new Uint8Array(digest); // 32 bytes
+    const dig = await crypto.subtle.digest("SHA-256", buf);
+    return "0x"+bytesToHex(new Uint8Array(dig));
   }
 
-  function resetRegisterUI() {
-    setRegisterStatus("");
-    txBox.style.display = "none";
-    txHashOut.textContent = "—";
-    txLink.href = "#";
-    registerBtn.disabled = true;
-  }
-
-  function setFile(file) {
-    currentFile = file;
+  fileInput.onchange = () => {
+    currentFile = fileInput.files[0] || null;
     currentHash = null;
     hashOut.textContent = "—";
+    verifyBox.style.display="none";
+    registerBtn.disabled = true;
+    verifyBtn.disabled = true;
     copyBtn.disabled = true;
-    resetRegisterUI();
 
-    if (!file) {
-      fileInfo.textContent = "Ingen fil vald.";
-      hashBtn.disabled = true;
-      setStatus("");
+    if(!currentFile){
+      fileInfo.textContent="Ingen fil vald.";
+      hashBtn.disabled=true;
+      return;
+    }
+    fileInfo.textContent=`${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
+    hashBtn.disabled=false;
+  };
+
+  hashBtn.onclick = async () => {
+    try{
+      set(status,"Hashar…");
+      currentHash = await sha256(currentFile);
+      hashOut.textContent = currentHash;
+      set(status,"Klar ✅","ok");
+      registerBtn.disabled=false;
+      verifyBtn.disabled=false;
+      copyBtn.disabled=false;
+    }catch{
+      set(status,"Fel vid hashing","err");
+    }
+  };
+
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(currentHash);
+    set(status,"Hash kopierad ✅","ok");
+  };
+
+  registerBtn.onclick = async () => {
+    set(chainStatus,"Registrerar…");
+    const r = await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({hash:currentHash})});
+    const j = await r.json();
+    if(j.ok) set(chainStatus,"Registrerad ✅","ok");
+    else set(chainStatus,j.error||"Fel","err");
+  };
+
+  verifyBtn.onclick = async () => {
+    set(chainStatus,"Verifierar…");
+    verifyBox.style.display="none";
+
+    const r = await fetch("/api/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({hash:currentHash})});
+    const j = await r.json();
+
+    if(!j.ok){
+      set(chainStatus,j.error||"Fel","err");
       return;
     }
 
-    fileInfo.textContent = `Vald fil: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-    hashBtn.disabled = false;
-    setStatus("Redo att hasha.");
-  }
-
-  fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] ?? null));
-
-  dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
-  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
-  dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("drag");
-    const file = e.dataTransfer?.files?.[0];
-    if (file) setFile(file);
-  });
-
-  hashBtn.addEventListener("click", async () => {
-    if (!currentFile) return;
-    try {
-      hashBtn.disabled = true;
-      setStatus("Hashar…");
-
-      const bytes = await sha256Bytes(currentFile);
-      const bytes32 = "0x" + bytesToHex(bytes);
-
-      currentHash = bytes32;
-      hashOut.textContent = bytes32;
-
-      setStatus("Klar ✅", "ok");
-      copyBtn.disabled = false;
-      registerBtn.disabled = false;
-    } catch (e) {
-      console.error(e);
-      setStatus("Fel: kunde inte hasha filen.", "err");
-      currentHash = null;
-      hashOut.textContent = "—";
-      copyBtn.disabled = true;
-      resetRegisterUI();
-    } finally {
-      hashBtn.disabled = !currentFile;
+    if(!j.exists){
+      verifyResult.innerHTML = "<span class='err'>❌ Hashen finns inte registrerad</span>";
+    } else {
+      const d = new Date(j.timestamp*1000).toLocaleString("sv-SE");
+      verifyResult.innerHTML = `
+        <div class="ok">✅ Hashen är registrerad</div>
+        <div class="meta">Datum: ${d}</div>
+        <div class="meta">Submitter:</div>
+        <div class="mono">${j.submitter}</div>
+      `;
     }
-  });
-
-  copyBtn.addEventListener("click", async () => {
-    if (!currentHash) return;
-    try {
-      await navigator.clipboard.writeText(currentHash);
-      setStatus("Hash kopierad ✅", "ok");
-    } catch {
-      setStatus("Kunde inte kopiera (tillåt clipboard i browsern).", "err");
-    }
-  });
-
-  registerBtn.addEventListener("click", async () => {
-    if (!currentHash) return;
-
-    try {
-      registerBtn.disabled = true;
-      setRegisterStatus("Registrerar på chain…");
-
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hash: currentHash }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || data?.ok === false) {
-        const msg =
-          data?.error ||
-          data?.message ||
-          `Fel vid registrering (HTTP ${res.status})`;
-
-        const low = String(msg).toLowerCase();
-        if (low.includes("redan") || low.includes("already")) {
-          setRegisterStatus("Den här hashen verkar redan vara registrerad.", "err");
-        } else {
-          setRegisterStatus(msg, "err");
-        }
-        return;
-      }
-
-      const txHash = data?.txHash;
-      if (txHash) showTx(txHash);
-
-      setRegisterStatus("Registrerad ✅", "ok");
-    } catch (e) {
-      console.error(e);
-      setRegisterStatus("Nätfel: kunde inte nå /api/register.", "err");
-    } finally {
-      registerBtn.disabled = !currentHash;
-    }
-  });
-
-  setFile(null);
+    verifyBox.style.display="block";
+    set(chainStatus,"","meta");
+  };
 })();
 </script>
 
-<script src="/chat-widget.js?v=2025-01" defer></script>
+<script src="/chat-widget.js" defer></script>
 </body>
 </html>
