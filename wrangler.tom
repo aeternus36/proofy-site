@@ -1,0 +1,13 @@
+name = "proofy-site"
+compatibility_date = "2025-12-19"
+
+[build]
+upload.format = "modules"
+
+[site]
+bucket = "./dist" # Ändra om du har din frontend i en annan mapp
+
+[vars]
+PROOFY_CONTRACT_ADDRESS = "0x4FCbe453FCA44900d9d0Df1f53ed0FA8f32dD1B6"
+AMOY_RPC_URL = "https://rpc-amoy.polygon.technology"
+PROOFY_PRIVATE_KEY = "din_privata_nyckel"
