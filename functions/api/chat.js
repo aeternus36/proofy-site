@@ -1,88 +1,79 @@
-// functions/api/chat.js
-import OpenAI from "openai";
-
-function corsHeaders(env) {
-  const allow = (env?.ALLOW_ORIGIN || process.env.ALLOW_ORIGIN || "*").trim() || "*";
-  return {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "access-control-allow-origin": allow,
-    "access-control-allow-headers": "content-type",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
-  };
-}
-
-function json(env, status, obj) {
-  return new Response(JSON.stringify(obj), { status, headers: corsHeaders(env) });
-}
-
-function getEnv(context, key) {
-  return (context?.env?.[key] || process.env[key] || "").trim();
-}
-
-export async function onRequest(context) {
-  const { request } = context;
-
-  if (request.method === "OPTIONS") return json(context.env, 204, {});
-  if (request.method === "GET") {
-    // Gör det lätt att testa i webbläsaren
-    const hasKey = !!getEnv(context, "OPENAI_API_KEY");
-    return json(context.env, 200, {
-      ok: true,
-      service: "proofy-chat",
-      method: "GET",
-      hasOpenAIKey: hasKey,
-      note: "POST /api/chat med {message:\"...\"} för att chatta."
-    });
-  }
-
-  if (request.method !== "POST") {
-    return json(context.env, 405, { ok: false, userMessage: "Metoden stöds inte." });
-  }
-
-  const apiKey = getEnv(context, "OPENAI_API_KEY");
-  if (!apiKey) {
-    // Lugnt, revisionsvänligt
-    return json(context.env, 500, {
-      ok: false,
-      userMessage: "Chatten är inte tillgänglig just nu. Försök igen senare."
-    });
-  }
-
-  let body = {};
+export async function onRequestPost({ request }) {
   try {
-    body = await request.json();
-  } catch {
-    return json(context.env, 400, { ok: false, userMessage: "Ogiltig begäran. Försök igen." });
-  }
+    const body = await request.json().catch(() => ({}));
+    const messages = Array.isArray(body.messages) ? body.messages : [];
+    const last = messages.length ? String(messages[messages.length - 1]?.content || "") : "";
+    const text = last.toLowerCase();
 
-  const message = String(body?.message || "").trim();
-  if (!message) {
-    return json(context.env, 400, { ok: false, userMessage: "Skriv ett meddelande först." });
-  }
+    // Enkla, fungerande svar direkt (ingen extern API/nycklar behövs).
+    // Du kan byta ut detta mot riktig AI senare utan att ändra frontend.
+    let answer = "Jag kan hjälpa dig med pilot, demo, säkerhet och hur filverifiering fungerar. Vad vill du veta?";
+    let ctas = [
+      { label: "Hasha & registrera fil", url: "/hash.html" },
+      { label: "Verifiera fil", url: "/verify.html" },
+      { label: "Säkerhet", url: "/security.html" },
+    ];
+    let lead = { question: "Vill du verifiera en fil nu, eller prata pilotupplägg?" };
 
-  try {
-    const client = new OpenAI({ apiKey });
+    if (text.includes("demo") || text.includes("boka")) {
+      answer =
+        "För demo: skriv företag + kontaktperson + önskad tid, så bokar vi 10–15 min.\n\nDu kan också använda kontaktformuläret längst ned på sidan eller mejla kontakt@proofy.se.";
+      ctas = [
+        { label: "Gå till kontakt", url: "/#kontakt" },
+        { label: "Se pilot", url: "/pilot.html" },
+        { label: "Säkerhet", url: "/security.html" },
+      ];
+      lead = { question: "Vill du att jag föreslår ett upplägg för pilot eller bara en snabb demo?" };
+    } else if (text.includes("pilot")) {
+      answer =
+        "Pilot brukar vara: välj ett par typfall, registrera filer i verkliga ärenden, och spara verifierings-ID i ärendet.\n\nMålet är att testa rutin och beviskedja utan extra friktion.";
+      ctas = [
+        { label: "Pilotupplägg", url: "/pilot.html" },
+        { label: "Hasha & registrera", url: "/hash.html" },
+        { label: "Verifiera", url: "/verify.html" },
+      ];
+      lead = { question: "Vilken typ av underlag vill ni kunna styrka (t.ex. kundunderlag, avtal, beslut)?" };
+    } else if (text.includes("gdpr") || text.includes("säkerhet") || text.includes("integritet")) {
+      answer =
+        "Proofy lagrar inte filinnehåll. Endast en kryptografisk hash (fingeravtryck) registreras, vilket inte kan användas för att återskapa filen.\n\nDet minimerar datalagring och attackyta.";
+      ctas = [
+        { label: "Säkerhet & integritet", url: "/security.html" },
+        { label: "Verifiera fil", url: "/verify.html" },
+        { label: "Hasha & registrera", url: "/hash.html" },
+      ];
+      lead = { question: "Vill du att jag förklarar hur verifierings-ID kan dokumenteras i ett ärende?" };
+    } else if (text.includes("hash") || text.includes("verifiera") || text.includes("bytes32")) {
+      answer =
+        "Så funkar det:\n1) Hasha en fil lokalt i webbläsaren\n2) Registrera hash på kedjan\n3) Verifiera senare genom att hasha samma fil igen och jämföra\n\nMinsta ändring i filen ger ny hash → ingen match.";
+      ctas = [
+        { label: "Hasha & registrera fil", url: "/hash.html" },
+        { label: "Verifiera fil", url: "/verify.html" },
+        { label: "Villkor", url: "/terms.html" },
+      ];
+      lead = { question: "Vill du ha en delbar verifieringslänk (hash i URL) eller ett intyg att spara i ärendet?" };
+    }
 
-    // Enkel, stabil chat. (Du kan senare byta modell/striktare policy.)
-    const resp = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "Du är Proofy Assist. Svara kort, sakligt och revisionsvänligt." },
-        { role: "user", content: message }
-      ],
-      temperature: 0.2,
+    return new Response(JSON.stringify({ ok: true, answer, ctas, lead }), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
     });
-
-    const text = resp?.choices?.[0]?.message?.content?.trim() || "";
-
-    return json(context.env, 200, { ok: true, reply: text });
-  } catch {
-    // Inga råa fel till användare
-    return json(context.env, 500, {
+  } catch (e) {
+    return new Response(JSON.stringify({
       ok: false,
-      userMessage: "Chatten är tillfälligt otillgänglig. Försök igen om en stund."
+      answer: "Det blev ett tekniskt fel. Mejla kontakt@proofy.se så hjälper vi dig."
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
     });
   }
 }
 
+export async function onRequest({ request }) {
+  if (request.method === "POST") return onRequestPost({ request });
+  return new Response(JSON.stringify({ ok: false, error: "Method Not Allowed" }), {
+    status: 405,
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+  });
+}
