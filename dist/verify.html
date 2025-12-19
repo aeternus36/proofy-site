@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Verifiera dokument</title>
+  <title>Proofy – Verifiera fil</title>
   <meta name="theme-color" content="#0b1220" />
 
   <style>
@@ -67,7 +67,7 @@ input[type="file"], input[type="text"]{
   <div class="wrap nav">
     <a class="brand" href="/"><span class="logo"></span>Proofy</a>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn" href="/hash.html">Hasha & registrera</a>
+      <a class="btn" href="/hash.html">Registrera fil</a>
       <a class="btn primary" href="/#kontakt">Boka demo</a>
     </div>
   </div>
@@ -75,7 +75,7 @@ input[type="file"], input[type="text"]{
 
 <main>
   <div class="wrap">
-    <h1>Verifiera dokument</h1>
+    <h1>Verifiera fil</h1>
     <p class="meta">
       Verifiera via fil (hashas lokalt), via verifierings-ID (bytes32), eller via delbar länk:
       <span class="mono">/verify.html?hash=0x…</span>
@@ -91,8 +91,9 @@ input[type="file"], input[type="text"]{
             Vi räknar SHA-256 i webbläsaren och kontrollerar om hashvärdet finns registrerat.
           </p>
 
-          <input id="fileInput" type="file" accept=".pdf,application/pdf" />
-          <div id="dropZone" class="drop" style="margin-top:10px">Dra & släpp PDF här</div>
+          <!-- OBS: accept borttaget så alla filer stöds -->
+          <input id="fileInput" type="file" />
+          <div id="dropZone" class="drop" style="margin-top:10px">Dra & släpp fil här</div>
 
           <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
 
@@ -105,7 +106,7 @@ input[type="file"], input[type="text"]{
             <div id="localHashOut" class="mono">—</div>
           </div>
 
-          <div class="small" style="margin-top:10px">Inget dokumentinnehåll skickas iväg i hash-steget.</div>
+          <div class="small" style="margin-top:10px">Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).</div>
         </div>
 
         <!-- RIGHT: hash -->
@@ -220,14 +221,14 @@ input[type="file"], input[type="text"]{
 
       if(!j.exists){
         resultBox.innerHTML = `
-          <div class="err">❌ Dokumentet är inte registrerat</div>
+          <div class="err">❌ Filen är inte registrerad</div>
           <div class="meta" style="margin-top:6px">Verifierings-ID:</div>
           <div class="mono">${h}</div>
         `;
       } else {
         const date = new Date(j.timestamp * 1000).toLocaleString("sv-SE");
         resultBox.innerHTML = `
-          <div class="ok">✅ Dokumentet är registrerat</div>
+          <div class="ok">✅ Filen är registrerad</div>
           <div class="meta" style="margin-top:6px">Datum: ${date}</div>
           <div class="meta" style="margin-top:6px">Submitter:</div>
           <div class="mono">${j.submitter}</div>
