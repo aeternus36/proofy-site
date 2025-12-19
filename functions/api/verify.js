@@ -27,33 +27,23 @@ function json(data, status = 200) {
 }
 
 function isValidBytes32Hex(hash) {
-  // bytes32 måste vara 0x + 64 hex-tecken
   return typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash);
 }
 
-export async function onRequest(context) {
+export async function onRequestOptions() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "POST, OPTIONS",
+      "access-control-allow-headers": "content-type",
+    },
+  });
+}
+
+export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // CORS preflight
-  if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-methods": "POST, OPTIONS",
-        "access-control-allow-headers": "content-type",
-      },
-    });
-  }
-
-  if (request.method !== "POST") {
-    return json(
-      { ok: false, error: "Method Not Allowed", allowed: ["POST", "OPTIONS"] },
-      405
-    );
-  }
-
-  // Läs env
   const rpcUrl = env.AMOY_RPC_URL;
   const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
 
@@ -68,7 +58,6 @@ export async function onRequest(context) {
     );
   }
 
-  // Läs body
   let body;
   try {
     body = await request.json();
@@ -77,20 +66,16 @@ export async function onRequest(context) {
   }
 
   const hash = body?.hash;
-
   if (!isValidBytes32Hex(hash)) {
     return json(
       {
         ok: false,
         error: "Invalid hash. Expected bytes32 hex: 0x + 64 hex chars",
-        example:
-          "0x1111111111111111111111111111111111111111111111111111111111111111",
       },
       400
     );
   }
 
-  // Public client (read-only)
   const publicClient = createPublicClient({
     chain: polygonAmoy,
     transport: http(rpcUrl),
@@ -104,13 +89,11 @@ export async function onRequest(context) {
       args: [hash],
     });
 
-    // Kontraktets default för "inte registrerad": timestamp=0 och submitter=0x000...
     const exists = BigInt(timestamp) !== 0n;
 
     return json({
       ok: true,
-      chainId: polygonAmoy.id, // 80002
-      contract: contractAddress,
+      chainId: polygonAmoy.id,
       hash,
       exists,
       timestamp: exists ? Number(timestamp) : 0,
@@ -120,11 +103,7 @@ export async function onRequest(context) {
     });
   } catch (err) {
     return json(
-      {
-        ok: false,
-        error: "readContract failed",
-        details: err?.message ?? String(err),
-      },
+      { ok: false, error: "readContract failed", details: err?.message ?? String(err) },
       500
     );
   }
