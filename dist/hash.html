@@ -68,7 +68,7 @@ a.inline{color:#93c5fd;text-decoration:underline}
 
 <main>
   <div class="wrap">
-    <h1>Hasha, registrera & verifiera PDF</h1>
+    <h1>Hasha, registrera & verifiera fil</h1>
     <p class="meta">Filen hash:as lokalt i webbläsaren. Endast hashvärdet används mot Proofys register.</p>
 
     <section class="card content">
@@ -76,8 +76,8 @@ a.inline{color:#93c5fd;text-decoration:underline}
 
         <!-- LEFT -->
         <div>
-          <b>1) Välj PDF</b>
-          <input id="fileInput" type="file" accept=".pdf,application/pdf" />
+          <b>1) Välj fil</b>
+          <input id="fileInput" type="file" />
 
           <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn primary" id="hashBtn" disabled>Hasha</button>
@@ -86,6 +86,7 @@ a.inline{color:#93c5fd;text-decoration:underline}
 
           <div id="localStatus" class="meta" style="margin-top:10px">Ingen fil vald.</div>
           <div class="small" style="margin-top:8px">Tips: Minsta ändring i filen ger en helt annan hash.</div>
+          <div class="small" style="margin-top:6px">Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).</div>
         </div>
 
         <!-- RIGHT -->
