@@ -1,80 +1,65 @@
+// functions/register.mjs
 import {
   createPublicClient,
   createWalletClient,
   http,
   zeroAddress,
   privateKeyToAccount,
-  isHex,
 } from "viem";
 import { polygonAmoy } from "viem/chains";
-import { ABI } from "./abi";
 
-function json(statusCode, obj) {
-  return new Response(JSON.stringify(obj), {
-    status: statusCode,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "access-control-allow-origin": "*",
-      "access-control-allow-headers": "content-type",
-      "access-control-allow-methods": "POST,OPTIONS",
-    },
-  });
-}
+const ABI = [
+  {
+    type: "function",
+    name: "getProof",
+    stateMutability: "view",
+    inputs: [{ name: "hash", type: "bytes32" }],
+    outputs: [
+      { name: "timestamp", type: "uint256" },
+      { name: "submitter", type: "address" },
+    ],
+  },
+  {
+    type: "function",
+    name: "register",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "hash", type: "bytes32" }],
+    outputs: [],
+  },
+];
 
-function isBytes32Hash(h) {
-  return typeof h === "string" && /^0x[a-fA-F0-9]{64}$/.test(h);
-}
+export async function onRequestPost(context) {
+  const json = (status, obj) =>
+    new Response(JSON.stringify(obj), {
+      status,
+      headers: {
+        "content-type": "application/json",
+        "access-control-allow-origin": "*",
+      },
+    });
 
-export async function onRequest(context) {
-  const { request, env } = context;
-  if (request.method === "OPTIONS") return json(204, {});
-  if (request.method !== "POST") return json(405, { ok: false, error: "Use POST" });
-
-  const CONTRACT_ADDRESS = env.CONTRACT_ADDRESS || "";
-  const RPC_URL = env.AMOY_RPC_URL || "";
-  const PRIVATE_KEY = env.PROOFY_PRIVATE_KEY || "";
-
-  const body = await request.json().catch(() => ({}));
+  const body = await context.request.json().catch(() => ({}));
   const hash = (body?.hash || "").trim();
 
-  if (!isBytes32Hash(hash)) {
-    return json(400, { ok: false, error: "Invalid hash. Expected bytes32 hex." });
+  if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
+    return json(400, { ok: false, error: "Invalid hash." });
   }
+
+  const CONTRACT_ADDRESS = context.env.PROOFY_CONTRACT_ADDRESS;
+  const RPC_URL = context.env.AMOY_RPC_URL;
+  const PRIVATE_KEY = context.env.PROOFY_PRIVATE_KEY;
+
   if (!CONTRACT_ADDRESS || !RPC_URL || !PRIVATE_KEY) {
-    return json(500, { ok: false, error: "Missing env vars" });
+    return json(500, { ok: false, error: "Missing required environment variables." });
   }
-  if (!/^0x[a-fA-F0-9]{64}$/.test(PRIVATE_KEY)) {
-    return json(400, { ok: false, error: "Invalid private key format." });
-  }
+
+  const account = privateKeyToAccount(PRIVATE_KEY);
 
   const publicClient = createPublicClient({
     chain: polygonAmoy,
     transport: http(RPC_URL),
   });
 
-  try {
-    const { timestamp, submitter } = await publicClient.readContract({
-      address: CONTRACT_ADDRESS,
-      abi: ABI,
-      functionName: "getProof",
-      args: [hash],
-    });
-
-    if (timestamp > 0 && submitter && submitter !== zeroAddress) {
-      return json(200, {
-        ok: true,
-        alreadyExists: true,
-        hashHex: hash,
-        timestamp: Number(timestamp),
-        submitter,
-      });
-    }
-  } catch (_) {
-    // ignore and continue to write
-  }
-
-  const account = privateKeyToAccount(PRIVATE_KEY);
   const walletClient = createWalletClient({
     account,
     chain: polygonAmoy,
@@ -82,7 +67,29 @@ export async function onRequest(context) {
   });
 
   try {
-    const { request: txRequest } = await publicClient.simulateContract({
+    const proof = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: ABI,
+      functionName: "getProof",
+      args: [hash],
+    });
+
+    if (
+      Number(proof?.timestamp || 0) > 0 &&
+      (proof?.submitter || zeroAddress) !== zeroAddress
+    ) {
+      return json(200, {
+        ok: true,
+        alreadyExists: true,
+        hashHex: hash,
+        timestamp: Number(proof.timestamp),
+        submitter: proof.submitter,
+      });
+    }
+  } catch (_) {}
+
+  try {
+    const sim = await publicClient.simulateContract({
       address: CONTRACT_ADDRESS,
       abi: ABI,
       functionName: "register",
@@ -90,18 +97,19 @@ export async function onRequest(context) {
       account,
     });
 
-    const txHash = await walletClient.writeContract(txRequest);
+    const txHash = await walletClient.writeContract(sim.request);
     const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
     return json(200, {
       ok: true,
       alreadyExists: false,
-      hashHex: hash,
       txHash,
       blockNumber: Number(receipt.blockNumber),
     });
   } catch (e) {
-    const msg = String(e?.shortMessage || e?.message || e);
-    return json(500, { ok: false, error: msg });
+    return json(500, {
+      ok: false,
+      error: e.message || "Unknown error",
+    });
   }
 }
