@@ -1,101 +1,72 @@
-import { readFileSync } from "node:fs";
-import { OpenAIStream } from "ai";
-import OpenAI from "openai";
-import { config } from "dotenv";
-config();
+// functions/api/chat.js
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { OpenAIStream, StreamingTextResponse } from 'ai';
+import OpenAI from 'openai';
 
-export const configRuntime = {
-  runtime: "edge",
-};
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export default async (req, context) => {
-  const { request } = context;
+const ctas = [
+  { label: 'Hasha & registrera fil', url: '/hash.html' },
+  { label: 'Verifiera fil', url: '/verify.html' },
+  { label: 'Fråga oss', url: '/index.html#kontakt' },
+];
 
-  if (request.method !== "POST") {
-    return new Response(
-      JSON.stringify({ ok: false, error: "Method Not Allowed" }),
-      {
-        status: 405,
-        headers: {
-          "content-type": "application/json",
-        },
-      }
-    );
-  }
+const faqContent = `
+Proofy är en webbtjänst där du kan bevisa att du hade en viss fil vid en viss tidpunkt – utan att vi någonsin sparar filen.
 
-  const { message, messages } = await request.json();
+- Vi lagrar inte dina filer. Allt hashas lokalt i webbläsaren med SHA-256.
+- Du kan registrera ett fil-hash tillsammans med en tidsstämpel.
+- Du kan senare verifiera att en fil matchar ett redan registrerat hash.
+- Proofy fungerar med valfri filtyp.
+- Proofy är gratis att testa. Eventuell prissättning meddelas direkt av vårt team.
+- Vi ger inte juridisk rådgivning, men hjälper gärna med hur Proofy fungerar.
+`;
 
-  if (!message && !messages) {
-    return new Response(
-      JSON.stringify({
-        ok: false,
-        error: "Missing `message` or `messages` in request body",
-      }),
-      {
-        status: 400,
-        headers: {
-          "content-type": "application/json",
-        },
-      }
-    );
-  }
-
-  const system = {
-    role: "system",
-    content: `Du är Proofy Assist – en AI-assistent för tjänsten Proofy.
-Du hjälper användare att förstå hur Proofy fungerar (hashing, verifiering, tidsstämpling).
-Svara alltid på svenska. Ge aldrig juridiska råd eller föreslå att användaren ska prata med jurist.
-Om användaren frågar om priser, svara att Proofy är gratis att testa – för större volymer kan man kontakta Proofy direkt.
-Om du är osäker, be användaren mejla kontakt@proofy.se.`,
-  };
-
-  let faqContent = "";
+export const POST = async ({ request }) => {
   try {
-    faqContent = readFileSync("./functions/faq.txt", "utf-8").trim().slice(0, 4000);
-  } catch (e) {
-    faqContent = "";
-  }
+    const body = await request.json();
+    const messages = body?.messages || [
+      { role: 'user', content: body.message || '' },
+    ];
 
-  const cleaned = message
-    ? [{ role: "user", content: message }]
-    : messages.map((m) => ({ role: m.role, content: m.content }));
+    const system = {
+      role: 'system',
+      content: `Du är Proofy Assist – en saklig, hjälpsam AI som svarar på svenska på frågor om Proofy.
 
-  const payload = {
-    model: process.env.OPENAI_MODEL || "gpt-4",
-    temperature: 0.4,
-    stream: true,
-    messages: [
-      system,
-      ...(faqContent ? [{ role: "system", content: faqContent }] : []),
-      ...cleaned,
-    ],
-  };
+Proofy hjälper användare att skapa och verifiera hashvärden (SHA-256) av filer, utan att spara själva filerna. Du ger aldrig juridisk rådgivning och föreslår inte att kontakta jurist. Hänvisa istället till vår kontaktsida vid behov.
 
-  const stream = await OpenAIStream(openai, payload, {
-    async onCompletion(_completion, raw) {
-      context.waitUntil(logChat({
-        messages: [...payload.messages, { role: "assistant", content: raw }],
-        ip: request.headers.get("CF-Connecting-IP"),
-      }));
-    },
-  });
+Om någon frågar om kostnader, svara att Proofy är gratis att testa och att ev. priser meddelas separat. Var hjälpsam, men håll dig till fakta. Avsluta gärna med en call-to-action:
+${ctas.map(({ label, url }) => `- ${label}: ${url}`).join('\n')}
 
-  return new Response(stream);
-};
+Vanliga frågor:
+${faqContent.slice(0, 1800)}
+`
+    };
 
-async function logChat({ messages, ip }) {
-  const endpoint = "https://proofy-chat-logger.fly.dev/api/log";
-  try {
-    await fetch(endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ messages, ip }),
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      stream: true,
+      messages: [system, ...messages],
     });
+
+    return new StreamingTextResponse(response);
   } catch (err) {
-    console.error("Loggning misslyckades:", err);
+    console.error('Chat API error:', err);
+    return new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-}
+};
+
+export const GET = async () => {
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      route: '/api/chat',
+      hint: 'POST JSON {message:"..."} eller {messages:[{role,content}]}',
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    }),
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+};
