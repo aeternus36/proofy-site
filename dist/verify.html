@@ -10,11 +10,11 @@
 :root{
   --bg:#0b1220;--text:#eaf0ff;--muted:#a9b7d3;
   --border:rgba(255,255,255,.12);--brand:#6ea8ff;--brand2:#7cf1c6;
-  --shadow:0 18px 60px rgba(0,0,0,.38);--r:18px;--max:980px;
+  --shadow:0 18px 60px rgba(0,0,0,.38);--r:18px;--max:1100px;
 }
 *{box-sizing:border-box}
 body{
-  margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
   color:var(--text);
   background:
     radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
@@ -27,10 +27,12 @@ header{border-bottom:1px solid var(--border);background:rgba(11,18,32,.75);posit
 .brand{display:flex;gap:10px;font-weight:900;text-decoration:none;align-items:center}
 .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2))}
 .btn{
+  display:inline-flex;align-items:center;justify-content:center;
   padding:12px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
   background:rgba(255,255,255,.06);color:inherit;font-weight:900;cursor:pointer;
 }
 .btn.primary{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#08101e}
+.btn:disabled{opacity:.45;cursor:not-allowed}
 .card{
   border:1px solid var(--border);border-radius:var(--r);
   background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
@@ -39,15 +41,15 @@ header{border-bottom:1px solid var(--border);background:rgba(11,18,32,.75);posit
 .content{padding:18px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
-.mono{font-family:ui-monospace,monospace;word-break:break-all}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all}
 .meta{color:var(--muted);font-size:13px}
 .ok{color:#7cf1c6;font-weight:900}
 .err{color:#ff8aa1;font-weight:900}
-input[type="text"], input[type="file"]{
+.hr{height:1px;background:rgba(255,255,255,.12);margin:14px 0}
+input[type="file"], input[type="text"]{
   width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
   background:rgba(11,18,32,.35);color:var(--text);outline:none
 }
-.hr{height:1px;background:rgba(255,255,255,.12);margin:14px 0}
 .drop{
   border:2px dashed rgba(255,255,255,.18);
   background:rgba(255,255,255,.03);
@@ -56,6 +58,7 @@ input[type="text"], input[type="file"]{
   text-align:center;
 }
 .drop.drag{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.05)}
+.small{font-size:12.5px;color:rgba(169,183,211,.92)}
   </style>
 </head>
 
@@ -74,43 +77,42 @@ input[type="text"], input[type="file"]{
   <div class="wrap">
     <h1>Verifiera dokument</h1>
     <p class="meta">
-      Du kan verifiera via <b>delbar länk</b> (<span class="mono">/verify.html?hash=0x…</span>),
-      genom att <b>klistra in hash</b>, eller genom att <b>ladda upp fil</b> (hashas lokalt).
+      Verifiera via fil (hashas lokalt), via verifierings-ID (bytes32), eller via delbar länk:
+      <span class="mono">/verify.html?hash=0x…</span>
     </p>
 
     <section class="card content">
       <div class="grid">
 
-        <!-- LEFT: upload -->
+        <!-- LEFT: file -->
         <div>
-          <b>Verifiera genom fil</b>
+          <b>Verifiera via fil</b>
           <p class="meta" style="margin-top:8px">
-            Ladda upp filen du vill kontrollera. Vi räknar SHA-256 i webbläsaren och verifierar mot chain.
+            Vi räknar SHA-256 i webbläsaren och kontrollerar om hashvärdet finns registrerat.
           </p>
 
           <input id="fileInput" type="file" accept=".pdf,application/pdf" />
-
-          <div id="dropZone" class="drop" style="margin-top:10px">
-            Dra & släpp PDF här
-          </div>
+          <div id="dropZone" class="drop" style="margin-top:10px">Dra & släpp PDF här</div>
 
           <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
 
           <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn primary" id="hashAndVerifyBtn" disabled>Hasha & verifiera</button>
+            <button class="btn primary" id="hashVerifyBtn" disabled>Hasha & verifiera</button>
           </div>
 
           <div id="localHashBox" style="display:none;margin-top:12px">
             <div class="meta">Uträknad hash (bytes32):</div>
             <div id="localHashOut" class="mono">—</div>
           </div>
+
+          <div class="small" style="margin-top:10px">Inget dokumentinnehåll skickas iväg i hash-steget.</div>
         </div>
 
         <!-- RIGHT: hash -->
         <div>
           <b>Verifiera via verifierings-ID</b>
-          <label class="meta" style="display:block;margin-top:10px">Verifierings-ID (bytes32)</label>
-          <input id="hashInput" type="text" placeholder="0x + 64 hex" />
+          <label class="meta" style="display:block;margin-top:10px">Verifierings-ID (0x + 64 hex)</label>
+          <input id="hashInput" type="text" placeholder="0x + 64 hex (bytes32)" />
 
           <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn primary" id="verifyBtn">Verifiera</button>
@@ -120,8 +122,7 @@ input[type="text"], input[type="file"]{
           <div class="hr"></div>
 
           <div id="status" class="meta"></div>
-
-          <div id="resultBox" style="display:none;margin-top:12px"></div>
+          <div id="resultBox" style="display:none;margin-top:10px"></div>
         </div>
 
       </div>
@@ -131,24 +132,45 @@ input[type="text"], input[type="file"]{
 
 <script>
 (() => {
-  const fileInput = document.getElementById("fileInput");
-  const dropZone = document.getElementById("dropZone");
-  const fileInfo = document.getElementById("fileInfo");
-  const hashAndVerifyBtn = document.getElementById("hashAndVerifyBtn");
-  const localHashBox = document.getElementById("localHashBox");
-  const localHashOut = document.getElementById("localHashOut");
+  const $ = (id) => document.getElementById(id);
 
-  const hashInput = document.getElementById("hashInput");
-  const verifyBtn = document.getElementById("verifyBtn");
-  const copyLinkBtn = document.getElementById("copyLinkBtn");
-  const status = document.getElementById("status");
-  const resultBox = document.getElementById("resultBox");
+  const fileInput = $("fileInput");
+  const dropZone = $("dropZone");
+  const fileInfo = $("fileInfo");
+  const hashVerifyBtn = $("hashVerifyBtn");
+  const localHashBox = $("localHashBox");
+  const localHashOut = $("localHashOut");
+
+  const hashInput = $("hashInput");
+  const verifyBtn = $("verifyBtn");
+  const copyLinkBtn = $("copyLinkBtn");
+  const status = $("status");
+  const resultBox = $("resultBox");
 
   let currentFile = null;
 
-  function setStatus(msg, kind){
+  // anti-spam + ignore old responses
+  let busy = false;
+  let opId = 0;
+
+  function setBusy(v){
+    busy = v;
+    hashVerifyBtn.disabled = !currentFile || busy;
+    verifyBtn.disabled = busy;
+    copyLinkBtn.disabled = busy;
+  }
+
+  function setStatus(msg, cls="meta"){
     status.textContent = msg || "";
-    status.className = kind === "ok" ? "ok" : kind === "err" ? "err" : "meta";
+    status.className = cls;
+  }
+
+  function resetResults(){
+    localHashBox.style.display = "none";
+    localHashOut.textContent = "—";
+    resultBox.style.display = "none";
+    resultBox.innerHTML = "";
+    setStatus("");
   }
 
   function bytesToHex(bytes){
@@ -158,94 +180,84 @@ input[type="text"], input[type="file"]{
   async function sha256Bytes32Hex(file){
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + bytesToHex(new Uint8Array(dig)); // 32 bytes => 64 hex
+    return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
   function isBytes32Hex(h){
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
   }
 
-  function getHashFromUrl(){
-    const p = new URLSearchParams(location.search);
-    return p.get("hash");
-  }
-
   function shareUrlForHash(h){
     return `${location.origin}/verify.html?hash=${h}`;
   }
 
-  async function verify(hash){
-    setStatus("Verifierar…");
-    resultBox.style.display = "none";
-
-    const r = await fetch("/api/verify",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash })
-    });
-
-    const j = await r.json().catch(() => ({}));
-
-    if(!r.ok || !j.ok){
-      setStatus(j.error || `Fel vid verifiering (HTTP ${r.status})`, "err");
+  async function verifyHash(h, showWorking=true){
+    if(!isBytes32Hex(h)){
+      setStatus("Ange en giltig bytes32-hash (0x + 64 hex).", "err");
       return;
     }
 
-    if(!j.exists){
-      resultBox.innerHTML = `
-        <div class="err">❌ Dokumentet är inte registrerat</div>
-        <div class="meta" style="margin-top:6px">Verifierings-ID:</div>
-        <div class="mono">${hash}</div>
-      `;
-    } else {
-      const date = new Date(j.timestamp * 1000).toLocaleString("sv-SE");
-      resultBox.innerHTML = `
-        <div class="ok">✅ Dokumentet är registrerat</div>
-        <div class="meta" style="margin-top:6px">Datum: ${date}</div>
-        <div class="meta" style="margin-top:6px">Submitter:</div>
-        <div class="mono">${j.submitter}</div>
-        <div class="meta" style="margin-top:10px">Delbar länk:</div>
-        <div class="mono">${shareUrlForHash(hash)}</div>
-      `;
-    }
+    const myOp = ++opId;
+    setBusy(true);
+    if(showWorking) setStatus("Verifierar…");
+    resultBox.style.display = "none";
+    resultBox.innerHTML = "";
 
-    resultBox.style.display = "block";
-    setStatus("");
+    try{
+      const r = await fetch("/api/verify",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ hash: h })
+      });
+
+      const j = await r.json().catch(() => ({}));
+      if(myOp !== opId) return;
+
+      if(!r.ok || !j.ok){
+        setStatus("Tekniskt fel vid verifiering.", "err");
+        return;
+      }
+
+      if(!j.exists){
+        resultBox.innerHTML = `
+          <div class="err">❌ Dokumentet är inte registrerat</div>
+          <div class="meta" style="margin-top:6px">Verifierings-ID:</div>
+          <div class="mono">${h}</div>
+        `;
+      } else {
+        const date = new Date(j.timestamp * 1000).toLocaleString("sv-SE");
+        resultBox.innerHTML = `
+          <div class="ok">✅ Dokumentet är registrerat</div>
+          <div class="meta" style="margin-top:6px">Datum: ${date}</div>
+          <div class="meta" style="margin-top:6px">Submitter:</div>
+          <div class="mono">${j.submitter}</div>
+          <div class="meta" style="margin-top:10px">Delbar länk:</div>
+          <div class="mono">${shareUrlForHash(h)}</div>
+        `;
+      }
+
+      resultBox.style.display = "block";
+      setStatus("");
+    } finally {
+      if(myOp === opId) setBusy(false);
+    }
   }
 
-  // --- Hash input verify ---
-  verifyBtn.onclick = () => {
-    const h = (hashInput.value || "").trim();
-    if(!isBytes32Hex(h)) return setStatus("Ange en giltig bytes32-hash (0x + 64 hex).", "err");
-    verify(h);
-  };
-
-  copyLinkBtn.onclick = async () => {
-    const h = (hashInput.value || "").trim();
-    if(!isBytes32Hex(h)) return setStatus("Ange en giltig bytes32-hash innan du kopierar länk.", "err");
-    try{
-      await navigator.clipboard.writeText(shareUrlForHash(h));
-      setStatus("Länk kopierad ✅", "ok");
-    } catch {
-      setStatus("Kunde inte kopiera länk (tillåt clipboard i browsern).", "err");
-    }
-  };
-
-  // --- File upload hashing + verify ---
+  // --- file handling
   function setFile(file){
     currentFile = file || null;
-    localHashBox.style.display = "none";
-    localHashOut.textContent = "—";
-    hashAndVerifyBtn.disabled = !currentFile;
+    resetResults();
 
     if(!currentFile){
       fileInfo.textContent = "Ingen fil vald.";
+      hashVerifyBtn.disabled = true;
       return;
     }
     fileInfo.textContent = `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
+    setBusy(false);
   }
 
-  fileInput.onchange = () => setFile(fileInput.files?.[0] || null);
+  fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
 
   dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
@@ -256,39 +268,68 @@ input[type="text"], input[type="file"]{
     if(f) setFile(f);
   });
 
-  hashAndVerifyBtn.onclick = async () => {
-    if(!currentFile) return;
-    try{
-      setStatus("Hashar fil lokalt…");
-      hashAndVerifyBtn.disabled = true;
+  hashVerifyBtn.addEventListener("click", async () => {
+    if(!currentFile || busy) return;
 
+    const myOp = ++opId;
+    setBusy(true);
+    setStatus("Hashar fil lokalt…");
+    resultBox.style.display = "none";
+    resultBox.innerHTML = "";
+
+    try{
       const h = await sha256Bytes32Hex(currentFile);
+      if(myOp !== opId) return;
 
       localHashBox.style.display = "block";
       localHashOut.textContent = h;
+      hashInput.value = h;
 
-      hashInput.value = h; // fyll i så man kan kopiera länk direkt
       setStatus("Hash klar ✅", "ok");
-
-      await verify(h);
+      await verifyHash(h, false);
     } catch (e){
       console.error(e);
+      if(myOp !== opId) return;
       setStatus("Fel: kunde inte hasha filen.", "err");
     } finally {
-      hashAndVerifyBtn.disabled = !currentFile;
+      if(myOp === opId) setBusy(false);
     }
-  };
+  });
 
-  // Auto-verify om hash finns i URL
-  const urlHash = getHashFromUrl();
+  // --- hash input verify
+  verifyBtn.addEventListener("click", () => {
+    const h = (hashInput.value || "").trim();
+    verifyHash(h, true);
+  });
+
+  copyLinkBtn.addEventListener("click", async () => {
+    const h = (hashInput.value || "").trim();
+    if(!isBytes32Hex(h)){
+      setStatus("Ange en giltig hash innan du kopierar länk.", "err");
+      return;
+    }
+    try{
+      await navigator.clipboard.writeText(shareUrlForHash(h));
+      setStatus("Länk kopierad ✅", "ok");
+    } catch {
+      setStatus("Kunde inte kopiera länk. Tillåt clipboard i webbläsaren.", "err");
+    }
+  });
+
+  // --- auto from URL
+  const p = new URLSearchParams(location.search);
+  const urlHash = p.get("hash");
   if(urlHash){
     hashInput.value = urlHash;
-    if(isBytes32Hex(urlHash)) {
-      verify(urlHash);
+    if(isBytes32Hex(urlHash)){
+      verifyHash(urlHash, true);
     } else {
       setStatus("Ogiltig hash i URL. Förväntar bytes32 (0x + 64 hex).", "err");
     }
   }
+
+  // initial
+  setBusy(false);
 })();
 </script>
 
