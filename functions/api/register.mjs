@@ -1,58 +1,36 @@
 export async function onRequestGet({ env }) {
-  // GET används när du öppnar länken i webbläsaren.
-  // Returnerar en tydlig status + vilka env som finns (utan att läcka hemligheter).
-  const hasKey = Boolean(env.PROOFY_PRIVATE_KEY);
-  const hasRpc = Boolean(env.AMOY_RPC_URL);
-  const hasAddress = Boolean(env.PROOFY_CONTRACT_ADDRESS);
+  const hasKey = !!env.PROOFY_PRIVATE_KEY;
+  const hasRpc = !!env.AMOY_RPC_URL;
+  const hasAddress = !!env.PROOFY_CONTRACT_ADDRESS;
 
   return new Response(
     JSON.stringify(
       {
         ok: true,
         message: "Use POST /api/register",
-        env: {
-          hasKey,
-          hasRpc,
-          hasAddress,
-        },
+        env: { hasKey, hasRpc, hasAddress },
       },
       null,
       2
     ),
-    {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    }
+    { headers: { "Content-Type": "application/json" } }
   );
 }
 
 export async function onRequestPost({ request, env }) {
-  // POST används av Postman / din frontend.
-  // Den här versionen är “säker debug” och bekräftar att POST funkar + att env finns.
-  let body = null;
+  const hasKey = !!env.PROOFY_PRIVATE_KEY;
+  const hasRpc = !!env.AMOY_RPC_URL;
+  const hasAddress = !!env.PROOFY_CONTRACT_ADDRESS;
 
+  let body = null;
   try {
     body = await request.json();
   } catch {
     return new Response(
-      JSON.stringify(
-        { ok: false, error: "Invalid JSON body. Send Content-Type: application/json" },
-        null,
-        2
-      ),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-      }
+      JSON.stringify({ ok: false, error: "Body must be valid JSON" }, null, 2),
+      { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
-
-  const hasKey = Boolean(env.PROOFY_PRIVATE_KEY);
-  const hasRpc = Boolean(env.AMOY_RPC_URL);
-  const hasAddress = Boolean(env.PROOFY_CONTRACT_ADDRESS);
 
   return new Response(
     JSON.stringify(
@@ -65,12 +43,6 @@ export async function onRequestPost({ request, env }) {
       null,
       2
     ),
-    {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    }
+    { headers: { "Content-Type": "application/json" } }
   );
 }
