@@ -1,72 +1,66 @@
-// functions/api/chat.js
-
 import { OpenAIStream, StreamingTextResponse } from 'ai';
-import OpenAI from 'openai';
+import { ChatOpenAI } from 'langchain/chat_models/openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const chat = new ChatOpenAI({
+  temperature: 0,
+  modelName: 'gpt-4',
+  streaming: true,
+});
 
-const ctas = [
-  { label: 'Hasha & registrera fil', url: '/hash.html' },
-  { label: 'Verifiera fil', url: '/verify.html' },
-  { label: 'Fråga oss', url: '/index.html#kontakt' },
-];
+export const runtime = 'edge';
 
-const faqContent = `
-Proofy är en webbtjänst där du kan bevisa att du hade en viss fil vid en viss tidpunkt – utan att vi någonsin sparar filen.
-
-- Vi lagrar inte dina filer. Allt hashas lokalt i webbläsaren med SHA-256.
-- Du kan registrera ett fil-hash tillsammans med en tidsstämpel.
-- Du kan senare verifiera att en fil matchar ett redan registrerat hash.
-- Proofy fungerar med valfri filtyp.
-- Proofy är gratis att testa. Eventuell prissättning meddelas direkt av vårt team.
-- Vi ger inte juridisk rådgivning, men hjälper gärna med hur Proofy fungerar.
-`;
-
-export const POST = async ({ request }) => {
+export async function POST(req) {
   try {
-    const body = await request.json();
-    const messages = body?.messages || [
-      { role: 'user', content: body.message || '' },
+    const body = await req.json();
+
+    const messages = body.messages || [
+      {
+        role: 'user',
+        content: body.message || '',
+      },
     ];
 
-    const system = {
-      role: 'system',
-      content: `Du är Proofy Assist – en saklig, hjälpsam AI som svarar på svenska på frågor om Proofy.
+    const fullMessages = [
+      {
+        role: 'system',
+        content:
+          `Du är Proofy Assist – en vänlig, korrekt och tekniskt kunnig assistent för webbplatsen proofy.se. Du ska:
 
-Proofy hjälper användare att skapa och verifiera hashvärden (SHA-256) av filer, utan att spara själva filerna. Du ger aldrig juridisk rådgivning och föreslår inte att kontakta jurist. Hänvisa istället till vår kontaktsida vid behov.
+- Svara på frågor om hur verifiering av filer fungerar.
+- Förklara kort hur hashing, blockkedje-registrering och filskydd fungerar.
+- Inte säga att ni har en jurist, advokat eller liknande – det finns ingen.
+- Inte säga att det finns prisinformation om det inte finns på proofy.se.
+- Undvika påståenden som kräver externa länkar som inte finns.
+- Vara tydlig med att Proofy inte lagrar filer – bara hashvärden.
+- Undvika antaganden om företagsstruktur.
 
-Om någon frågar om kostnader, svara att Proofy är gratis att testa och att ev. priser meddelas separat. Var hjälpsam, men håll dig till fakta. Avsluta gärna med en call-to-action:
-${ctas.map(({ label, url }) => `- ${label}: ${url}`).join('\n')}
+Exempel på vanliga frågor:
+Fråga: Sparar ni mina filer? Svar: Nej, Proofy sparar aldrig själva filen – bara ett hashvärde, vilket inte kan användas för att återskapa filen.
+Fråga: Vad kostar det? Svar: Prissättning kan variera. Kontakta oss direkt för information.
+Fråga: Vad händer om någon försöker manipulera filen? Svar: En ändrad fil ger ett nytt hashvärde och verifieras inte mot blockkedjan.
+`,
+      },
+      ...messages,
+    ];
 
-Vanliga frågor:
-${faqContent.slice(0, 1800)}
-`
-    };
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
-      stream: true,
-      messages: [system, ...messages],
-    });
-
-    return new StreamingTextResponse(response);
+    const stream = await OpenAIStream(chat.call(fullMessages));
+    return new StreamingTextResponse(stream);
   } catch (err) {
     console.error('Chat API error:', err);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ ok: false, error: 'Internt fel. Testa igen senare.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
-};
+}
 
-export const GET = async () => {
+export async function GET() {
   return new Response(
     JSON.stringify({
       ok: true,
       route: '/api/chat',
-      hint: 'POST JSON {message:"..."} eller {messages:[{role,content}]}',
-      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      hint: "POST JSON {message:'...'} eller {messages:[{role,content}]}"
     }),
-    { headers: { 'Content-Type': 'application/json' } }
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
   );
-};
+}
