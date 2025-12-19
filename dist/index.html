@@ -8,132 +8,146 @@
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/" />
   <meta name="theme-color" content="#0b1220" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Proofy" />
+  <meta property="og:title" content="Proofy – Dokumentverifiering för redovisningsbyråer" />
+  <meta property="og:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
+  <meta property="og:url" content="https://proofy.se/" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Proofy – Dokumentverifiering för redovisningsbyråer" />
+  <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
+
   <style>
-    :root {
-      --bg: #0b1220;
-      --panel: rgba(255,255,255,.06);
-      --panel2: rgba(255,255,255,.04);
-      --text: #eaf0ff;
-      --muted: #a9b7d3;
-      --border: rgba(255,255,255,.12);
-      --brand: #6ea8ff;
-      --brand2: #7cf1c6;
-      --shadow: 0 18px 60px rgba(0,0,0,.38);
-      --r: 18px;
-      --max: 1140px;
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
     body {
+      font-family: sans-serif;
       margin: 0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      color: var(--text);
-      background:
-        radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
-        radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
-        radial-gradient(900px 600px at 40% 100%, rgba(110,168,255,.10), transparent 60%),
-        var(--bg);
-      line-height: 1.55;
+      background: #0b1220;
+      color: #eaf0ff;
     }
-    a { color: inherit; }
-    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 20px; }
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      backdrop-filter: blur(12px) saturate(160%);
-      background: rgba(11,18,32,.70);
-      border-bottom: 1px solid var(--border);
+    .wrap {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 20px;
     }
-    .nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 14px 0;
-      flex-wrap: wrap;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      font-weight: 900;
-      letter-spacing: .2px;
-    }
-    .logo {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
-      box-shadow: 0 16px 40px rgba(110,168,255,.22);
-      position: relative;
-    }
-    .logo:after {
-      content: "";
-      position: absolute;
-      inset: 9px 10px;
-      border-radius: 7px;
-      background: rgba(11,18,32,.65);
-      border: 1px solid rgba(255,255,255,.20);
-    }
-    nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      color: var(--muted);
-      font-weight: 700;
+    header, footer {
+      background: rgba(11,18,32,.85);
+      padding: 20px 0;
     }
     nav a {
+      color: #a9b7d3;
+      margin-right: 15px;
       text-decoration: none;
-      padding: 8px 10px;
-      border-radius: 12px;
     }
     nav a:hover {
-      background: rgba(255,255,255,.06);
-      color: var(--text);
+      color: #eaf0ff;
     }
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
       padding: 12px 16px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      text-decoration: none;
-      font-weight: 900;
-      transition: transform .08s ease, background .15s ease;
-      white-space: nowrap;
-    }
-    .btn:hover { background: rgba(255,255,255,.10); }
-    .btn:active { transform: translateY(1px); }
-    .btn.primary {
-      border: none;
+      background: linear-gradient(135deg, #6ea8ff, #7cf1c6);
       color: #08101e;
-      background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-      box-shadow: 0 18px 45px rgba(110,168,255,.22);
+      font-weight: bold;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
     }
-    @media (max-width: 720px) {
-      .nav {
+    main {
+      padding: 40px 0;
+    }
+    h1, h2 {
+      font-weight: 800;
+    }
+    section {
+      margin-top: 40px;
+    }
+    .card {
+      background: rgba(255,255,255,.04);
+      padding: 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    footer {
+      font-size: 14px;
+      color: #a9b7d3;
+    }
+    @media (max-width: 600px) {
+      nav {
+        display: flex;
         flex-direction: column;
-        align-items: flex-start;
-      }
-      .nav nav {
-        width: 100%;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .nav .btn.primary {
-        width: 100%;
-        justify-content: center;
+        gap: 10px;
       }
     }
   </style>
 </head>
 <body>
-  <!-- Ditt befintliga HTML-innehåll följer här (det har inte tagits bort) -->
+  <header>
+    <div class="wrap">
+      <nav>
+        <a href="#forbyraer">För byråer</a>
+        <a href="#hur">Hur det fungerar</a>
+        <a href="#trygghet">Säkerhet</a>
+        <a href="#faq">FAQ</a>
+        <a href="#kontakt">Kontakt</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <h1>Proofy – Dokumentverifiering för redovisningsbyråer</h1>
+    <p>Proofy hjälper dig att verifiera om en fil är oförändrad sedan en viss tidpunkt – utan att lagra filinnehåll.</p>
+
+    <section id="forbyraer">
+      <h2>För byråer</h2>
+      <div class="card">
+        <p>Proofy passar när ni vill visa att ett underlag inte har ändrats efter registrering. Inte för arkivering eller juridisk rådgivning.</p>
+      </div>
+    </section>
+
+    <section id="hur">
+      <h2>Hur det fungerar</h2>
+      <div class="card">
+        <ul>
+          <li>Registrera en fil och få ett verifierings-ID.</li>
+          <li>Spara ID i ärendet eller rutin.</li>
+          <li>Verifiera om filen är oförändrad vid behov.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="trygghet">
+      <h2>Säkerhet</h2>
+      <div class="card">
+        <p>Vi lagrar inte filinnehåll. Proofy genererar ett hashvärde av filen och lagrar en tidsstämplad post kopplad till det.</p>
+      </div>
+    </section>
+
+    <section id="faq">
+      <h2>FAQ</h2>
+      <div class="card">
+        <p><strong>Vad är Proofy?</strong> En tjänst för teknisk verifiering av filers integritet utan att lagra innehållet.</p>
+        <p><strong>Kan ni se våra filer?</strong> Nej, filinnehåll lagras inte.</p>
+      </div>
+    </section>
+
+    <section id="kontakt">
+      <h2>Kontakt</h2>
+      <div class="card">
+        <p>Maila oss på kontakt@proofy.se eller fyll i formuläret nedan.</p>
+        <form>
+          <p><input type="text" placeholder="Namn" required /></p>
+          <p><input type="email" placeholder="E-post" required /></p>
+          <p><textarea placeholder="Meddelande" required></textarea></p>
+          <p><button class="btn" type="submit">Skicka</button></p>
+        </form>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <div class="wrap">
+      <p>© 2025 Proofy. Alla rättigheter förbehållna.</p>
+    </div>
+  </footer>
 </body>
 </html>
