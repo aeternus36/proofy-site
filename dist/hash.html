@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Hasha & verifiera PDF</title>
-  <meta name="description" content="Räkna SHA-256 på en PDF lokalt i webbläsaren och få en bytes32-hash för registrering/verifiering." />
+  <title>Proofy – Hasha & registrera PDF</title>
+  <meta name="description" content="Räkna SHA-256 på en PDF lokalt i webbläsaren och registrera hash på chain." />
   <meta name="theme-color" content="#0b1220" />
 
   <style>
@@ -141,18 +141,18 @@ input{
 <header>
   <div class="wrap">
     <div class="nav">
-      <a class="brand" href="/index.html" aria-label="Proofy">
+      <a class="brand" href="/" aria-label="Proofy">
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
       <nav aria-label="Navigation">
-        <a href="/index.html#forbyraer">För byråer</a>
-        <a href="/index.html#hur">Hur det fungerar</a>
-        <a href="/index.html#trygghet">Säkerhet</a>
-        <a href="/index.html#faq">FAQ</a>
-        <a href="/index.html#kontakt">Kontakt</a>
+        <a href="/#forbyraer">För byråer</a>
+        <a href="/#hur">Hur det fungerar</a>
+        <a href="/security.html">Säkerhet</a>
+        <a href="/#faq">FAQ</a>
+        <a href="/#kontakt">Kontakt</a>
       </nav>
-      <a class="btn primary" href="/index.html#kontakt">Boka demo</a>
+      <a class="btn primary" href="/#kontakt">Boka demo</a>
     </div>
   </div>
 </header>
@@ -164,7 +164,7 @@ input{
     <h1 class="pageTitle">Hasha en PDF (SHA-256 → bytes32)</h1>
     <p class="lead">
       Välj en PDF så räknar vi ut ett kryptografiskt fingeravtryck <b>lokalt i webbläsaren</b>.
-      Hashen kan användas för registrering och verifiering i Proofy, utan att dokumentinnehåll lagras.
+      Hashen kan användas för registrering i Proofy, utan att dokumentinnehåll lagras.
     </p>
 
     <section class="card content">
@@ -195,18 +195,25 @@ input{
           <div class="meta" style="margin-top:8px;">SHA-256 som bytes32:</div>
           <div id="hashOut" class="mono" style="margin-top:8px;">—</div>
 
-          <div class="hr"></div>
+          <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn primary" id="registerBtn" disabled>Registrera på chain</button>
+          </div>
 
-          <div class="meta">
-            <b>Format:</b> <span class="mono">0x</span> + 64 hex (32 bytes).<br/>
-            <b>Obs:</b> Minsta ändring i filen ger helt annan hash.
+          <div style="margin-top:10px;" class="meta" id="registerStatus"></div>
+
+          <div style="margin-top:10px; display:none;" id="txBox">
+            <div class="meta">Tx:</div>
+            <div class="mono" id="txHashOut">—</div>
+            <div style="margin-top:8px;">
+              <a class="btn" id="txLink" href="#" target="_blank" rel="noopener noreferrer">Öppna i Polygonscan (Amoy)</a>
+            </div>
           </div>
 
           <div class="hr"></div>
 
           <div class="meta">
-            Nästa steg blir att koppla denna sida till:
-            <span class="mono">/api/register</span> och <span class="mono">/api/verify</span>.
+            <b>Format:</b> <span class="mono">0x</span> + 64 hex (32 bytes).<br/>
+            <b>Obs:</b> Minsta ändring i filen ger helt annan hash.
           </div>
         </div>
       </div>
@@ -229,12 +236,29 @@ input{
   const hashBtn = document.getElementById("hashBtn");
   const copyBtn = document.getElementById("copyBtn");
 
+  const registerBtn = document.getElementById("registerBtn");
+  const registerStatus = document.getElementById("registerStatus");
+  const txBox = document.getElementById("txBox");
+  const txHashOut = document.getElementById("txHashOut");
+  const txLink = document.getElementById("txLink");
+
   let currentFile = null;
   let currentHash = null;
 
   function setStatus(msg, kind) {
     statusEl.className = "meta " + (kind === "ok" ? "ok" : kind === "err" ? "err" : "");
     statusEl.textContent = msg || "";
+  }
+
+  function setRegisterStatus(msg, kind) {
+    registerStatus.className = "meta " + (kind === "ok" ? "ok" : kind === "err" ? "err" : "");
+    registerStatus.textContent = msg || "";
+  }
+
+  function showTx(txHash) {
+    txBox.style.display = "block";
+    txHashOut.textContent = txHash;
+    txLink.href = `https://amoy.polygonscan.com/tx/${txHash}`;
   }
 
   function bytesToHex(bytes) {
@@ -249,11 +273,20 @@ input{
     return new Uint8Array(digest); // 32 bytes
   }
 
+  function resetRegisterUI() {
+    setRegisterStatus("");
+    txBox.style.display = "none";
+    txHashOut.textContent = "—";
+    txLink.href = "#";
+    registerBtn.disabled = true;
+  }
+
   function setFile(file) {
     currentFile = file;
     currentHash = null;
     hashOut.textContent = "—";
     copyBtn.disabled = true;
+    resetRegisterUI();
 
     if (!file) {
       fileInfo.textContent = "Ingen fil vald.";
@@ -292,12 +325,14 @@ input{
 
       setStatus("Klar ✅", "ok");
       copyBtn.disabled = false;
+      registerBtn.disabled = false;
     } catch (e) {
       console.error(e);
       setStatus("Fel: kunde inte hasha filen.", "err");
       currentHash = null;
       hashOut.textContent = "—";
       copyBtn.disabled = true;
+      resetRegisterUI();
     } finally {
       hashBtn.disabled = !currentFile;
     }
@@ -313,12 +348,52 @@ input{
     }
   });
 
+  registerBtn.addEventListener("click", async () => {
+    if (!currentHash) return;
+
+    try {
+      registerBtn.disabled = true;
+      setRegisterStatus("Registrerar på chain…");
+
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hash: currentHash }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data?.ok === false) {
+        const msg =
+          data?.error ||
+          data?.message ||
+          `Fel vid registrering (HTTP ${res.status})`;
+
+        const low = String(msg).toLowerCase();
+        if (low.includes("redan") || low.includes("already")) {
+          setRegisterStatus("Den här hashen verkar redan vara registrerad.", "err");
+        } else {
+          setRegisterStatus(msg, "err");
+        }
+        return;
+      }
+
+      const txHash = data?.txHash;
+      if (txHash) showTx(txHash);
+
+      setRegisterStatus("Registrerad ✅", "ok");
+    } catch (e) {
+      console.error(e);
+      setRegisterStatus("Nätfel: kunde inte nå /api/register.", "err");
+    } finally {
+      registerBtn.disabled = !currentHash;
+    }
+  });
+
   setFile(null);
 })();
 </script>
 
-<!-- Du har chat-widget på index. Vill du även ha den här: -->
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
-
