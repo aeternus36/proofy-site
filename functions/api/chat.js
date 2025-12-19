@@ -1,19 +1,16 @@
 export async function onRequest(context) {
   const { request, env } = context;
 
-  // CORS headers (så browser kan läsa svaret)
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 
-  // Preflight (CORS)
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // GET = healthcheck (så du kan testa i webbläsaren utan Postman)
   if (request.method === "GET") {
     return new Response(
       JSON.stringify({
@@ -34,7 +31,6 @@ export async function onRequest(context) {
     );
   }
 
-  // Only allow POST for chat
   if (request.method !== "POST") {
     return new Response(JSON.stringify({ ok: false, error: "Method Not Allowed" }), {
       status: 405,
@@ -48,7 +44,6 @@ export async function onRequest(context) {
 
   try {
     const apiKey = env.OPENAI_API_KEY;
-
     if (!apiKey) {
       return new Response(
         JSON.stringify({
@@ -67,9 +62,7 @@ export async function onRequest(context) {
       );
     }
 
-    // Läs body (stödjer både {message:"..."} och {messages:[...]})
     const body = await request.json().catch(() => ({}));
-
     const singleMessage =
       typeof body?.message === "string" ? body.message.trim() : "";
 
@@ -104,9 +97,10 @@ export async function onRequest(context) {
     const system = {
       role: "system",
       content:
-        "Du är Proofy Assist. Svara på svenska, kort och tydligt. " +
-        "Hjälp med demo, pilot, säkerhet och hur filverifiering fungerar. " +
-        "Håll en professionell ton. Om något är oklart, föreslå nästa steg.",
+        "Du är Proofy Assist, en AI-chatt som hjälper användare på svenska. Proofy är en tjänst för att verifiera att en fil existerade vid en viss tidpunkt genom SHA-256-hashning och tidsstämpling. Proofy lagrar aldrig filinnehåll. " +
+        "Du ska aldrig ge juridiska råd, och du får inte föreslå att användaren kontaktar en jurist. " +
+        "Vid juridiska frågor svarar du neutralt och hänvisar till Proofys kontaktsida eller supportmejl. " +
+        "Var kort, tydlig, professionell och hjälp användaren att förstå Proofys tekniska funktion.",
     };
 
     const payload = {
@@ -145,9 +139,13 @@ export async function onRequest(context) {
       );
     }
 
-    const text =
-      j?.choices?.[0]?.message?.content ||
-      "Jag kunde tyvärr inte generera ett svar just nu.";
+    const text = j?.choices?.[0]?.message?.content || "";
+
+    // 🔐 Enkel fallback om modellen ändå föreslår jurist (säkerhetsnät)
+    const containsLegalHint = /jurist|advokat|laglig|rättslig/i.test(text);
+    const fallback = `Proofy är ett tekniskt verktyg för att visa att en fil existerade vid en viss tidpunkt. Vi ger inte juridisk rådgivning. Om du är osäker kan du kontakta vår support via kontakt@proofy.se eller läsa mer på vår hemsida.`;
+
+    const finalReply = containsLegalHint ? fallback : text;
 
     const ctas = [
       { label: "Hasha & registrera fil", url: "/hash.html" },
@@ -155,13 +153,12 @@ export async function onRequest(context) {
       { label: "Säkerhet", url: "/security.html" },
     ];
 
-    // Viktigt: returnera flera fältnamn så widgeten alltid hittar svaret
     return new Response(
       JSON.stringify({
         ok: true,
-        answer: text,
-        reply: text,
-        message: text,
+        answer: finalReply,
+        reply: finalReply,
+        message: finalReply,
         ctas,
       }),
       {
