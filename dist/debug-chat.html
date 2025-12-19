@@ -2,39 +2,103 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy Chat Debug</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Proofy – Debug Chat</title>
   <style>
-    body{font-family:system-ui;margin:20px;max-width:900px}
-    input,button{font:inherit;padding:10px}
-    pre{background:#111;color:#0f0;padding:12px;overflow:auto;border-radius:10px}
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 16px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px; max-width: 820px; }
+    textarea { width: 100%; min-height: 90px; padding: 10px; border-radius: 10px; border: 1px solid #ccc; font-family: inherit; }
+    button { padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer; }
+    .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+    .muted { color: #666; font-size: 14px; }
+    pre { background: #0b1020; color: #d6e1ff; padding: 12px; border-radius: 12px; overflow: auto; }
+    .ok { color: #0a7; font-weight: 600; }
+    .bad { color: #c23; font-weight: 600; }
+    label { font-size: 14px; color: #333; display:block; margin-bottom: 6px;}
+    input[type="checkbox"] { transform: scale(1.15); }
   </style>
 </head>
 <body>
-  <h1>Chat debug</h1>
+  <div class="card">
+    <h2>Debug: /api/chat</h2>
+    <p class="muted">
+      Den här sidan gör ett POST-anrop till <code>/api/chat</code> och visar exakt vad backend svarar.
+      Bra när du saknar Postman.
+    </p>
 
-  <input id="msg" value="Lagrar ni dokument?" style="width:100%"/>
-  <p><button id="go">Skicka</button></p>
+    <label for="msg">Meddelande</label>
+    <textarea id="msg">Hej! Kan du kort förklara hur Proofy verifierar filer utan att lagra innehåll?</textarea>
 
-  <h3>Status</h3>
-  <pre id="status">-</pre>
+    <div class="row">
+      <button id="send">Skicka</button>
 
-  <h3>Rå response</h3>
-  <pre id="raw">-</pre>
+      <label class="muted" style="display:flex; gap:8px; align-items:center;">
+        <input id="useMessages" type="checkbox" checked />
+        Skicka som <code>{messages:[...]}</code> (annars <code>{message:"..."}</code>)
+      </label>
+    </div>
+
+    <p id="status" class="muted"></p>
+
+    <h3>Resultat</h3>
+    <pre id="out">{ väntar... }</pre>
+  </div>
 
   <script>
-    document.getElementById("go").onclick = async () => {
-      const msg = document.getElementById("msg").value.trim();
-      const res = await fetch("/.netlify/functions/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: msg }] })
-      });
+    const $ = (id) => document.getElementById(id);
+    const out = $("out");
+    const statusEl = $("status");
 
-      document.getElementById("status").textContent = String(res.status);
-      const text = await res.text();
-      document.getElementById("raw").textContent = text;
-    };
+    function setStatus(ok, text) {
+      statusEl.className = ok ? "ok" : "bad";
+      statusEl.textContent = text;
+    }
+
+    async function send() {
+      out.textContent = "{ skickar... }";
+      setStatus(true, "Skickar...");
+
+      const text = $("msg").value.trim();
+      const useMessages = $("useMessages").checked;
+
+      const body = useMessages
+        ? { messages: [{ role: "user", content: text }] }
+        : { message: text };
+
+      try {
+        const r = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const raw = await r.text(); // ta text först så vi kan visa även om JSON parse failar
+        let json;
+        try { json = JSON.parse(raw); } catch { json = null; }
+
+        if (!r.ok) {
+          setStatus(false, `Fel ${r.status}: ${r.statusText}`);
+          out.textContent = raw;
+          return;
+        }
+
+        setStatus(true, `OK ${r.status}`);
+        out.textContent = json ? JSON.stringify(json, null, 2) : raw;
+
+        // Hjälpvisning: plocka ut svar om det finns
+        if (json) {
+          const answer = json.answer || json.reply || json.message || json?.choices?.[0]?.message?.content;
+          if (answer) {
+            out.textContent += "\n\n---\nUtplockat svar:\n" + answer;
+          }
+        }
+      } catch (e) {
+        setStatus(false, "Nätverksfel: kunde inte nå /api/chat");
+        out.textContent = String(e);
+      }
+    }
+
+    $("send").addEventListener("click", send);
   </script>
 </body>
 </html>
