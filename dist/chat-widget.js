@@ -1,22 +1,23 @@
-/* Proofy chat widget – standalone loader
-   Safe mode:
-   - Does nothing if DOM isn't ready or if it can't attach
-   - Never writes raw script text into the page
+/* Proofy chat widget – standalone loader (Cloudflare Pages)
+   - Uses /api/chat
+   - Skips init if inline widget already ran
 */
 (() => {
   try {
-    // Guard: ensure we are running as JS in a browser
     if (typeof window === "undefined" || typeof document === "undefined") return;
 
+    // If inline chat already initialized, don't create another one.
+    if (window.__proofyInlineChatInit) return;
+
     const CONFIG = {
-      endpoint: "/.netlify/functions/chat",
+      endpoint: "/api/chat",
       buttonText: "Fråga oss",
       title: "Proofy Assist",
       intro: "Hej. Skriv vad du vill verifiera, så föreslår jag ett bra upplägg.",
       quick: [
         { label: "Boka demo", q: "Jag vill boka en demo. Hur går det till?" },
         { label: "Starta pilot", q: "Jag vill starta en pilot. Vad är nästa steg?" },
-        { label: "Säkerhet", q: "Hur jobbar ni med säkerhet och GDPR när ni inte lagrar dokumentinnehåll?" },
+        { label: "Säkerhet", q: "Hur jobbar ni med säkerhet och GDPR när ni inte lagrar filinnehåll?" },
       ],
       maxCtas: 3,
     };
@@ -40,10 +41,8 @@
 
     function linkify(text) {
       const escaped = escapeHtml(text);
-      // Support http(s) links and relative "/path" links
       return escaped.replace(/(\bhttps?:\/\/[^\s]+|\B\/[^\s]+)/g, (m) => {
-        const url = m;
-        const safe = escapeHtml(url);
+        const safe = escapeHtml(m);
         return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${safe}</a>`;
       });
     }
@@ -53,17 +52,13 @@
     }
 
     onReady(() => {
-      // Guard: if body is missing, bail
       if (!document.body) return;
-
-      // Avoid duplicate init
       if (window.__proofyChatWidgetInit) return;
       window.__proofyChatWidgetInit = true;
 
       const chatHistory = [];
       let isOpen = false;
 
-      // Styles
       const style = document.createElement("style");
       style.textContent = `
         .proofy-chat-btn{
@@ -155,14 +150,12 @@
       `;
       document.head.appendChild(style);
 
-      // Button
       const button = document.createElement("button");
       button.className = "proofy-chat-btn";
       button.type = "button";
       button.innerText = CONFIG.buttonText;
       document.body.appendChild(button);
 
-      // Panel
       const panel = document.createElement("div");
       panel.className = "proofy-panel";
       panel.innerHTML = `
@@ -175,7 +168,7 @@
             ${CONFIG.quick.map(q => `<button class="proofy-qbtn" type="button" data-q="${escapeHtml(q.q)}">${escapeHtml(q.label)}</button>`).join("")}
           </div>
           <div id="proofy-messages"></div>
-          <div class="proofy-hint">Exempel: “Hur fungerar verifierings-ID?”, “Kan PDF re-export ge ingen match?”</div>
+          <div class="proofy-hint">Exempel: “Hur fungerar verifierings-ID?”, “Kan en fil ändras vid ny export?”</div>
         </div>
         <div class="proofy-footer">
           <input class="proofy-input" placeholder="Skriv en fråga..." />
@@ -288,13 +281,11 @@
         b.addEventListener("click", () => send(b.getAttribute("data-q")));
       });
 
-      // Intro
       addMessage("assistant", CONFIG.intro);
       chatHistory.push({ role: "assistant", content: CONFIG.intro });
     });
 
   } catch (e) {
-    // Fail silently (important so widget never breaks the page)
     console.warn("Proofy chat widget failed to init:", e);
   }
 })();
