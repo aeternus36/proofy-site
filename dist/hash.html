@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Hasha, registrera & verifiera</title>
+  <title>Proofy – Skapa verifierings-ID</title>
   <meta name="theme-color" content="#0b1220" />
 
   <style>
@@ -11,6 +11,7 @@
       --bg:#0b1220;--text:#eaf0ff;--muted:#a9b7d3;
       --border:rgba(255,255,255,.12);--brand:#6ea8ff;--brand2:#7cf1c6;
       --shadow:0 18px 60px rgba(0,0,0,.38);--r:18px;--max:1100px;
+      --ok:#7cf1c6; --err:#ff8aa1;
     }
     *{box-sizing:border-box}
     body{
@@ -31,10 +32,13 @@
       padding:12px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
       background:rgba(255,255,255,.06);color:inherit;font-weight:900;cursor:pointer;
       text-decoration:none;
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      white-space: nowrap;
     }
+    .btn:hover{ background:rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
+    .btn:active{ transform: translateY(1px); }
     .btn.primary{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#08101e}
     .btn:disabled{opacity:.45;cursor:not-allowed}
-
     .card{
       border:1px solid var(--border);border-radius:var(--r);
       background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
@@ -45,8 +49,8 @@
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all}
     .meta{color:var(--muted);font-size:13px}
-    .ok{color:#7cf1c6;font-weight:900}
-    .err{color:#ff8aa1;font-weight:900}
+    .ok{color:var(--ok);font-weight:900}
+    .err{color:var(--err);font-weight:900}
     .hr{height:1px;background:rgba(255,255,255,.12);margin:14px 0}
     input[type="file"], input[type="text"]{
       width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
@@ -62,7 +66,6 @@
     }
     .drop.drag{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.05)}
     .small{font-size:12.5px;color:rgba(169,183,211,.92)}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .pill{
       display:inline-flex;align-items:center;gap:8px;
       padding:8px 12px;border-radius:999px;
@@ -70,6 +73,39 @@
       background:rgba(255,255,255,.04);
       font-size:13px;color:var(--muted);font-weight:800;
     }
+
+    /* QR box */
+    .qrWrap{
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .qrBox{
+      width:180px; height:180px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .qrBox canvas, .qrBox img{ width:180px; height:180px; display:block; }
+    .linkBox{
+      flex:1;
+      min-width: 240px;
+    }
+
+    details{
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,.04);
+    }
+    summary{ cursor:pointer; font-weight:950; list-style:none; }
+    summary::-webkit-details-marker{ display:none; }
   </style>
 </head>
 
@@ -78,7 +114,7 @@
   <div class="wrap nav">
     <a class="brand" href="/"><span class="logo"></span>Proofy</a>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn" href="/verify">Verifiera</a>
+      <a class="btn" href="/verify.html">Verifiera underlag</a>
       <a class="btn primary" href="/#kontakt">Boka demo</a>
     </div>
   </div>
@@ -86,19 +122,20 @@
 
 <main>
   <div class="wrap">
-    <h1>Hasha, registrera & verifiera</h1>
+    <h1>Skapa verifierings-ID</h1>
     <p class="meta">
-      Filen hashas lokalt i webbläsaren. Proofy lagrar inte filinnehåll – endast fingerprint/hash.
+      Filen lämnar aldrig din dator. Proofy beräknar ett <b>digitalt fingeravtryck</b> (SHA-256) lokalt i webbläsaren
+      och skapar en <b>tidsstämplad verifieringspost</b> för den filversionen.
     </p>
 
     <section class="card content">
       <div class="grid">
 
-        <!-- LEFT: file + actions -->
+        <!-- LEFT: file register -->
         <div>
-          <b>1) Välj fil</b>
+          <b>Välj fil</b>
           <p class="meta" style="margin-top:8px">
-            Välj en fil eller dra & släpp. Vi beräknar SHA-256 lokalt och kan sedan registrera eller verifiera hashvärdet.
+            Dra in en fil eller välj via knappen. Vi beräknar fingeravtrycket lokalt och skapar ett verifierings-ID.
           </p>
 
           <input id="fileInput" type="file" />
@@ -106,59 +143,89 @@
 
           <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
 
-          <div class="row" style="margin-top:12px">
-            <button class="btn primary" id="hashBtn" disabled>Hasha</button>
-            <button class="btn" id="copyHashBtn" disabled>Kopiera hash</button>
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <button class="btn primary" id="registerBtn" disabled>Skapa verifierings-ID</button>
+            <a class="btn" id="certLink" href="#" target="_blank" rel="noopener" style="display:none;">Öppna kvitto</a>
+            <span id="status" class="pill">Välj en fil</span>
           </div>
 
           <div id="localHashBox" style="display:none;margin-top:12px">
-            <div class="meta">SHA-256 (bytes32):</div>
+            <div class="meta">Digitalt fingeravtryck (SHA-256 / bytes32):</div>
             <div id="localHashOut" class="mono">—</div>
           </div>
 
           <div class="small" style="margin-top:10px">
-            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="row" style="margin-top:0">
-            <button class="btn primary" id="registerBtn" disabled>Registrera</button>
-            <button class="btn" id="verifyBtn" disabled>Verifiera</button>
-            <button class="btn" id="copyVerifyLinkBtn" disabled>Kopiera verifierings-länk</button>
-          </div>
-
-          <div class="row" style="margin-top:10px">
-            <span id="statusPill" class="pill">Välj en fil</span>
+            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP). Minsta ändring ger ett helt nytt fingeravtryck.
           </div>
         </div>
 
-        <!-- RIGHT: results -->
+        <!-- RIGHT: result -->
         <div>
-          <b>2) Resultat</b>
+          <b>Resultat</b>
           <div class="hr"></div>
 
-          <div class="meta">Aktuellt fingerprint (bytes32)</div>
+          <div class="meta">Verifierings-ID (digitalt fingeravtryck)</div>
           <div id="hashOut" class="mono" style="margin-top:8px">—</div>
 
-          <div class="hr"></div>
+          <div id="result" style="display:none;margin-top:12px;">
+            <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
 
-          <div id="resultBox" style="display:none;margin-top:8px"></div>
+            <div class="meta">Delbar verifieringslänk</div>
+            <div class="mono" id="shareLinkOut" style="margin-top:8px">—</div>
 
-          <div id="errorBox" style="display:none;margin-top:8px">
-            <div class="err">Tillfälligt tekniskt problem</div>
-            <div id="errorMsg" class="mono" style="margin-top:8px"></div>
+            <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn" id="copyLinkBtn" type="button">Kopiera länk</button>
+              <a class="btn" id="openVerifyBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna verifiering</a>
+            </div>
+
+            <div class="qrWrap">
+              <div class="qrBox" aria-label="QR-kod för verifieringslänk">
+                <canvas id="qrCanvas" width="180" height="180" aria-hidden="true"></canvas>
+              </div>
+              <div class="linkBox">
+                <div class="small">
+                  <b>QR-kod</b>: Skanna för att öppna verifieringssidan på mobil.
+                  Bra när ni vill hänvisa kund eller intern granskare till exakt verifieringspost.
+                </div>
+
+                <details style="margin-top:12px;">
+                  <summary>Teknisk detalj (för spårbarhet)</summary>
+                  <div class="hr"></div>
+
+                  <div class="meta">Postreferens</div>
+                  <div id="txOut" class="mono" style="margin-top:8px">—</div>
+
+                  <div class="meta" style="margin-top:10px;">Batch/sekvens</div>
+                  <div id="blockOut" class="mono" style="margin-top:8px">—</div>
+
+                  <div class="meta" style="margin-top:10px;">Åtgärd</div>
+                  <div id="fnOut" class="mono" style="margin-top:8px">—</div>
+
+                  <div class="small" style="margin-top:10px;">
+                    Detta är tekniska fält för felsökning/spårbarhet. För byråarbete räcker normalt verifierings-ID + datum/notering i ärendet.
+                  </div>
+                </details>
+              </div>
+            </div>
           </div>
 
-          <div class="small" style="margin-top:12px">
-            Tips: För verifieringslänk används formatet <span class="mono">/verify?hash=0x…</span>
+          <div id="error" style="display:none;margin-top:12px;">
+            <div class="err">Tillfälligt tekniskt problem</div>
+            <div id="errorMsg" class="mono" style="margin-top:8px"></div>
           </div>
         </div>
 
       </div>
     </section>
+
+    <p class="meta" style="margin-top:14px">
+      Proofy lagrar inte dokument. Ni kan alltid verifiera en filversion i efterhand genom att jämföra dess digitala fingeravtryck mot verifieringsposten.
+    </p>
   </div>
 </main>
+
+<!-- QR generator library (only downloads code; QR is generated locally in your browser) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
 
 <script>
 (() => {
@@ -167,47 +234,59 @@
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
-
-  const hashBtn = $("hashBtn");
-  const copyHashBtn = $("copyHashBtn");
   const registerBtn = $("registerBtn");
-  const verifyBtn = $("verifyBtn");
-  const copyVerifyLinkBtn = $("copyVerifyLinkBtn");
-
-  const statusPill = $("statusPill");
+  const statusEl = $("status");
+  const hashOut = $("hashOut");
+  const certLink = $("certLink");
 
   const localHashBox = $("localHashBox");
   const localHashOut = $("localHashOut");
-  const hashOut = $("hashOut");
 
-  const resultBox = $("resultBox");
-  const errorBox = $("errorBox");
+  const resultBox = $("result");
+  const resultLine = $("resultLine");
+
+  const shareLinkOut = $("shareLinkOut");
+  const copyLinkBtn = $("copyLinkBtn");
+  const openVerifyBtn = $("openVerifyBtn");
+
+  const qrCanvas = $("qrCanvas");
+
+  const txOut = $("txOut");
+  const blockOut = $("blockOut");
+  const fnOut = $("fnOut");
+
+  const errorBox = $("error");
   const errorMsg = $("errorMsg");
 
   let currentFile = null;
   let currentHash = null;
-
   let busy = false;
   let opId = 0;
 
   function setBusy(v){
     busy = v;
-    hashBtn.disabled = !currentFile || busy;
-    copyHashBtn.disabled = !currentHash || busy;
-    registerBtn.disabled = !currentHash || busy;
-    verifyBtn.disabled = !currentHash || busy;
-    copyVerifyLinkBtn.disabled = !currentHash || busy;
+    registerBtn.disabled = !currentFile || busy;
+    copyLinkBtn.disabled = busy || !currentHash;
   }
 
-  function setStatus(text){
-    statusPill.textContent = text;
-  }
-
-  function resetMessages(){
+  function resetUI(){
     resultBox.style.display = "none";
-    resultBox.innerHTML = "";
     errorBox.style.display = "none";
     errorMsg.textContent = "";
+    shareLinkOut.textContent = "—";
+    openVerifyBtn.style.display = "none";
+    txOut.textContent = "—";
+    blockOut.textContent = "—";
+    fnOut.textContent = "—";
+    clearQr();
+  }
+
+  function clearQr(){
+    if(!qrCanvas) return;
+    const ctx = qrCanvas.getContext("2d");
+    ctx.clearRect(0,0,qrCanvas.width,qrCanvas.height);
+    ctx.fillStyle = "rgba(255,255,255,.06)";
+    ctx.fillRect(0,0,qrCanvas.width,qrCanvas.height);
   }
 
   function bytesToHex(bytes){
@@ -224,37 +303,53 @@
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
   }
 
-  function verifyUrlForHash(h){
-    // matchar din routing: /verify (utan .html) i screenshots
-    return `${location.origin}/verify?hash=${h}`;
+  function shareUrlForHash(h){
+    return `${location.origin}/verify.html?hash=${h}`;
   }
 
   function setFile(file){
     currentFile = file || null;
     currentHash = null;
 
-    resetMessages();
-
+    resetUI();
     localHashBox.style.display = "none";
     localHashOut.textContent = "—";
     hashOut.textContent = "—";
+    certLink.style.display = "none";
 
     if(!currentFile){
       fileInfo.textContent = "Ingen fil vald.";
-      setStatus("Välj en fil");
-      setBusy(false);
+      statusEl.textContent = "Välj en fil";
+      registerBtn.disabled = true;
       return;
     }
 
     fileInfo.textContent = `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
-    setStatus("Redo att hasha");
+    statusEl.textContent = "Redo";
     setBusy(false);
   }
 
-  // file input
+  async function renderQr(link){
+    clearQr();
+    // library loads with defer; wait until available
+    if(!window.QRCode){
+      // fallback: show link only
+      return;
+    }
+    try{
+      await window.QRCode.toCanvas(qrCanvas, link, {
+        errorCorrectionLevel: "M",
+        margin: 1,
+        width: 180
+      });
+    } catch {
+      // if QR fails, still ok: link is visible
+      clearQr();
+    }
+  }
+
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
 
-  // drag & drop (identiskt mönster som verify.html)
   dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
   dropZone.addEventListener("drop", (e) => {
@@ -264,183 +359,96 @@
     if(f) setFile(f);
   });
 
-  // Hash
-  hashBtn.addEventListener("click", async () => {
+  registerBtn.addEventListener("click", async () => {
     if(!currentFile || busy) return;
 
     const myOp = ++opId;
     setBusy(true);
-    resetMessages();
-    setStatus("Hashar lokalt…");
+    resetUI();
+
+    statusEl.textContent = "Beräknar fingeravtryck…";
 
     try{
       const h = await sha256Bytes32Hex(currentFile);
       if(myOp !== opId) return;
 
+      if(!isBytes32Hex(h)){
+        throw new Error("Ogiltigt fingeravtryck (bytes32).");
+      }
+
       currentHash = h;
 
       localHashBox.style.display = "block";
       localHashOut.textContent = h;
+
       hashOut.textContent = h;
 
-      setStatus("Hash klar ✅");
-    } catch (e){
-      console.error(e);
-      if(myOp !== opId) return;
-      errorBox.style.display = "block";
-      errorMsg.textContent = "Kunde inte beräkna hash.";
-      setStatus("Fel");
-    } finally {
-      if(myOp === opId) setBusy(false);
-    }
-  });
+      // optional receipt page if you have it
+      certLink.href = `/certificate.html?hash=${encodeURIComponent(h)}`;
+      certLink.style.display = "inline-flex";
 
-  // Copy hash
-  copyHashBtn.addEventListener("click", async () => {
-    if(!currentHash || busy) return;
-    try{
-      await navigator.clipboard.writeText(currentHash);
-      setStatus("Hash kopierad ✅");
-    } catch {
-      setStatus("Kunde inte kopiera. Tillåt clipboard i webbläsaren.");
-    }
-  });
+      statusEl.textContent = "Skapar verifieringspost…";
 
-  // Verify (uses /api/verify like verify.html)
-  async function doVerify(h){
-    if(!isBytes32Hex(h)) throw new Error("Ogiltig hash (bytes32).");
-
-    const r = await fetch("/api/verify",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash: h })
-    });
-
-    const j = await r.json().catch(() => ({}));
-    if(!r.ok || !j.ok) throw new Error(j?.error || "Tekniskt fel vid verifiering.");
-    return j;
-  }
-
-  verifyBtn.addEventListener("click", async () => {
-    if(!currentHash || busy) return;
-
-    const myOp = ++opId;
-    setBusy(true);
-    resetMessages();
-    setStatus("Verifierar…");
-
-    try{
-      const j = await doVerify(currentHash);
-      if(myOp !== opId) return;
-
-      if(!j.exists){
-        resultBox.innerHTML = `
-          <div class="err">❌ Hashen är inte registrerad</div>
-          <div class="meta" style="margin-top:8px">Verifierings-ID:</div>
-          <div class="mono">${currentHash}</div>
-        `;
-      } else {
-        const date = new Date(j.timestamp * 1000).toLocaleString("sv-SE");
-        resultBox.innerHTML = `
-          <div class="ok">✅ Hashen är registrerad</div>
-          <div class="meta" style="margin-top:8px">Datum: ${date}</div>
-          <div class="meta" style="margin-top:8px">Submitter:</div>
-          <div class="mono">${j.submitter}</div>
-        `;
-      }
-
-      resultBox.style.display = "block";
-      setStatus("Klar ✅");
-    } catch (e){
-      console.error(e);
-      if(myOp !== opId) return;
-      errorBox.style.display = "block";
-      errorMsg.textContent = (e?.message || "Verifieringstjänsten kunde inte nås just nu.");
-      setStatus("Fel");
-    } finally {
-      if(myOp === opId) setBusy(false);
-    }
-  });
-
-  // Register (uses /api/register)
-  registerBtn.addEventListener("click", async () => {
-    if(!currentHash || busy) return;
-
-    const myOp = ++opId;
-    setBusy(true);
-    resetMessages();
-    setStatus("Registrerar…");
-
-    try{
-      const res = await fetch("/api/register",{
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ hash: currentHash })
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ hash: h })
       });
 
       const data = await res.json().catch(() => ({}));
       if(myOp !== opId) return;
 
-      if(!res.ok || data.ok === false){
-        const msg = data?.error || `Registrering misslyckades (HTTP ${res.status}).`;
+      if (!res.ok || data.ok === false) {
+        const msg = data?.error || `Tjänsten svarade med fel (HTTP ${res.status}).`;
         throw new Error(msg);
       }
 
-      // Visa ett rent resultat först…
-      if(data.alreadyExists){
-        resultBox.innerHTML = `
-          <div class="ok">✅ Redan registrerad</div>
-          <div class="meta" style="margin-top:8px">Verifierings-ID:</div>
-          <div class="mono">${currentHash}</div>
-        `;
-      } else {
-        resultBox.innerHTML = `
-          <div class="ok">✅ Registrerad</div>
-          <div class="meta" style="margin-top:8px">Verifierings-ID:</div>
-          <div class="mono">${currentHash}</div>
-        `;
-      }
-
-      // …och direkt efter visa verifierad metadata via /api/verify (så datum/submitter alltid blir korrekt)
-      try{
-        const j = await doVerify(currentHash);
-        if(myOp !== opId) return;
-        if(j.exists){
-          const date = new Date(j.timestamp * 1000).toLocaleString("sv-SE");
-          resultBox.innerHTML += `
-            <div class="hr"></div>
-            <div class="meta">Datum: ${date}</div>
-            <div class="meta" style="margin-top:8px">Submitter:</div>
-            <div class="mono">${j.submitter}</div>
-          `;
-        }
-      } catch { /* ignore verify metadata failure */ }
+      const link = shareUrlForHash(h);
 
       resultBox.style.display = "block";
-      setStatus("Klar ✅");
+
+      if (data.alreadyExists) {
+        resultLine.innerHTML = `<span class="ok">✅ Verifieringspost finns redan</span> <span class="meta">(ingen ny post behövdes)</span>`;
+      } else {
+        resultLine.innerHTML = `<span class="ok">✅ Verifierings-ID skapat</span> <span class="meta">(tidsstämplat)</span>`;
+      }
+
+      shareLinkOut.textContent = link;
+      openVerifyBtn.href = link;
+      openVerifyBtn.style.display = "inline-flex";
+
+      // tech details (kept but de-emphasized)
+      txOut.textContent = data.txHash || "—";
+      blockOut.textContent = (data.blockNumber ?? "—");
+      fnOut.textContent = (data.functionUsed ?? "—");
+
+      await renderQr(link);
+
+      statusEl.textContent = "Klar ✅";
+      setBusy(false);
     } catch (e){
       console.error(e);
       if(myOp !== opId) return;
       errorBox.style.display = "block";
-      errorMsg.textContent = (e?.message || "Registreringstjänsten kunde inte nås just nu.");
-      setStatus("Fel");
-    } finally {
-      if(myOp === opId) setBusy(false);
+      errorMsg.textContent = (e?.message || "Tjänsten kunde inte nås just nu.");
+      statusEl.textContent = "Fel";
+      setBusy(false);
     }
   });
 
-  // Copy verify link
-  copyVerifyLinkBtn.addEventListener("click", async () => {
+  copyLinkBtn.addEventListener("click", async () => {
     if(!currentHash || busy) return;
+    const link = shareUrlForHash(currentHash);
     try{
-      await navigator.clipboard.writeText(verifyUrlForHash(currentHash));
-      setStatus("Länk kopierad ✅");
+      await navigator.clipboard.writeText(link);
+      statusEl.textContent = "Länk kopierad ✅";
     } catch {
-      setStatus("Kunde inte kopiera länk. Tillåt clipboard i webbläsaren.");
+      statusEl.textContent = "Kunde inte kopiera (tillåt clipboard)";
     }
   });
 
   // initial
+  clearQr();
   setBusy(false);
 })();
 </script>
