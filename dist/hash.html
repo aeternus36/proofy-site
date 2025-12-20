@@ -1,526 +1,381 @@
-<!doctype html>
-<html lang="sv">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Skapa verifierings-ID</title>
-  <meta name="description" content="Skapa verifierings-ID (SHA-256) lokalt i webbläsaren. Filen lämnar aldrig din dator. Proofy lagrar inte filinnehåll." />
-  <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
-</head>
-
-<body>
-<header>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo" aria-hidden="true"></span>
-        <span>Proofy</span>
-      </a>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a class="btn" href="/verify.html">Verifiera fil</a>
-        <a class="btn" href="/certificate.html">Certifikat</a>
-        <a class="btn primary" href="/#kontakt">Boka demo</a>
-      </div>
-    </div>
-  </div>
-</header>
-
-<main>
-  <div class="wrap">
-    <div class="badge">För redovisningsbyråer · revision · granskning</div>
-
-    <h1 class="pageTitle">Skapa verifierings-ID</h1>
-
-    <p class="lead">
-      Filen lämnar aldrig din dator. Proofy beräknar ett <b>digitalt fingeravtryck</b> (SHA-256) lokalt i webbläsaren
-      och registrerar endast fingeravtrycket. Du får ett <b>Verifierings-ID</b> och en <b>delbar verifieringslänk</b>.
-    </p>
-
-    <div class="card content" style="margin-top:14px;">
-      <div class="grid2">
-
-        <!-- LEFT: Create from file -->
-        <section aria-label="Skapa via fil">
-          <div style="font-weight:950; font-size:16px;">Skapa via fil</div>
-          <p class="meta" style="margin-top:8px">
-            Dra & släpp eller välj filversionen som ska vara referens i ärendet.
-            Vi visar ID + länk + QR, och registrerar fingeravtrycket.
-          </p>
-
-          <input id="fileInput" type="file" />
-          <div id="dropZone" class="drop" style="margin-top:10px">Dra & släpp fil här</div>
-
-          <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
-
-          <div class="actions" style="margin-top:12px">
-            <button class="btn primary" id="createBtn" disabled>Skapa & registrera</button>
-            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
-            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
-            <a class="btn" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna certifikat</a>
-            <span id="statusPill" class="pill">Välj en fil</span>
-          </div>
-
-          <div id="localHashBox" style="display:none;margin-top:12px">
-            <div class="meta">Digitalt fingeravtryck (SHA-256 / bytes32):</div>
-            <div id="localHashOut" class="mono">—</div>
-          </div>
-
-          <div class="small" style="margin-top:10px">
-            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP). Minsta ändring ger ett helt nytt fingeravtryck.
-            <br />
-            <b>Obs:</b> Ny export/omskanning kan ge “ingen match” även om filen ser likadan ut.
-          </div>
-        </section>
-
-        <!-- RIGHT: Result -->
-        <section aria-label="Resultat">
-          <div style="font-weight:950; font-size:16px;">Resultat</div>
-          <div class="hr"></div>
-
-          <div class="meta">Verifierings-ID</div>
-          <div id="hashOut" class="mono" style="margin-top:8px">—</div>
-
-          <div class="hr"></div>
-
-          <div id="resultBox" style="display:none;">
-            <div id="headline" style="font-size:18px; margin-bottom:10px;"></div>
-
-            <div class="meta">Verifieringslänk</div>
-            <div id="linkOut" class="mono" style="margin-top:8px">—</div>
-
-            <div class="qrWrap" style="margin-top:12px">
-              <div>
-                <div class="meta" style="margin-bottom:8px">QR-kod</div>
-                <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
-              </div>
-
-              <div style="min-width:240px; flex:1">
-                <div class="meta">Tidsstämpling</div>
-                <div id="timeOut" class="mono" style="margin-top:8px">—</div>
-
-                <div class="meta" style="margin-top:10px;">Registrerad av</div>
-                <div id="submitterOut" class="mono" style="margin-top:8px">—</div>
-
-                <div class="meta" style="margin-top:10px;">Transaktion</div>
-                <div id="txOut" class="mono" style="margin-top:8px">—</div>
-
-                <div class="small" style="margin-top:10px">
-                  Tips: Spara ID i ärendet. Dela länken om någon behöver kontrollera senare.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div id="errorBox" style="display:none;">
-            <div class="err">Tillfälligt tekniskt problem</div>
-            <div id="errorMsg" class="mono" style="margin-top:8px"></div>
-          </div>
-        </section>
-
-      </div>
-    </div>
-
-    <!-- NEW: Have an ID already -->
-    <section style="margin-top:14px;">
-      <div class="card content">
-        <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
-        <p class="meta" style="margin:0 0 10px;">
-          Klistra in ett ID (0x + 64 hex). Vi genererar länk + QR direkt (utan fil).
-        </p>
-
-        <div class="grid2">
-          <div>
-            <label class="meta" for="manualHash">Verifierings-ID (bytes32)</label>
-            <input id="manualHash" type="text" placeholder="0x…" style="margin-top:8px" />
-            <div class="actions" style="margin-top:12px">
-              <button class="btn" id="manualBuildBtn" type="button">Skapa länk & QR</button>
-              <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
-              <a class="btn soft" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
-              <span id="manualPill" class="pill">Klistra in ID</span>
-            </div>
-          </div>
-
-          <div>
-            <div class="meta">Verifieringslänk</div>
-            <div id="manualLinkOut" class="mono" style="margin-top:8px">—</div>
-
-            <div class="qrWrap" style="margin-top:12px">
-              <div>
-                <div class="meta" style="margin-bottom:8px">QR-kod</div>
-                <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
-              </div>
-              <div style="min-width:240px; flex:1">
-                <div class="small" style="margin-top:0;">
-                  Bra när du fått ett ID i en notering och vill dela en verifieringslänk snabbt.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="hr"></div>
-        <p class="small" style="margin:0;">
-          Proofy lagrar inte dokument. Verifiering bygger på jämförelse av filens digitala fingeravtryck.
-        </p>
-      </div>
-    </section>
-
-    <p class="meta" style="margin-top:14px">
-      Proofy lagrar inte dokument. Verifiering bygger på jämförelse av filens fingeravtryck.
-    </p>
-  </div>
-</main>
-
-<!-- ✅ QR lib MUST be reachable at /qr.min.js (dist root on deploy) -->
-<script
-  src="/qr.min.js?v=2025-12-20"
-  onload="window.__proofyQrLibLoaded = true"
-  onerror="window.__proofyQrLibError = true"
-></script>
-
-<script>
-(() => {
-  const $ = (id) => document.getElementById(id);
-
-  const fileInput = $("fileInput");
-  const dropZone = $("dropZone");
-  const fileInfo = $("fileInfo");
-
-  const createBtn = $("createBtn");
-  const copyIdBtn = $("copyIdBtn");
-  const copyLinkBtn = $("copyLinkBtn");
-  const receiptBtn = $("receiptBtn");
-  const statusPill = $("statusPill");
-
-  const localHashBox = $("localHashBox");
-  const localHashOut = $("localHashOut");
-
-  const hashOut = $("hashOut");
-  const resultBox = $("resultBox");
-  const headline = $("headline");
-  const linkOut = $("linkOut");
-  const qrBox = $("qrBox");
-  const timeOut = $("timeOut");
-  const submitterOut = $("submitterOut");
-  const txOut = $("txOut");
-  const errorBox = $("errorBox");
-  const errorMsg = $("errorMsg");
-
-  // Manual section
-  const manualHash = $("manualHash");
-  const manualBuildBtn = $("manualBuildBtn");
-  const manualCopyLinkBtn = $("manualCopyLinkBtn");
-  const manualVerifyBtn = $("manualVerifyBtn");
-  const manualPill = $("manualPill");
-  const manualLinkOut = $("manualLinkOut");
-  const manualQrBox = $("manualQrBox");
-
-  let currentFile = null;
-  let currentHash = null;
-  let currentLink = null;
-
-  let busy = false;
-  let opId = 0;
-
-  function setBusy(v){
-    busy = v;
-    createBtn.disabled = !currentFile || busy;
-    copyIdBtn.disabled = !currentHash || busy;
-    copyLinkBtn.disabled = !currentLink || busy;
-  }
-
-  function setPill(text){
-    statusPill.textContent = text;
-  }
-
-  function setManualPill(text){
-    manualPill.textContent = text;
-  }
-
-  function resetRight(){
-    resultBox.style.display = "none";
-    errorBox.style.display = "none";
-    errorMsg.textContent = "";
-    headline.textContent = "";
-    hashOut.textContent = "—";
-    linkOut.textContent = "—";
-    timeOut.textContent = "—";
-    submitterOut.textContent = "—";
-    txOut.textContent = "—";
-    qrBox.innerHTML = "";
-    receiptBtn.style.display = "none";
-  }
-
-  function bytesToHex(bytes){
-    return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
-  }
-
-  async function sha256Bytes32Hex(file){
-    const buf = await file.arrayBuffer();
-    const dig = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + bytesToHex(new Uint8Array(dig));
-  }
-
-  function isBytes32Hex(h){
-    return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
-  }
-
-  function buildVerifyLink(hash){
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
-  }
-
-  function showQrError(targetEl, extra){
-    const parts = [];
-    parts.push("QR-bibliotek kunde inte laddas.");
-    if (window.__proofyQrLibError) {
-      parts.push("Kontrollera att /qr.min.js finns i deploy (inte /dist/...).");
-    }
-    if (extra) parts.push(extra);
-    targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
-  }
-
-  function canRenderQr(){
-    return typeof window.QRCode === "function";
-  }
-
-  function renderQr(targetEl, text){
-    if (!targetEl) return;
-
-    if (!canRenderQr()){
-      if (window.__proofyQrLibError) {
-        showQrError(targetEl);
-        return;
-      }
-
-      targetEl.innerHTML = `<div class="meta">Laddar QR…</div>`;
-
-      let tries = 0;
-      const maxTries = 20; // ~1s
-      const t = setInterval(() => {
-        tries++;
-        if (canRenderQr()){
-          clearInterval(t);
-          doRender(targetEl, text);
-          return;
-        }
-        if (window.__proofyQrLibError || tries >= maxTries){
-          clearInterval(t);
-          showQrError(targetEl, tries >= maxTries ? "Tog för lång tid att ladda biblioteket." : "");
-        }
-      }, 50);
-
-      return;
-    }
-
-    doRender(targetEl, text);
-  }
-
-  function doRender(targetEl, text){
-    targetEl.innerHTML = "";
-    const correctLevel =
-      window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
-        ? window.QRCodeCorrectLevel.M
-        : undefined;
-
-    new QRCode(targetEl, {
-      text,
-      width: 150,
-      height: 150,
-      colorDark: "#0b1220",
-      colorLight: "#eaf0ff",
-      correctLevel
-    });
-  }
-
-  function setFile(file){
-    currentFile = file || null;
-    currentHash = null;
-    currentLink = null;
-
-    resetRight();
-
-    localHashBox.style.display = "none";
-    localHashOut.textContent = "—";
-    fileInput.value = "";
-
-    if(!currentFile){
-      fileInfo.textContent = "Ingen fil vald.";
-      setPill("Välj en fil");
-      setBusy(false);
-      return;
-    }
-
-    fileInfo.textContent = `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
-    setPill("Redo att skapa");
-    setBusy(false);
-  }
-
-  // Input
-  fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
-
-  // Drag & drop
-  dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
-  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
-  dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("drag");
-    const f = e.dataTransfer?.files?.[0];
-    if(f) setFile(f);
-  });
-
-  // Create ID + register
-  createBtn.addEventListener("click", async () => {
-    if(!currentFile || busy) return;
-
-    const myOp = ++opId;
-    setBusy(true);
-    resetRight();
-
-    setPill("Hashar lokalt…");
-
-    try{
-      const h = await sha256Bytes32Hex(currentFile);
-      if(myOp !== opId) return;
-
-      if(!isBytes32Hex(h)) throw new Error("Fel vid hash-format (ej bytes32).");
-
-      currentHash = h;
-      currentLink = buildVerifyLink(h);
-
-      localHashBox.style.display = "block";
-      localHashOut.textContent = h;
-
-      hashOut.textContent = h;
-      linkOut.textContent = currentLink;
-
-      // Certificate link
-      receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(h)}`;
-      receiptBtn.style.display = "inline-flex";
-
-      // Render QR immediately
-      renderQr(qrBox, currentLink);
-
-      setPill("Registrerar…");
-
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ hash: h })
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if(myOp !== opId) return;
-
-      if(!res.ok || data.ok === false){
-        throw new Error(data?.error || `Registrering misslyckades (HTTP ${res.status}).`);
-      }
-
-      resultBox.style.display = "block";
-
-      if (data.alreadyExists) {
-        headline.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`;
-      } else {
-        headline.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="meta">(ny verifieringspost skapad)</span>`;
-      }
-
-      if (data.timestamp) {
-        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
-      } else {
-        timeOut.textContent = "—";
-      }
-
-      submitterOut.textContent = data.submitter || "—";
-      txOut.textContent = data.txHash || "—";
-
-      setPill("Klart ✅");
-      setBusy(false);
-    } catch (e){
-      console.error(e);
-      if(myOp !== opId) return;
-
-      errorBox.style.display = "block";
-      errorMsg.textContent = (e?.message || "Registreringstjänsten kunde inte nås just nu.");
-      setPill("Fel");
-      setBusy(false);
-    }
-  });
-
-  // Copy buttons
-  copyIdBtn.addEventListener("click", async () => {
-    if(!currentHash) return;
-    try{
-      await navigator.clipboard.writeText(currentHash);
-      setPill("ID kopierat ✅");
-    } catch {
-      setPill("Kunde inte kopiera");
-    }
-  });
-
-  copyLinkBtn.addEventListener("click", async () => {
-    if(!currentLink) return;
-    try{
-      await navigator.clipboard.writeText(currentLink);
-      setPill("Länk kopierad ✅");
-    } catch {
-      setPill("Kunde inte kopiera");
-    }
-  });
-
-  // Manual: build link + QR from existing hash
-  function setManualState(hash){
-    const clean = (hash || "").trim();
-    if (!isBytes32Hex(clean)){
-      manualLinkOut.textContent = "—";
-      manualQrBox.innerHTML = "";
-      manualCopyLinkBtn.disabled = true;
-      manualVerifyBtn.href = "/verify.html";
-      manualVerifyBtn.style.pointerEvents = "none";
-      manualVerifyBtn.style.opacity = ".55";
-      setManualPill(clean ? "Ogiltigt format" : "Klistra in ID");
-      return null;
-    }
-
-    const link = buildVerifyLink(clean);
-    manualLinkOut.textContent = link;
-    renderQr(manualQrBox, link);
-
-    manualCopyLinkBtn.disabled = false;
-    manualVerifyBtn.href = link;
-    manualVerifyBtn.style.pointerEvents = "auto";
-    manualVerifyBtn.style.opacity = "1";
-    setManualPill("Redo ✅");
-    return link;
-  }
-
-  manualBuildBtn.addEventListener("click", () => {
-    setManualState(manualHash.value);
-  });
-
-  manualHash.addEventListener("input", () => {
-    // snäll live-validering
-    setManualState(manualHash.value);
-  });
-
-  manualCopyLinkBtn.addEventListener("click", async () => {
-    const link = setManualState(manualHash.value);
-    if (!link) return;
-    try{
-      await navigator.clipboard.writeText(link);
-      setManualPill("Länk kopierad ✅");
-    } catch {
-      setManualPill("Kunde inte kopiera");
-    }
-  });
-
-  // Initial
-  resetRight();
-  setBusy(false);
-  setManualState("");
-})();
-</script>
-
-<script src="/chat-widget.js?v=2025-01" defer></script>
-</body>
-</html>
+:root{
+  --bg:#0b1220;
+  --panel: rgba(255,255,255,.06);
+  --panel2: rgba(255,255,255,.04);
+  --text:#eaf0ff;
+  --muted:#a9b7d3;
+  --border: rgba(255,255,255,.12);
+  --brand:#6ea8ff;
+  --brand2:#7cf1c6;
+  --shadow: 0 18px 60px rgba(0,0,0,.38);
+  --r: 18px;
+  --max: 1140px;
+
+  --ok:#7cf1c6;
+  --err:#ff8aa1;
+}
+
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  color: var(--text);
+  background:
+    radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
+    radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
+    radial-gradient(900px 600px at 40% 100%, rgba(110,168,255,.10), transparent 60%),
+    var(--bg);
+  line-height:1.55;
+}
+
+a{ color:inherit; }
+.wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
+
+.skip{
+  position:absolute;
+  left:-9999px;
+  top:10px;
+  background:#fff;
+  color:#000;
+  padding:10px 12px;
+  border-radius:10px;
+  z-index:999999;
+}
+.skip:focus{ left:10px; }
+
+header{
+  position: sticky;
+  top:0;
+  z-index:50;
+  backdrop-filter: blur(12px) saturate(160%);
+  background: rgba(11,18,32,.70);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding: 12px 0;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  font-weight: 900;
+  letter-spacing:.2px;
+}
+
+.logo{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  box-shadow: 0 16px 40px rgba(110,168,255,.22);
+  position: relative;
+}
+.logo:after{
+  content:"";
+  position:absolute;
+  inset: 9px 10px;
+  border-radius: 7px;
+  background: rgba(11,18,32,.65);
+  border: 1px solid rgba(255,255,255,.20);
+}
+
+/* ✅ Nya nav-klasser (snyggare layout) */
+.navLinks{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 999px;
+}
+.navLinks a{
+  text-decoration:none;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: rgba(169,183,211,.95);
+  font-weight: 850;
+  font-size: 13px;
+}
+.navLinks a:hover{
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+}
+
+.navActions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:nowrap;
+}
+
+@media (max-width: 920px){
+  .navLinks{ display:none; }
+}
+@media (max-width: 520px){
+  .nav{ align-items:flex-start; }
+  .navActions{ gap:8px; }
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  text-decoration:none;
+  font-weight: 900;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
+  white-space: nowrap;
+  cursor:pointer;
+}
+.btn:hover{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
+}
+.btn:active{ transform: translateY(1px); }
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+.btn.primary{
+  border:none;
+  color:#08101e;
+  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
+  box-shadow: 0 18px 45px rgba(110,168,255,.22);
+}
+
+.btn.soft{
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.05);
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  font-size: 12.5px;
+  color: rgba(234,240,255,.92);
+}
+
+main{ padding: 34px 0 42px; }
+.pageTitle{
+  margin: 18px 0 10px;
+  font-size: clamp(28px, 3.2vw, 52px);
+  letter-spacing: -.5px;
+  line-height:1.1;
+}
+.lead{
+  color: rgba(234,240,255,.92);
+  max-width: 90ch;
+  margin: 0 0 18px;
+  font-size: 16.8px;
+}
+.meta{ color: var(--muted); font-size: 13px; }
+.small{ font-size: 12.5px; color: rgba(169,183,211,.92); max-width: 92ch; }
+
+.card{
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  box-shadow: var(--shadow);
+}
+.content{ padding: 18px; }
+
+.hr{ height:1px; background: var(--border); margin: 14px 0; }
+
+.grid2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 900px){
+  .grid2{ grid-template-columns: 1fr; }
+}
+
+.grid3{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 920px){
+  .grid3{ grid-template-columns: 1fr; }
+}
+
+.tile{
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(11,18,32,.25);
+}
+.tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
+
+.heroRow{
+  display:grid;
+  grid-template-columns: 1.25fr .9fr;
+  gap: 14px;
+  align-items:start;
+}
+.heroSide{ position: relative; }
+@media (max-width: 920px){
+  .heroRow{ grid-template-columns: 1fr; }
+  .heroSide{ margin-top: 10px; }
+}
+
+.heroCtas{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.heroCtas .btn{ min-width: 190px; }
+@media (max-width: 560px){
+  .heroCtas .btn{ width: 100%; min-width: unset; }
+}
+
+.trustRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.cleanList{
+  margin: 0;
+  padding-left: 18px;
+}
+.cleanList li{ color: rgba(169,183,211,.95); margin: 8px 0; }
+
+details{
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255,255,255,.04);
+}
+summary{ cursor:pointer; font-weight: 950; list-style: none; }
+summary::-webkit-details-marker{ display:none; }
+details p{ color: var(--muted); margin: 10px 0 0; }
+
+input[type="file"], input[type="text"], input[type="email"], textarea{
+  width:100%;
+  padding:12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(11,18,32,.35);
+  color: var(--text);
+  outline:none;
+  font: inherit;
+}
+textarea{ min-height: 120px; resize: vertical; }
+
+.formGrid{
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  word-break: break-all;
+}
+
+.ok{ color: var(--ok); font-weight: 900; }
+.err{ color: var(--err); font-weight: 900; }
+
+.drop{
+  border:2px dashed rgba(255,255,255,.18);
+  background: rgba(255,255,255,.03);
+  border-radius:16px;
+  padding:16px;
+  text-align:center;
+  user-select:none;
+}
+.drop.drag{
+  border-color: rgba(255,255,255,.35);
+  background: rgba(255,255,255,.05);
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.qrWrap{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+.qrBox{
+  width: 170px;
+  height: 170px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(11,18,32,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.qrBox canvas, .qrBox img{
+  width: 150px !important;
+  height: 150px !important;
+  image-rendering: pixelated;
+}
+
+/* Footer helpers */
+footer{
+  padding: 26px 0 44px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  background: rgba(11,18,32,.45);
+}
+.foot{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.links a{ color: rgba(169,183,211,.95); text-decoration:none; margin-right: 12px; }
+.links a:hover{ color: var(--text); }
+
+/* Print */
+@media print{
+  header{ position: static; backdrop-filter:none; background:#fff; border-bottom:none; }
+  body{ background:#fff; color:#000; }
+  .btn, .actions, .note{ display:none !important; }
+  .card{ box-shadow:none !important; background:#fff !important; border:1px solid #ddd !important; }
+  .badge{ border:1px solid #ddd !important; background:#fff !important; color:#000 !important; }
+  .meta{ color:#444 !important; }
+  a{ color:#000 !important; text-decoration:none !important; }
+}
