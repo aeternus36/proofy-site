@@ -17,6 +17,7 @@
 
 *{ box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -32,6 +33,8 @@ body{
 a{ color:inherit; }
 .wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
 
+/* ================= HEADER ================= */
+
 header{
   position: sticky;
   top:0;
@@ -40,6 +43,7 @@ header{
   background: rgba(11,18,32,.70);
   border-bottom: 1px solid var(--border);
 }
+
 .nav{
   display:flex;
   align-items:center;
@@ -47,6 +51,7 @@ header{
   gap:14px;
   padding: 14px 0;
 }
+
 .brand{
   display:flex;
   align-items:center;
@@ -55,6 +60,7 @@ header{
   font-weight: 900;
   letter-spacing:.2px;
 }
+
 .logo{
   width: 34px;
   height: 34px;
@@ -63,6 +69,7 @@ header{
   box-shadow: 0 16px 40px rgba(110,168,255,.22);
   position: relative;
 }
+
 .logo:after{
   content:"";
   position:absolute;
@@ -71,6 +78,8 @@ header{
   background: rgba(11,18,32,.65);
   border: 1px solid rgba(255,255,255,.20);
 }
+
+/* ================= BUTTONS ================= */
 
 .btn{
   display:inline-flex;
@@ -88,6 +97,7 @@ header{
   white-space: nowrap;
   cursor:pointer;
 }
+
 .btn:hover{ background: rgba(255,255,255,.10); }
 .btn:active{ transform: translateY(1px); }
 .btn:disabled{ opacity:.45; cursor:not-allowed; }
@@ -99,33 +109,28 @@ header{
   box-shadow: 0 18px 45px rgba(110,168,255,.22);
 }
 
-.badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 10px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  font-size: 12.5px;
-  color: rgba(234,240,255,.92);
-}
+/* ================= TEXT / LAYOUT ================= */
 
 main{ padding: 34px 0 42px; }
+
 .pageTitle{
-  margin: 18px 0 10px;
+  margin: 18px 0 12px;
   font-size: clamp(28px, 3.2vw, 52px);
   letter-spacing: -.5px;
   line-height:1.1;
 }
+
 .lead{
   color: rgba(234,240,255,.92);
   max-width: 90ch;
-  margin: 0 0 18px;
+  margin: 0 0 22px;
   font-size: 16.8px;
 }
+
 .meta{ color: var(--muted); font-size: 13px; }
 .small{ font-size: 12.5px; color: rgba(169,183,211,.92); }
+
+/* ================= CARDS ================= */
 
 .card{
   border: 1px solid var(--border);
@@ -133,20 +138,27 @@ main{ padding: 34px 0 42px; }
   background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
   box-shadow: var(--shadow);
 }
+
 .content{ padding: 18px; }
 
 .hr{ height:1px; background: var(--border); margin: 14px 0; }
+
+/* ================= GRIDS ================= */
 
 .grid2{
   display:grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
 @media (max-width: 900px){
   .grid2{ grid-template-columns: 1fr; }
 }
 
-input[type="file"], input[type="text"]{
+/* ================= INPUTS ================= */
+
+input[type="file"],
+input[type="text"]{
   width:100%;
   padding:12px;
   border-radius:14px;
@@ -156,12 +168,31 @@ input[type="file"], input[type="text"]{
   outline:none;
   font: inherit;
 }
+
+input[type="file"]:hover,
+input[type="text"]:hover{
+  border-color: rgba(255,255,255,.20);
+}
+
+input:focus{
+  border-color: var(--brand);
+}
+
+/* ================= HASH / DATA ================= */
+
 .mono{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   word-break: break-all;
+  background: rgba(11,18,32,.35);
+  border: 1px solid rgba(255,255,255,.14);
+  padding: 12px;
+  border-radius: 14px;
 }
+
 .ok{ color: var(--ok); font-weight: 900; }
 .err{ color: var(--err); font-weight: 900; }
+
+/* ================= DROP ================= */
 
 .drop{
   border:2px dashed rgba(255,255,255,.18);
@@ -171,10 +202,13 @@ input[type="file"], input[type="text"]{
   text-align:center;
   user-select:none;
 }
+
 .drop.drag{
-  border-color: rgba(255,255,255,.35);
+  border-color: var(--brand);
   background: rgba(255,255,255,.05);
 }
+
+/* ================= STATUS ================= */
 
 .pill{
   display:inline-flex;
@@ -196,12 +230,15 @@ input[type="file"], input[type="text"]{
   align-items:center;
 }
 
+/* ================= QR ================= */
+
 .qrWrap{
   display:flex;
   gap:14px;
   align-items:flex-start;
   flex-wrap:wrap;
 }
+
 .qrBox{
   width: 170px;
   height: 170px;
@@ -213,16 +250,15 @@ input[type="file"], input[type="text"]{
   justify-content:center;
   overflow:hidden;
 }
-.qrBox canvas, .qrBox img{
+
+.qrBox canvas,
+.qrBox img{
   width: 150px !important;
   height: 150px !important;
   image-rendering: pixelated;
 }
 
-/* =========================================================
-   Certificate / Print helpers (mörkt Proofy-tema)
-   - Gör att certificate.html kan se ut som resten utan inline CSS
-   ========================================================= */
+/* ================= CERTIFICATE / PRINT ================= */
 
 .note{ margin-top: 14px; }
 
@@ -235,90 +271,15 @@ input[type="file"], input[type="text"]{
   box-shadow: var(--shadow);
 }
 
-.hdr{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:14px;
-  flex-wrap:wrap;
-}
-
-h1{
-  margin:0;
-  font-size: clamp(24px, 2.4vw, 34px);
-  letter-spacing: -.4px;
-  line-height: 1.12;
-}
-
-.subtitle{
-  color: rgba(234,240,255,.84);
-  margin-top: 8px;
-  max-width: 80ch;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  margin-top: 14px;
-}
-@media (min-width: 860px){
-  .grid{ grid-template-columns: 1fr 1fr; }
-}
-
-.label{
-  color: var(--muted);
-  font-size: 12.8px;
-  font-weight: 900;
-  letter-spacing: .2px;
-  margin-bottom: 8px;
-}
-
-pre.mono{
-  margin:0;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(11,18,32,.35);
-  color: var(--text);
-  white-space: pre-wrap;
-}
-
-.para{
-  margin: 10px 0 0;
-  color: rgba(234,240,255,.92);
-  line-height: 1.65;
-}
-.muted{ color: var(--muted); }
-
-/* QR-box på certifikat (återanvänd qrBox men tillåt lite större) */
-.qrRow{
-  display:flex;
-  gap:14px;
-  flex-wrap:wrap;
-  align-items:flex-start;
-  margin-top: 10px;
-}
-
-/* Print: gör pdf ren (utan sticky header och glow) */
 @media print{
-  header{ position: static; backdrop-filter:none; background:#fff; border-bottom:none; }
-  body{
-    background:#fff;
-    color:#000;
-  }
+  header{ position: static; background:#fff; border-bottom:none; }
+  body{ background:#fff; color:#000; }
   .btn, .actions, .note{ display:none !important; }
   .card, .paper{
     box-shadow:none !important;
     background:#fff !important;
     border:1px solid #ddd !important;
   }
-  .badge{ border:1px solid #ddd !important; background:#fff !important; color:#000 !important; }
-  .meta, .muted{ color:#444 !important; }
-  pre.mono{
-    background:#fff !important;
-    color:#000 !important;
-    border:1px solid #ddd !important;
-  }
+  .mono{ background:#fff !important; color:#000 !important; }
   a{ color:#000 !important; text-decoration:none !important; }
 }
