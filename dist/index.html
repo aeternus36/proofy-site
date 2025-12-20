@@ -57,19 +57,11 @@ header{
   background: rgba(11,18,32,.70);
   border-bottom: 1px solid var(--border);
 }
-
 .nav{
   display:flex; align-items:center; justify-content:space-between;
   gap: 14px; padding: 14px 0;
 }
-
-.brand{
-  display:flex; align-items:center; gap:10px;
-  text-decoration:none;
-  font-weight: 900;
-  letter-spacing:.2px
-}
-
+.brand{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight: 900; letter-spacing:.2px }
 .logo{
   width: 34px; height: 34px; border-radius: 10px;
   background: linear-gradient(135deg, var(--brand), var(--brand2));
@@ -83,23 +75,9 @@ header{
   background: rgba(11,18,32,.65);
   border: 1px solid rgba(255,255,255,.20);
 }
-
-nav{
-  display:flex;
-  gap: 10px;
-  align-items:center;
-  color: var(--muted);
-  font-weight: 700;
-}
-nav a{
-  text-decoration:none;
-  padding: 8px 10px;
-  border-radius: 12px;
-}
-nav a:hover{
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-}
+nav{ display:flex; gap: 10px; align-items:center; color: var(--muted); font-weight: 800; }
+nav a{ text-decoration:none; padding: 8px 10px; border-radius: 12px; }
+nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
 
 .btn{
   display:inline-flex; align-items:center; justify-content:center;
@@ -113,10 +91,7 @@ nav a:hover{
   transition: transform .08s ease, background .15s ease, border-color .15s ease;
   white-space: nowrap;
 }
-.btn:hover{
-  background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.18);
-}
+.btn:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
 .btn:active{ transform: translateY(1px) }
 
 .btn.primary{
@@ -125,91 +100,12 @@ nav a:hover{
   background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
   box-shadow: 0 18px 45px rgba(110,168,255,.22);
 }
-
-/* ✅ Header CTAs */
-.headerCtas{ display:flex; gap:10px; align-items:center; }
-.btn.headerCta{
-  background: rgba(255,255,255,.055);
-  border-color: rgba(255,255,255,.16);
+.btn.soft{
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.05);
 }
-.btn.headerCta:hover{
-  background: rgba(255,255,255,.085);
-  border-color: rgba(255,255,255,.20);
-}
-
-/* ✅ Mobile menu button */
-.menuBtn{
-  display:none;
-  width:44px;height:44px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  cursor:pointer;
-  font-weight:900;
-}
-.menuBtn:hover{ background: rgba(255,255,255,.10); }
-
-.mobileMenu{
-  display:none;
-  margin: 0 0 14px;
-  padding:12px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(11,18,32,.78);
-}
-.mobileMenu a{
-  display:block;
-  padding:10px 10px;
-  border-radius:12px;
-  text-decoration:none;
-  color: rgba(234,240,255,.92);
-  font-weight:800;
-}
-.mobileMenu a:hover{ background: rgba(255,255,255,.06); }
-
-/* ✅ Hero actions */
-.heroActions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-}
-.heroActions .btn.primary{ padding: 12px 18px; }
-.heroActions .btn{ padding: 12px 16px; }
-
-.btn.tool{
-  background: rgba(255,255,255,.055);
-  border-color: rgba(255,255,255,.14);
-}
-.btn.tool:hover{
-  background: rgba(255,255,255,.085);
-  border-color: rgba(255,255,255,.18);
-}
-.btn.tool.emph{
-  background: rgba(255,255,255,.075);
-  border-color: rgba(255,255,255,.20);
-}
-
-/* ✅ Clean link row (no chips) */
-.heroMetaLinks{
-  margin-top:10px;
-  color: rgba(169,183,211,.95);
-  font-weight: 800;
-  font-size: 13px;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.heroMetaLinks a{
-  text-decoration:none;
-  color: rgba(169,183,211,.95);
-}
-.heroMetaLinks a:hover{ color: var(--text); }
-.heroMetaLinks .dotSep{ opacity:.5; }
-
-/* ✅ Layout & sections */
 main{ padding: 34px 0 22px; }
+
 .card{
   border: 1px solid var(--border);
   border-radius: var(--r);
@@ -236,12 +132,20 @@ main{ padding: 34px 0 22px; }
 }
 .hr{ height:1px; background: var(--border); margin: 14px 0; }
 .grid3{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+@media (max-width: 920px){
+  nav{ display:none; }
+  .grid3{ grid-template-columns: 1fr; }
+}
+
 .tile{ padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,.10); background: rgba(11,18,32,.25); }
 .tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
+
 details{ border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.04); }
 summary{ cursor:pointer; font-weight: 950; list-style: none; }
 summary::-webkit-details-marker{ display:none; }
 details p{ color: var(--muted); margin: 10px 0 0; }
+
 footer{
   padding: 26px 0 44px; color: var(--muted);
   border-top: 1px solid var(--border);
@@ -250,6 +154,7 @@ footer{
 .foot{ display:flex; align-items:flex-start; justify-content:space-between; gap: 16px; flex-wrap: wrap; }
 .links a{ color: rgba(169,183,211,.95); text-decoration:none; margin-right: 12px; }
 .links a:hover{ color: var(--text); }
+
 input, textarea{
   width: 100%;
   padding: 12px;
@@ -262,21 +167,16 @@ input, textarea{
 }
 textarea{ min-height: 120px; resize: vertical; }
 
-/* ✅ Responsive */
-@media (max-width: 920px){
-  nav{ display:none; }
-  .grid3{ grid-template-columns: 1fr; }
-  .menuBtn{ display:inline-flex; align-items:center; justify-content:center; }
+/* Hero CTA layout */
+.heroCtas{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
 }
-
-@media (max-width: 640px){
-  .heroActions{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:10px;
-  }
-  .heroActions .btn.primary{ grid-column: 1 / -1; }
-  .heroActions .btn{ width:100%; }
+.heroCtas .btn{ min-width: 180px; }
+@media (max-width: 560px){
+  .heroCtas .btn{ width: 100%; min-width: unset; }
 }
   </style>
 
@@ -291,7 +191,6 @@ textarea{ min-height: 120px; resize: vertical; }
   }
   </script>
 </head>
-
 <body>
 <header>
   <div class="wrap">
@@ -300,29 +199,14 @@ textarea{ min-height: 120px; resize: vertical; }
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
-
       <nav aria-label="Navigation">
         <a href="#forbyraer">För byråer</a>
         <a href="#hur">Hur det fungerar</a>
         <a href="#trygghet">Säkerhet</a>
-        <a href="#faq">FAQ</a>
+        <a href="#faq">Frågor & svar</a>
         <a href="#kontakt">Kontakt</a>
       </nav>
-
-      <div class="headerCtas">
-        <button class="menuBtn" id="menuBtn" aria-label="Öppna meny" aria-expanded="false">☰</button>
-        <a class="btn headerCta" href="#kontakt">Boka demo</a>
-      </div>
-    </div>
-
-    <!-- ✅ Mobile dropdown menu -->
-    <div class="mobileMenu" id="mobileMenu" aria-label="Mobilmeny">
-      <a href="#forbyraer">För byråer</a>
-      <a href="#hur">Hur det fungerar</a>
-      <a href="#trygghet">Säkerhet</a>
-      <a href="#faq">FAQ</a>
-      <a href="#kontakt">Kontakt</a>
-      <a href="/security.html">Säkerhet & integritet</a>
+      <a class="btn primary" href="#kontakt">Boka demo</a>
     </div>
   </div>
 </header>
@@ -331,32 +215,26 @@ textarea{ min-height: 120px; resize: vertical; }
   <div class="wrap">
     <div class="badge">För redovisningsbyråer · revision · granskning</div>
 
-    <h1 class="pageTitle">Ett enkelt sätt att visa att underlag inte har ändrats – när det faktiskt spelar roll.</h1>
+    <h1 class="pageTitle">Visa att underlag inte har ändrats – när det faktiskt spelar roll.</h1>
 
     <p class="lead">
       När ett underlag ifrågasätts i efterhand uppstår onödiga diskussioner.
-      Proofy ger dig ett <strong>verifierings-ID</strong> som gör det enkelt att kontrollera om en fil
-      är <strong>oförändrad</strong> sedan en viss tidpunkt. <strong>Vi lagrar inte filinnehåll.</strong>
+      Proofy ger dig ett <strong>Verifierings-ID</strong> som gör det enkelt att kontrollera om en fil är
+      <strong>oförändrad</strong> sedan en viss tidpunkt. <strong>Vi lagrar inte filinnehåll.</strong>
     </p>
 
     <div class="card" style="padding:18px; margin-top:14px;">
-      <div class="heroActions">
+      <div class="heroCtas">
         <a class="btn primary" href="/pilot.html">Starta pilot</a>
-        <a class="btn tool emph" href="/verify.html">Verifiera underlag</a>
-        <a class="btn tool" href="/hash.html">Skapa verifierings-ID</a>
-      </div>
-
-      <div class="heroMetaLinks" aria-label="Mer information">
-        <a href="#hur">Hur det fungerar</a><span class="dotSep">·</span>
-        <a href="/security.html">Säkerhet & integritet</a><span class="dotSep">·</span>
-        <a href="#forbyraer">För byråer</a>
+        <a class="btn soft" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/hash.html">Skapa verifierings-ID</a>
       </div>
 
       <div class="hr"></div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <span class="badge">🔒 Inget filinnehåll lagras</span>
-        <span class="badge">🧾 Verifiering med ID</span>
+        <span class="badge">🧾 Verifierings-ID för ärendet</span>
         <span class="badge">⚡ 1–2 min att testa</span>
       </div>
 
@@ -370,7 +248,7 @@ textarea{ min-height: 120px; resize: vertical; }
       <div class="card content">
         <p>
           Proofy är byggt för byråers vardag: många ärenden, många versioner, och hög kostnad när någon ifrågasätter ett underlag i efterhand.
-          Du får ett verifierings-ID att spara i ärendet, som gör det lätt att visa om filen är samma som den registrerade versionen.
+          Ni får ett Verifierings-ID att spara i ärendet, som gör det lätt att visa om filen ni verifierar är samma version som den registrerade.
         </p>
         <div class="grid3" style="margin-top:14px;">
           <div class="tile">
@@ -400,21 +278,21 @@ textarea{ min-height: 120px; resize: vertical; }
         <div class="grid3" style="margin-top:14px;">
           <div class="tile">
             <b>Dialog med kund</b>
-            <span class="small">Visa att underlaget ni arbetade på är samma fil som kunden skickade vid ett visst datum.</span>
+            <span class="small">Visa att underlaget ni arbetade på är samma filversion som kunden skickade vid ett visst datum.</span>
           </div>
           <div class="tile">
             <b>Granskning / revision</b>
-            <span class="small">Stärk er interna dokumentation genom att kunna verifiera att en fil är oförändrad.</span>
+            <span class="small">Stärk er dokumentation genom att kunna verifiera att en filversion är oförändrad.</span>
           </div>
           <div class="tile">
-            <b>Tvist & efterfrågor</b>
+            <b>Efterfrågor i efterhand</b>
             <span class="small">Minska tiden på “bevisa version” när en part ifrågasätter ett underlag i efterhand.</span>
           </div>
         </div>
 
         <div class="hr"></div>
         <p class="small">
-          <b>Kärnan:</b> Proofy gör det enkelt att kontrollera om en fil är samma som den som registrerades – utan att någon behöver “lita på” e-posttrådar eller filnamn.
+          <b>Kärnan:</b> Proofy gör det enkelt att kontrollera om en fil är samma version som den som registrerades – utan att någon behöver “lita på” e-posttrådar eller filnamn.
         </p>
       </div>
     </section>
@@ -423,9 +301,9 @@ textarea{ min-height: 120px; resize: vertical; }
       <h2>Vad Proofy gör</h2>
       <div class="card content">
         <ul>
-          <li><b>Skapar ett verifierings-ID</b> för en fil vid registrering.</li>
-          <li><b>Ger en tidsstämplad post</b> kopplad till filens fingeravtryck.</li>
-          <li><b>Låter dig verifiera</b> senare: match / ingen match.</li>
+          <li><b>Skapar ett Verifierings-ID</b> för en filversion.</li>
+          <li><b>Ger en tidsstämplad verifieringspost</b> kopplad till filens digitala fingeravtryck.</li>
+          <li><b>Låter er verifiera</b> senare: match / ingen match.</li>
           <li><b>Lagrar inte filinnehåll</b> (Proofy är inte ett arkiv).</li>
         </ul>
 
@@ -434,8 +312,9 @@ textarea{ min-height: 120px; resize: vertical; }
         <details>
           <summary>Tekniska detaljer (för den som vill)</summary>
           <p>
-            Proofy beräknar ett kryptografiskt fingeravtryck (hash) av filens bytes.
-            Minsta ändring i filen ger ett helt annat fingeravtryck. Fingeravtrycket kan inte användas för att återskapa filinnehåll.
+            Proofy beräknar ett kryptografiskt fingeravtryck av filens bytes (SHA-256).
+            Minsta ändring i filen ger ett helt annat fingeravtryck.
+            Fingeravtrycket kan inte användas för att återskapa filinnehåll.
             Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).
           </p>
         </details>
@@ -447,16 +326,16 @@ textarea{ min-height: 120px; resize: vertical; }
       <div class="card content">
         <div class="grid3">
           <div class="tile">
-            <b>1) Registrera</b>
-            <span class="small">Registrera en fil och få ett verifierings-ID.</span>
+            <b>1) Skapa Verifierings-ID</b>
+            <span class="small">Skapa Verifierings-ID för en filversion och spara i ärendet.</span>
           </div>
           <div class="tile">
-            <b>2) Referera</b>
-            <span class="small">Spara ID i ärendet/noteringar eller i er rutin.</span>
+            <b>2) Referera i ärendet</b>
+            <span class="small">Spara ID i noteringar/rutin, gärna med datum/tid.</span>
           </div>
           <div class="tile">
-            <b>3) Verifiera</b>
-            <span class="small">Kontrollera vid behov om filen matchar posten.</span>
+            <b>3) Verifiera vid behov</b>
+            <span class="small">Kontrollera om filen ni verifierar matchar den registrerade versionen.</span>
           </div>
         </div>
         <div class="hr"></div>
@@ -472,54 +351,97 @@ textarea{ min-height: 120px; resize: vertical; }
         <ul>
           <li><b>Inget filinnehåll lagras.</b> Proofy är byggt för att inte bli ett “dataskåp”.</li>
           <li><b>Minimal attackyta.</b> Fokus på registrering och verifiering – inga filrenderingar/OCR i MVP.</li>
-          <li><b>Kontrollerbarhet.</b> Verifieringen bygger på jämförelse av fingeravtryck.</li>
+          <li><b>Kontrollerbarhet.</b> Verifiering bygger på jämförelse av filens digitala fingeravtryck.</li>
         </ul>
         <p class="small">Mer: <a href="/security.html">Säkerhet & integritet</a>.</p>
       </div>
     </section>
 
-    <section id="invandningar" style="margin-top:28px;">
-      <h2>Vanliga invändningar</h2>
-      <div class="card content">
-        <details>
-          <summary>“Vad händer om någon skapar en ny fil och påstår att den är originalet?”</summary>
-          <p>En ny fil får ett annat fingeravtryck och matchar inte den registrerade posten. Proofy visar om filen du verifierar är samma som den registrerade versionen.</p>
-        </details>
-        <div style="height:10px"></div>
-        <details>
-          <summary>“Är detta juridiskt bindande?”</summary>
-          <p>Proofy är ett tekniskt verifieringsunderlag. Det ersätter inte juridisk bedömning, men kan användas som en del av dokumentation vid granskning eller tvist.</p>
-        </details>
-        <div style="height:10px"></div>
-        <details>
-          <summary>“Ser ni våra filer?”</summary>
-          <p>Nej. Proofy är byggt för att inte lagra filinnehåll. Endast tekniska referenser som krävs för verifiering lagras.</p>
-        </details>
-      </div>
-    </section>
-
+    <!-- ✅ Replaced "Invändningar" + old FAQ with one byrå-anpassad Q&A -->
     <section id="faq" style="margin-top:28px;">
-      <h2>FAQ</h2>
+      <h2>Frågor & svar (för byråer)</h2>
       <div class="card content">
+
         <details>
-          <summary>Vad är Proofy?</summary>
-          <p>Proofy hjälper dig att verifiera om en fil/ett underlag är oförändrat sedan det registrerades, genom ett verifierings-ID. Proofy är byggt för att inte lagra filinnehåll.</p>
+          <summary>Vad är Proofy i praktiken?</summary>
+          <p>
+            Proofy ger en <b>tidsstämplad verifieringspost</b> kopplad till ett dokuments <b>digitala fingeravtryck</b>.
+            Det gör att ni i efterhand kan kontrollera om en fil är <b>samma version</b> som den som registrerades.
+            Proofy är ett tekniskt verifieringsunderlag – inte ett arkiv, inte e-signering och inte juridisk rådgivning.
+          </p>
         </details>
+
         <div style="height:10px"></div>
+
         <details>
-          <summary>Lagrar ni filer?</summary>
-          <p>Nej. Filen används bara tillfälligt för att beräkna ett kryptografiskt fingeravtryck och raderas därefter. Tjänsten lagrar tekniska referenser som behövs för verifiering.</p>
+          <summary>Lagrar Proofy dokument eller filinnehåll?</summary>
+          <p>
+            Nej. Filen används lokalt för att beräkna ett digitalt fingeravtryck. Proofy lagrar inte filinnehåll,
+            bara den tekniska referens som krävs för verifiering (fingeravtryck + tidsstämpling/verifieringspost).
+          </p>
         </details>
+
         <div style="height:10px"></div>
+
         <details>
-          <summary>Om någon exporterar om / återskapar en fil – kan det bli “ingen match”?</summary>
-          <p>Ja. Proofy verifierar filens bytes. Om en process skapar en ny fil (ny export, omskanning, omkomprimering eller annan ompackning) kan den räknas som ny version tekniskt. I pilot sätter man rutiner för vilken fil som ska registreras.</p>
+          <summary>Vad visar verifieringen – och vad visar den inte?</summary>
+          <p>
+            Verifiering visar om filen ni kontrollerar är <b>identisk</b> (samma bytes) som den registrerade versionen.
+            Proofy säger inte vem som skapade filen, om innehållet är korrekt, eller vem som haft filen därefter –
+            bara om filen är oförändrad jämfört med registrerad version.
+          </p>
         </details>
+
         <div style="height:10px"></div>
+
         <details>
-          <summary>Hur bokar vi en demo?</summary>
-          <p>Använd formuläret i kontaktsektionen nedan eller maila <b>kontakt@proofy.se</b>.</p>
+          <summary>Om någon exporterar om / skannar om – kan det bli “ingen match”?</summary>
+          <p>
+            Ja. Ny export, omskanning, omkomprimering eller annan ompackning kan skapa en ny filversion tekniskt,
+            även om den “ser likadan ut”. I pilot brukar man sätta enkel rutin för vilken filversion som ska registreras som referens.
+          </p>
         </details>
+
+        <div style="height:10px"></div>
+
+        <details>
+          <summary>Vad händer om kunden skickar en “annan version” i efterhand?</summary>
+          <p>
+            Den versionen får ett annat digitalt fingeravtryck och matchar inte den registrerade posten.
+            Då kan ni tydligt visa: <b>den här filen är inte samma version som den som registrerades vid datum X</b>.
+          </p>
+        </details>
+
+        <div style="height:10px"></div>
+
+        <details>
+          <summary>Är detta juridiskt bindande?</summary>
+          <p>
+            Proofy är ett <b>tekniskt verifieringsunderlag</b>. Hur det används i en juridisk bedömning beror på sammanhang och parter.
+            I praktiken används det som en del av dokumentation/spårbarhet vid granskning eller vid ifrågasättanden i efterhand.
+          </p>
+        </details>
+
+        <div style="height:10px"></div>
+
+        <details>
+          <summary>Vilken information sparar vi i ärendet?</summary>
+          <p>
+            Ni sparar normalt <b>Verifierings-ID</b> (och gärna datum/tid i er notering).
+            Vid behov kan ni senare verifiera filen mot den registrerade posten.
+          </p>
+        </details>
+
+        <div style="height:10px"></div>
+
+        <details>
+          <summary>Hur bokar vi demo eller startar pilot?</summary>
+          <p>
+            Använd formuläret i kontaktsektionen eller maila <b>kontakt@proofy.se</b>.
+            En demo tar normalt 10–15 min och en pilot kan startas med tydliga ramar och enkel onboarding.
+          </p>
+        </details>
+
       </div>
 
       <!-- FAQ structured data -->
@@ -528,10 +450,14 @@ textarea{ min-height: 120px; resize: vertical; }
         "@context":"https://schema.org",
         "@type":"FAQPage",
         "mainEntity":[
-          {"@type":"Question","name":"Vad är Proofy?","acceptedAnswer":{"@type":"Answer","text":"Proofy hjälper dig att verifiera om en fil/ett underlag är oförändrat sedan det registrerades, genom ett verifierings-ID. Proofy är byggt för att inte lagra filinnehåll."}},
-          {"@type":"Question","name":"Lagrar ni filer?","acceptedAnswer":{"@type":"Answer","text":"Nej. Filen används bara tillfälligt för att beräkna ett kryptografiskt fingeravtryck och raderas därefter. Tjänsten lagrar tekniska referenser som behövs för verifiering."}},
-          {"@type":"Question","name":"Om någon exporterar om / återskapar en fil – kan det bli “ingen match”?","acceptedAnswer":{"@type":"Answer","text":"Ja. Proofy verifierar filens bytes. Om en process skapar en ny fil (ny export, omskanning, omkomprimering eller annan ompackning) kan den räknas som ny version tekniskt. I pilot sätter man rutiner för vilken fil som ska registreras."}},
-          {"@type":"Question","name":"Hur bokar vi en demo?","acceptedAnswer":{"@type":"Answer","text":"Använd formuläret i kontaktsektionen eller maila kontakt@proofy.se."}}
+          {"@type":"Question","name":"Vad är Proofy i praktiken?","acceptedAnswer":{"@type":"Answer","text":"Proofy ger en tidsstämplad verifieringspost kopplad till ett dokuments digitala fingeravtryck. Det gör att ni i efterhand kan kontrollera om en fil är samma version som den som registrerades. Proofy är ett tekniskt verifieringsunderlag – inte ett arkiv, inte e-signering och inte juridisk rådgivning."}},
+          {"@type":"Question","name":"Lagrar Proofy dokument eller filinnehåll?","acceptedAnswer":{"@type":"Answer","text":"Nej. Proofy lagrar inte filinnehåll, bara den tekniska referens som krävs för verifiering (fingeravtryck + tidsstämpling/verifieringspost)."}},
+          {"@type":"Question","name":"Vad visar verifieringen – och vad visar den inte?","acceptedAnswer":{"@type":"Answer","text":"Verifiering visar om filen ni kontrollerar är identisk med den registrerade versionen. Proofy säger inte vem som skapade filen eller om innehållet är korrekt – bara om filen är oförändrad jämfört med registrerad version."}},
+          {"@type":"Question","name":"Om någon exporterar om / skannar om – kan det bli “ingen match”?","acceptedAnswer":{"@type":"Answer","text":"Ja. Ny export, omskanning eller omkomprimering kan skapa en ny filversion tekniskt. I pilot brukar man sätta rutin för vilken filversion som ska registreras som referens."}},
+          {"@type":"Question","name":"Vad händer om kunden skickar en annan version i efterhand?","acceptedAnswer":{"@type":"Answer","text":"En annan version får ett annat digitalt fingeravtryck och matchar inte den registrerade posten. Då kan ni visa att filen inte är samma version som den som registrerades vid ett visst datum."}},
+          {"@type":"Question","name":"Är detta juridiskt bindande?","acceptedAnswer":{"@type":"Answer","text":"Proofy är ett tekniskt verifieringsunderlag. Hur det används i en juridisk bedömning beror på sammanhang och parter."}},
+          {"@type":"Question","name":"Vilken information sparar vi i ärendet?","acceptedAnswer":{"@type":"Answer","text":"Ni sparar normalt Verifierings-ID (och gärna datum/tid i er notering). Vid behov kan ni senare verifiera filen mot den registrerade posten."}},
+          {"@type":"Question","name":"Hur bokar vi demo eller startar pilot?","acceptedAnswer":{"@type":"Answer","text":"Använd formuläret eller maila kontakt@proofy.se. En demo tar normalt 10–15 min och en pilot kan startas med tydliga ramar och enkel onboarding."}}
         ]
       }
       </script>
@@ -544,7 +470,7 @@ textarea{ min-height: 120px; resize: vertical; }
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <!-- Netlify form -->
+        <!-- Netlify form (kan uppdateras senare till Cloudflare Workers/Forms om du vill) -->
         <form name="demo" method="POST" data-netlify="true" netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="demo" />
           <input type="hidden" name="redirect" value="/thanks.html" />
@@ -566,7 +492,7 @@ textarea{ min-height: 120px; resize: vertical; }
               <input id="company" name="company" type="text" autocomplete="organization" />
             </div>
             <div>
-              <label class="small" for="volume">Ca dokument/månad</label>
+              <label class="small" for="volume">Ca underlag/månad</label>
               <input id="volume" name="volume" type="text" placeholder="t.ex. 50–200" />
             </div>
           </div>
@@ -585,7 +511,7 @@ textarea{ min-height: 120px; resize: vertical; }
 
         <div class="hr"></div>
         <p class="small" style="margin:0;">
-          OBS: Proofy är en digital tjänst för filverifiering och spårbarhet. Vi ersätter inte juridisk rådgivning eller revision.
+          OBS: Proofy är en digital tjänst för teknisk verifiering och spårbarhet. Vi ersätter inte juridisk rådgivning eller revision.
         </p>
       </div>
     </section>
@@ -612,33 +538,6 @@ textarea{ min-height: 120px; resize: vertical; }
     </div>
   </div>
 </footer>
-
-<!-- ✅ Mobile menu toggle -->
-<script>
-(() => {
-  const btn = document.getElementById("menuBtn");
-  const menu = document.getElementById("mobileMenu");
-  if(!btn || !menu) return;
-
-  function setOpen(open){
-    menu.style.display = open ? "block" : "none";
-    btn.setAttribute("aria-expanded", open ? "true" : "false");
-  }
-
-  btn.addEventListener("click", () => {
-    const isOpen = menu.style.display === "block";
-    setOpen(!isOpen);
-  });
-
-  menu.querySelectorAll("a").forEach(a => {
-    a.addEventListener("click", () => setOpen(false));
-  });
-
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 920) setOpen(false);
-  });
-})();
-</script>
 
 <!-- INLINE CHAT (kan inte försvinna pga publish/404) -->
 <script>
@@ -755,7 +654,7 @@ textarea{ min-height: 120px; resize: vertical; }
           <button class="proofy-qbtn" data-q="Hur jobbar ni med säkerhet och GDPR när ni inte lagrar filinnehåll?">Säkerhet</button>
         </div>
         <div id="proofy-messages"></div>
-        <div class="proofy-hint">Exempel: “Hur fungerar verifierings-ID?”, “Kan PDF re-export ge ingen match?”</div>
+        <div class="proofy-hint">Exempel: “Hur fungerar verifierings-ID?”, “Kan ny export ge ingen match?”</div>
       </div>
       <div class="proofy-footer">
         <input class="proofy-input" placeholder="Skriv en fråga..." />
@@ -895,7 +794,6 @@ textarea{ min-height: 120px; resize: vertical; }
   }
 })();
 </script>
-
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
