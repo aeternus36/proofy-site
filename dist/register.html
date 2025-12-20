@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy – Registrera dokument</title>
+
+  <style>
+    :root{
+      --bg-dark:#0b0d12; --bg:#f6f7fb; --card:#fff; --text:#111; --muted:#666;
+      --line:#e3e3e3; --blue:#4f7cff; --green:#0a7a2f; --red:#b00020;
+    }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); }
+    .topbar{ background:var(--bg-dark); color:#fff; }
+    .topbar .wrap{ max-width:1100px; margin:0 auto; padding:16px; display:flex; align-items:center; gap:16px; }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; }
+    .dot{ width:10px; height:10px; border-radius:50%; background:var(--blue); }
+    .nav{ margin-left:auto; display:flex; gap:16px; flex-wrap:wrap; }
+    .nav a{ color:#d7deff; text-decoration:none; font-weight:700; }
+    .nav a:hover{ text-decoration:underline; }
+    .wrap{ max-width:900px; margin:0 auto; padding:32px 16px; }
+    h1{ margin:0 0 8px; }
+    p{ margin:0 0 16px; color:#333; line-height:1.6; }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin:18px 0; }
+    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    button{ padding:10px 16px; border-radius:12px; border:1px solid #ccc; background:#fff; font-weight:800; cursor:pointer; }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+    .pill{ padding:6px 12px; border-radius:999px; font-size:13px; background:#f1f1f1; }
+    .ok{ color:var(--green); font-weight:800; }
+    .bad{ color:var(--red); font-weight:800; }
+    .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px; word-break:break-all; background:#f6f6f6; padding:12px; border-radius:12px; }
+    a{ color:#0b57d0; text-decoration:none; font-weight:700; }
+    a:hover{ text-decoration:underline; }
+    footer{ margin-top:40px; padding-top:16px; border-top:1px solid var(--line); font-size:14px; color:var(--muted); }
+
+    /* Dropzone (samma UX som verify.html men anpassad till ljus UI) */
+    .drop{
+      border:2px dashed rgba(0,0,0,.18);
+      background:rgba(0,0,0,.02);
+      border-radius:16px;
+      padding:16px;
+      text-align:center;
+      cursor:pointer;
+      user-select:none;
+    }
+    .drop.drag{
+      border-color:rgba(0,0,0,.35);
+      background:rgba(0,0,0,.04);
+    }
+    .small{ font-size:12.5px; color:#556; }
+  </style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span> Proofy</div>
+    <nav class="nav">
+      <a href="/">Start</a>
+      <a href="/verify.html">Verifiera</a>
+      <a href="/register.html">Registrera</a>
+      <a href="/legal.html">Juridik</a>
+    </nav>
+  </div>
+</div>
+
+<div class="wrap">
+  <h1>Registrera dokument</h1>
+  <p>
+    Dokumentet lämnar aldrig din dator. Proofy beräknar en <strong>SHA-256-hash lokalt</strong> i webbläsaren
+    och registrerar endast hashvärdet on-chain.
+  </p>
+
+  <div class="card">
+    <div class="row" style="width:100%">
+      <input type="file" id="file" style="flex:1; min-width:220px;" />
+      <button id="btnRegister" disabled>Registrera</button>
+      <a id="certLink" href="#" target="_blank" rel="noopener" style="display:none;">Öppna certifikat</a>
+      <span id="status" class="pill">Välj en fil</span>
+    </div>
+
+    <div id="dropZone" class="drop" style="margin-top:10px">
+      Dra & släpp fil här
+    </div>
+
+    <div id="fileInfo" class="small" style="margin-top:10px">
+      Ingen fil vald.
+    </div>
+
+    <p class="muted" style="margin-top:8px;">
+      Tips: stora filer kan ta några sekunder – hash beräknas i webbläsaren.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="muted">SHA-256 (bytes32)</div>
+    <div id="hashOut" class="mono">—</div>
+  </div>
+
+  <div class="card" id="result" style="display:none;">
+    <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
+
+    <div class="muted">Transaktion</div>
+    <div id="txOut" class="mono">—</div>
+
+    <div class="muted" style="margin-top:10px;">Blocknummer</div>
+    <div id="blockOut" class="mono">—</div>
+
+    <div class="muted" style="margin-top:10px;">Funktion</div>
+    <div id="fnOut" class="mono">—</div>
+  </div>
+
+  <div class="card" id="error" style="display:none;">
+    <div class="bad">Tillfälligt tekniskt problem</div>
+    <div id="errorMsg" class="mono"></div>
+  </div>
+
+  <footer>
+    Registrering innebär att hashvärdet lagras on-chain med tidsstämpling. Proofy lagrar inte dokument.
+  </footer>
+</div>
+
+<script>
+  const fileInput = document.getElementById("file");
+  const btnRegister = document.getElementById("btnRegister");
+  const statusEl = document.getElementById("status");
+  const hashOut = document.getElementById("hashOut");
+  const certLink = document.getElementById("certLink");
+
+  const resultBox = document.getElementById("result");
+  const resultLine = document.getElementById("resultLine");
+  const txOut = document.getElementById("txOut");
+  const blockOut = document.getElementById("blockOut");
+  const fnOut = document.getElementById("fnOut");
+
+  const errorBox = document.getElementById("error");
+  const errorMsg = document.getElementById("errorMsg");
+
+  // Dropzone elements
+  const dropZone = document.getElementById("dropZone");
+  const fileInfo = document.getElementById("fileInfo");
+
+  let currentHash = null;
+
+  function resetUI(){
+    resultBox.style.display = "none";
+    errorBox.style.display = "none";
+  }
+
+  // Click dropzone -> open file picker
+  dropZone.addEventListener("click", () => fileInput.click());
+
+  // Drag & drop support
+  dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("drag");
+    const f = e.dataTransfer?.files?.[0];
+    if(!f) return;
+
+    // Set dropped file to input so existing flow works
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    fileInput.files = dt.files;
+
+    // Trigger existing change handler
+    fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  fileInput.addEventListener("change", async () => {
+    resetUI();
+    certLink.style.display = "none";
+    btnRegister.disabled = true;
+
+    const file = fileInput.files?.[0];
+    if (!file){
+      fileInfo.textContent = "Ingen fil vald.";
+      statusEl.textContent = "Välj en fil";
+      hashOut.textContent = "—";
+      currentHash = null;
+      return;
+    }
+
+    fileInfo.textContent = `Vald fil: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
+    statusEl.textContent = "Beräknar hash…";
+
+    try {
+      currentHash = await sha256File(file);
+      hashOut.textContent = currentHash;
+
+      certLink.href = `/certificate.html?hash=${encodeURIComponent(currentHash)}`;
+      certLink.style.display = "inline";
+
+      statusEl.textContent = "Redo att registrera";
+      btnRegister.disabled = false;
+    } catch (e) {
+      errorBox.style.display = "block";
+      errorMsg.textContent = "Kunde inte beräkna hash.";
+      statusEl.textContent = "Fel";
+      currentHash = null;
+    }
+  });
+
+  btnRegister.addEventListener("click", async () => {
+    if (!currentHash) return;
+    resetUI();
+
+    statusEl.textContent = "Registrerar…";
+    btnRegister.disabled = true;
+
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ hash: currentHash })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.ok === false) {
+        const msg = data?.error || `Registrering misslyckades (HTTP ${res.status}).`;
+        throw new Error(msg);
+      }
+
+      resultBox.style.display = "block";
+
+      if (data.alreadyExists) {
+        resultLine.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span style="color:#666;">(ingen ny registrering behövdes)</span>`;
+        txOut.textContent = "—";
+        blockOut.textContent = "—";
+        fnOut.textContent = "—";
+      } else {
+        resultLine.innerHTML = `<span class="ok">✅ Registrerad</span> <span style="color:#666;">(on-chain)</span>`;
+        txOut.textContent = data.txHash || "—";
+        blockOut.textContent = (data.blockNumber ?? "—");
+        fnOut.textContent = (data.functionUsed ?? "—");
+      }
+
+      statusEl.textContent = "Klar";
+    } catch (e) {
+      errorBox.style.display = "block";
+      errorMsg.textContent = (e?.message || "Registreringstjänsten kunde inte nås just nu.");
+      statusEl.textContent = "Fel";
+    } finally {
+      btnRegister.disabled = false;
+    }
+  });
+
+  async function sha256File(file){
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+</script>
+
+</body>
+</html>
