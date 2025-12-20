@@ -2,6 +2,18 @@ import { createPublicClient, createWalletClient, http, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 const PROOFY_ABI = [
+  // ✅ Read: getProof(bytes32) -> (uint256 timestamp, address submitter)
+  {
+    type: "function",
+    name: "getProof",
+    stateMutability: "view",
+    inputs: [{ name: "hash", type: "bytes32" }],
+    outputs: [
+      { name: "timestamp", type: "uint256" },
+      { name: "submitter", type: "address" },
+    ],
+  },
+  // ✅ Write: register(bytes32)
   {
     type: "function",
     name: "register",
@@ -19,7 +31,7 @@ function json(status, obj) {
 }
 
 export async function onRequest({ request, env }) {
-  // Tillåt GET för browser-test
+  // Allow GET for browser test
   if (request.method === "GET") {
     return json(200, {
       ok: true,
@@ -36,7 +48,7 @@ export async function onRequest({ request, env }) {
     return json(405, { ok: false, error: "Use POST" });
   }
 
-  // 1️⃣ Läs body
+  // 1) Read body
   let body;
   try {
     body = await request.json();
@@ -46,7 +58,7 @@ export async function onRequest({ request, env }) {
 
   const hash = (body?.hash || "").trim();
 
-  // 2️⃣ Validera hash
+  // 2) Validate hash (bytes32)
   if (!hash || !hash.startsWith("0x") || hash.length !== 66 || !isHex(hash)) {
     return json(400, {
       ok: false,
@@ -55,7 +67,7 @@ export async function onRequest({ request, env }) {
     });
   }
 
-  // 3️⃣ Env
+  // 3) Env
   const rpcUrl = env.AMOY_RPC_URL;
   const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
   const privateKey = env.PROOFY_PRIVATE_KEY;
@@ -68,22 +80,45 @@ export async function onRequest({ request, env }) {
   }
 
   try {
-    // 4️⃣ Skapa signer
-    const account = privateKeyToAccount(privateKey);
-
+    // 4) Clients
     const publicClient = createPublicClient({
       transport: http(rpcUrl),
     });
+
+    // (Optional but useful)
+    const chainId = await publicClient.getChainId();
+
+    // ✅ 5) Pre-check: if already registered, return a clean response
+    // getProof returns [timestamp, submitter] in viem for tuple outputs
+    const proof = await publicClient.readContract({
+      address: contractAddress,
+      abi: PROOFY_ABI,
+      functionName: "getProof",
+      args: [hash],
+    });
+
+    const timestamp = Number(proof?.[0] ?? 0);
+    const submitter = proof?.[1] ?? "0x0000000000000000000000000000000000000000";
+
+    if (timestamp > 0) {
+      return json(200, {
+        ok: true,
+        chainId,
+        hash,
+        alreadyExists: true,
+        timestamp,
+        submitter,
+      });
+    }
+
+    // ✅ 6) Not registered -> send tx
+    const account = privateKeyToAccount(privateKey);
 
     const walletClient = createWalletClient({
       account,
       transport: http(rpcUrl),
     });
 
-    // (valfritt men bra)
-    const chainId = await publicClient.getChainId();
-
-    // 5️⃣ Skicka tx
     const txHash = await walletClient.writeContract({
       address: contractAddress,
       abi: PROOFY_ABI,
@@ -91,16 +126,22 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
+    // You can optionally wait for receipt, but keeping it fast is fine:
+    // const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+
     return json(200, {
       ok: true,
       chainId,
-      txHash,
       hash,
+      alreadyExists: false,
+      txHash,
+      // blockNumber: receipt?.blockNumber ? Number(receipt.blockNumber) : null,
+      // functionUsed: "register",
     });
   } catch (e) {
     return json(500, {
       ok: false,
-      error: e.message,
+      error: e?.message || String(e),
     });
   }
 }
