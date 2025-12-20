@@ -50,17 +50,26 @@ body{
 }
 a{ color:inherit }
 .wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
+
 header{
   position: sticky; top:0; z-index:50;
   backdrop-filter: blur(12px) saturate(160%);
   background: rgba(11,18,32,.70);
   border-bottom: 1px solid var(--border);
 }
+
 .nav{
   display:flex; align-items:center; justify-content:space-between;
   gap: 14px; padding: 14px 0;
 }
-.brand{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight: 900; letter-spacing:.2px }
+
+.brand{
+  display:flex; align-items:center; gap:10px;
+  text-decoration:none;
+  font-weight: 900;
+  letter-spacing:.2px
+}
+
 .logo{
   width: 34px; height: 34px; border-radius: 10px;
   background: linear-gradient(135deg, var(--brand), var(--brand2));
@@ -74,9 +83,23 @@ header{
   background: rgba(11,18,32,.65);
   border: 1px solid rgba(255,255,255,.20);
 }
-nav{ display:flex; gap: 10px; align-items:center; color: var(--muted); font-weight: 700; }
-nav a{ text-decoration:none; padding: 8px 10px; border-radius: 12px; }
-nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
+
+nav{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  color: var(--muted);
+  font-weight: 700;
+}
+nav a{
+  text-decoration:none;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+nav a:hover{
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+}
 
 .btn{
   display:inline-flex; align-items:center; justify-content:center;
@@ -95,6 +118,7 @@ nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
   border-color: rgba(255,255,255,.18);
 }
 .btn:active{ transform: translateY(1px) }
+
 .btn.primary{
   border: none;
   color: #08101e;
@@ -102,21 +126,58 @@ nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
   box-shadow: 0 18px 45px rgba(110,168,255,.22);
 }
 
-/* ✅ NEW: Hero CTA = clean, enterprise-like */
+/* ✅ Header CTAs */
+.headerCtas{ display:flex; gap:10px; align-items:center; }
+.btn.headerCta{
+  background: rgba(255,255,255,.055);
+  border-color: rgba(255,255,255,.16);
+}
+.btn.headerCta:hover{
+  background: rgba(255,255,255,.085);
+  border-color: rgba(255,255,255,.20);
+}
+
+/* ✅ Mobile menu button */
+.menuBtn{
+  display:none;
+  width:44px;height:44px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  cursor:pointer;
+  font-weight:900;
+}
+.menuBtn:hover{ background: rgba(255,255,255,.10); }
+
+.mobileMenu{
+  display:none;
+  margin: 0 0 14px;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(11,18,32,.78);
+}
+.mobileMenu a{
+  display:block;
+  padding:10px 10px;
+  border-radius:12px;
+  text-decoration:none;
+  color: rgba(234,240,255,.92);
+  font-weight:800;
+}
+.mobileMenu a:hover{ background: rgba(255,255,255,.06); }
+
+/* ✅ Hero actions */
 .heroActions{
   display:flex;
   gap:10px;
   flex-wrap:wrap;
   align-items:center;
 }
-.heroActions .btn.primary{
-  padding: 12px 18px;
-}
-.heroActions .btn{
-  padding: 12px 16px;
-}
+.heroActions .btn.primary{ padding: 12px 18px; }
+.heroActions .btn{ padding: 12px 16px; }
 
-/* Subtle “tool” styling – not flashy */
 .btn.tool{
   background: rgba(255,255,255,.055);
   border-color: rgba(255,255,255,.14);
@@ -125,14 +186,12 @@ nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
   background: rgba(255,255,255,.085);
   border-color: rgba(255,255,255,.18);
 }
-
-/* Make verify slightly more prominent without adding glow */
 .btn.tool.emph{
   background: rgba(255,255,255,.075);
   border-color: rgba(255,255,255,.20);
 }
 
-/* ✅ NEW: text links row (no chips) */
+/* ✅ Clean link row (no chips) */
 .heroMetaLinks{
   margin-top:10px;
   color: rgba(169,183,211,.95);
@@ -149,19 +208,7 @@ nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
 .heroMetaLinks a:hover{ color: var(--text); }
 .heroMetaLinks .dotSep{ opacity:.5; }
 
-/* ✅ NEW: mobile layout (always looks intentional) */
-@media (max-width: 640px){
-  .heroActions{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:10px;
-  }
-  .heroActions .btn.primary{
-    grid-column: 1 / -1;
-  }
-  .heroActions .btn{ width:100%; }
-}
-
+/* ✅ Layout & sections */
 main{ padding: 34px 0 22px; }
 .card{
   border: 1px solid var(--border);
@@ -189,10 +236,6 @@ main{ padding: 34px 0 22px; }
 }
 .hr{ height:1px; background: var(--border); margin: 14px 0; }
 .grid3{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-@media (max-width: 920px){
-  nav{ display:none; }
-  .grid3{ grid-template-columns: 1fr; }
-}
 .tile{ padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,.10); background: rgba(11,18,32,.25); }
 .tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
 details{ border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.04); }
@@ -218,6 +261,23 @@ input, textarea{
   font: inherit;
 }
 textarea{ min-height: 120px; resize: vertical; }
+
+/* ✅ Responsive */
+@media (max-width: 920px){
+  nav{ display:none; }
+  .grid3{ grid-template-columns: 1fr; }
+  .menuBtn{ display:inline-flex; align-items:center; justify-content:center; }
+}
+
+@media (max-width: 640px){
+  .heroActions{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px;
+  }
+  .heroActions .btn.primary{ grid-column: 1 / -1; }
+  .heroActions .btn{ width:100%; }
+}
   </style>
 
   <!-- Structured data: Organization -->
@@ -231,6 +291,7 @@ textarea{ min-height: 120px; resize: vertical; }
   }
   </script>
 </head>
+
 <body>
 <header>
   <div class="wrap">
@@ -239,6 +300,7 @@ textarea{ min-height: 120px; resize: vertical; }
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
+
       <nav aria-label="Navigation">
         <a href="#forbyraer">För byråer</a>
         <a href="#hur">Hur det fungerar</a>
@@ -246,7 +308,21 @@ textarea{ min-height: 120px; resize: vertical; }
         <a href="#faq">FAQ</a>
         <a href="#kontakt">Kontakt</a>
       </nav>
-      <a class="btn primary" href="#kontakt">Boka demo</a>
+
+      <div class="headerCtas">
+        <button class="menuBtn" id="menuBtn" aria-label="Öppna meny" aria-expanded="false">☰</button>
+        <a class="btn headerCta" href="#kontakt">Boka demo</a>
+      </div>
+    </div>
+
+    <!-- ✅ Mobile dropdown menu -->
+    <div class="mobileMenu" id="mobileMenu" aria-label="Mobilmeny">
+      <a href="#forbyraer">För byråer</a>
+      <a href="#hur">Hur det fungerar</a>
+      <a href="#trygghet">Säkerhet</a>
+      <a href="#faq">FAQ</a>
+      <a href="#kontakt">Kontakt</a>
+      <a href="/security.html">Säkerhet & integritet</a>
     </div>
   </div>
 </header>
@@ -264,14 +340,12 @@ textarea{ min-height: 120px; resize: vertical; }
     </p>
 
     <div class="card" style="padding:18px; margin-top:14px;">
-      <!-- ✅ HERO ACTIONS: clean, intentional -->
       <div class="heroActions">
         <a class="btn primary" href="/pilot.html">Starta pilot</a>
         <a class="btn tool emph" href="/verify.html">Verifiera underlag</a>
         <a class="btn tool" href="/hash.html">Skapa verifierings-ID</a>
       </div>
 
-      <!-- ✅ Simple professional link row -->
       <div class="heroMetaLinks" aria-label="Mer information">
         <a href="#hur">Hur det fungerar</a><span class="dotSep">·</span>
         <a href="/security.html">Säkerhet & integritet</a><span class="dotSep">·</span>
@@ -291,7 +365,6 @@ textarea{ min-height: 120px; resize: vertical; }
       </p>
     </div>
 
-    <!-- Resten av din sida är oförändrad -->
     <section id="forbyraer" style="margin-top:28px;">
       <h2>För byråer</h2>
       <div class="card content">
@@ -539,6 +612,33 @@ textarea{ min-height: 120px; resize: vertical; }
     </div>
   </div>
 </footer>
+
+<!-- ✅ Mobile menu toggle -->
+<script>
+(() => {
+  const btn = document.getElementById("menuBtn");
+  const menu = document.getElementById("mobileMenu");
+  if(!btn || !menu) return;
+
+  function setOpen(open){
+    menu.style.display = open ? "block" : "none";
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  btn.addEventListener("click", () => {
+    const isOpen = menu.style.display === "block";
+    setOpen(!isOpen);
+  });
+
+  menu.querySelectorAll("a").forEach(a => {
+    a.addEventListener("click", () => setOpen(false));
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 920) setOpen(false);
+  });
+})();
+</script>
 
 <!-- INLINE CHAT (kan inte försvinna pga publish/404) -->
 <script>
@@ -795,6 +895,7 @@ textarea{ min-height: 120px; resize: vertical; }
   }
 })();
 </script>
+
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
