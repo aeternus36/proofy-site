@@ -491,4 +491,35 @@
         setBadge("Registrerad", "ok");
         existsOut.textContent = "Registrerad (verifierings-ID finns i registret)";
         tsSeOut.textContent = data.timestamp ? formatSe(data.timestamp) : "—";
-        tsUtcOut.textContent = data.timestamp ? formatUtc(da
+        tsUtcOut.textContent = data.timestamp ? formatUtc(data.timestamp) : "—";
+        submitterOut.textContent = data.submitter || "—";
+        interpretation.textContent =
+          "Detta intyg visar att ett dokument med exakt detta verifierings-ID var registrerat vid angiven tidpunkt.";
+      } else {
+        setBadge("Inte registrerad", "bad");
+        existsOut.textContent = "Inte registrerad (verifierings-ID saknas)";
+        tsSeOut.textContent = "—";
+        tsUtcOut.textContent = "—";
+        submitterOut.textContent = "—";
+        interpretation.textContent =
+          "Detta intyg visar att ingen registrering hittades för angivet verifierings-ID vid kontrolltillfället.";
+      }
+    } catch (e) {
+      setBadge("Kan ej kontrollera just nu", "bad");
+      showProblem(String(e?.message || e));
+      existsOut.textContent = "—";
+      tsSeOut.textContent = "—";
+      tsUtcOut.textContent = "—";
+      submitterOut.textContent = "—";
+      interpretation.textContent =
+        "Kontrollen kunde inte genomföras på grund av ett tillfälligt nätverks-/driftproblem. Prova igen.";
+    }
+  }
+
+  btnRefresh.addEventListener("click", () => loadCertificate());
+
+  loadCertificate();
+</script>
+
+</body>
+</html>
