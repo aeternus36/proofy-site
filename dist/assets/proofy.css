@@ -219,3 +219,106 @@ input[type="file"], input[type="text"]{
   image-rendering: pixelated;
 }
 
+/* =========================================================
+   Certificate / Print helpers (mörkt Proofy-tema)
+   - Gör att certificate.html kan se ut som resten utan inline CSS
+   ========================================================= */
+
+.note{ margin-top: 14px; }
+
+.paper{
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  box-shadow: var(--shadow);
+}
+
+.hdr{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+h1{
+  margin:0;
+  font-size: clamp(24px, 2.4vw, 34px);
+  letter-spacing: -.4px;
+  line-height: 1.12;
+}
+
+.subtitle{
+  color: rgba(234,240,255,.84);
+  margin-top: 8px;
+  max-width: 80ch;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+@media (min-width: 860px){
+  .grid{ grid-template-columns: 1fr 1fr; }
+}
+
+.label{
+  color: var(--muted);
+  font-size: 12.8px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  margin-bottom: 8px;
+}
+
+pre.mono{
+  margin:0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(11,18,32,.35);
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.para{
+  margin: 10px 0 0;
+  color: rgba(234,240,255,.92);
+  line-height: 1.65;
+}
+.muted{ color: var(--muted); }
+
+/* QR-box på certifikat (återanvänd qrBox men tillåt lite större) */
+.qrRow{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  align-items:flex-start;
+  margin-top: 10px;
+}
+
+/* Print: gör pdf ren (utan sticky header och glow) */
+@media print{
+  header{ position: static; backdrop-filter:none; background:#fff; border-bottom:none; }
+  body{
+    background:#fff;
+    color:#000;
+  }
+  .btn, .actions, .note{ display:none !important; }
+  .card, .paper{
+    box-shadow:none !important;
+    background:#fff !important;
+    border:1px solid #ddd !important;
+  }
+  .badge{ border:1px solid #ddd !important; background:#fff !important; color:#000 !important; }
+  .meta, .muted{ color:#444 !important; }
+  pre.mono{
+    background:#fff !important;
+    color:#000 !important;
+    border:1px solid #ddd !important;
+  }
+  a{ color:#000 !important; text-decoration:none !important; }
+}
