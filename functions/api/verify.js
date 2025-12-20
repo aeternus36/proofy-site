@@ -1,4 +1,4 @@
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, isHex } from "viem";
 import { polygonAmoy } from "viem/chains";
 
 const PROOFY_ABI = [
@@ -14,97 +14,122 @@ const PROOFY_ABI = [
   },
 ];
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data, null, 2), {
+function json(status, obj) {
+  return new Response(JSON.stringify(obj, null, 2), {
     status,
     headers: {
-      "content-type": "application/json; charset=utf-8",
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type",
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
+      "Access-Control-Allow-Headers": "content-type",
     },
   });
 }
 
 function isValidBytes32Hex(hash) {
-  return typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash);
+  return (
+    typeof hash === "string" &&
+    hash.startsWith("0x") &&
+    hash.length === 66 &&
+    isHex(hash)
+  );
 }
 
-export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type",
-    },
-  });
-}
+export async function onRequest({ request, env }) {
+  // CORS preflight
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
+        "Access-Control-Allow-Headers": "content-type",
+      },
+    });
+  }
 
-export async function onRequestPost(context) {
-  const { request, env } = context;
+  // Allow GET for quick browser test
+  if (request.method === "GET") {
+    return json(200, {
+      ok: true,
+      message: "Use POST /api/verify with JSON body: { hash: \"0x...\" }",
+      env: {
+        hasRpc: !!env.AMOY_RPC_URL,
+        hasAddress: !!env.PROOFY_CONTRACT_ADDRESS,
+      },
+      chain: {
+        name: "polygonAmoy",
+        chainId: polygonAmoy.id,
+      },
+    });
+  }
+
+  if (request.method !== "POST") {
+    return json(405, { ok: false, error: "Use POST" });
+  }
 
   const rpcUrl = env.AMOY_RPC_URL;
   const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
 
   if (!rpcUrl || !contractAddress) {
-    return json(
-      {
-        ok: false,
-        error:
-          "Missing env vars. Required: AMOY_RPC_URL, PROOFY_CONTRACT_ADDRESS",
-      },
-      500
-    );
+    return json(500, {
+      ok: false,
+      error: "Missing environment variables",
+      required: ["AMOY_RPC_URL", "PROOFY_CONTRACT_ADDRESS"],
+    });
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return json({ ok: false, error: "Invalid JSON body" }, 400);
+    return json(400, { ok: false, error: "Invalid JSON body" });
   }
 
-  const hash = body?.hash;
+  const hash = (body?.hash || "").trim();
+
   if (!isValidBytes32Hex(hash)) {
-    return json(
-      {
-        ok: false,
-        error: "Invalid hash. Expected bytes32 hex: 0x + 64 hex chars",
-      },
-      400
-    );
+    return json(400, {
+      ok: false,
+      error: "hash must be bytes32 (0x + 64 hex chars)",
+      received: body,
+    });
   }
-
-  const publicClient = createPublicClient({
-    chain: polygonAmoy,
-    transport: http(rpcUrl),
-  });
 
   try {
-    const [timestamp, submitter] = await publicClient.readContract({
+    const publicClient = createPublicClient({
+      chain: polygonAmoy,
+      transport: http(rpcUrl),
+    });
+
+    const proof = await publicClient.readContract({
       address: contractAddress,
       abi: PROOFY_ABI,
       functionName: "getProof",
       args: [hash],
     });
 
-    const exists = BigInt(timestamp) !== 0n;
+    // viem returns tuple outputs as array
+    const timestampBig = proof?.[0] ?? 0n;
+    const submitter = proof?.[1] ?? "0x0000000000000000000000000000000000000000";
 
-    return json({
+    const exists = BigInt(timestampBig) !== 0n;
+    const timestamp = exists ? Number(timestampBig) : 0;
+
+    return json(200, {
       ok: true,
       chainId: polygonAmoy.id,
       hash,
       exists,
-      timestamp: exists ? Number(timestamp) : 0,
+      timestamp,
       submitter: exists
         ? submitter
         : "0x0000000000000000000000000000000000000000",
     });
-  } catch (err) {
-    return json(
-      { ok: false, error: "readContract failed", details: err?.message ?? String(err) },
-      500
-    );
+  } catch (e) {
+    return json(500, {
+      ok: false,
+      error: e?.message || String(e),
+    });
   }
 }
