@@ -97,6 +97,24 @@ nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
   background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
   box-shadow: 0 18px 45px rgba(110,168,255,.22);
 }
+
+/* ✅ NEW: CTA hierarchy helpers (adds only, doesn't break anything) */
+.heroCtas{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.heroCtas .btn.primary{ padding: 12px 18px; }
+.heroCtas .btn{ padding: 12px 16px; }
+.heroLinks{
+  display:flex; gap:12px; flex-wrap:wrap;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 13px;
+}
+.heroLinks a{
+  text-decoration:none;
+  padding: 6px 0;
+  border-radius: 10px;
+}
+.heroLinks a:hover{ color: var(--text); }
+
 main{ padding: 34px 0 22px; }
 .card{
   border: 1px solid var(--border);
@@ -124,7 +142,10 @@ main{ padding: 34px 0 22px; }
 }
 .hr{ height:1px; background: var(--border); margin: 14px 0; }
 .grid3{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-@media (max-width: 920px){ nav{ display:none; } .grid3{ grid-template-columns: 1fr; } }
+@media (max-width: 920px){
+  nav{ display:none; }
+  .grid3{ grid-template-columns: 1fr; }
+}
 .tile{ padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,.10); background: rgba(11,18,32,.25); }
 .tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
 details{ border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.04); }
@@ -196,13 +217,20 @@ textarea{ min-height: 120px; resize: vertical; }
     </p>
 
     <div class="card" style="padding:18px; margin-top:14px;">
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <!-- ✅ UPDATED: Clear CTA hierarchy -->
+      <div class="heroCtas">
         <a class="btn primary" href="/pilot.html">Starta pilot</a>
-        <a class="btn" href="#forbyraer">För byråer</a>
-        <a class="btn" href="#hur">Hur det fungerar</a>
-        <a class="btn" href="/security.html">Säkerhet & integritet</a>
-        <a class="btn" href="/hash.html">Hasha & registrera fil</a>
-        <a class="btn" href="/verify.html">Verifiera fil</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/hash.html">Skapa verifierings-ID</a>
+      </div>
+
+      <!-- ✅ NEW: info links (no longer competing as buttons) -->
+      <div style="margin-top:10px">
+        <div class="heroLinks" aria-label="Mer information">
+          <a href="#hur">Hur det fungerar</a>
+          <a href="/security.html">Säkerhet & integritet</a>
+          <a href="#forbyraer">För byråer</a>
+        </div>
       </div>
 
       <div class="hr"></div>
@@ -723,4 +751,4 @@ textarea{ min-height: 120px; resize: vertical; }
 </script>
 <script src="/chat-widget.js?v=2025-01" defer></script> 
 </body>
-  </html>
+</html>
