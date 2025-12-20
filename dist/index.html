@@ -87,7 +87,7 @@ nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
   background: rgba(255,255,255,.06);
   text-decoration:none;
   font-weight: 900;
-  transition: transform .08s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
   white-space: nowrap;
 }
 .btn:hover{
@@ -102,59 +102,64 @@ nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
   box-shadow: 0 18px 45px rgba(110,168,255,.22);
 }
 
-/* ✅ CTA hierarchy: keep it premium */
-.heroCtas{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-.heroCtas .btn.primary{ padding: 12px 18px; }
-.heroCtas .btn{ padding: 12px 16px; }
-
-/* ✅ NEW: make "Verifiera underlag" slightly more important than "Skapa verifierings-ID" */
-.btn.secondary{
-  background: rgba(255,255,255,.075);
-  border-color: rgba(255,255,255,.20);
-  box-shadow: 0 10px 30px rgba(0,0,0,.18);
+/* ✅ NEW: Hero CTA = clean, enterprise-like */
+.heroActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
 }
-.btn.secondary:hover{
-  background: rgba(255,255,255,.11);
-  border-color: rgba(255,255,255,.26);
+.heroActions .btn.primary{
+  padding: 12px 18px;
+}
+.heroActions .btn{
+  padding: 12px 16px;
 }
 
-/* ✅ NEW: tertiary is calmer */
-.btn.tertiary{
+/* Subtle “tool” styling – not flashy */
+.btn.tool{
   background: rgba(255,255,255,.055);
   border-color: rgba(255,255,255,.14);
 }
-.btn.tertiary:hover{
+.btn.tool:hover{
   background: rgba(255,255,255,.085);
   border-color: rgba(255,255,255,.18);
 }
 
-/* ✅ NEW: info links as chips (looks deliberate) */
-.heroLinks{
-  display:flex; gap:10px; flex-wrap:wrap;
-  color: rgba(169,183,211,.95);
-  font-weight: 900;
-  font-size: 12.8px;
-}
-.heroLinks a{
-  text-decoration:none;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.035);
-}
-.heroLinks a:hover{
-  color: var(--text);
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.14);
+/* Make verify slightly more prominent without adding glow */
+.btn.tool.emph{
+  background: rgba(255,255,255,.075);
+  border-color: rgba(255,255,255,.20);
 }
 
-/* ✅ NEW: mobile CTA layout (primary full width, then 2 columns) */
+/* ✅ NEW: text links row (no chips) */
+.heroMetaLinks{
+  margin-top:10px;
+  color: rgba(169,183,211,.95);
+  font-weight: 800;
+  font-size: 13px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.heroMetaLinks a{
+  text-decoration:none;
+  color: rgba(169,183,211,.95);
+}
+.heroMetaLinks a:hover{ color: var(--text); }
+.heroMetaLinks .dotSep{ opacity:.5; }
+
+/* ✅ NEW: mobile layout (always looks intentional) */
 @media (max-width: 640px){
-  .heroCtas{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-  .heroCtas .btn.primary{ grid-column: 1 / -1; }
-  .heroCtas .btn{ width:100%; }
-  .heroLinks{ gap:8px; }
-  .heroLinks a{ padding: 8px 10px; }
+  .heroActions{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px;
+  }
+  .heroActions .btn.primary{
+    grid-column: 1 / -1;
+  }
+  .heroActions .btn{ width:100%; }
 }
 
 main{ padding: 34px 0 22px; }
@@ -259,18 +264,18 @@ textarea{ min-height: 120px; resize: vertical; }
     </p>
 
     <div class="card" style="padding:18px; margin-top:14px;">
-      <div class="heroCtas">
+      <!-- ✅ HERO ACTIONS: clean, intentional -->
+      <div class="heroActions">
         <a class="btn primary" href="/pilot.html">Starta pilot</a>
-        <a class="btn secondary" href="/verify.html">Verifiera underlag</a>
-        <a class="btn tertiary" href="/hash.html">Skapa verifierings-ID</a>
+        <a class="btn tool emph" href="/verify.html">Verifiera underlag</a>
+        <a class="btn tool" href="/hash.html">Skapa verifierings-ID</a>
       </div>
 
-      <div style="margin-top:10px">
-        <div class="heroLinks" aria-label="Mer information">
-          <a href="#hur">Hur det fungerar</a>
-          <a href="/security.html">Säkerhet & integritet</a>
-          <a href="#forbyraer">För byråer</a>
-        </div>
+      <!-- ✅ Simple professional link row -->
+      <div class="heroMetaLinks" aria-label="Mer information">
+        <a href="#hur">Hur det fungerar</a><span class="dotSep">·</span>
+        <a href="/security.html">Säkerhet & integritet</a><span class="dotSep">·</span>
+        <a href="#forbyraer">För byråer</a>
       </div>
 
       <div class="hr"></div>
@@ -286,6 +291,7 @@ textarea{ min-height: 120px; resize: vertical; }
       </p>
     </div>
 
+    <!-- Resten av din sida är oförändrad -->
     <section id="forbyraer" style="margin-top:28px;">
       <h2>För byråer</h2>
       <div class="card content">
