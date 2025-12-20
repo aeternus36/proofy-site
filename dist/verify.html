@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
-  <meta name="description" content="Verifiera om ett underlag matchar registrerad filversion – genom Verifierings-ID eller genom att välja fil lokalt." />
+  <meta name="description" content="Verifiera om ett underlag matchar en tidigare registrerad referens – utan att lagra filinnehåll." />
   <meta name="theme-color" content="#0b1220" />
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 </head>
@@ -20,15 +20,16 @@
         <span>Proofy</span>
       </a>
 
-      <div class="navLinks" aria-label="Navigation">
-        <a href="/">Start</a>
-        <a href="/verify.html">Verifiera</a>
-        <a href="/hash.html">Skapa ID</a>
-        <a href="/terms.html">Villkor</a>
-      </div>
+      <nav class="navLinks" aria-label="Navigation">
+        <a href="/#nytta">Nytta</a>
+        <a href="/#hur">Så funkar det</a>
+        <a href="/#trygghet">Säkerhet</a>
+        <a href="/#faq">Frågor</a>
+        <a href="/#kontakt">Kontakt</a>
+      </nav>
 
       <div class="navActions">
-        <a class="btn" href="/hash.html">Skapa Verifierings-ID</a>
+        <a class="btn" href="/hash.html">Skapa ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
     </div>
@@ -37,21 +38,24 @@
 
 <main id="main">
   <div class="wrap">
+    <div class="badge">För redovisningsbyråer · revision · granskning</div>
+
     <h1 class="pageTitle">Verifiera underlag</h1>
-    <p class="lead" style="font-size:16.8px;">
-      Verifiera via fil (lokalt) eller genom att klistra in ett <b>Verifierings-ID</b>.
-      Om du har en delbar länk kan den se ut så här:
-      <span class="mono">/verify.html?id=…</span>
+
+    <p class="lead">
+      Verifiera om ett underlag matchar en tidigare registrerad referens.
+      Du kan verifiera via fil eller genom att klistra in ett Verifierings-ID.
+      Proofy lagrar inte dokument.
     </p>
 
     <section class="card content">
       <div class="grid2">
 
-        <div>
+        <!-- LEFT -->
+        <section aria-label="Verifiera via fil">
           <div style="font-weight:950; font-size:16px;">Verifiera via fil</div>
           <p class="meta" style="margin-top:8px">
-            Välj en fil så kontrollerar vi om den matchar en registrerad version.
-            Filen hanteras lokalt i webbläsaren.
+            Välj filen du vill kontrollera. Vi skapar ett Verifierings-ID lokalt och söker efter en matchande referens.
           </p>
 
           <input id="fileInput" type="file" />
@@ -65,39 +69,62 @@
           </div>
 
           <div id="localIdBox" style="display:none;margin-top:12px">
-            <div class="meta">Beräknat Verifierings-ID</div>
-            <div id="localIdOut" class="mono" style="margin-top:8px">—</div>
+            <div class="meta">Verifierings-ID (skapat lokalt för kontroll):</div>
+            <div id="localIdOut" class="mono">—</div>
           </div>
 
           <div class="small" style="margin-top:10px">
-            Tips: Om någon skickar en ny filversion i efterhand kan verifieringen visa “ingen match”.
+            Tips: Om någon exporterat om/omsannat kan det räknas som en ny filversion även om dokumentet ser likadant ut.
           </div>
-        </div>
+        </section>
 
-        <div>
+        <!-- RIGHT -->
+        <section aria-label="Verifiera via Verifierings-ID">
           <div style="font-weight:950; font-size:16px;">Verifiera via Verifierings-ID</div>
+
           <label class="meta" style="display:block;margin-top:10px" for="idInput">Verifierings-ID</label>
-          <input id="idInput" type="text" placeholder="Klistra in Verifierings-ID" />
+          <input id="idInput" type="text" placeholder="Klistra in Verifierings-ID…" />
 
           <div class="actions" style="margin-top:12px">
             <button class="btn primary" id="verifyBtn" type="button">Verifiera</button>
             <button class="btn" id="copyLinkBtn" type="button">Kopiera verifieringslänk</button>
-            <a class="btn soft" id="openCertBtn" href="/certificate.html" style="pointer-events:none;opacity:.55;">Öppna intyg</a>
           </div>
 
           <div class="hr"></div>
 
           <div id="status" class="meta"></div>
 
-          <div id="resultBox" class="card" style="display:none;margin-top:10px; padding:14px; background:rgba(11,18,32,.25); border:1px solid rgba(255,255,255,.12); border-radius:16px;"></div>
+          <div id="resultBox" style="display:none;margin-top:10px">
+            <div class="tile">
+              <div id="resultTop" style="font-weight:950;"></div>
 
-          <p class="small" style="margin-top:12px;">
-            <b>Juridik (kort):</b> Proofy visar om filen matchar registrerad version. Det är inte ett intyg om innehållets korrekthet eller upphov.
-          </p>
-        </div>
+              <div class="hr" style="margin:12px 0;"></div>
+
+              <div class="meta">Verifierings-ID</div>
+              <div class="mono" id="resultId" style="margin-top:6px;">—</div>
+
+              <div class="meta" style="margin-top:10px;">Delbar verifieringslänk</div>
+              <div class="mono" id="resultLink" style="margin-top:6px;">—</div>
+
+              <div class="meta" style="margin-top:10px;">Registreringstid</div>
+              <div class="mono" id="resultTime" style="margin-top:6px;">—</div>
+
+              <div class="meta" style="margin-top:10px;">Registrerad av</div>
+              <div class="mono" id="resultWho" style="margin-top:6px;">—</div>
+
+              <div class="small" style="margin-top:10px;">
+                Vid behov: spara resultatet i ärendet (t.ex. som notering eller i er granskningsdokumentation).
+              </div>
+            </div>
+          </div>
+        </section>
 
       </div>
     </section>
+
+    <p class="small" style="margin-top:14px">
+      Tips: Spara Verifierings-ID i ärendet (gärna med datum/tid). Vid behov kan samma fil verifieras senare.
+    </p>
   </div>
 </main>
 
@@ -115,10 +142,15 @@
   const idInput = $("idInput");
   const verifyBtn = $("verifyBtn");
   const copyLinkBtn = $("copyLinkBtn");
-  const openCertBtn = $("openCertBtn");
   const status = $("status");
   const statusPill = $("statusPill");
+
   const resultBox = $("resultBox");
+  const resultTop = $("resultTop");
+  const resultId = $("resultId");
+  const resultLink = $("resultLink");
+  const resultTime = $("resultTime");
+  const resultWho = $("resultWho");
 
   let currentFile = null;
   let busy = false;
@@ -144,7 +176,11 @@
     localIdBox.style.display = "none";
     localIdOut.textContent = "—";
     resultBox.style.display = "none";
-    resultBox.innerHTML = "";
+    resultTop.textContent = "";
+    resultId.textContent = "—";
+    resultLink.textContent = "—";
+    resultTime.textContent = "—";
+    resultWho.textContent = "—";
     setStatus("");
   }
 
@@ -152,14 +188,15 @@
     return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
   }
 
-  async function computeIdFromFile(file){
+  async function makeLocalId(file){
+    // Teknisk beräkning (ordet visas inte i UI)
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
-  function isIdFormat(h){
-    return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
+  function isIdFormat(v){
+    return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v);
   }
 
   function shareUrlForId(id){
@@ -175,12 +212,11 @@
   }
 
   async function verifyId(id, showWorking=true){
-    if(!isIdFormat(id)){
+    const clean = (id || "").trim();
+
+    if(!isIdFormat(clean)){
       setStatus("Ange ett giltigt Verifierings-ID.", "err");
       setPill("Ogiltigt ID");
-      openCertBtn.href = "/certificate.html";
-      openCertBtn.style.pointerEvents = "none";
-      openCertBtn.style.opacity = ".55";
       return;
     }
 
@@ -193,18 +229,12 @@
     }
 
     resultBox.style.display = "none";
-    resultBox.innerHTML = "";
-
-    // cert link
-    openCertBtn.href = `/certificate.html?id=${encodeURIComponent(id)}`;
-    openCertBtn.style.pointerEvents = "auto";
-    openCertBtn.style.opacity = "1";
 
     try{
       const r = await fetch("/api/verify",{
         method:"POST",
         headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ hash: id })
+        body: JSON.stringify({ hash: clean }) // backend-fält
       });
 
       const j = await r.json().catch(() => ({}));
@@ -216,36 +246,20 @@
         return;
       }
 
-      const link = shareUrlForId(id);
+      const link = shareUrlForId(clean);
+
+      resultId.textContent = clean;
+      resultLink.textContent = link;
 
       if(!j.exists){
-        resultBox.innerHTML = `
-          <div class="err">❌ Ingen registrering hittades</div>
-          <div class="meta" style="margin-top:10px;">Verifierings-ID</div>
-          <div class="mono" style="margin-top:8px;">${id}</div>
-          <div class="meta" style="margin-top:10px;">Delbar verifieringslänk</div>
-          <div class="mono" style="margin-top:8px;">${link}</div>
-        `;
+        resultTop.innerHTML = `<span class="err">❌ Ingen match</span> <span class="meta">(ingen referens hittades)</span>`;
+        resultTime.textContent = "—";
+        resultWho.textContent = "—";
         setPill("Ingen match");
       } else {
-        resultBox.innerHTML = `
-          <div class="ok">✅ Match: registrerad version finns</div>
-          <div class="meta" style="margin-top:10px;">Registrerad</div>
-          <div class="mono" style="margin-top:8px;">${j.timestamp ? fmtDateSv(j.timestamp) : "—"}</div>
-          <div class="meta" style="margin-top:10px;">Verifierings-ID</div>
-          <div class="mono" style="margin-top:8px;">${id}</div>
-          <div class="meta" style="margin-top:10px;">Delbar verifieringslänk</div>
-          <div class="mono" style="margin-top:8px;">${link}</div>
-
-          <details style="margin-top:12px;">
-            <summary>Detaljer (valfritt)</summary>
-            <p class="meta" style="margin:10px 0 0;">
-              Detta kan hjälpa vid felsökning men behövs normalt inte i byråflödet.
-            </p>
-            <div class="meta" style="margin-top:10px;">Registrerad av</div>
-            <div class="mono" style="margin-top:8px;">${j.submitter || "—"}</div>
-          </details>
-        `;
+        resultTop.innerHTML = `<span class="ok">✅ Match</span> <span class="meta">(referens finns registrerad)</span>`;
+        resultTime.textContent = j.timestamp ? fmtDateSv(j.timestamp) : "—";
+        resultWho.textContent = j.submitter || "—";
         setPill("Match ✅");
       }
 
@@ -288,18 +302,16 @@
 
     const myOp = ++opId;
     setBusy(true);
-    setStatus("Skapar Verifierings-ID lokalt…");
+    setStatus("Skapar ID lokalt…");
     setPill("Arbetar…");
 
-    resultBox.style.display = "none";
-    resultBox.innerHTML = "";
-
     try{
-      const id = await computeIdFromFile(currentFile);
+      const id = await makeLocalId(currentFile);
       if(myOp !== opId) return;
 
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
+
       idInput.value = id;
 
       setStatus("");
@@ -308,14 +320,16 @@
     } catch (e){
       console.error(e);
       if(myOp !== opId) return;
-      setStatus("Fel: kunde inte behandla filen.", "err");
+      setStatus("Fel: kunde inte skapa ID lokalt.", "err");
       setPill("Fel");
     } finally {
       if(myOp === opId) setBusy(false);
     }
   });
 
-  verifyBtn.addEventListener("click", () => verifyId((idInput.value || "").trim(), true));
+  verifyBtn.addEventListener("click", () => {
+    verifyId(idInput.value, true);
+  });
 
   copyLinkBtn.addEventListener("click", async () => {
     const id = (idInput.value || "").trim();
@@ -334,9 +348,9 @@
     }
   });
 
-  // Auto from URL: prefer id= but support old hash= for bakåtkompatibilitet
+  // Auto från URL: stöd både ?id= och legacy ?hash=
   const p = new URLSearchParams(location.search);
-  const urlId = (p.get("id") || p.get("hash") || "").trim();
+  const urlId = p.get("id") || p.get("hash");
   if(urlId){
     idInput.value = urlId;
     if(isIdFormat(urlId)){
