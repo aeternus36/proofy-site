@@ -124,7 +124,11 @@
 </main>
 
 <!-- ✅ QR lib MUST be reachable at /qr.min.js (dist root on deploy) -->
-<script src="/qr.min.js?v=2025-12-20"></script>
+<script
+  src="/qr.min.js?v=2025-12-20"
+  onload="window.__proofyQrLibLoaded = true"
+  onerror="window.__proofyQrLibError = true"
+></script>
 
 <script>
 (() => {
@@ -207,20 +211,73 @@
     return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
+  function showQrError(extra){
+    const parts = [];
+    parts.push("QR-bibliotek kunde inte laddas.");
+    if (window.__proofyQrLibError) {
+      parts.push("Kontrollera att /qr.min.js finns i deploy (inte /dist/...).");
+    }
+    if (extra) parts.push(extra);
+
+    qrBox.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
+  }
+
+  function canRenderQr(){
+    // QRCode.js (David Shim) brukar exponera en funktion/global "QRCode"
+    return typeof window.QRCode === "function";
+  }
+
   function renderQr(text){
-    // Ensure QRCode lib is loaded
-    if (typeof window.QRCode !== "function") {
-      qrBox.innerHTML = '<div class="meta">QR-bibliotek kunde inte laddas.</div>';
+    if (!qrBox) return;
+
+    // Om biblioteket inte hunnit bli tillgängligt än: vänta kort och prova igen
+    if (!canRenderQr()){
+      // Om vi redan vet att scriptet failat: visa fel direkt
+      if (window.__proofyQrLibError) {
+        showQrError();
+        return;
+      }
+
+      // Vänta lite (för långsam laddning / caching) och testa igen
+      qrBox.innerHTML = `<div class="meta">Laddar QR…</div>`;
+
+      let tries = 0;
+      const maxTries = 20; // ~1s vid 50ms
+      const t = setInterval(() => {
+        tries++;
+        if (canRenderQr()){
+          clearInterval(t);
+          doRender(text);
+          return;
+        }
+        if (window.__proofyQrLibError || tries >= maxTries){
+          clearInterval(t);
+          showQrError(tries >= maxTries ? "Tog för lång tid att ladda biblioteket." : "");
+        }
+      }, 50);
+
       return;
     }
+
+    doRender(text);
+  }
+
+  function doRender(text){
     qrBox.innerHTML = "";
+
+    // Vissa minifierade builds saknar QRCodeCorrectLevel – hantera mjukt.
+    const correctLevel =
+      window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
+        ? window.QRCodeCorrectLevel.M
+        : undefined;
+
     new QRCode(qrBox, {
       text,
       width: 150,
       height: 150,
       colorDark: "#0b1220",
       colorLight: "#eaf0ff",
-      correctLevel: window.QRCodeCorrectLevel ? window.QRCodeCorrectLevel.M : undefined
+      correctLevel
     });
   }
 
@@ -321,7 +378,6 @@
       if (data.timestamp) {
         timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
       } else {
-        // if API doesn't return timestamp, keep dash
         timeOut.textContent = "—";
       }
 
