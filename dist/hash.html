@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="sv">
 <head>
@@ -27,36 +26,40 @@ body{
 header{
   border-bottom:1px solid var(--border);
   background:rgba(11,18,32,.75);
-  position:sticky;top:0;z-index:10;
+  position:sticky;top:0;z-index:10
 }
-.nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0;gap:12px}
+.nav{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 0;gap:12px
+}
 .brand{display:flex;gap:10px;font-weight:900;text-decoration:none;align-items:center;color:inherit}
 .logo{
   width:34px;height:34px;border-radius:10px;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 16px 40px rgba(110,168,255,.22);
   position:relative;
 }
 .logo:after{
   content:"";
   position:absolute; inset:9px 10px;
   border-radius:7px;
-  background:rgba(11,18,32,.65);
-  border:1px solid rgba(255,255,255,.20);
+  background: rgba(11,18,32,.65);
+  border: 1px solid rgba(255,255,255,.20);
 }
 .btn{
   display:inline-flex;align-items:center;justify-content:center;
   padding:12px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
   background:rgba(255,255,255,.06);color:inherit;font-weight:900;cursor:pointer;
   text-decoration:none;
-  transition: transform .08s ease, background .15s ease, border-color .15s ease;
-  white-space: nowrap;
+  transition: transform .08s ease, background .15s ease;
 }
-.btn:hover{ background:rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
-.btn:active{ transform: translateY(1px); }
-.btn.primary{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#08101e}
+.btn:hover{ background:rgba(255,255,255,.10) }
+.btn:active{ transform: translateY(1px) }
+.btn.primary{
+  border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));
+  color:#08101e;
+  box-shadow: 0 18px 45px rgba(110,168,255,.22);
+}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-
 .card{
   border:1px solid var(--border);border-radius:var(--r);
   background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
@@ -70,7 +73,7 @@ header{
 .ok{color:var(--ok);font-weight:900}
 .err{color:var(--err);font-weight:900}
 .hr{height:1px;background:rgba(255,255,255,.12);margin:14px 0}
-input[type="file"]{
+input[type="file"], input[type="text"]{
   width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
   background:rgba(11,18,32,.35);color:var(--text);outline:none
 }
@@ -91,43 +94,40 @@ input[type="file"]{
   background:rgba(255,255,255,.04);
   font-size:13px;color:var(--muted);font-weight:800;
 }
-.resultCard{
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(11,18,32,.25);
-  border-radius:16px;
-  padding:14px;
-}
-.kv{margin-top:10px}
-.kv .k{color:var(--muted);font-size:12.5px;margin-bottom:6px}
-.kv .v{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all}
-.actionsRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-@media(max-width:560px){
-  .actionsRow .btn{ width:100%; }
-}
-.qrWrap{
-  display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;
+.kv{ margin-top:10px; }
+.kv .k{ color: var(--muted); font-size:12.5px; }
+.kv .v{ margin-top:6px; }
+.qrRow{
   margin-top:12px;
+  display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;
 }
 .qrBox{
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.04);
+  width:170px;height:170px;
   border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
   padding:10px;
-  width:156px;
-  height:156px;
-  display:flex;align-items:center;justify-content:center;
 }
-.qrBox canvas{ width:136px; height:136px; }
+canvas{ display:block; width:150px; height:150px; }
+.actions{
+  margin-top:12px;
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+}
   </style>
 </head>
 
 <body>
 <header>
-  <div class="wrap nav">
-    <a class="brand" href="/"><span class="logo" aria-hidden="true"></span>Proofy</a>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn" href="/verify.html">Verifiera underlag</a>
-      <a class="btn primary" href="/#kontakt">Boka demo</a>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/" aria-label="Proofy">
+        <span class="logo" aria-hidden="true"></span>
+        <span>Proofy</span>
+      </a>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn" href="/verify.html">Verifiera fil</a>
+        <a class="btn primary" href="/#kontakt">Boka demo</a>
+      </div>
     </div>
   </div>
 </header>
@@ -136,8 +136,8 @@ input[type="file"]{
   <div class="wrap">
     <h1>Skapa verifierings-ID</h1>
     <p class="meta">
-      Filen lämnar inte din dator. Vi beräknar ett <b>digitalt fingeravtryck</b> (SHA-256) lokalt och skapar en
-      <b>tidsstämplad verifieringspost</b>. Resultatet är ett <b>Verifierings-ID</b> som kan sparas i ärendet.
+      Filen lämnar aldrig din dator. Proofy beräknar ett <b>digitalt fingeravtryck</b> (SHA-256) lokalt i webbläsaren
+      och registrerar endast fingeravtrycket. Du får ett <b>Verifierings-ID</b> och en <b>delbar verifieringslänk</b>.
     </p>
 
     <section class="card content">
@@ -147,7 +147,7 @@ input[type="file"]{
         <div>
           <b>Skapa via fil</b>
           <p class="meta" style="margin-top:8px">
-            Välj fil eller dra & släpp. Sedan skapar vi Verifierings-ID och en delbar verifieringslänk.
+            Dra & släpp eller välj en fil. Därefter skapar vi en verifieringspost och visar ID + länk + QR.
           </p>
 
           <input id="fileInput" type="file" />
@@ -155,10 +155,10 @@ input[type="file"]{
 
           <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
 
-          <div class="actionsRow" style="margin-top:12px">
-            <button class="btn primary" id="registerBtn" disabled>Skapa verifierings-ID</button>
-            <button class="btn" id="copyIdBtn" type="button" disabled>Kopiera ID</button>
-            <button class="btn" id="copyLinkBtn" type="button" disabled>Kopiera länk</button>
+          <div class="actions">
+            <button class="btn primary" id="createBtn" disabled>Skapa ID</button>
+            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
+            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
             <span id="statusPill" class="pill">Välj en fil</span>
           </div>
 
@@ -168,7 +168,7 @@ input[type="file"]{
           </div>
 
           <div class="small" style="margin-top:10px">
-            Tips: Spara Verifierings-ID i ärendet (gärna med datum/tid) och dela länken vid behov.
+            QR-koden öppnar verifieringslänken på mobilen (smidigt vid kontroll på plats).
           </div>
         </div>
 
@@ -177,7 +177,9 @@ input[type="file"]{
           <b>Resultat</b>
           <div class="hr"></div>
 
-          <div id="resultBox" class="resultCard" style="display:none;">
+          <div id="status" class="meta"></div>
+
+          <div id="resultBox" style="display:none;margin-top:10px">
             <div id="resultLine" style="font-size:18px;margin-bottom:10px;"></div>
 
             <div class="kv">
@@ -190,29 +192,33 @@ input[type="file"]{
               <div id="linkOut" class="v mono">—</div>
             </div>
 
-            <div class="qrWrap">
+            <div class="qrRow">
               <div>
-                <div class="k">QR-kod (öppnar verifieringslänk)</div>
-                <div class="qrBox"><canvas id="qrCanvas" width="136" height="136"></canvas></div>
+                <div class="k">QR-kod</div>
+                <div class="qrBox">
+                  <canvas id="qrCanvas" width="150" height="150"></canvas>
+                </div>
               </div>
-              <div style="flex:1; min-width:220px">
-                <div class="k">Status</div>
-                <div id="statusText" class="meta">—</div>
+
+              <div style="flex:1; min-width:240px">
+                <div class="kv">
+                  <div class="k">Tidsstämpling</div>
+                  <div id="timeOut" class="v mono">—</div>
+                </div>
 
                 <div class="kv">
                   <div class="k">Registrerad av</div>
                   <div id="submitterOut" class="v mono">—</div>
                 </div>
 
-                <div class="kv">
-                  <div class="k">Tidsstämpling</div>
-                  <div id="timeOut" class="v mono">—</div>
+                <div class="small" style="margin-top:10px">
+                  Tips: Spara ID i ärendet, och dela länken om någon behöver kontrollera senare.
                 </div>
               </div>
             </div>
           </div>
 
-          <div id="errorBox" class="resultCard" style="display:none;">
+          <div id="errorBox" style="display:none;margin-top:10px">
             <div class="err">Tillfälligt tekniskt problem</div>
             <div id="errorMsg" class="mono" style="margin-top:8px"></div>
           </div>
@@ -220,8 +226,15 @@ input[type="file"]{
 
       </div>
     </section>
+
+    <p class="meta" style="margin-top:14px">
+      Proofy lagrar inte dokument. Verifiering bygger på jämförelse av filens fingeravtryck.
+    </p>
   </div>
 </main>
+
+<!-- ✅ Viktigt: den här måste ligga som /dist/qr.min.js så den nås via /qr.min.js -->
+<script src="/qr.min.js?v=2025-12-20"></script>
 
 <script>
 (() => {
@@ -231,22 +244,22 @@ input[type="file"]{
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
 
-  const registerBtn = $("registerBtn");
+  const createBtn = $("createBtn");
   const copyIdBtn = $("copyIdBtn");
   const copyLinkBtn = $("copyLinkBtn");
-
   const statusPill = $("statusPill");
 
   const localHashBox = $("localHashBox");
   const localHashOut = $("localHashOut");
 
+  const status = $("status");
   const resultBox = $("resultBox");
   const resultLine = $("resultLine");
+
   const idOut = $("idOut");
   const linkOut = $("linkOut");
-  const statusText = $("statusText");
-  const submitterOut = $("submitterOut");
   const timeOut = $("timeOut");
+  const submitterOut = $("submitterOut");
 
   const qrCanvas = $("qrCanvas");
 
@@ -254,6 +267,7 @@ input[type="file"]{
   const errorMsg = $("errorMsg");
 
   let currentFile = null;
+
   let busy = false;
   let opId = 0;
 
@@ -262,9 +276,14 @@ input[type="file"]{
 
   function setBusy(v){
     busy = v;
-    registerBtn.disabled = !currentFile || busy;
+    createBtn.disabled = !currentFile || busy;
     copyIdBtn.disabled = !lastHash || busy;
     copyLinkBtn.disabled = !lastLink || busy;
+  }
+
+  function setStatus(msg, cls="meta"){
+    status.textContent = msg || "";
+    status.className = cls;
   }
 
   function setPill(msg){
@@ -276,22 +295,22 @@ input[type="file"]{
     errorMsg.textContent = "";
 
     resultBox.style.display = "none";
-    resultLine.textContent = "";
+    resultLine.innerHTML = "";
+
     idOut.textContent = "—";
     linkOut.textContent = "—";
-    statusText.textContent = "—";
-    submitterOut.textContent = "—";
     timeOut.textContent = "—";
+    submitterOut.textContent = "—";
 
     localHashBox.style.display = "none";
     localHashOut.textContent = "—";
 
-    clearCanvas(qrCanvas);
+    clearQr();
 
+    setStatus("");
     lastHash = null;
     lastLink = null;
-    copyIdBtn.disabled = true;
-    copyLinkBtn.disabled = true;
+    setBusy(false);
   }
 
   function bytesToHex(bytes){
@@ -304,16 +323,65 @@ input[type="file"]{
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
+  function isBytes32Hex(h){
+    return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
+  }
+
   function shareUrlForHash(h){
     return `${location.origin}/verify.html?hash=${h}`;
   }
 
-  function fmtDateSv(timestampSeconds){
-    try{
-      return new Date(timestampSeconds * 1000).toLocaleString("sv-SE");
-    } catch {
-      return "—";
+  function fmtDateSv(ts){
+    try{ return new Date(ts * 1000).toLocaleString("sv-SE"); }
+    catch{ return "—"; }
+  }
+
+  function clearQr(){
+    const ctx = qrCanvas.getContext("2d");
+    const size = qrCanvas.width;
+    ctx.clearRect(0,0,size,size);
+    ctx.fillStyle = "#0b1220";
+    ctx.fillRect(0,0,size,size);
+    ctx.strokeStyle = "rgba(255,255,255,.14)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1,1,size-2,size-2);
+  }
+
+  function renderQr(text){
+    // QRCode() comes from qr.min.js
+    if(typeof QRCode !== "function"){
+      clearQr();
+      return;
     }
+
+    const qr = QRCode(text);
+    const count = qr.getModuleCount();
+    const ctx = qrCanvas.getContext("2d");
+    const size = qrCanvas.width;
+
+    const padding = 10; // quiet zone
+    const usable = size - padding*2;
+    const cell = Math.floor(usable / count);
+    const offset = padding + Math.floor((usable - cell*count) / 2);
+
+    // background
+    ctx.fillStyle = "#0b1220";
+    ctx.fillRect(0,0,size,size);
+
+    // draw modules
+    for(let r=0;r<count;r++){
+      for(let c=0;c<count;c++){
+        if(qr.isDark(r,c)){
+          ctx.fillStyle = "#eaf0ff";
+          ctx.fillRect(offset + c*cell, offset + r*cell, cell, cell);
+        }
+      }
+    }
+
+    // border
+    ctx.strokeStyle = "rgba(255,255,255,.14)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1,1,size-2,size-2);
   }
 
   function setFile(file){
@@ -323,7 +391,7 @@ input[type="file"]{
     if(!currentFile){
       fileInfo.textContent = "Ingen fil vald.";
       setPill("Välj en fil");
-      registerBtn.disabled = true;
+      createBtn.disabled = true;
       return;
     }
 
@@ -333,7 +401,6 @@ input[type="file"]{
   }
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
-
   dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
   dropZone.addEventListener("drop", (e) => {
@@ -343,34 +410,40 @@ input[type="file"]{
     if(f) setFile(f);
   });
 
-  registerBtn.addEventListener("click", async () => {
+  async function postRegister(hash){
+    const res = await fetch("/api/register",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hash })
+    });
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  createBtn.addEventListener("click", async () => {
     if(!currentFile || busy) return;
 
     const myOp = ++opId;
     setBusy(true);
     resetUI();
-
     setPill("Beräknar fingeravtryck…");
+    setStatus("Hashar fil lokalt…");
 
     try{
       const h = await sha256Bytes32Hex(currentFile);
       if(myOp !== opId) return;
 
-      lastHash = h;
-      lastLink = shareUrlForHash(h);
-
       localHashBox.style.display = "block";
       localHashOut.textContent = h;
 
+      if(!isBytes32Hex(h)){
+        throw new Error("Fel: hash blev inte bytes32.");
+      }
+
       setPill("Skapar verifieringspost…");
+      setStatus("Skapar verifieringspost…");
 
-      const res = await fetch("/api/register",{
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ hash: h })
-      });
-
-      const data = await res.json().catch(() => ({}));
+      const { res, data } = await postRegister(h);
       if(myOp !== opId) return;
 
       if(!res.ok || data.ok === false){
@@ -378,29 +451,28 @@ input[type="file"]{
         throw new Error(msg);
       }
 
-      // Show result
+      lastHash = data.hash || h;
+      lastLink = shareUrlForHash(lastHash);
+
       resultBox.style.display = "block";
-      idOut.textContent = h;
+      idOut.textContent = lastHash;
       linkOut.textContent = lastLink;
 
-      // If backend returns proof-like values (optional)
-      const existsAlready = !!data.alreadyExists;
-      const ts = data.timestamp ?? data.ts ?? null;
-      const submitter = data.submitter ?? null;
-
-      if(existsAlready){
-        resultLine.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(ingen ny registrering behövdes)</span>`;
-        statusText.textContent = "Verifieringspost fanns redan – du kan använda samma ID och länk.";
+      // ✅ Om redan registrerad: visa snyggt (inte fel)
+      if(data.alreadyExists){
+        resultLine.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`;
+        setStatus("Verifieringspost fanns redan. ID och länk är fortfarande giltiga.", "meta");
       } else {
         resultLine.innerHTML = `<span class="ok">✅ Verifierings-ID skapat</span>`;
-        statusText.textContent = "Spara ID i ärendet och dela länken vid behov.";
+        setStatus("Klart. Spara Verifierings-ID i ärendet och dela länken vid behov.", "meta");
       }
 
-      submitterOut.textContent = submitter || "—";
-      timeOut.textContent = ts ? fmtDateSv(ts) : "—";
+      // Dessa finns om din /api/register returnerar dem (i din kod gör den det vid alreadyExists)
+      timeOut.textContent = data.timestamp ? fmtDateSv(Number(data.timestamp)) : "—";
+      submitterOut.textContent = data.submitter || "—";
 
-      // QR code for the verify link
-      drawQrToCanvas(qrCanvas, lastLink);
+      // ✅ QR som går att scanna (riktig QR)
+      renderQr(lastLink);
 
       copyIdBtn.disabled = false;
       copyLinkBtn.disabled = false;
@@ -411,6 +483,7 @@ input[type="file"]{
       if(myOp !== opId) return;
       errorBox.style.display = "block";
       errorMsg.textContent = (e?.message || "Tjänsten kunde inte nås just nu.");
+      setStatus("Fel vid skapande av verifieringspost.", "err");
       setPill("Fel");
     } finally {
       if(myOp === opId) setBusy(false);
@@ -421,7 +494,7 @@ input[type="file"]{
     if(!lastHash) return;
     try{
       await navigator.clipboard.writeText(lastHash);
-      setPill("ID kopierat");
+      setPill("ID kopierat ✅");
     } catch {
       setPill("Kunde inte kopiera");
     }
@@ -431,104 +504,15 @@ input[type="file"]{
     if(!lastLink) return;
     try{
       await navigator.clipboard.writeText(lastLink);
-      setPill("Länk kopierad");
+      setPill("Länk kopierad ✅");
     } catch {
       setPill("Kunde inte kopiera");
     }
   });
 
-  // -------- QR (minimal canvas QR-like renderer, no external libs) --------
-  // OBS: Det här är en enkel, snygg “QR”-rendering för UI som fungerar i praktiken
-  // när du öppnar länken via telefon-kamera i många fall. Vill du ha 100% standard
-  // QR enligt ISO/IEC 18004 byter vi till en liten QR-lib (minimerad) i nästa steg.
-  function clearCanvas(canvas){
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-  }
-
-  function drawQrToCanvas(canvas, text){
-    // Simple pseudo-QR: deterministic grid pattern from URL hash
-    // (UI-friendly; for fully standard QR use a real QR encoder)
-    const ctx = canvas.getContext("2d");
-    const size = canvas.width;
-    const cells = 29; // visually QR-ish
-    const cell = Math.floor(size / cells);
-    const pad = Math.floor((size - cell * cells) / 2);
-
-    // background
-    ctx.clearRect(0,0,size,size);
-    ctx.fillStyle = "rgba(11,18,32,.85)";
-    ctx.fillRect(0,0,size,size);
-
-    // border
-    ctx.strokeStyle = "rgba(255,255,255,.14)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(1,1,size-2,size-2);
-
-    const bits = hashBits(text, cells * cells);
-
-    // finder-like corners
-    function finder(x,y){
-      ctx.fillStyle = "rgba(124,241,198,.95)";
-      ctx.fillRect(pad + x*cell, pad + y*cell, cell*7, cell*7);
-      ctx.fillStyle = "rgba(11,18,32,.95)";
-      ctx.fillRect(pad + (x+1)*cell, pad + (y+1)*cell, cell*5, cell*5);
-      ctx.fillStyle = "rgba(110,168,255,.95)";
-      ctx.fillRect(pad + (x+2)*cell, pad + (y+2)*cell, cell*3, cell*3);
-    }
-
-    finder(1,1);
-    finder(cells-8,1);
-    finder(1,cells-8);
-
-    // data cells
-    for(let i=0;i<cells*cells;i++){
-      const x = i % cells;
-      const y = Math.floor(i / cells);
-
-      // skip finder areas
-      const inFinder =
-        (x>=1 && x<8 && y>=1 && y<8) ||
-        (x>=cells-8 && x<cells-1 && y>=1 && y<8) ||
-        (x>=1 && x<8 && y>=cells-8 && y<cells-1);
-
-      if(inFinder) continue;
-
-      if(bits[i]){
-        ctx.fillStyle = "rgba(234,240,255,.92)";
-        ctx.fillRect(pad + x*cell, pad + y*cell, cell-1, cell-1);
-      }
-    }
-
-    // subtle brand corner dot
-    ctx.fillStyle = "rgba(110,168,255,.35)";
-    ctx.beginPath();
-    ctx.arc(size-10, 10, 3, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  function hashBits(str, n){
-    // deterministic bitstream from string
-    let h1 = 0x811c9dc5;
-    for(let i=0;i<str.length;i++){
-      h1 ^= str.charCodeAt(i);
-      h1 = Math.imul(h1, 0x01000193);
-    }
-    const bits = new Array(n).fill(false);
-    let x = h1 >>> 0;
-    for(let i=0;i<n;i++){
-      // xorshift
-      x ^= x << 13; x >>>= 0;
-      x ^= x >> 17; x >>>= 0;
-      x ^= x << 5;  x >>>= 0;
-      bits[i] = (x & 1) === 1;
-    }
-    return bits;
-  }
-
   // initial
-  resetUI();
-  setPill("Välj en fil");
+  clearQr();
+  setFile(null);
   setBusy(false);
 })();
 </script>
