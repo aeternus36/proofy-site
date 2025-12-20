@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Proof Certificate</title>
-  <meta name="description" content="Proof Certificate för dokumentverifiering via SHA-256-hash och on-chain tidsstämpling." />
+  <title>Proofy – Verifieringsintyg</title>
+  <meta name="description" content="Verifieringsintyg för dokumentintegritet via digitalt fingeravtryck (SHA-256) och tidsstämpling." />
 
   <style>
     :root{
@@ -20,7 +20,7 @@
     }
     body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); }
 
-    /* Topbar (matchar era verktygssidor) */
+    /* Topbar (tillfällig: flyttas senare till proofy.css när vi unifierar) */
     .topbar{ background:var(--bg-dark); color:#fff; }
     .topbar .wrap{
       max-width:1100px; margin:0 auto; padding:16px;
@@ -90,6 +90,7 @@
       border-radius:12px;
       padding:12px;
       margin:0;
+      white-space:pre-wrap;
     }
 
     .para{ color:#333; line-height:1.65; margin:10px 0 0; }
@@ -102,6 +103,7 @@
       gap:10px;
       flex-wrap:wrap;
       margin-top:14px;
+      align-items:center;
     }
     button{
       padding:10px 14px;
@@ -113,6 +115,26 @@
     }
 
     .hr{ height:1px; background:var(--line); margin:18px 0; }
+
+    /* QR */
+    .qrRow{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      align-items:flex-start;
+      margin-top:10px;
+    }
+    .qrBox{
+      width:160px;
+      height:160px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+      overflow:hidden;
+    }
 
     /* Print */
     @media print{
@@ -132,8 +154,8 @@
     <div class="brand"><span class="dot"></span> Proofy</div>
     <nav class="nav">
       <a href="/">Start</a>
+      <a href="/hash.html">Skapa verifierings-ID</a>
       <a href="/verify.html">Verifiera</a>
-      <a href="/register.html">Registrera</a>
       <a href="/legal.html">Juridik</a>
     </nav>
   </div>
@@ -142,15 +164,15 @@
 <div class="wrap">
 
   <div class="note muted">
-    Certifikat öppnas via <span class="mono" style="display:inline; padding:2px 6px;">/certificate.html?hash=0x…</span>
+    Intyg öppnas via <span class="mono" style="display:inline; padding:2px 6px;">/certificate.html?hash=0x…</span>
   </div>
 
   <div class="paper">
     <div class="hdr">
       <div>
-        <h1>Proof Certificate</h1>
+        <h1>Verifieringsintyg</h1>
         <div class="subtitle">
-          Teknisk verifiering av dokumentintegritet via SHA-256-hash och on-chain tidsstämpling.
+          Tekniskt intyg om dokumentintegritet via digitalt fingeravtryck (SHA-256) och tidsstämpling.
         </div>
       </div>
       <div id="statusBadge" class="badge">Laddar…</div>
@@ -164,34 +186,33 @@
 
     <div class="grid">
       <div class="card">
-        <div class="label">Dokumentets SHA-256 (bytes32)</div>
+        <div class="label">Verifierings-ID (bytes32)</div>
         <pre id="hashOut" class="mono">—</pre>
         <div class="para muted">
-          Hashvärdet beräknas från dokumentet lokalt i webbläsaren vid verifiering/registrering.
-          Proofy lagrar inte dokumentet.
+          Verifierings-ID är dokumentets digitala fingeravtryck. Proofy lagrar aldrig dokumentet.
         </div>
       </div>
 
       <div class="card">
-        <div class="label">Certifikat genererat</div>
+        <div class="label">Intyg genererat</div>
         <pre id="issuedOut" class="mono">—</pre>
         <div class="para muted">
-          Detta är genereringstid för certifikatsidan (inte on-chain tid).
+          Detta är genereringstid för intygssidan (inte tidsstämplingen i registret).
         </div>
       </div>
     </div>
 
     <div class="grid">
       <div class="card">
-        <div class="label">On-chain status</div>
+        <div class="label">Registreringsstatus</div>
         <pre id="existsOut" class="mono">—</pre>
 
         <div class="hr"></div>
 
-        <div class="label">On-chain tidsstämpel (Sverige)</div>
+        <div class="label">Tidsstämpling (Sverige)</div>
         <pre id="tsSeOut" class="mono">—</pre>
 
-        <div class="label" style="margin-top:10px;">On-chain tidsstämpel (UTC)</div>
+        <div class="label" style="margin-top:10px;">Tidsstämpling (UTC)</div>
         <pre id="tsUtcOut" class="mono">—</pre>
       </div>
 
@@ -201,12 +222,31 @@
 
         <div class="hr"></div>
 
-        <div class="label">Submitter (valfritt att använda)</div>
+        <div class="label">Registrerad av</div>
         <pre id="submitterOut" class="mono">—</pre>
 
         <div class="para muted" style="margin-top:10px;">
-          Submitter är den adress som registrerat hashvärdet. Den kan användas för spårbarhet,
-          men behövs inte för att verifiera integritet.
+          “Registrerad av” är den adress som skapade posten. Den kan användas för spårbarhet,
+          men behövs inte för att kontrollera integritet.
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="label">Verifieringslänk och QR</div>
+      <div class="qrRow">
+        <div>
+          <div class="label" style="margin-bottom:8px;">QR-kod</div>
+          <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
+          <div id="qrStatus" class="para muted" style="margin-top:8px; font-size:13px;">—</div>
+        </div>
+
+        <div style="flex:1; min-width:260px;">
+          <div class="label">Verifieringslänk</div>
+          <pre id="verifyLinkOut" class="mono">—</pre>
+          <div class="para muted" style="margin-top:10px;">
+            Dela länken eller låt mottagaren scanna QR-koden för att kontrollera verifierings-ID:t.
+          </div>
         </div>
       </div>
     </div>
@@ -214,12 +254,13 @@
     <div class="card" style="margin-top:14px;">
       <div class="label">Tolkning</div>
       <div class="para" id="interpretation">
-        — 
+        —
       </div>
 
       <div class="para muted" style="margin-top:10px;">
-        <b>Viktigt:</b> Ett “Verifierat/Registrerat”-utfall innebär att hashvärdet var registrerat vid angiven on-chain tid.
-        Det säger inget om dokumentets innehåll, äkthet, upphov eller vem som skapat dokumentet – endast att ett dokument med samma hashvärde existerade senast vid den tidpunkten.
+        <b>Viktigt:</b> Ett “Registrerad”-utfall innebär att verifierings-ID:t var registrerat vid angiven tidpunkt.
+        Det säger inget om dokumentets innehåll, äkthet, upphov eller vem som skapat dokumentet – endast att ett dokument
+        med samma digitala fingeravtryck fanns registrerat senast vid den tidpunkten.
       </div>
     </div>
 
@@ -227,12 +268,20 @@
       <div class="label" style="color:var(--red); font-weight:900;">Tillfälligt tekniskt problem</div>
       <div class="para muted" id="problemText">—</div>
       <div class="para muted" style="margin-top:8px;">
-        Prova att klicka <b>Uppdatera</b>. Om problemet kvarstår: kontrollera Netlify Functions och att miljövariabler är satta (RPC/kontrakt).
+        Prova att klicka <b>Uppdatera</b>. Om problemet kvarstår: kontrollera att Cloudflare Workers API är publicerat
+        och att kontrakt/RPC-konfiguration är korrekt.
       </div>
     </div>
 
   </div>
 </div>
+
+<!-- ✅ QR lib MUST be reachable at /qr.min.js (Cloudflare Pages root) -->
+<script
+  src="/qr.min.js?v=2025-12-20"
+  onload="window.__proofyQrLibLoaded = true"
+  onerror="window.__proofyQrLibError = true"
+></script>
 
 <script>
   // Konfiguration (statiskt för tydlig revision)
@@ -260,6 +309,10 @@
   const btnRefresh = el("btnRefresh");
   const btnVerifyLink = el("btnVerifyLink");
 
+  const qrBox = el("qrBox");
+  const qrStatus = el("qrStatus");
+  const verifyLinkOut = el("verifyLinkOut");
+
   function getHashFromQuery() {
     const url = new URL(window.location.href);
     const h = (url.searchParams.get("hash") || "").trim();
@@ -268,6 +321,11 @@
 
   function isBytes32Hash(h) {
     return /^0x[a-fA-F0-9]{64}$/.test(h);
+  }
+
+  function buildVerifyLink(hash) {
+    // Always share /verify.html?hash=...
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
   function formatUtc(ts) {
@@ -300,6 +358,65 @@
     problemText.textContent = "—";
   }
 
+  function setQrStatus(msg) {
+    if (!qrStatus) return;
+    qrStatus.textContent = msg || "";
+  }
+
+  function renderQr(text) {
+    if (!qrBox) return;
+
+    if (typeof window.QRCode !== "function") {
+      if (window.__proofyQrLibError) {
+        qrBox.innerHTML = '<div class="muted" style="font-size:13px; padding:10px; text-align:center;">QR-bibliotek kunde inte laddas.<br/>Kontrollera att <span class="mono" style="display:inline; padding:2px 6px;">/qr.min.js</span> finns i deploy.</div>';
+        setQrStatus("QR-bibliotek kunde inte laddas.");
+        return;
+      }
+
+      // Vänta kort och prova igen (för långsam load/caching)
+      qrBox.innerHTML = '<div class="muted" style="font-size:13px; padding:10px; text-align:center;">Laddar QR…</div>';
+      setQrStatus("Laddar QR…");
+
+      let tries = 0;
+      const maxTries = 20; // ~1s
+      const t = setInterval(() => {
+        tries++;
+        if (typeof window.QRCode === "function") {
+          clearInterval(t);
+          doRender(text);
+          setQrStatus("");
+          return;
+        }
+        if (window.__proofyQrLibError || tries >= maxTries) {
+          clearInterval(t);
+          qrBox.innerHTML = '<div class="muted" style="font-size:13px; padding:10px; text-align:center;">QR-bibliotek kunde inte laddas.</div>';
+          setQrStatus("QR-bibliotek kunde inte laddas.");
+        }
+      }, 50);
+
+      return;
+    }
+
+    doRender(text);
+    setQrStatus("");
+  }
+
+  function doRender(text) {
+    qrBox.innerHTML = "";
+
+    const correctLevel =
+      window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
+        ? window.QRCodeCorrectLevel.M
+        : undefined;
+
+    new QRCode(qrBox, {
+      text,
+      width: 150,
+      height: 150,
+      correctLevel
+    });
+  }
+
   async function loadCertificate() {
     hideProblem();
 
@@ -310,25 +427,33 @@
     const issuedUtc = new Date().toISOString().replace("T"," ").replace(".000Z"," UTC");
     issuedOut.textContent = `${issuedSe} (Europe/Stockholm)\n${issuedUtc}`;
 
-    // Länka verifieringssidan för samma hash
-    if (hash) {
-      btnVerifyLink.href = "/verify.html";
-    }
-
     sourceOut.textContent =
       `${NETWORK_LABEL} · ChainId ${CHAIN_ID}\n` +
       `Contract: ${CONTRACT}\n` +
       `Explorer: ${CONTRACT_EXPLORER}`;
 
+    // Länka verifieringssidan för samma hash + QR/länk
+    if (hash) {
+      const vlink = buildVerifyLink(hash);
+      btnVerifyLink.href = vlink;
+      verifyLinkOut.textContent = vlink;
+      renderQr(vlink);
+    } else {
+      btnVerifyLink.href = "/verify.html";
+      verifyLinkOut.textContent = "—";
+      qrBox.innerHTML = "—";
+      setQrStatus("—");
+    }
+
     // Validera input
     if (!hash) {
-      setBadge("Saknar hash", "bad");
+      setBadge("Saknar verifierings-ID", "bad");
       existsOut.textContent = "—";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
       submitterOut.textContent = "—";
       interpretation.textContent =
-        "Ingen hash angavs. Öppna certifikatet med ?hash=0x… eller gå via verifierings-/registreringssidan.";
+        "Ingen verifierings-ID angavs. Öppna intyget med ?hash=0x… eller gå via verifieringssidan.";
       return;
     }
 
@@ -339,64 +464,31 @@
       tsUtcOut.textContent = "—";
       submitterOut.textContent = "—";
       interpretation.textContent =
-        "Hashvärdet har fel format. Det ska vara bytes32: 0x + 64 hex-tecken (SHA-256).";
+        "Verifierings-ID har fel format. Det ska vara bytes32: 0x + 64 hex-tecken (SHA-256).";
       return;
     }
 
     setBadge("Kontrollerar…");
 
-    // Hämta on-chain status från din verify-function
+    // Hämta status från Cloudflare Workers API
     try {
-      const res = await fetch(`/.netlify/functions/verify?hash=${encodeURIComponent(hash)}`, { method: "GET" });
+      const res = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method: "GET" });
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || data.ok === false) {
-        // Här är det ett verkligt drift-/konfigproblem
-        setBadge("Kan ej verifiera just nu", "bad");
+        setBadge("Kan ej kontrollera just nu", "bad");
         showProblem(String(data.error || `HTTP ${res.status}`));
         existsOut.textContent = "—";
         tsSeOut.textContent = "—";
         tsUtcOut.textContent = "—";
         submitterOut.textContent = "—";
         interpretation.textContent =
-          "Verifiering kunde inte genomföras på grund av ett tillfälligt tekniskt problem. Prova igen senare.";
+          "Kontrollen kunde inte genomföras på grund av ett tillfälligt tekniskt problem. Prova igen senare.";
         return;
       }
 
-      // Normal respons:
       if (data.exists) {
-        setBadge("Verifierad", "ok");
-        existsOut.textContent = "Registrerad (hash finns on-chain)";
+        setBadge("Registrerad", "ok");
+        existsOut.textContent = "Registrerad (verifierings-ID finns i registret)";
         tsSeOut.textContent = data.timestamp ? formatSe(data.timestamp) : "—";
-        tsUtcOut.textContent = data.timestamp ? formatUtc(data.timestamp) : "—";
-        submitterOut.textContent = data.submitter || "—";
-        interpretation.textContent =
-          "Detta certifikat visar att ett dokument med exakt detta SHA-256-hashvärde var registrerat on-chain vid angiven tidpunkt.";
-      } else {
-        setBadge("Inte registrerad", "bad");
-        existsOut.textContent = "Inte registrerad (hash saknas)";
-        tsSeOut.textContent = "—";
-        tsUtcOut.textContent = "—";
-        submitterOut.textContent = "—";
-        interpretation.textContent =
-          "Detta certifikat visar att ingen on-chain-registrering hittades för angivet hashvärde vid kontrolltillfället.";
-      }
-    } catch (e) {
-      setBadge("Kan ej verifiera just nu", "bad");
-      showProblem(String(e?.message || e));
-      existsOut.textContent = "—";
-      tsSeOut.textContent = "—";
-      tsUtcOut.textContent = "—";
-      submitterOut.textContent = "—";
-      interpretation.textContent =
-        "Verifiering kunde inte genomföras på grund av ett tillfälligt nätverks-/driftproblem. Prova igen.";
-    }
-  }
-
-  btnRefresh.addEventListener("click", () => loadCertificate());
-
-  loadCertificate();
-</script>
-
-</body>
-</html>
+        tsUtcOut.textContent = data.timestamp ? formatUtc(da
