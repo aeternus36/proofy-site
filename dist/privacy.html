@@ -3,188 +3,191 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Integritetspolicy – Proofy</title>
-  <meta name="description" content="Integritetspolicy för Proofy. Proofy lagrar inte dokumentinnehåll och behandlar personuppgifter på ett minimalt sätt." />
+  <title>Proofy – Integritet</title>
+  <meta name="description" content="Integritetspolicy för Proofy." />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="canonical" href="https://proofy.se/privacy.html" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
   <style>
-:root{
-  --bg:#0b1220;
-  --panel: rgba(255,255,255,.06);
-  --panel2: rgba(255,255,255,.04);
-  --text:#eaf0ff;
-  --muted:#a9b7d3;
-  --border: rgba(255,255,255,.12);
-  --brand:#6ea8ff;
-  --brand2:#7cf1c6;
-  --shadow: 0 18px 60px rgba(0,0,0,.38);
-  --r: 18px;
-  --max: 1140px;
-}
-*{ box-sizing:border-box }
-body{
-  margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  color: var(--text);
-  background:
-    radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
-    radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
-    radial-gradient(900px 600px at 40% 100%, rgba(110,168,255,.10), transparent 60%),
-    var(--bg);
-  line-height:1.55;
-}
-a{ color:inherit }
-.wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
-header{
-  position: sticky; top:0; z-index:50;
-  backdrop-filter: blur(12px) saturate(160%);
-  background: rgba(11,18,32,.70);
-  border-bottom: 1px solid var(--border);
-}
-.nav{
-  display:flex; align-items:center; justify-content:space-between;
-  gap: 14px; padding: 14px 0;
-}
-.brand{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight: 900; letter-spacing:.2px }
-.logo{
-  width: 34px; height: 34px; border-radius: 10px;
-  background: linear-gradient(135deg, var(--brand), var(--brand2));
-  box-shadow: 0 16px 40px rgba(110,168,255,.22);
-  position: relative;
-}
-.logo:after{
-  content:"";
-  position:absolute; inset: 9px 10px;
-  border-radius: 7px;
-  background: rgba(11,18,32,.65);
-  border: 1px solid rgba(255,255,255,.20);
-}
-nav{ display:flex; gap: 10px; align-items:center; color: var(--muted); font-weight: 700; }
-nav a{ text-decoration:none; padding: 8px 10px; border-radius: 12px; }
-nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:10px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  text-decoration:none;
-  font-weight: 900;
-  transition: transform .08s ease, background .15s ease;
-  white-space: nowrap;
-}
-.btn:hover{ background: rgba(255,255,255,.10) }
-.btn:active{ transform: translateY(1px) }
-.btn.primary{
-  border: none;
-  color: #08101e;
-  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-  box-shadow: 0 18px 45px rgba(110,168,255,.22);
-}
-main{ padding: 34px 0 22px; }
-.card{
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
-  box-shadow: var(--shadow);
-}
-.pageTitle{
-  margin: 18px 0 10px;
-  font-size: clamp(28px, 3.2vw, 52px);
-  letter-spacing: -.5px;
-  line-height:1.1;
-}
-.lead{ color: rgba(234,240,255,.92); max-width: 90ch; margin: 0 0 18px; font-size: 16.8px; }
-.small{ font-size: 12.5px; color: rgba(169,183,211,.92); max-width: 92ch; }
-.content{ padding: 18px; }
-.content h2{ font-size: 20px; margin: 18px 0 8px; letter-spacing: -.2px; }
-.content p, .content li{ color: var(--muted); }
-.badge{
-  display:inline-flex; align-items:center; gap: 8px;
-  padding: 8px 10px; border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  font-size: 12.5px; color: rgba(234,240,255,.92);
-}
-.hr{ height:1px; background: var(--border); margin: 14px 0; }
-.grid3{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-@media (max-width: 920px){ nav{ display:none; } .grid3{ grid-template-columns: 1fr; } }
-.tile{ padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,.10); background: rgba(11,18,32,.25); }
-.tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
-details{ border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.04); }
-summary{ cursor:pointer; font-weight: 950; list-style: none; }
-summary::-webkit-details-marker{ display:none; }
-details p{ color: var(--muted); margin: 10px 0 0; }
-footer{
-  padding: 26px 0 44px; color: var(--muted);
-  border-top: 1px solid var(--border);
-  background: rgba(11,18,32,.45);
-}
-.foot{ display:flex; align-items:flex-start; justify-content:space-between; gap: 16px; flex-wrap: wrap; }
-.links a{ color: rgba(169,183,211,.95); text-decoration:none; margin-right: 12px; }
-.links a:hover{ color: var(--text); }
-input, textarea{
-  width: 100%;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(11,18,32,.35);
-  color: var(--text);
-  outline: none;
-  font: inherit;
-}
-textarea{ min-height: 120px; resize: vertical; }
-</style>
+    .wrapN{ max-width: 920px; margin:0 auto; padding: 0 20px; }
+    .cardN{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      box-shadow: 0 18px 60px rgba(0,0,0,.38);
+      padding: 18px;
+      margin: 16px 0;
+    }
+    h1{ margin:18px 0 8px; font-size: clamp(26px, 3vw, 44px); line-height:1.12; }
+    h2{ margin: 18px 0 8px; font-size: 18px; }
+    p, li{ color: rgba(169,183,211,.95); line-height:1.65; }
+    .muted{ color: rgba(169,183,211,.92); }
+    .badgeN{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      font-size: 12.5px;
+      color: rgba(234,240,255,.92);
+      font-weight: 900;
+    }
+    .hr{ height:1px; background: rgba(255,255,255,.12); margin: 14px 0; }
+    a{ color: inherit; }
+  </style>
 </head>
-<body>
 
+<body>
 <header>
   <div class="wrap">
     <div class="nav">
       <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo" aria-hidden="true"></span>
-        <span>Proofy</span>
+        <span class="logo" aria-hidden="true"></span><span>Proofy</span>
       </a>
-      <nav aria-label="Navigation">
-        <a href="/#forbyraer">För byråer</a>
-        <a href="/#hur">Hur det fungerar</a>
-        <a href="/#trygghet">Säkerhet</a>
-        <a href="/#faq">FAQ</a>
-        <a href="/#kontakt">Kontakt</a>
-      </nav>
-      <a class="btn primary" href="/#kontakt">Boka demo</a>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn" href="/verify.html">Verifiera</a>
+        <a class="btn primary" href="/#kontakt">Boka demo</a>
+      </div>
     </div>
   </div>
 </header>
 
 <main>
-  <div class="wrap">
-    <h1 class="pageTitle">Integritetspolicy</h1>
-    <p class="lead">Proofy är byggt enligt principen <em>privacy by design</em>. Vi behandlar så lite data som möjligt och undviker att lagra dokumentinnehåll.</p>
+  <div class="wrapN">
+    <div class="badgeN" style="margin-top:18px;">Integritet · GDPR</div>
+    <h1>Integritetspolicy</h1>
+    <p class="muted">
+      Här beskriver vi hur Proofy hanterar personuppgifter och annan information när du använder vår webbplats och tjänst.
+      Målet är enkelhet och transparens – och att vi ska behöva så lite data som möjligt.
+    </p>
 
-    <div class="card content">
-      <div class="badge">Senast uppdaterad: 2025-12-14</div>
-
-      <h2>1. Vad Proofy gör</h2>
-      <p>Proofy tillhandahåller teknisk tidsstämpling och verifiering av dokument genom att beräkna ett kryptografiskt fingeravtryck (hash) av filens innehåll och registrera fingeravtryck + tid i ett publikt, oföränderligt tidsstämplat register.</p>
-
-      <h2>2. Dokumentinnehåll</h2>
-      <p><b>Proofy lagrar inte dokumentets innehåll.</b> Dokumentet används endast tillfälligt för att beräkna fingeravtryck och raderas därefter.</p>
-
-      <h2>3. Personuppgifter</h2>
-      <p>Proofy är utformat för att minimera personuppgiftsbehandling. Om du kontaktar oss via e-post behandlar vi de uppgifter du själv skickar (t.ex. namn, e-postadress och meddelande) för att kunna besvara din förfrågan.</p>
-
-      <h2>4. Loggar och driftdata</h2>
-      <p>För driftsäkerhet kan teknisk information såsom tidpunkt, felmeddelanden, ungefärlig filstorlek och IP-adress behandlas. Loggar används för felsökning, säkerhet och missbruksbekämpning och sparas under begränsad tid.</p>
-
-      <h2>5. Tredje parter</h2>
-      <p>Proofy kan använda underleverantörer för infrastruktur (t.ex. hosting, DNS, e-post). Vi delar inte dokumentinnehåll eftersom det inte lagras.</p>
-
-      <h2>6. Dina rättigheter</h2>
-      <p>Om vi behandlar personuppgifter (t.ex. via e-postkontakt) har du rättigheter enligt GDPR. Kontakta oss på kontakt@proofy.se.</p>
-
-      <div class="hr"></div>
-      <p class="small"><b>Obs:</b> Vid större kommersiell lansering (betalningar, konton, integrationer) bör policyn uppdateras och eventuellt granskas juridiskt.</p>
+    <div class="cardN">
+      <h2>1. Personuppgiftsansvarig och kontakt</h2>
+      <p>
+        Proofy är personuppgiftsansvarig för behandlingen som beskrivs i denna policy, om inte annat framgår av avtal.
+      </p>
+      <p>
+        Kontakt: <b>kontakt@proofy.se</b>.
+      </p>
+      <p class="muted">
+        (Rekommendation: lägg in organisationsnummer och adress på webbplatsen för full tydlighet.)
+      </p>
     </div>
+
+    <div class="cardN">
+      <h2>2. Vad vi samlar in</h2>
+      <p><b>A) Kontakt och demo/pilot</b></p>
+      <ul>
+        <li>Namn, e-post och eventuell företagsinformation du lämnar via formulär eller e-post.</li>
+        <li>Meddelanden/innehåll du själv skriver i kontaktformulär.</li>
+      </ul>
+      <div class="hr"></div>
+
+      <p><b>B) Tjänstens användning (spårbarhet)</b></p>
+      <ul>
+        <li>Uppgifter som behövs för att registrera och kontrollera ett Verifierings-ID (och tidpunkt för registrering).</li>
+        <li>Teknisk loggdata som behövs för drift, felsökning och säkerhet (t.ex. tidsstämplar, felkoder, grundläggande anslutningsdata).</li>
+      </ul>
+      <p class="muted">
+        Vi eftersträvar att inte behandla dokumentinnehåll i samband med registrering/kontroll. Du ska inte skicka dokumentinnehåll i kontaktformuläret.
+      </p>
+    </div>
+
+    <div class="cardN">
+      <h2>3. Varför vi behandlar uppgifter</h2>
+      <ul>
+        <li><b>För att leverera tjänsten</b> (t.ex. registrering och kontroll).</li>
+        <li><b>För att kommunicera</b> med dig om demo, pilot, frågor och support.</li>
+        <li><b>För att förbättra och skydda</b> tjänsten (drift, felsökning, incidenthantering, missbruksförebyggande).</li>
+        <li><b>För att uppfylla rättsliga krav</b> om sådana blir tillämpliga.</li>
+      </ul>
+    </div>
+
+    <div class="cardN">
+      <h2>4. Rättslig grund</h2>
+      <p>
+        Vi behandlar personuppgifter baserat på:
+      </p>
+      <ul>
+        <li><b>Avtal</b> (när behandling krävs för att leverera tjänsten eller hantera kundrelationen),</li>
+        <li><b>Berättigat intresse</b> (t.ex. drift, säkerhet, förbättring, kommunikation med företagskunder),</li>
+        <li><b>Rättslig förpliktelse</b> (om vi måste uppfylla ett lagkrav),</li>
+        <li><b>Samtycke</b> (om vi uttryckligen ber om det i ett specifikt fall).</li>
+      </ul>
+    </div>
+
+    <div class="cardN">
+      <h2>5. Hur länge vi sparar uppgifter</h2>
+      <ul>
+        <li>Kontaktuppgifter och dialog sparas så länge det behövs för att hantera ärendet och vår relation, eller enligt avtal.</li>
+        <li>Tekniska loggar sparas i den omfattning och tid som behövs för drift och säkerhet, och rensas löpande.</li>
+        <li>Uppgifter kopplade till tjänstens funktion (registrering/kontroll) sparas i enlighet med tjänstens syfte och kundens behov, eller enligt avtal.</li>
+      </ul>
+      <p class="muted">
+        Exakta tider kan bero på avtal och krav i den specifika kundrelationen.
+      </p>
+    </div>
+
+    <div class="cardN">
+      <h2>6. Delning och personuppgiftsbiträden</h2>
+      <p>
+        Vi delar endast uppgifter med leverantörer som behövs för att driva tjänsten (t.ex. drift, hosting, e-post).
+        Sådana leverantörer agerar normalt som personuppgiftsbiträden och omfattas av avtalade skyddsåtgärder.
+      </p>
+      <p>
+        Vi säljer inte personuppgifter.
+      </p>
+    </div>
+
+    <div class="cardN">
+      <h2>7. Överföring utanför EU/EES</h2>
+      <p>
+        Om uppgifter i något fall överförs utanför EU/EES säkerställer vi lämpliga skyddsåtgärder enligt GDPR,
+        exempelvis standardavtalsklausuler och kompletterande skydd när det krävs.
+      </p>
+    </div>
+
+    <div class="cardN">
+      <h2>8. Säkerhet</h2>
+      <p>
+        Vi arbetar med tekniska och organisatoriska säkerhetsåtgärder för att skydda uppgifter mot obehörig åtkomst,
+        förlust och otillåten behandling. Åtkomst styrs och loggas i rimlig omfattning.
+      </p>
+    </div>
+
+    <div class="cardN">
+      <h2>9. Dina rättigheter</h2>
+      <p>Du har rätt att, enligt GDPR och i tillämplig omfattning:</p>
+      <ul>
+        <li>begära registerutdrag,</li>
+        <li>begära rättelse,</li>
+        <li>begära radering (när vi inte behöver uppgifterna längre),</li>
+        <li>invända mot viss behandling,</li>
+        <li>begära begränsning,</li>
+        <li>begära dataportabilitet (i vissa fall).</li>
+      </ul>
+      <p>
+        Kontakta oss på <b>kontakt@proofy.se</b>. Du har även rätt att klaga hos Integritetsskyddsmyndigheten (IMY).
+      </p>
+    </div>
+
+    <div class="cardN">
+      <h2>10. Cookies</h2>
+      <p>
+        Om vi använder cookies eller liknande teknik beskriver vi det här eller i en separat cookie-information.
+        (Om ni inte använder cookies utöver det som krävs för grundfunktion kan ni skriva det uttryckligen.)
+      </p>
+    </div>
+
+    <div class="cardN">
+      <h2>11. Ändringar</h2>
+      <p>
+        Vi kan uppdatera denna policy. Vid väsentliga ändringar informerar vi på webbplatsen eller via e-post när det är relevant.
+      </p>
+    </div>
+
+    <p class="muted" style="margin:18px 0 34px;">
+      Senast uppdaterad: <span id="updatedAt">2025-12-20</span>.
+    </p>
   </div>
 </main>
 
@@ -193,13 +196,9 @@ textarea{ min-height: 120px; resize: vertical; }
     <div class="foot">
       <div>
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av dokument. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
-        </div>
+        <div class="small">© 2025 Proofy.</div>
       </div>
       <div class="links">
-        <a href="/security.html">Säkerhet</a>
         <a href="/privacy.html">Integritet</a>
         <a href="/terms.html">Villkor</a>
         <a href="/#kontakt">Kontakt</a>
@@ -208,6 +207,8 @@ textarea{ min-height: 120px; resize: vertical; }
   </div>
 </footer>
 
-<script src="/chat-widget.js" defer></script>
+<script>
+  // document.getElementById("updatedAt").textContent = new Date().toISOString().slice(0,10);
+</script>
 </body>
 </html>
