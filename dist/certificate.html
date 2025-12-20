@@ -4,96 +4,172 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifieringsintyg</title>
-  <meta name="description" content="Verifieringsintyg som sammanfattar om en filversion var registrerad vid en viss tidpunkt. Inget dokumentinnehåll lagras." />
+  <meta name="description" content="Verifieringsintyg som sammanfattar om ett Verifierings-ID är registrerat och när registreringen skedde." />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- Unifierad styling (samma som övriga sidor) -->
+  <!-- Om du har gemensam CSS, behåll. Annars går sidan ändå bra med inline-stilen nedan -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 
   <style>
-    /* Små, sida-specifika justeringar (behåller Proofy-look) */
-    .pageTop{ margin-top: 10px; }
-    .kicker{ margin: 14px 0 8px; }
-    .heroText{ max-width: 92ch; }
-
-    .certHead{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      align-items:flex-start;
-      flex-wrap:wrap;
-      margin-top: 6px;
+    /* Målet: en sida, mindre “flik-känsla”, bättre mobilheader, tydlig intygslayout */
+    .certWrap{ max-width: 920px; margin:0 auto; padding: 0 20px; }
+    .certTop{
+      margin-top: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      box-shadow: 0 18px 60px rgba(0,0,0,.38);
+      padding: 18px;
     }
-    .certActions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
+    .certHead{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:12px; flex-wrap:wrap;
+    }
+    .certTitle{
+      margin: 0;
+      font-size: clamp(26px, 3.2vw, 42px);
+      line-height: 1.12;
+      letter-spacing: -.4px;
+    }
+    .certLead{
+      margin: 10px 0 0;
+      color: rgba(234,240,255,.92);
+      max-width: 95ch;
+      line-height: 1.55;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 12px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      font-weight: 950;
+      white-space: nowrap;
+    }
+    .chip.ok{ color: var(--ok); }
+    .chip.err{ color: var(--err); }
+    .chip.neutral{ color: rgba(234,240,255,.92); }
+
+    .actions{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
       margin-top: 12px;
     }
-    .certActions .btn{ min-width: 190px; }
-    @media (max-width: 560px){
-      .certActions .btn{ width:100%; min-width: unset; }
+    .actions .btn{ min-width: 180px; }
+    @media (max-width:560px){
+      .actions .btn{ width:100%; min-width: unset; }
     }
 
-    .kvGrid{
+    .grid{
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-top: 12px;
     }
     @media (max-width: 920px){
-      .kvGrid{ grid-template-columns: 1fr; }
+      .grid{ grid-template-columns: 1fr; }
     }
 
-    .kvCard{
-      border: 1px solid rgba(255,255,255,.12);
+    .panel{
+      border: 1px solid rgba(255,255,255,.10);
       background: rgba(11,18,32,.25);
       border-radius: 16px;
-      padding: 14px;
+      padding: 16px;
     }
-    .k{ color: var(--muted); font-size: 12.5px; margin-bottom: 6px; font-weight: 900; letter-spacing: .2px; }
-    .v{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; word-break: break-all; }
+    .label{
+      color: rgba(169,183,211,.92);
+      font-size: 12.5px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      margin-bottom: 6px;
+    }
+    .value{
+      color: rgba(234,240,255,.92);
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      word-break: break-all;
+    }
 
-    .summaryBox{
-      margin-top: 12px;
-      padding: 14px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.12);
+    .hr{ height:1px; background: rgba(255,255,255,.12); margin: 14px 0; }
+
+    .note{
+      border:1px solid rgba(255,255,255,.12);
       background: rgba(255,255,255,.04);
-    }
-
-    .warnBox{
-      margin-top: 12px;
-      padding: 14px;
       border-radius: 16px;
-      border: 1px solid rgba(255,138,161,.30);
-      background: rgba(255,138,161,.08);
-      display:none;
+      padding: 14px;
+      color: rgba(169,183,211,.95);
+      font-size: 13px;
+      line-height: 1.55;
     }
+    .note b{ color: rgba(234,240,255,.92); }
 
-    .inputRow{
+    .openBox{
+      display:none;
+      margin-top: 12px;
+    }
+    .openRow{
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
       margin-top: 10px;
     }
-    .inputRow input{ flex:1; min-width: 240px; }
-    .inputRow .btn{ min-width: 180px; }
-    @media (max-width: 560px){
-      .inputRow input{ width: 100%; min-width: unset; }
-      .inputRow .btn{ width: 100%; min-width: unset; }
+    .openRow input{
+      flex:1;
+      min-width: 220px;
+      width:100%;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(11,18,32,.35);
+      color: rgba(234,240,255,.92);
+      outline:none;
+      font: inherit;
+    }
+    .openRow .btn{ min-width: 170px; }
+    @media (max-width:560px){
+      .openRow .btn{ width:100%; }
     }
 
-    /* Print */
+    .qrRow{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      align-items:flex-start;
+      margin-top: 10px;
+    }
+    .qrBox{
+      width: 170px;
+      height: 170px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(11,18,32,.25);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .qrBox canvas, .qrBox img{
+      width:150px !important; height:150px !important;
+      image-rendering: pixelated;
+    }
+
+    details{ border:1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.04); }
+    summary{ cursor:pointer; font-weight: 950; list-style:none; }
+    summary::-webkit-details-marker{ display:none; }
+    details p{ margin: 10px 0 0; color: rgba(169,183,211,.95); line-height:1.6; }
+
+    /* Print/PDF: ren och “intygig” */
     @media print{
-      header{ position: static !important; backdrop-filter:none !important; }
-      .navLinks, .navActions, .certActions, .inputRow, .notePrintHide{ display:none !important; }
+      header, .actions, .openBox, #qrWrap, #btnCopyLink { display:none !important; }
       body{ background:#fff !important; color:#000 !important; }
-      .card, .kvCard, .summaryBox{ box-shadow:none !important; background:#fff !important; border:1px solid #ddd !important; }
-      .badge{ border:1px solid #ddd !important; background:#fff !important; color:#000 !important; }
-      .meta, .small{ color:#333 !important; }
+      .certTop{ box-shadow:none !important; background:#fff !important; border:1px solid #ddd !important; }
+      .panel, .note, details{ background:#fff !important; border:1px solid #ddd !important; }
+      .chip{ background:#fff !important; border:1px solid #ddd !important; }
+      .label{ color:#444 !important; }
+      .value{ color:#000 !important; }
       a{ color:#000 !important; text-decoration:none !important; }
     }
   </style>
@@ -107,14 +183,7 @@
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
-
-      <div class="navLinks" aria-label="Navigation">
-        <a href="/verify.html">Verifiera</a>
-        <a href="/hash.html">Skapa ID</a>
-        <a href="/security.html">Säkerhet</a>
-      </div>
-
-      <div class="navActions">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:nowrap;">
         <a class="btn" href="/verify.html">Verifiera</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
@@ -123,145 +192,185 @@
 </header>
 
 <main>
-  <div class="wrap pageTop">
+  <div class="certWrap">
 
-    <div class="badge kicker">Intyg · dokumentintegritet · byrå & granskning</div>
+    <div class="badge" style="margin-top:18px;">Intyg · spårbarhet · byrå & granskning</div>
 
-    <div class="certHead">
-      <div>
-        <h1 class="pageTitle" style="margin-top:0;">Verifieringsintyg</h1>
-        <p class="lead heroText" style="margin-bottom:0;">
-          Intyget sammanfattar resultatet av en kontroll av ett <b>Verifierings-ID</b>.
-          Det visar om ID:t finns registrerat och, i så fall, <b>när registreringen skedde</b>.
-          <b>Inget dokumentinnehåll lagras</b> i Proofy.
-        </p>
+    <section class="certTop" aria-label="Verifieringsintyg">
+
+      <div class="certHead">
+        <div style="flex:1;min-width:260px;">
+          <h1 class="certTitle">Verifieringsintyg</h1>
+          <p class="certLead">
+            Intyget sammanfattar resultatet av en kontroll av ett <b>Verifierings-ID</b>.
+            Det visar om ID:t är registrerat och, i så fall, <b>när registreringen skedde</b>.
+            <b>Inget dokumentinnehåll lagras</b> i Proofy.
+          </p>
+        </div>
+        <div>
+          <div id="statusChip" class="chip neutral">Laddar…</div>
+        </div>
       </div>
 
-      <div>
-        <div id="statusBadge" class="pill">Laddar…</div>
-        <div class="meta" id="statusHint" style="margin-top:8px;">—</div>
+      <div class="actions" aria-label="Åtgärder">
+        <button class="btn" id="btnPrint" type="button">Skriv ut / Spara som PDF</button>
+        <button class="btn soft" id="btnRefresh" type="button">Uppdatera</button>
+        <a class="btn primary" id="btnVerify" href="/verify.html">Öppna verifiering</a>
+        <button class="btn" id="btnCopyLink" type="button" disabled>Kopiera länk</button>
       </div>
-    </div>
 
-    <div class="card content" style="margin-top:14px;">
-      <!-- Om hash saknas: visa enkel inmatning för att öppna intyg -->
-      <div id="noHashBox" class="summaryBox" style="display:none;">
-        <div style="font-weight:950; font-size:16px;">Öppna intyg</div>
-        <p class="meta" style="margin-top:8px;">
-          Klistra in ett Verifierings-ID för att visa intyget. Du kan också öppna intyget via länk:
+      <div id="openBox" class="openBox">
+        <div class="hr"></div>
+        <div class="note">
+          <b>Öppna intyget</b><br />
+          Klistra in Verifierings-ID eller öppna via länk:
           <span class="mono">/certificate.html?hash=0x…</span>
-        </p>
-
-        <div class="inputRow">
-          <input id="hashInput" type="text" placeholder="Verifierings-ID (0x…)" autocomplete="off" spellcheck="false" />
-          <button class="btn primary" id="openBtn" type="button">Öppna intyg</button>
+        </div>
+        <div class="openRow">
+          <input id="hashInput" type="text" placeholder="Verifierings-ID (0x…)" />
+          <button id="btnOpen" class="btn primary" type="button">Öppna intyg</button>
+          <button id="btnPaste" class="btn soft" type="button">Klistra in ID</button>
           <a class="btn" href="/verify.html">Gå till verifiering</a>
         </div>
+        <div id="openHint" class="meta" style="margin-top:8px;"></div>
+      </div>
 
-        <div class="small" style="margin-top:10px;">
-          Tips för spårbarhet: spara Verifierings-ID i ärendet tillsammans med datum/tid och vilken filversion det avser.
+      <div class="hr"></div>
+
+      <!-- Kärninformation: kompakt men komplett -->
+      <div class="grid">
+        <div class="panel">
+          <div class="label">Verifierings-ID</div>
+          <div id="hashOut" class="value mono">—</div>
+          <div class="meta" style="margin-top:8px;">
+            ID:t avser en <b>filversion</b>. Minsta ändring ger ett nytt ID.
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="label">Kontroll genomförd</div>
+          <div id="checkedOut" class="value">—</div>
+          <div class="meta" style="margin-top:8px;">
+            Tidpunkten då kontrollen gjordes (när intyget uppdaterades).
+          </div>
         </div>
       </div>
 
-      <!-- När hash finns: visa cert -->
-      <div id="certBox" style="display:none;">
-        <div class="certActions notePrintHide">
-          <button class="btn" id="printBtn" type="button">Skriv ut / Spara som PDF</button>
-          <button class="btn soft" id="refreshBtn" type="button">Uppdatera</button>
-          <a class="btn primary" id="verifyBtn" href="/verify.html">Öppna verifiering</a>
+      <div class="grid">
+        <div class="panel">
+          <div class="label">Resultat</div>
+          <div id="resultOut" class="value">—</div>
+
+          <div class="hr"></div>
+
+          <div class="label">Registreringstid (Sverige)</div>
+          <div id="tsSeOut" class="value">—</div>
+
+          <div class="label" style="margin-top:10px;">Registreringstid (UTC)</div>
+          <div id="tsUtcOut" class="value">—</div>
         </div>
 
-        <div class="kvGrid">
-          <div class="kvCard">
-            <div class="k">Verifierings-ID</div>
-            <div class="v" id="hashOut">—</div>
-            <div class="small" style="margin-top:10px;">
-              Verifierings-ID är en teknisk identifierare för en filversion. Minsta ändring ger ett nytt ID.
-            </div>
-          </div>
+        <div class="panel">
+          <div class="label">Verifieringslänk</div>
+          <div id="verifyLinkOut" class="value mono">—</div>
 
-          <div class="kvCard">
-            <div class="k">Intyg skapat</div>
-            <div class="v" id="issuedOut">—</div>
-            <div class="small" style="margin-top:10px;">
-              Detta är tidpunkten när intyget visades/genererades i webbläsaren (inte registreringstid).
-            </div>
-          </div>
-        </div>
-
-        <div class="kvGrid">
-          <div class="kvCard">
-            <div class="k">Kontrollresultat</div>
-            <div class="v" id="existsOut">—</div>
-
-            <div class="hr"></div>
-
-            <div class="k">Registreringstid (Sverige)</div>
-            <div class="v" id="tsSeOut">—</div>
-
-            <div class="k" style="margin-top:10px;">Registreringstid (UTC)</div>
-            <div class="v" id="tsUtcOut">—</div>
-          </div>
-
-          <div class="kvCard">
-            <div class="k">Verifieringslänk</div>
-            <div class="v" id="verifyLinkOut">—</div>
-
-            <div class="qrWrap" style="margin-top:12px;">
+          <div id="qrWrap">
+            <div class="qrRow">
               <div>
-                <div class="k" style="margin-bottom:8px;">QR-kod</div>
-                <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
-                <div class="meta" id="qrStatus" style="margin-top:8px;">—</div>
+                <div class="label" style="margin-top:12px;">QR-kod</div>
+                <div id="qrBox" class="qrBox" aria-label="QR-kod">—</div>
+                <div id="qrStatus" class="meta" style="margin-top:8px;">—</div>
               </div>
-              <div style="min-width:240px; flex:1">
-                <div class="k">Registrerad av</div>
-                <div class="v" id="submitterOut">—</div>
-                <div class="small" style="margin-top:10px;">
-                  Detta fält används för spårbarhet i registret och påverkar inte kontrollresultatet.
+              <div style="flex:1; min-width:240px;">
+                <div class="note" style="margin-top:12px;">
+                  Dela länken eller QR-koden när någon behöver kontrollera ID:t i efterhand.
                 </div>
               </div>
             </div>
           </div>
+
         </div>
+      </div>
 
-        <div class="summaryBox" style="margin-top:12px;">
-          <div style="font-weight:950; font-size:16px;">Tolkning</div>
-          <div class="meta" id="interpretation" style="margin-top:8px;">—</div>
+      <div class="panel" style="margin-top:12px;">
+        <div class="label">Tolkning</div>
+        <div id="interpretation" class="value">—</div>
 
-          <div class="small" style="margin-top:10px;">
-            <b>Viktigt:</b> Intyget visar endast om en <b>filversion</b> (via Verifierings-ID) var registrerad vid angiven tidpunkt.
-            Det säger inget om dokumentets innehåll, riktighet, upphov, behörighet eller parternas avtal – och ersätter inte juridisk rådgivning.
-          </div>
+        <div class="note" style="margin-top:12px;">
+          <b>Viktigt:</b> Intyget visar endast om en filversion (via Verifierings-ID) var registrerad vid angiven tidpunkt.
+          Det säger inget om dokumentets innehåll, riktighet, upphov, behörighet, avtal mellan parter eller hur filen hanterats efteråt.
         </div>
+      </div>
 
-        <div id="problemBox" class="warnBox">
-          <div class="err" style="font-weight:950;">Tillfälligt tekniskt problem</div>
-          <div class="meta" id="problemText" style="margin-top:8px;">—</div>
-          <div class="small" style="margin-top:10px;">
-            Prova <b>Uppdatera</b>. Om problemet kvarstår kan det bero på att API:t inte är publicerat eller att endpoint/metod skiljer sig från verifieringssidan.
-          </div>
+      <!-- Svensk juridik-/revisionsdel: kort synlig + detaljer i “visa mer” -->
+      <div class="panel" style="margin-top:12px;">
+        <div class="label">Juridisk information</div>
+        <div class="value" style="color: rgba(169,183,211,.95);">
+          Detta intyg är ett tekniskt underlag för dokumentation/spårbarhet. Det ersätter inte juridisk rådgivning
+          eller professionell bedömning i granskning/revision. Bevisvärde bedöms i sitt sammanhang.
         </div>
 
         <details style="margin-top:12px;">
-          <summary>Tekniska detaljer (valfritt)</summary>
-          <p class="meta" style="margin-top:10px;">
-            Den här sektionen är till för felsökning och teknisk dokumentation.
+          <summary>Visa fullständig text</summary>
+          <p>
+            <b>1) Utfärdare och kontakt</b><br/>
+            Intyget tillhandahålls av Proofy (”tjänsten”). Kontakt: <b>kontakt@proofy.se</b>.
           </p>
-          <div class="kvCard" style="margin-top:10px;">
-            <div class="k">Teknisk källa</div>
-            <div class="v" id="sourceOut">—</div>
-          </div>
+          <p>
+            <b>2) Vad intyget omfattar</b><br/>
+            Intyget beskriver utfallet av en kontroll av ett Verifierings-ID och (om registrerad) registreringstid.
+            Intyget tar inte ställning till dokumentets innehåll, tolkning, riktighet eller rättsliga giltighet.
+          </p>
+          <p>
+            <b>3) Vad intyget inte omfattar</b><br/>
+            Intyget visar inte vem som skapat dokumentet, vem som haft tillgång till det, om behörig person godkänt det,
+            eller om filen hanterats/ändrats efter registrering. Intyget är inte e-signering, inte arkivering och inte ett avtal i sig.
+          </p>
+          <p>
+            <b>4) Integritet och sekretess</b><br/>
+            Proofy lagrar inte dokumentinnehåll i samband med intyget. Intyget kan innehålla Verifierings-ID och tider.
+            Hantering av personuppgifter och övrig information regleras i tillämplig integritetspolicy och villkor.
+          </p>
+          <p>
+            <b>5) Användning i byrå-/revisionssammanhang</b><br/>
+            Intyget är avsett som stöd för spårbarhet och dokumentation. Professionell bedömning, övriga kontrollåtgärder
+            och krav på dokumentation kvarstår. Vid tvist eller granskning är intyget en del av helheten.
+          </p>
+          <p>
+            <b>6) Drift, fel och tillgänglighet</b><br/>
+            Tillfälliga driftstörningar kan påverka möjligheten att genomföra kontrollen vid ett visst tillfälle.
+            Vid avvikelse rekommenderas att kontrollen görs om, samt att underlaget verifieras genom etablerade rutiner.
+          </p>
+          <p>
+            <b>7) Ansvar och ansvarsbegränsning</b><br/>
+            Intyget lämnas ”i befintligt skick” som tekniskt underlag. Proofy lämnar inga garantier om att intyget uppfyller
+            särskilda branschkrav i varje enskilt fall. Eventuellt ansvar regleras i Proofys villkor.
+          </p>
+          <p>
+            <b>8) Tillämplig lag och tvist</b><br/>
+            Svensk lag ska tillämpas i den mån annat inte följer av tvingande regler. Tvist hanteras enligt Proofys villkor.
+          </p>
+          <p class="meta">
+            Länkar: <a href="/terms.html">Villkor</a> · <a href="/privacy.html">Integritet</a>
+          </p>
         </details>
-
-        <div class="meta" style="margin-top:12px;">
-          Behöver ni ett upplägg för rutin/arbetsflöde i byrån? <a href="/#kontakt">Boka demo</a>.
-        </div>
       </div>
-    </div>
+
+      <div id="problemBox" class="note" style="display:none; margin-top:12px;">
+        <b style="color: var(--err);">Tillfälligt tekniskt problem</b>
+        <div id="problemText" style="margin-top:6px;">—</div>
+      </div>
+
+    </section>
+
+    <p class="small" style="margin-top:14px;">
+      Behöver ni ett upplägg för rutin/arbetsflöde i byrån? <a href="/#kontakt">Boka demo</a>.
+    </p>
+
   </div>
 </main>
 
-<!-- QR-lib (samma som dina andra sidor) -->
+<!-- QR-bibliotek -->
 <script
   src="/qr.min.js?v=2025-12-20"
   onload="window.__proofyQrLibLoaded = true"
@@ -272,28 +381,25 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const statusBadge = $("statusBadge");
-  const statusHint  = $("statusHint");
+  const statusChip = $("statusChip");
+  const btnPrint = $("btnPrint");
+  const btnRefresh = $("btnRefresh");
+  const btnVerify = $("btnVerify");
+  const btnCopyLink = $("btnCopyLink");
 
-  const noHashBox = $("noHashBox");
-  const certBox   = $("certBox");
-
+  const openBox = $("openBox");
   const hashInput = $("hashInput");
-  const openBtn   = $("openBtn");
+  const btnOpen = $("btnOpen");
+  const btnPaste = $("btnPaste");
+  const openHint = $("openHint");
 
-  const printBtn  = $("printBtn");
-  const refreshBtn= $("refreshBtn");
-  const verifyBtn = $("verifyBtn");
-
-  const hashOut   = $("hashOut");
-  const issuedOut = $("issuedOut");
-
-  const existsOut = $("existsOut");
-  const tsSeOut   = $("tsSeOut");
-  const tsUtcOut  = $("tsUtcOut");
-  const submitterOut = $("submitterOut");
-
+  const hashOut = $("hashOut");
+  const checkedOut = $("checkedOut");
+  const resultOut = $("resultOut");
+  const tsSeOut = $("tsSeOut");
+  const tsUtcOut = $("tsUtcOut");
   const verifyLinkOut = $("verifyLinkOut");
+
   const qrBox = $("qrBox");
   const qrStatus = $("qrStatus");
 
@@ -302,104 +408,131 @@
   const problemBox = $("problemBox");
   const problemText = $("problemText");
 
-  const sourceOut = $("sourceOut");
+  let busy = false;
+  let opId = 0;
 
-  // === Tekniska konstanter (kan stå i kod, men visas bara under "Tekniska detaljer") ===
-  const NETWORK_LABEL = "Polygon Amoy (testnet)";
-  const CHAIN_ID = 80002;
-  const CONTRACT = "0x1C14960C4dAD90047ea91d224539311c69EAB261";
-  const CONTRACT_EXPLORER = "https://www.oklink.com/amoy/address/" + CONTRACT;
-
-  function setBadge(text, kind){
-    statusBadge.textContent = text;
-    statusBadge.classList.remove("ok", "err");
-    if (kind === "ok") statusBadge.classList.add("ok");
-    if (kind === "err") statusBadge.classList.add("err");
+  function setBusy(v){
+    busy = v;
+    btnRefresh.disabled = v;
+    btnCopyLink.disabled = v || !verifyLinkOut.textContent || verifyLinkOut.textContent === "—";
   }
 
-  function setHint(text){
-    statusHint.textContent = text || "—";
+  function setStatus(text, kind){
+    statusChip.textContent = text;
+    statusChip.classList.remove("ok","err","neutral");
+    statusChip.classList.add(kind || "neutral");
   }
 
   function showProblem(msg){
     problemBox.style.display = "block";
-    problemText.textContent = msg || "—";
+    problemText.textContent = msg || "Okänt fel.";
   }
-
   function hideProblem(){
     problemBox.style.display = "none";
     problemText.textContent = "—";
   }
 
   function isBytes32Hex(h){
-    return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
+    return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h.trim());
   }
 
   function getHashFromUrl(){
-    const p = new URLSearchParams(location.search);
-    return (p.get("hash") || "").trim();
+    const url = new URL(location.href);
+    return (url.searchParams.get("hash") || "").trim();
+  }
+
+  function setHashInUrl(hash){
+    const url = new URL(location.href);
+    if (hash) url.searchParams.set("hash", hash);
+    else url.searchParams.delete("hash");
+    history.replaceState({}, "", url.toString());
   }
 
   function buildVerifyLink(hash){
     return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
-  function formatUtc(ts){
-    const d = new Date(Number(ts) * 1000);
-    // 2025-12-20 16:21:56 UTC
-    return d.toISOString().replace("T"," ").replace(".000Z"," UTC");
+  function fmtSe(ts){
+    try{
+      return new Intl.DateTimeFormat("sv-SE", {
+        timeZone:"Europe/Stockholm",
+        year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit"
+      }).format(new Date(Number(ts) * 1000)) + " (Europe/Stockholm)";
+    } catch {
+      return "—";
+    }
+  }
+  function fmtUtc(ts){
+    try{
+      return new Date(Number(ts) * 1000).toISOString().replace("T"," ").replace(".000Z"," UTC");
+    } catch {
+      return "—";
+    }
   }
 
-  function formatSe(ts){
-    const d = new Date(Number(ts) * 1000);
-    return new Intl.DateTimeFormat("sv-SE", {
-      timeZone: "Europe/Stockholm",
-      year:"numeric", month:"2-digit", day:"2-digit",
-      hour:"2-digit", minute:"2-digit", second:"2-digit"
-    }).format(d) + " (Europe/Stockholm)";
+  function setCheckedNow(){
+    const se = new Date().toLocaleString("sv-SE", { timeZone:"Europe/Stockholm" });
+    const utc = new Date().toISOString().replace("T"," ").replace("Z"," UTC");
+    checkedOut.textContent = `${se} (Europe/Stockholm)\n${utc}`;
   }
 
-  function setQrStatus(msg){
-    if (qrStatus) qrStatus.textContent = msg || "";
+  function resetView(){
+    hashOut.textContent = "—";
+    resultOut.textContent = "—";
+    tsSeOut.textContent = "—";
+    tsUtcOut.textContent = "—";
+    verifyLinkOut.textContent = "—";
+    interpretation.textContent = "—";
+    if (qrBox) qrBox.innerHTML = "—";
+    if (qrStatus) qrStatus.textContent = "—";
+    btnVerify.href = "/verify.html";
+    btnCopyLink.disabled = true;
   }
 
   function canRenderQr(){
     return typeof window.QRCode === "function";
   }
 
+  function showQrError(){
+    const msg = window.__proofyQrLibError
+      ? "QR kunde inte laddas. Kontrollera att /qr.min.js finns i deploy."
+      : "QR kunde inte laddas.";
+    qrBox.innerHTML = `<div class="meta" style="padding:10px;text-align:center;">${msg}</div>`;
+    qrStatus.textContent = msg;
+  }
+
   function renderQr(text){
     if (!qrBox) return;
 
-    if (!canRenderQr()){
+    if(!canRenderQr()){
       if (window.__proofyQrLibError){
-        qrBox.innerHTML = '<div class="meta" style="padding:10px;text-align:center;">QR-bibliotek kunde inte laddas.<br/>Kontrollera att <span class="mono">/qr.min.js</span> finns i deploy.</div>';
-        setQrStatus("QR-bibliotek kunde inte laddas.");
+        showQrError();
         return;
       }
-
-      qrBox.innerHTML = '<div class="meta" style="padding:10px;text-align:center;">Laddar QR…</div>';
-      setQrStatus("Laddar QR…");
+      qrBox.innerHTML = `<div class="meta" style="padding:10px;text-align:center;">Laddar QR…</div>`;
+      qrStatus.textContent = "Laddar QR…";
 
       let tries = 0;
+      const maxTries = 20;
       const t = setInterval(() => {
         tries++;
         if (canRenderQr()){
           clearInterval(t);
           doRender(text);
-          setQrStatus("");
+          qrStatus.textContent = "";
           return;
         }
-        if (window.__proofyQrLibError || tries >= 20){
+        if (window.__proofyQrLibError || tries >= maxTries){
           clearInterval(t);
-          qrBox.innerHTML = '<div class="meta" style="padding:10px;text-align:center;">QR-bibliotek kunde inte laddas.</div>';
-          setQrStatus("QR-bibliotek kunde inte laddas.");
+          showQrError();
         }
       }, 50);
       return;
     }
 
     doRender(text);
-    setQrStatus("");
+    qrStatus.textContent = "";
   }
 
   function doRender(text){
@@ -409,176 +542,163 @@
         ? window.QRCodeCorrectLevel.M
         : undefined;
 
-    new QRCode(qrBox, {
-      text,
-      width: 150,
-      height: 150,
-      correctLevel
-    });
+    new QRCode(qrBox, { text, width:150, height:150, correctLevel });
   }
 
-  // Robust verifieringsanrop:
-  // 1) POST /api/verify {hash} (samma som verify.html)
-  // 2) fallback GET /api/verify?hash=... (om din backend stödjer GET)
+  // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
   async function fetchVerify(hash){
-    // POST
     try{
-      const r = await fetch("/api/verify", {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ hash })
-      });
-
-      // Om din worker returnerar 405/404 för POST, fall back
-      if (r.status === 404 || r.status === 405) throw new Error("POST not supported");
-
+      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) return { ok:false, error: `HTTP ${r.status}` , raw:j };
-      return j;
-    } catch {
-      // GET fallback
-      const r2 = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
-      const j2 = await r2.json().catch(() => ({}));
-      if (!r2.ok) return { ok:false, error:`HTTP ${r2.status}`, raw:j2 };
-      return j2;
-    }
+      if (r.ok) return { ok:true, data:j };
+    } catch { /* ignore */ }
+
+    const r2 = await fetch(`/api/verify`, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hash })
+    });
+    const j2 = await r2.json().catch(() => ({}));
+    if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
+    return { ok:true, data:j2 };
   }
 
-  function setIssuedNow(){
-    const se = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" });
-    const utc = new Date().toISOString().replace("T"," ").replace(".000Z"," UTC");
-    issuedOut.textContent = `${se} (Europe/Stockholm)\n${utc}`;
-  }
-
-  function setTechSource(){
-    sourceOut.textContent =
-      `${NETWORK_LABEL} · ChainId ${CHAIN_ID}\n` +
-      `Contract: ${CONTRACT}\n` +
-      `Explorer: ${CONTRACT_EXPLORER}`;
-  }
-
-  async function load(){
+  async function loadCertificate(hash){
+    const myOp = ++opId;
     hideProblem();
-    setIssuedNow();
-    setTechSource();
+    setBusy(true);
+    setCheckedNow();
 
-    const hash = getHashFromUrl();
-
-    // Om ingen hash: visa inmatning
-    if (!hash){
-      noHashBox.style.display = "block";
-      certBox.style.display = "none";
-      setBadge("Klistra in Verifierings-ID", "");
-      setHint("Öppna intyget genom att ange ett Verifierings-ID.");
+    if(!hash){
+      resetView();
+      openBox.style.display = "block";
+      setStatus("Saknar Verifierings-ID", "err");
+      interpretation.textContent = "Ingen kontroll kunde göras eftersom Verifierings-ID saknas.";
+      setBusy(false);
       return;
     }
 
-    // Hash finns: visa cert
-    noHashBox.style.display = "none";
-    certBox.style.display = "block";
-
+    openBox.style.display = "none";
     hashOut.textContent = hash;
 
-    // länk & QR (alltid)
+    // Länk/QR även om formatet är fel – men tydlig status
     const vlink = buildVerifyLink(hash);
-    verifyBtn.href = vlink;
+    btnVerify.href = vlink;
     verifyLinkOut.textContent = vlink;
     renderQr(vlink);
+    btnCopyLink.disabled = false;
 
-    // Validering
-    if (!isBytes32Hex(hash)){
-      setBadge("Ogiltigt format", "err");
-      setHint("Verifierings-ID har fel format.");
-      existsOut.textContent = "—";
+    if(!isBytes32Hex(hash)){
+      setStatus("Ogiltigt Verifierings-ID", "err");
+      resultOut.textContent = "Kan inte kontrollera (fel format)";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
-      submitterOut.textContent = "—";
-      interpretation.textContent =
-        "Verifierings-ID måste vara 0x följt av 64 hex-tecken.";
+      interpretation.textContent = "Verifierings-ID har fel format. Kontrollera att du kopierat hela ID:t.";
+      setBusy(false);
       return;
     }
 
-    setBadge("Kontrollerar…", "");
-    setHint("Hämtar status från registret…");
+    setStatus("Kontrollerar…", "neutral");
 
     try{
-      const data = await fetchVerify(hash);
+      const res = await fetchVerify(hash);
+      if (myOp !== opId) return;
 
-      // Förväntat format: { ok:true, exists:boolean, timestamp:number, submitter:string }
-      if (!data || data.ok === false){
-        setBadge("Kan inte kontrollera", "err");
-        setHint("Tillfälligt fel vid kontroll.");
-        showProblem(data?.error || "Kontrollen kunde inte genomföras just nu.");
-        existsOut.textContent = "—";
+      if(!res.ok){
+        setStatus("Kan inte kontrollera just nu", "err");
+        resultOut.textContent = "Kontroll kunde inte genomföras";
         tsSeOut.textContent = "—";
         tsUtcOut.textContent = "—";
-        submitterOut.textContent = "—";
-        interpretation.textContent =
-          "Kontrollen kunde inte genomföras på grund av ett tillfälligt drift-/nätverksproblem. Prova igen.";
+        interpretation.textContent = "Kontrollen kunde inte genomföras på grund av ett tillfälligt tekniskt problem.";
+        showProblem(res.error || "Okänt fel.");
+        setBusy(false);
         return;
       }
 
-      // Vissa implementationer kan returnera {exists:..} utan {ok:true}
-      const exists = !!data.exists;
+      const data = res.data || {};
+      const exists = Boolean(data.exists);
       const ts = data.timestamp ? Number(data.timestamp) : null;
 
       if (exists){
-        setBadge("Registrerad", "ok");
-        setHint("Verifierings-ID finns i registret.");
-        existsOut.textContent = "Registrerad (Verifierings-ID finns i registret)";
-        tsSeOut.textContent = ts ? formatSe(ts) : "—";
-        tsUtcOut.textContent = ts ? formatUtc(ts) : "—";
-        submitterOut.textContent = data.submitter || "—";
-        interpretation.textContent =
-          "Kontrollen visar att Verifierings-ID:t fanns registrerat vid angiven registreringstid.";
+        setStatus("Registrerad", "ok");
+        resultOut.textContent = "Registrerad (Verifierings-ID finns i registret)";
+        tsSeOut.textContent = ts ? fmtSe(ts) : "—";
+        tsUtcOut.textContent = ts ? fmtUtc(ts) : "—";
+        interpretation.textContent = "Kontrollen visar att Verifierings-ID:t fanns registrerat vid angiven registreringstid.";
       } else {
-        setBadge("Inte registrerad", "err");
-        setHint("Verifierings-ID hittades inte i registret.");
-        existsOut.textContent = "Inte registrerad (Verifierings-ID saknas)";
+        setStatus("Inte registrerad", "err");
+        resultOut.textContent = "Inte registrerad (Verifierings-ID saknas i registret)";
         tsSeOut.textContent = "—";
         tsUtcOut.textContent = "—";
-        submitterOut.textContent = "—";
-        interpretation.textContent =
-          "Kontrollen visar att ingen registrering hittades för Verifierings-ID:t vid kontrolltillfället.";
+        interpretation.textContent = "Kontrollen visar att ingen registrering hittades för angivet Verifierings-ID vid kontrolltillfället.";
       }
+
+      setBusy(false);
     } catch (e){
-      setBadge("Kan inte kontrollera", "err");
-      setHint("Tillfälligt fel vid kontroll.");
-      showProblem(String(e?.message || e));
-      existsOut.textContent = "—";
+      if (myOp !== opId) return;
+      setStatus("Kan inte kontrollera just nu", "err");
+      resultOut.textContent = "Kontroll kunde inte genomföras";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
-      submitterOut.textContent = "—";
-      interpretation.textContent =
-        "Kontrollen kunde inte genomföras på grund av ett tillfälligt drift-/nätverksproblem. Prova igen.";
+      interpretation.textContent = "Kontrollen kunde inte genomföras på grund av ett tillfälligt nätverks-/driftproblem.";
+      showProblem(String(e?.message || e));
+      setBusy(false);
     }
   }
 
-  // Buttons
-  if (printBtn) printBtn.addEventListener("click", () => window.print());
-  if (refreshBtn) refreshBtn.addEventListener("click", () => load());
+  // Actions
+  btnPrint.addEventListener("click", () => window.print());
+  btnRefresh.addEventListener("click", () => loadCertificate(getHashFromUrl()));
 
-  if (openBtn){
-    openBtn.addEventListener("click", () => {
-      const h = (hashInput.value || "").trim();
-      if (!h){
-        setBadge("Klistra in Verifierings-ID", "");
-        setHint("Fyll i Verifierings-ID för att öppna intyget.");
-        return;
-      }
-      // Öppna samma sida med param
-      location.href = `/certificate.html?hash=${encodeURIComponent(h)}`;
-    });
+  btnCopyLink.addEventListener("click", async () => {
+    const txt = (verifyLinkOut.textContent || "").trim();
+    if (!txt || txt === "—") return;
+    try{
+      await navigator.clipboard.writeText(txt);
+      setStatus("Länk kopierad", "ok");
+      setTimeout(() => {
+        const h = getHashFromUrl();
+        if (h) loadCertificate(h);
+        else setStatus("Saknar Verifierings-ID", "err");
+      }, 900);
+    } catch {
+      setStatus("Kunde inte kopiera", "err");
+    }
+  });
+
+  // Open box
+  btnOpen?.addEventListener("click", () => {
+    const h = (hashInput.value || "").trim();
+    if (!h){
+      openHint.textContent = "Klistra in Verifierings-ID för att öppna intyget.";
+      return;
+    }
+    openHint.textContent = "";
+    setHashInUrl(h);
+    loadCertificate(h);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  btnPaste?.addEventListener("click", async () => {
+    try{
+      const t = await navigator.clipboard.readText();
+      if (t) hashInput.value = t.trim();
+      openHint.textContent = t ? "ID insatt. Klicka “Öppna intyg”." : "Inget att klistra in.";
+    } catch {
+      openHint.textContent = "Kunde inte läsa urklipp. Klistra in manuellt.";
+    }
+  });
+
+  // Start
+  const initialHash = getHashFromUrl();
+  if (initialHash) loadCertificate(initialHash);
+  else {
+    resetView();
+    setCheckedNow();
+    openBox.style.display = "block";
+    setStatus("Saknar Verifierings-ID", "err");
+    interpretation.textContent = "Ingen kontroll kunde göras eftersom Verifierings-ID saknas.";
   }
-
-  // Enter i input => öppna
-  if (hashInput){
-    hashInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") openBtn?.click();
-    });
-  }
-
-  load();
 })();
 </script>
 
