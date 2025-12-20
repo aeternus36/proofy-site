@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="sv">
 <head>
@@ -5,41 +6,123 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/proofy.css?v=2025-12-20">
+
+  <style>
+:root{
+  --bg:#0b1220;--text:#eaf0ff;--muted:#a9b7d3;
+  --border:rgba(255,255,255,.12);--brand:#6ea8ff;--brand2:#7cf1c6;
+  --shadow:0 18px 60px rgba(0,0,0,.38);--r:18px;--max:1100px;
+  --ok:#7cf1c6; --err:#ff8aa1;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  color:var(--text);
+  background:
+    radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
+    radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
+    var(--bg);
+}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
+header{
+  border-bottom:1px solid var(--border);
+  background:rgba(11,18,32,.75);
+  position:sticky;top:0;z-index:10;
+}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0;gap:12px}
+.brand{display:flex;gap:10px;font-weight:900;text-decoration:none;align-items:center;color:inherit}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2))}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:12px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);color:inherit;font-weight:900;cursor:pointer;
+  text-decoration:none;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
+  white-space: nowrap;
+}
+.btn:hover{ background:rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
+.btn:active{ transform: translateY(1px); }
+.btn.primary{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#08101e}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.card{
+  border:1px solid var(--border);border-radius:var(--r);
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
+  box-shadow:var(--shadow)
+}
+.content{padding:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all}
+.meta{color:var(--muted);font-size:13px}
+.ok{color:var(--ok);font-weight:900}
+.err{color:var(--err);font-weight:900}
+.hr{height:1px;background:rgba(255,255,255,.12);margin:14px 0}
+input[type="file"], input[type="text"]{
+  width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(11,18,32,.35);color:var(--text);outline:none
+}
+.drop{
+  border:2px dashed rgba(255,255,255,.18);
+  background:rgba(255,255,255,.03);
+  border-radius:16px;
+  padding:16px;
+  text-align:center;
+  user-select:none;
+}
+.drop.drag{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.05)}
+.small{font-size:12.5px;color:rgba(169,183,211,.92)}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04);
+  font-size:13px;color:var(--muted);font-weight:800;
+}
+.resultCard{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(11,18,32,.25);
+  border-radius:16px;
+  padding:14px;
+}
+.kv{margin-top:10px}
+.kv .k{color:var(--muted);font-size:12.5px;margin-bottom:6px}
+.kv .v{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all}
+.actionsRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+@media(max-width:560px){
+  .actionsRow .btn{ width:100%; }
+}
+  </style>
 </head>
 
 <body>
 <header>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo" aria-hidden="true"></span>
-        <span>Proofy</span>
-      </a>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <a class="btn" href="/hash.html">Skapa verifierings-ID</a>
-        <a class="btn primary" href="/#kontakt">Boka demo</a>
-      </div>
+  <div class="wrap nav">
+    <a class="brand" href="/"><span class="logo"></span>Proofy</a>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn" href="/hash.html">Skapa verifierings-ID</a>
+      <a class="btn primary" href="/#kontakt">Boka demo</a>
     </div>
   </div>
 </header>
 
 <main>
   <div class="wrap">
-    <div class="badge">För redovisningsbyråer · revision · granskning</div>
-    <h1 class="pageTitle">Verifiera underlag</h1>
-    <p class="lead">
-      Verifiera om en fil matchar en tidigare verifieringspost. Filen lämnar inte din dator — vi beräknar ett
-      <b>digitalt fingeravtryck</b> lokalt (SHA-256) och kontrollerar om verifieringsposten finns.
+    <h1>Verifiera underlag</h1>
+    <p class="meta">
+      Välj en fil för att beräkna <b>digitalt fingeravtryck</b> lokalt, eller klistra in ett <b>Verifierings-ID</b>.
+      Du kan även öppna en delbar länk:
+      <span class="mono">/verify.html?hash=0x…</span>
     </p>
 
     <section class="card content">
       <div class="grid">
-        <!-- LEFT -->
+
+        <!-- LEFT: file -->
         <div>
           <b>Verifiera via fil</b>
           <p class="meta" style="margin-top:8px">
-            Välj fil eller dra & släpp. Fingeravtrycket beräknas lokalt och kontrolleras mot verifieringsposten.
+            Vi beräknar filens digitala fingeravtryck (SHA-256) i webbläsaren och kontrollerar om en verifieringspost finns.
           </p>
 
           <input id="fileInput" type="file" />
@@ -57,50 +140,35 @@
             <div id="localHashOut" class="mono">—</div>
           </div>
 
-          <div class="small" style="margin-top:10px">Alla filtyper stöds (PDF, Excel, bilder, ZIP).</div>
+          <div class="small" style="margin-top:10px">Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).</div>
         </div>
 
-        <!-- RIGHT -->
+        <!-- RIGHT: id -->
         <div>
           <b>Verifiera via Verifierings-ID</b>
           <label class="meta" style="display:block;margin-top:10px">Verifierings-ID (0x + 64 hex)</label>
           <input id="hashInput" type="text" placeholder="0x + 64 hex (bytes32)" />
 
           <div class="actionsRow" style="margin-top:12px">
-            <button class="btn primary" id="verifyBtn" type="button">Verifiera ID</button>
+            <button class="btn primary" id="verifyBtn" type="button">Verifiera</button>
             <button class="btn" id="copyLinkBtn" type="button">Kopiera verifieringslänk</button>
           </div>
 
           <div class="hr"></div>
 
           <div id="status" class="meta"></div>
+
           <div id="resultBox" class="resultCard" style="display:none;margin-top:10px"></div>
         </div>
+
       </div>
     </section>
 
     <p class="small" style="margin-top:14px">
-      Delbar länk-format: <span class="mono">/verify.html?hash=0x…</span>
+      Tips: Spara Verifierings-ID i ärendet (gärna med datum/tid). Vid behov kan samma fil verifieras senare.
     </p>
   </div>
 </main>
-
-<footer>
-  <div class="wrap">
-    <div class="foot">
-      <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">Teknisk verifiering av filer — utan att lagra filinnehåll.</div>
-      </div>
-      <div class="links">
-        <a href="/security.html">Säkerhet</a>
-        <a href="/privacy.html">Integritet</a>
-        <a href="/terms.html">Villkor</a>
-        <a href="/#kontakt">Kontakt</a>
-      </div>
-    </div>
-  </div>
-</footer>
 
 <script>
 (() => {
@@ -121,6 +189,8 @@
   const resultBox = $("resultBox");
 
   let currentFile = null;
+
+  // anti-spam + ignore stale responses
   let busy = false;
   let opId = 0;
 
@@ -166,8 +236,12 @@
     return `${location.origin}/verify.html?hash=${h}`;
   }
 
-  function fmtDateSv(tsSeconds){
-    try{ return new Date(tsSeconds * 1000).toLocaleString("sv-SE"); } catch { return "—"; }
+  function fmtDateSv(timestampSeconds){
+    try{
+      return new Date(timestampSeconds * 1000).toLocaleString("sv-SE");
+    } catch {
+      return "—";
+    }
   }
 
   async function verifyHash(h, showWorking=true){
@@ -266,6 +340,7 @@
   }
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
+
   dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
   dropZone.addEventListener("drop", (e) => {
@@ -282,6 +357,9 @@
     setBusy(true);
     setStatus("Beräknar fingeravtryck lokalt…");
     setPill("Beräknar…");
+
+    resultBox.style.display = "none";
+    resultBox.innerHTML = "";
 
     try{
       const h = await sha256Bytes32Hex(currentFile);
@@ -326,6 +404,7 @@
     }
   });
 
+  // auto from URL
   const p = new URLSearchParams(location.search);
   const urlHash = p.get("hash");
   if(urlHash){
