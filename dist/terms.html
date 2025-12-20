@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Villkor</title>
-  <meta name="description" content="Allmänna villkor för Proofy." />
+  <meta name="description" content="Villkor för Proofy (B2B)." />
   <meta name="theme-color" content="#0b1220" />
   <link rel="canonical" href="https://proofy.se/terms.html" />
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
@@ -33,7 +33,10 @@
     }
     .hr{ height:1px; background: rgba(255,255,255,.12); margin: 14px 0; }
     a{ color: inherit; }
-    .toc a{ text-decoration:none; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; word-break: break-word; }
+    .toc{ margin-top: 12px; }
+    .toc ol{ margin: 10px 0 0; padding-left: 18px; }
+    .toc a{ text-decoration:none; color: rgba(234,240,255,.92); }
     .toc a:hover{ text-decoration:underline; }
   </style>
 </head>
@@ -56,185 +59,149 @@
 <main>
   <div class="wrapN">
     <div class="badgeN" style="margin-top:18px;">Villkor · B2B</div>
-    <h1>Allmänna villkor</h1>
+    <h1>Villkor</h1>
+
     <p class="muted">
-      Dessa villkor gäller för användning av Proofys webbplats och tjänst för registrering och kontroll av verifierings-ID.
-      Villkoren är skrivna för företagskunder och redovisnings-/revisionsmiljöer.
+      Dessa villkor gäller för användning av Proofy och avtal mellan Proofy och företagskunder (B2B).
+      Om du använder Proofy som privatperson är detta inte avsett för dig.
     </p>
 
-    <div class="cardN toc">
-      <div class="muted" style="font-weight:900; margin-bottom:8px;">Innehåll</div>
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <a href="#parter">1. parter och kontakt</a>
-        <a href="#b2b">2. målgrupp (b2b)</a>
-        <a href="#omfattning">3. tjänstens omfattning</a>
-        <a href="#kundansvar">4. kundens ansvar</a>
-        <a href="#tillganglighet">5. tillgänglighet och support</a>
-        <a href="#avgifter">6. avgifter</a>
-        <a href="#ip">7. immateriella rättigheter</a>
-        <a href="#sekretess">8. sekretess</a>
-        <a href="#integritet">9. integritet och personuppgifter</a>
-        <a href="#ansvar">10. ansvar och ansvarsbegränsning</a>
-        <a href="#force">11. force majeure</a>
-        <a href="#uppsagning">12. avtalstid och uppsägning</a>
-        <a href="#andringar">13. ändringar</a>
-        <a href="#lag">14. tillämplig lag och tvist</a>
-      </div>
+    <div class="cardN toc" aria-label="Innehåll">
+      <div style="font-weight:900; color: rgba(234,240,255,.92);">Innehåll</div>
+      <ol>
+        <li><a href="#parter-och-kontakt">Parter och kontakt</a></li>
+        <li><a href="#tjansten-och-syfte">Tjänsten och syfte</a></li>
+        <li><a href="#kundens-ansvar">Kundens ansvar</a></li>
+        <li><a href="#tillganglighet-och-andringar">Tillgänglighet och ändringar</a></li>
+        <li><a href="#support">Support</a></li>
+        <li><a href="#immateriella-rattigheter">Immateriella rättigheter</a></li>
+        <li><a href="#konfidentialitet">Konfidentialitet</a></li>
+        <li><a href="#personuppgifter">Personuppgifter</a></li>
+        <li><a href="#ansvarsbegransning">Ansvarsbegränsning</a></li>
+        <li><a href="#force-majeure">Force majeure</a></li>
+        <li><a href="#avtalstid-och-uppsagning">Avtalstid och uppsägning</a></li>
+        <li><a href="#tillamplig-lag-och-tvist">Tillämplig lag och tvist</a></li>
+      </ol>
     </div>
 
-    <div class="cardN" id="parter">
-      <h2>1. parter och kontakt</h2>
+    <div class="cardN" id="parter-och-kontakt">
+      <h2>1. Parter och kontakt</h2>
       <p>
-        Tjänsten tillhandahålls av <b>Proofy AB</b>, org.nr <b>XXXXXXXXXX-XXXX</b>, med adress <b>[gata, postnummer, ort]</b>
-        (”Proofy”, ”vi”, ”oss”).
+        <b>Proofy</b>, org.nr <b>[XXXXXX-XXXX]</b>, <b>[Gatuadress, postnummer, ort]</b> (“Proofy”) tillhandahåller tjänsten.
       </p>
-      <p>
-        Kontakt: <b>kontakt@proofy.se</b>.
-      </p>
+      <p>Kontakt: <b>kontakt@proofy.se</b></p>
       <p class="muted">
-        ”Kunden” är det företag/byrå som använder tjänsten (”ni”, ”er”).
+        Villkoren kompletteras av eventuella kommersiella avtal (t.ex. offert, beställning, pilotavtal). Vid konflikt gäller avtalet före dessa villkor.
       </p>
     </div>
 
-    <div class="cardN" id="b2b">
-      <h2>2. målgrupp (b2b)</h2>
+    <div class="cardN" id="tjansten-och-syfte">
+      <h2>2. Tjänsten och syfte</h2>
       <p>
-        Proofy tillhandahålls uteslutande till företag, byråer och andra juridiska personer.
-        Tjänsten är inte avsedd för konsumenter.
-      </p>
-    </div>
-
-    <div class="cardN" id="omfattning">
-      <h2>3. tjänstens omfattning</h2>
-      <p>
-        Proofy är en tjänst för att skapa ett verifierings-ID för en filversion och för att senare kunna kontrollera om en fil
-        matchar den registrerade versionen.
+        Proofy tillhandahåller en tjänst för teknisk verifiering av filintegritet. Tjänsten används för att skapa och kontrollera en
+        teknisk referens till en filversion (t.ex. verifierings-id) samt visa om en kontroll matchar en tidigare registrering.
       </p>
       <ul>
-        <li><b>Proofy lagrar inte filinnehåll</b> som en del av tjänstens grundfunktion.</li>
-        <li>Verifiering avser <b>om en fil är oförändrad</b> jämfört med registrerad version.</li>
-        <li>Tjänsten är ett <b>tekniskt verifieringsunderlag</b> och ersätter inte juridisk rådgivning, revision eller arkivering.</li>
-      </ul>
-      <div class="hr"></div>
-      <p class="muted">
-        Viktigt: resultatet ”match”/”ingen match” säger inget om innehållets riktighet, vem som skapat dokumentet,
-        eller dokumentets juridiska verkan. Det visar endast om filen vid kontrolltillfället är samma tekniska filversion.
-      </p>
-    </div>
-
-    <div class="cardN" id="kundansvar">
-      <h2>4. kundens ansvar</h2>
-      <ul>
-        <li>Ni ansvarar för att använda tjänsten i enlighet med lag, god sed och era interna rutiner.</li>
-        <li>Ni ansvarar för vilken filversion som registreras och hur verifierings-ID dokumenteras i era ärenden.</li>
-        <li>Ni ska inte skicka dokumentinnehåll eller känsliga personuppgifter i kontaktformulär eller chatt.</li>
-        <li>Ni ansvarar för att behöriga personer hanterar verifierings-ID och länkar i er organisation.</li>
+        <li>Tjänsten är avsedd som ett <b>tekniskt verifieringsunderlag</b> i ärenden och granskning.</li>
+        <li>Tjänsten är <b>inte</b> arkivering, e-signering, juridisk rådgivning eller revision.</li>
+        <li>Proofy bedömer inte filens innehåll, riktighet, upphov eller rättslig giltighet.</li>
       </ul>
     </div>
 
-    <div class="cardN" id="tillganglighet">
-      <h2>5. tillgänglighet och support</h2>
-      <p>
-        Proofy strävar efter stabil drift men kan inte garantera att tjänsten alltid är utan avbrott.
-        Planerat underhåll och oförutsedda störningar kan förekomma.
-      </p>
-      <p>
-        Support hanteras via <b>kontakt@proofy.se</b> och avser främst felavhjälpning och vägledning i hur tjänsten används.
-      </p>
-    </div>
-
-    <div class="cardN" id="avgifter">
-      <h2>6. avgifter</h2>
-      <p>
-        Avgifter, betalningsvillkor och eventuella tjänstenivåer (SLA) regleras i offert, beställning eller separat avtal.
-        Om inget annat avtalats är tillgång till webbplatsens öppna funktioner kostnadsfri och utan garantier.
-      </p>
-    </div>
-
-    <div class="cardN" id="ip">
-      <h2>7. immateriella rättigheter</h2>
-      <p>
-        Proofy och dess licensgivare innehar samtliga immateriella rättigheter till tjänsten, webbplatsen, design och material,
-        med undantag för kundens egna uppgifter.
-      </p>
-      <p>
-        Kunden får en icke-exklusiv rätt att använda tjänsten under avtalstiden enligt dessa villkor och eventuell beställning.
-      </p>
-    </div>
-
-    <div class="cardN" id="sekretess">
-      <h2>8. sekretess</h2>
-      <p>
-        Parterna ska inte röja konfidentiell information som erhållits i samband med användning av tjänsten,
-        utöver vad som krävs för att fullgöra avtalet eller vad som följer av lag eller myndighetsbeslut.
-      </p>
+    <div class="cardN" id="kundens-ansvar">
+      <h2>3. Kundens ansvar</h2>
+      <ul>
+        <li>Kunden ansvarar för hur tjänsten används i kundens processer och för vilka filer/versioner som registreras.</li>
+        <li>Kunden ansvarar för att inte ladda upp eller skicka känsligt material via kontaktformulär och för att följa interna och externa krav (t.ex. sekretess).</li>
+        <li>Kunden ansvarar för att bedöma om tjänsten passar det specifika ändamålet och eventuella regulatoriska krav.</li>
+      </ul>
       <p class="muted">
-        Exempel på konfidentiell information kan vara interna rutiner, prissättning och icke-publik teknisk information.
+        Tips i byråmiljö: dokumentera vilken filversion som fastställts i ärendet och spara verifierings-id tillsammans med datum/tid och relevant kontext.
       </p>
     </div>
 
-    <div class="cardN" id="integritet">
-      <h2>9. integritet och personuppgifter</h2>
+    <div class="cardN" id="tillganglighet-och-andringar">
+      <h2>4. Tillgänglighet och ändringar</h2>
       <p>
-        Behandling av personuppgifter beskrivs i vår integritetspolicy. Se <a href="/privacy.html">Integritet</a>.
-      </p>
-      <p class="muted">
-        Om parterna ingår personuppgiftsbiträdesavtal eller annat dataskyddsavtal gäller det före dessa villkor i relevanta delar.
-      </p>
-    </div>
-
-    <div class="cardN" id="ansvar">
-      <h2>10. ansvar och ansvarsbegränsning</h2>
-      <p>
-        Proofy ansvarar för att tillhandahålla tjänsten i enlighet med dessa villkor och eventuellt särskilt avtal.
-        Proofy ansvarar inte för kundens användning av tjänsten eller för beslut som fattas med stöd av verifieringsresultat.
+        Proofy eftersträvar god tillgänglighet men lämnar ingen garanti för oavbruten drift. Tjänsten kan uppdateras, förändras eller förbättras.
       </p>
       <ul>
-        <li>Proofy ansvarar inte för indirekta skador, följdskador, utebliven vinst eller förlorad goodwill.</li>
-        <li>Proofy ansvarar inte för fel som beror på tredje parts system, internetuppkoppling, webbläsare eller kundens utrustning.</li>
-        <li>Proofy ansvarar inte för att en fil ”ser likadan ut” men tekniskt är en ny version (t.ex. ny export/omskanning).</li>
+        <li>Planerade förändringar kan meddelas via webbplats eller e-post när det är relevant.</li>
+        <li>Begränsningar kan införas för att skydda tjänsten mot missbruk eller överbelastning.</li>
       </ul>
-      <div class="hr"></div>
+    </div>
+
+    <div class="cardN" id="support">
+      <h2>5. Support</h2>
+      <p>
+        Support sker i första hand via e-post: <b>kontakt@proofy.se</b>. Svarstid och nivå kan regleras i separat avtal för betalande kunder/pilot.
+      </p>
+    </div>
+
+    <div class="cardN" id="immateriella-rattigheter">
+      <h2>6. Immateriella rättigheter</h2>
+      <p>
+        Proofy och dess leverantörer behåller alla rättigheter till tjänsten, varumärken, design, kod och dokumentation.
+        Kunden får en icke-exklusiv, icke-överförbar rätt att använda tjänsten enligt dessa villkor och eventuellt avtal.
+      </p>
+    </div>
+
+    <div class="cardN" id="konfidentialitet">
+      <h2>7. Konfidentialitet</h2>
+      <p>
+        Parterna ska behandla konfidentiell information som de får del av inom ramen för samarbetet med skälig aktsamhet och minst
+        med samma skydd som för egen konfidentiell information.
+      </p>
       <p class="muted">
-        Om inget annat avtalats är Proofys sammanlagda ansvar begränsat till de avgifter som kunden betalat för tjänsten under de
-        senaste 12 månaderna före den skadegörande händelsen.
+        Undantag gäller för information som är allmänt känd, redan var känd för mottagaren eller måste lämnas ut enligt lag eller myndighetsbeslut.
       </p>
     </div>
 
-    <div class="cardN" id="force">
-      <h2>11. force majeure</h2>
+    <div class="cardN" id="personuppgifter">
+      <h2>8. Personuppgifter</h2>
       <p>
-        Part är befriad från ansvar för underlåtenhet att fullgöra viss förpliktelse om underlåtenheten beror på
-        omständighet utanför partens kontroll som parten inte skäligen kunnat förutse eller undvika.
+        Information om behandling av personuppgifter finns i <a href="/privacy.html">integritetspolicyn</a>.
       </p>
     </div>
 
-    <div class="cardN" id="uppsagning">
-      <h2>12. avtalstid och uppsägning</h2>
+    <div class="cardN" id="ansvarsbegransning">
+      <h2>9. Ansvarsbegränsning</h2>
       <p>
-        Avtalstid och uppsägning regleras i separat avtal, offert eller beställning.
-        Om inget annat avtalats får Proofy avbryta eller begränsa tillgången vid missbruk, säkerhetsrisk, utebliven betalning
-        eller om det krävs enligt lag eller myndighetsbeslut.
+        Tjänsten tillhandahålls “i befintligt skick” i den utsträckning som är tillåten enligt tillämplig lag för B2B.
+      </p>
+      <ul>
+        <li>Proofy ansvarar inte för indirekta skador (t.ex. utebliven vinst, produktionsbortfall, förlorad data, följdskador).</li>
+        <li>Proofy ansvarar inte för beslut som fattas av kunden eller tredje part baserat på tjänstens utfall.</li>
+        <li>Proofy ansvarar inte för fel som beror på kundens hantering, tredjepartssystem, nätverksfel eller force majeure.</li>
+      </ul>
+      <p>
+        Om Proofy trots ovan skulle vara skadeståndsskyldigt är Proofys sammanlagda ansvar begränsat till det belopp kunden betalat
+        för tjänsten under de senaste tre (3) månaderna före skadetillfället, eller <b>[SEK-belopp]</b> om inget betalats, beroende på vilket som är lägre.
       </p>
     </div>
 
-    <div class="cardN" id="andringar">
-      <h2>13. ändringar</h2>
+    <div class="cardN" id="force-majeure">
+      <h2>10. Force majeure</h2>
       <p>
-        Proofy kan uppdatera dessa villkor. Vid väsentliga ändringar informerar vi på webbplatsen och/eller via e-post
-        när det är relevant.
+        Part är befriad från ansvar för underlåtenhet att fullgöra skyldighet om underlåtenheten beror på omständighet utanför partens
+        rimliga kontroll, såsom myndighetsåtgärd, krig, arbetskonflikt, omfattande driftstörning hos leverantör, brand, översvämning,
+        avbrott i internetinfrastruktur eller liknande händelse.
       </p>
     </div>
 
-    <div class="cardN" id="lag">
-      <h2>14. tillämplig lag och tvist</h2>
+    <div class="cardN" id="avtalstid-och-uppsagning">
+      <h2>11. Avtalstid och uppsägning</h2>
       <p>
-        Dessa villkor ska tolkas enligt svensk rätt.
+        Avtalstid och uppsägning regleras i första hand i separat avtal (pilot, beställning eller offert).
+        Om inget annat avtalats kan Proofy avsluta åtkomst vid missbruk, väsentligt avtalsbrott eller av säkerhetsskäl.
       </p>
+    </div>
+
+    <div class="cardN" id="tillamplig-lag-och-tvist">
+      <h2>12. Tillämplig lag och tvist</h2>
       <p>
-        Tvist med anledning av villkoren eller tjänsten ska i första hand lösas genom dialog mellan parterna.
-        Om tvisten inte kan lösas ska den avgöras av allmän domstol i Sverige, med <b>[tingsrättens ort]</b> som första instans,
-        om inte annat följer av tvingande lag eller särskilt avtal.
+        Svensk lag ska tillämpas på dessa villkor och eventuella tvister. Tvist ska i första hand lösas genom förhandling.
+        Om tvist inte kan lösas ska den avgöras av allmän domstol med <b>Stockholms tingsrätt</b> som första instans, om inte annat följer av tvingande lag.
       </p>
     </div>
 
