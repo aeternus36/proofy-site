@@ -1,171 +1,135 @@
-
 <!doctype html>
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
+  <meta name="description" content="Verifiera om ett underlag är samma filversion som den som registrerats tidigare. Filen lämnar aldrig din dator. Proofy lagrar inte filinnehåll." />
   <meta name="theme-color" content="#0b1220" />
-
-  <style>
-:root{
-  --bg:#0b1220;--text:#eaf0ff;--muted:#a9b7d3;
-  --border:rgba(255,255,255,.12);--brand:#6ea8ff;--brand2:#7cf1c6;
-  --shadow:0 18px 60px rgba(0,0,0,.38);--r:18px;--max:1100px;
-  --ok:#7cf1c6; --err:#ff8aa1;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
-  color:var(--text);
-  background:
-    radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
-    radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
-    var(--bg);
-}
-.wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
-header{
-  border-bottom:1px solid var(--border);
-  background:rgba(11,18,32,.75);
-  position:sticky;top:0;z-index:10;
-}
-.nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0;gap:12px}
-.brand{display:flex;gap:10px;font-weight:900;text-decoration:none;align-items:center;color:inherit}
-.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2))}
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:12px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);color:inherit;font-weight:900;cursor:pointer;
-  text-decoration:none;
-  transition: transform .08s ease, background .15s ease, border-color .15s ease;
-  white-space: nowrap;
-}
-.btn:hover{ background:rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
-.btn:active{ transform: translateY(1px); }
-.btn.primary{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#08101e}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-
-.card{
-  border:1px solid var(--border);border-radius:var(--r);
-  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
-  box-shadow:var(--shadow)
-}
-.content{padding:18px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all}
-.meta{color:var(--muted);font-size:13px}
-.ok{color:var(--ok);font-weight:900}
-.err{color:var(--err);font-weight:900}
-.hr{height:1px;background:rgba(255,255,255,.12);margin:14px 0}
-input[type="file"], input[type="text"]{
-  width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
-  background:rgba(11,18,32,.35);color:var(--text);outline:none
-}
-.drop{
-  border:2px dashed rgba(255,255,255,.18);
-  background:rgba(255,255,255,.03);
-  border-radius:16px;
-  padding:16px;
-  text-align:center;
-  user-select:none;
-}
-.drop.drag{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.05)}
-.small{font-size:12.5px;color:rgba(169,183,211,.92)}
-.pill{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:8px 12px;border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.04);
-  font-size:13px;color:var(--muted);font-weight:800;
-}
-.resultCard{
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(11,18,32,.25);
-  border-radius:16px;
-  padding:14px;
-}
-.kv{margin-top:10px}
-.kv .k{color:var(--muted);font-size:12.5px;margin-bottom:6px}
-.kv .v{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all}
-.actionsRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-@media(max-width:560px){
-  .actionsRow .btn{ width:100%; }
-}
-  </style>
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 </head>
 
 <body>
+<a class="skip" href="#main">Hoppa till innehåll</a>
+
 <header>
-  <div class="wrap nav">
-    <a class="brand" href="/"><span class="logo"></span>Proofy</a>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn" href="/hash.html">Skapa verifierings-ID</a>
-      <a class="btn primary" href="/#kontakt">Boka demo</a>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/" aria-label="Proofy">
+        <span class="logo" aria-hidden="true"></span>
+        <span>Proofy</span>
+      </a>
+
+      <div class="navActions" aria-label="Snabblänkar">
+        <a class="btn soft" href="/hash.html">Skapa ID</a>
+        <a class="btn primary" href="/#kontakt">Boka demo</a>
+      </div>
     </div>
   </div>
 </header>
 
-<main>
+<main id="main">
   <div class="wrap">
-    <h1>Verifiera underlag</h1>
-    <p class="meta">
-      Välj en fil för att beräkna <b>digitalt fingeravtryck</b> lokalt, eller klistra in ett <b>Verifierings-ID</b>.
-      Du kan även öppna en delbar länk:
-      <span class="mono">/verify.html?hash=0x…</span>
+    <div class="badge">För redovisningsbyråer · revision · granskning</div>
+
+    <h1 class="pageTitle">Verifiera underlag</h1>
+
+    <p class="lead">
+      Här kontrollerar du om ett underlag är <b>samma filversion</b> som den som tidigare registrerats.
+      Du kan verifiera antingen genom att <b>välja filen</b> eller genom att <b>klistra in Verifierings-ID</b>.
+      <b>Filen lämnar aldrig din dator</b> och Proofy <b>lagrar inte filinnehåll</b>.
     </p>
 
-    <section class="card content">
-      <div class="grid">
+    <section class="card content" aria-label="Verifiera">
+      <div class="grid2">
 
-        <!-- LEFT: file -->
-        <div>
-          <b>Verifiera via fil</b>
+        <!-- LEFT: Verify via file -->
+        <section aria-label="Verifiera via fil">
+          <div style="font-weight:950; font-size:16px;">Verifiera via fil</div>
           <p class="meta" style="margin-top:8px">
-            Vi beräknar filens digitala fingeravtryck (SHA-256) i webbläsaren och kontrollerar om en verifieringspost finns.
+            Välj filversionen du vill kontrollera. Vi jämför den mot den registrerade referensen.
           </p>
 
-          <input id="fileInput" type="file" />
+          <input id="fileInput" type="file" aria-label="Välj fil att verifiera" />
           <div id="dropZone" class="drop" style="margin-top:10px">Dra & släpp fil här</div>
 
           <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
 
-          <div class="actionsRow" style="margin-top:12px">
-            <button class="btn primary" id="hashVerifyBtn" disabled>Verifiera via fil</button>
-            <span id="statusPill" class="pill">Välj en fil eller ange ID</span>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" id="fileVerifyBtn" disabled>Verifiera fil</button>
+            <span id="statusPill" class="pill">Välj fil eller klistra in ID</span>
           </div>
 
-          <div id="localHashBox" style="display:none;margin-top:12px">
-            <div class="meta">Digitalt fingeravtryck (SHA-256 / bytes32):</div>
-            <div id="localHashOut" class="mono">—</div>
+          <details style="margin-top:12px;">
+            <summary>Detaljer (valfritt)</summary>
+            <p class="meta" style="margin:10px 0 0;">
+              Här visas den interna referensen som används för att kontrollera om en fil är exakt samma version.
+            </p>
+            <div id="localRefBox" style="display:none;margin-top:10px">
+              <div class="meta">Intern referens:</div>
+              <div id="localRefOut" class="mono">—</div>
+            </div>
+          </details>
+
+          <div class="small" style="margin-top:10px">
+            Obs: Ny export/omskanning kan skapa en ny filversion även om den “ser likadan ut”.
           </div>
+        </section>
 
-          <div class="small" style="margin-top:10px">Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).</div>
-        </div>
+        <!-- RIGHT: Verify via ID -->
+        <section aria-label="Verifiera via Verifierings-ID">
+          <div style="font-weight:950; font-size:16px;">Verifiera via Verifierings-ID</div>
+          <p class="meta" style="margin-top:8px">
+            Har du ett Verifierings-ID i ärendet? Klistra in det här så kontrollerar vi status.
+          </p>
 
-        <!-- RIGHT: id -->
-        <div>
-          <b>Verifiera via Verifierings-ID</b>
-          <label class="meta" style="display:block;margin-top:10px">Verifierings-ID (0x + 64 hex)</label>
-          <input id="hashInput" type="text" placeholder="0x + 64 hex (bytes32)" />
+          <label class="meta" for="idInput" style="display:block;margin-top:10px;">Verifierings-ID</label>
+          <input id="idInput" type="text" placeholder="Klistra in Verifierings-ID…" autocomplete="off" />
 
-          <div class="actionsRow" style="margin-top:12px">
+          <div class="actions" style="margin-top:12px">
             <button class="btn primary" id="verifyBtn" type="button">Verifiera</button>
-            <button class="btn" id="copyLinkBtn" type="button">Kopiera verifieringslänk</button>
+            <button class="btn" id="copyLinkBtn" type="button" disabled>Kopiera verifieringslänk</button>
           </div>
 
           <div class="hr"></div>
 
-          <div id="status" class="meta"></div>
+          <div id="statusLine" class="meta" aria-live="polite"></div>
 
-          <div id="resultBox" class="resultCard" style="display:none;margin-top:10px"></div>
-        </div>
+          <div id="resultBox" style="display:none;margin-top:10px">
+            <div class="card content" style="background:rgba(11,18,32,.25); box-shadow:none;">
+              <div id="resultHeadline" style="font-size:18px; font-weight:950;"></div>
+
+              <div class="hr"></div>
+
+              <div class="meta">Tidpunkt</div>
+              <div id="timeOut" class="mono" style="margin-top:8px">—</div>
+
+              <div class="meta" style="margin-top:12px;">Skapad av</div>
+              <div id="submitterOut" class="mono" style="margin-top:8px">—</div>
+
+              <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
+              <div id="idOut" class="mono" style="margin-top:8px">—</div>
+
+              <div class="meta" style="margin-top:12px;">Verifieringslänk</div>
+              <div id="linkOut" class="mono" style="margin-top:8px">—</div>
+
+              <div class="small" style="margin-top:12px">
+                Tolkning: “Matchar” betyder att filversionen/ID:t finns registrerad som referens.
+                “Matchar inte” betyder att ingen referens hittades för den filversionen/ID:t.
+              </div>
+            </div>
+          </div>
+
+          <div class="small" style="margin-top:12px">
+            Tips: Dela verifieringslänken om någon annan behöver kontrollera senare.
+          </div>
+        </section>
 
       </div>
     </section>
 
     <p class="small" style="margin-top:14px">
-      Tips: Spara Verifierings-ID i ärendet (gärna med datum/tid). Vid behov kan samma fil verifieras senare.
+      Proofy lagrar inte dokument och visar inte vem som skapat ett dokument eller om innehållet är korrekt – endast om en filversion matchar en registrerad referens.
     </p>
   </div>
 </main>
@@ -174,47 +138,58 @@ input[type="file"], input[type="text"]{
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  // File side
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
-  const hashVerifyBtn = $("hashVerifyBtn");
-  const localHashBox = $("localHashBox");
-  const localHashOut = $("localHashOut");
+  const fileVerifyBtn = $("fileVerifyBtn");
+  const statusPill = $("statusPill");
+  const localRefBox = $("localRefBox");
+  const localRefOut = $("localRefOut");
 
-  const hashInput = $("hashInput");
+  // ID side
+  const idInput = $("idInput");
   const verifyBtn = $("verifyBtn");
   const copyLinkBtn = $("copyLinkBtn");
-  const status = $("status");
-  const statusPill = $("statusPill");
+  const statusLine = $("statusLine");
+
   const resultBox = $("resultBox");
+  const resultHeadline = $("resultHeadline");
+  const timeOut = $("timeOut");
+  const submitterOut = $("submitterOut");
+  const idOut = $("idOut");
+  const linkOut = $("linkOut");
 
+  // state
   let currentFile = null;
-
-  // anti-spam + ignore stale responses
+  let currentId = null;
   let busy = false;
   let opId = 0;
 
   function setBusy(v){
     busy = v;
-    hashVerifyBtn.disabled = !currentFile || busy;
+    fileVerifyBtn.disabled = !currentFile || busy;
     verifyBtn.disabled = busy;
-    copyLinkBtn.disabled = busy;
+    // copyLinkBtn enabled only if we have a valid currentId
+    copyLinkBtn.disabled = !currentId || busy;
   }
 
-  function setStatus(msg, cls="meta"){
-    status.textContent = msg || "";
-    status.className = cls;
+  function setPill(text){
+    statusPill.textContent = text || "—";
   }
 
-  function setPill(msg){
-    statusPill.textContent = msg || "—";
+  function setStatus(text, cls){
+    statusLine.textContent = text || "";
+    statusLine.className = cls ? cls : "meta";
   }
 
-  function resetResults(){
-    localHashBox.style.display = "none";
-    localHashOut.textContent = "—";
+  function resetResult(){
     resultBox.style.display = "none";
-    resultBox.innerHTML = "";
+    resultHeadline.textContent = "";
+    timeOut.textContent = "—";
+    submitterOut.textContent = "—";
+    idOut.textContent = "—";
+    linkOut.textContent = "—";
     setStatus("");
   }
 
@@ -222,115 +197,115 @@ input[type="file"], input[type="text"]{
     return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
   }
 
-  async function sha256Bytes32Hex(file){
+  async function fileToInternalId(file){
+    // Keep internal format compatible with your API: 0x + 64 hex
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
-  function isBytes32Hex(h){
-    return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
+  function isInternalIdFormat(v){
+    return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v);
   }
 
-  function shareUrlForHash(h){
-    return `${location.origin}/verify.html?hash=${h}`;
+  function buildShareLink(id){
+    // Keep query param name for compatibility: ?hash=
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(id)}`;
   }
 
-  function fmtDateSv(timestampSeconds){
-    try{
-      return new Date(timestampSeconds * 1000).toLocaleString("sv-SE");
-    } catch {
-      return "—";
+  function fmtSv(tsSeconds){
+    try{ return new Date(Number(tsSeconds) * 1000).toLocaleString("sv-SE"); }
+    catch { return "—"; }
+  }
+
+  function renderResult(found, payload){
+    const id = payload?.id || currentId;
+    const link = buildShareLink(id);
+
+    idOut.textContent = id || "—";
+    linkOut.textContent = link;
+
+    if (!found){
+      resultHeadline.innerHTML = `<span class="err">❌ Matchar inte</span> <span class="meta">(ingen referens hittades)</span>`;
+      timeOut.textContent = "—";
+      submitterOut.textContent = "—";
+      setPill("Matchar inte");
+    } else {
+      resultHeadline.innerHTML = `<span class="ok">✅ Matchar</span> <span class="meta">(referens hittades)</span>`;
+      timeOut.textContent = payload?.timestamp ? fmtSv(payload.timestamp) : "—";
+      submitterOut.textContent = payload?.submitter || "—";
+      setPill("Matchar ✅");
     }
+
+    currentId = id;
+    copyLinkBtn.disabled = !currentId || busy;
+
+    resultBox.style.display = "block";
   }
 
-  async function verifyHash(h, showWorking=true){
-    if(!isBytes32Hex(h)){
-      setStatus("Ange ett giltigt Verifierings-ID (0x + 64 hex).", "err");
-      setPill("Ogiltigt ID");
+  async function verifyById(id, showWorking=true){
+    const clean = (id || "").trim();
+
+    if (!isInternalIdFormat(clean)){
+      currentId = null;
+      copyLinkBtn.disabled = true;
+      resetResult();
+      setStatus("Ange ett giltigt Verifierings-ID.", "err");
+      setPill(clean ? "Ogiltigt ID" : "Välj fil eller klistra in ID");
       return;
     }
 
     const myOp = ++opId;
     setBusy(true);
 
-    if(showWorking){
-      setStatus("Verifierar…");
-      setPill("Verifierar…");
-    }
+    currentId = clean;
+    copyLinkBtn.disabled = false;
 
-    resultBox.style.display = "none";
-    resultBox.innerHTML = "";
+    if (showWorking){
+      resetResult();
+      setStatus("Kontrollerar…");
+      setPill("Kontrollerar…");
+    }
 
     try{
       const r = await fetch("/api/verify",{
         method:"POST",
         headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ hash: h })
+        body: JSON.stringify({ hash: clean }) // API expects {hash}
       });
 
       const j = await r.json().catch(() => ({}));
       if(myOp !== opId) return;
 
       if(!r.ok || !j.ok){
-        setStatus("Tekniskt fel vid verifiering.", "err");
+        setStatus("Tekniskt fel vid kontroll. Försök igen.", "err");
         setPill("Tekniskt fel");
         return;
       }
 
-      const link = shareUrlForHash(h);
-
-      if(!j.exists){
-        resultBox.innerHTML = `
-          <div class="err">❌ Ingen verifieringspost hittades</div>
-          <div class="kv">
-            <div class="k">Verifierings-ID</div>
-            <div class="v">${h}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Delbar verifieringslänk</div>
-            <div class="v">${link}</div>
-          </div>
-        `;
-        setPill("Ingen match");
-      } else {
-        resultBox.innerHTML = `
-          <div class="ok">✅ Match: verifieringspost finns</div>
-          <div class="kv">
-            <div class="k">Tidsstämpling</div>
-            <div class="v">${fmtDateSv(j.timestamp)}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Registrerad av</div>
-            <div class="v">${j.submitter || "—"}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Verifierings-ID</div>
-            <div class="v">${h}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Delbar verifieringslänk</div>
-            <div class="v">${link}</div>
-          </div>
-        `;
-        setPill("Match ✅");
-      }
-
-      resultBox.style.display = "block";
+      renderResult(!!j.exists, { id: clean, timestamp: j.timestamp, submitter: j.submitter });
       setStatus("");
+    } catch (e){
+      console.error(e);
+      if(myOp !== opId) return;
+      setStatus("Tekniskt fel vid kontroll. Försök igen.", "err");
+      setPill("Tekniskt fel");
     } finally {
       if(myOp === opId) setBusy(false);
     }
   }
 
+  // File input handling
   function setFile(file){
     currentFile = file || null;
-    resetResults();
+    localRefBox.style.display = "none";
+    localRefOut.textContent = "—";
+    resetResult();
 
     if(!currentFile){
       fileInfo.textContent = "Ingen fil vald.";
-      setPill("Välj en fil eller ange ID");
-      hashVerifyBtn.disabled = true;
+      setPill("Välj fil eller klistra in ID");
+      setBusy(false);
       return;
     }
 
@@ -350,73 +325,70 @@ input[type="file"], input[type="text"]{
     if(f) setFile(f);
   });
 
-  hashVerifyBtn.addEventListener("click", async () => {
+  fileVerifyBtn.addEventListener("click", async () => {
     if(!currentFile || busy) return;
 
     const myOp = ++opId;
     setBusy(true);
-    setStatus("Beräknar fingeravtryck lokalt…");
-    setPill("Beräknar…");
-
-    resultBox.style.display = "none";
-    resultBox.innerHTML = "";
+    setStatus("Förbereder kontroll…");
+    setPill("Förbereder…");
+    resetResult();
 
     try{
-      const h = await sha256Bytes32Hex(currentFile);
+      const id = await fileToInternalId(currentFile);
       if(myOp !== opId) return;
 
-      localHashBox.style.display = "block";
-      localHashOut.textContent = h;
-      hashInput.value = h;
+      // show optional details
+      localRefBox.style.display = "block";
+      localRefOut.textContent = id;
 
-      setStatus("");
-      setPill("Verifierar…");
-      await verifyHash(h, false);
+      // Also fill the ID input (nice for copy/share)
+      idInput.value = id;
+
+      await verifyById(id, false);
     } catch (e){
       console.error(e);
       if(myOp !== opId) return;
-      setStatus("Fel: kunde inte beräkna fingeravtryck.", "err");
+      setStatus("Kunde inte läsa filen. Försök igen.", "err");
       setPill("Fel");
     } finally {
       if(myOp === opId) setBusy(false);
     }
   });
 
-  verifyBtn.addEventListener("click", () => {
-    const h = (hashInput.value || "").trim();
-    verifyHash(h, true);
+  // ID input handling
+  verifyBtn.addEventListener("click", () => verifyById(idInput.value, true));
+
+  idInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") verifyById(idInput.value, true);
   });
 
   copyLinkBtn.addEventListener("click", async () => {
-    const h = (hashInput.value || "").trim();
-    if(!isBytes32Hex(h)){
+    const id = (idInput.value || "").trim();
+    if(!isInternalIdFormat(id)){
       setStatus("Ange ett giltigt Verifierings-ID innan du kopierar länk.", "err");
       setPill("Ogiltigt ID");
       return;
     }
     try{
-      await navigator.clipboard.writeText(shareUrlForHash(h));
+      await navigator.clipboard.writeText(buildShareLink(id));
       setStatus("Verifieringslänk kopierad ✅", "ok");
       setPill("Länk kopierad");
     } catch {
-      setStatus("Kunde inte kopiera. Tillåt clipboard i webbläsaren.", "err");
+      setStatus("Kunde inte kopiera. Tillåt urklipp i webbläsaren.", "err");
       setPill("Kunde inte kopiera");
     }
   });
 
-  // auto from URL
+  // Auto from URL: /verify.html?hash=0x...
   const p = new URLSearchParams(location.search);
-  const urlHash = p.get("hash");
-  if(urlHash){
-    hashInput.value = urlHash;
-    if(isBytes32Hex(urlHash)){
-      verifyHash(urlHash, true);
-    } else {
-      setStatus("Ogiltigt Verifierings-ID i länken.", "err");
-      setPill("Ogiltigt ID");
-    }
+  const urlId = p.get("hash");
+  if(urlId){
+    idInput.value = urlId;
+    verifyById(urlId, true);
   } else {
-    setPill("Välj en fil eller ange ID");
+    setPill("Välj fil eller klistra in ID");
+    setBusy(false);
   }
 
   setBusy(false);
