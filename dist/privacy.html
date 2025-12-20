@@ -1,11 +1,10 @@
-<!-- privacy.html -->
 <!doctype html>
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Integritetspolicy</title>
-  <meta name="description" content="Integritetspolicy (GDPR) för Proofy." />
+  <title>Proofy – Integritet</title>
+  <meta name="description" content="Integritetspolicy för Proofy." />
   <meta name="theme-color" content="#0b1220" />
   <link rel="canonical" href="https://proofy.se/privacy.html" />
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
@@ -21,7 +20,6 @@
     }
     h1{ margin:18px 0 8px; font-size: clamp(26px, 3vw, 44px); line-height:1.12; }
     h2{ margin: 18px 0 8px; font-size: 18px; }
-    h3{ margin: 14px 0 6px; font-size: 15px; }
     p, li{ color: rgba(169,183,211,.95); line-height:1.65; }
     .muted{ color: rgba(169,183,211,.92); }
     .badgeN{
@@ -36,16 +34,6 @@
     .hr{ height:1px; background: rgba(255,255,255,.12); margin: 14px 0; }
     a{ color: inherit; }
   </style>
-
-  <script type="application/ld+json">
-  {
-    "@context":"https://schema.org",
-    "@type":"Organization",
-    "name":"Proofy",
-    "url":"https://proofy.se/",
-    "email":"kontakt@proofy.se"
-  }
-  </script>
 </head>
 
 <body>
@@ -68,123 +56,154 @@
     <div class="badgeN" style="margin-top:18px;">Integritet · GDPR</div>
     <h1>Integritetspolicy</h1>
     <p class="muted">
-      Denna policy beskriver hur Proofy behandlar personuppgifter när du besöker vår webbplats eller använder vår tjänst.
-      Vi strävar efter att behandla så lite personuppgifter som möjligt.
+      Här beskriver vi hur Proofy hanterar personuppgifter och annan information när du använder vår webbplats och tjänst.
+      Vi strävar efter att behandla så lite information som möjligt och vara tydliga med varför vi gör det.
     </p>
 
-    <div class="cardN">
-      <h2>1. Personuppgiftsansvarig</h2>
+    <div class="cardN" id="controller">
+      <h2>1. personuppgiftsansvarig och kontakt</h2>
       <p>
-        Personuppgiftsansvarig är <b>[Bolagsnamn]</b>, org.nr <b>[Org.nr]</b>, <b>[Adress]</b> (“Proofy”, “vi”).
+        Personuppgiftsansvarig är <b>Proofy AB</b>, org.nr <b>XXXXXXXXXX-XXXX</b>, adress <b>[gata, postnummer, ort]</b>.
       </p>
       <p>
-        Kontakt: <b>kontakt@proofy.se</b>
+        Kontakt: <b>kontakt@proofy.se</b>.
       </p>
       <p class="muted">
-        Om ni har ett separat kundavtal kan det reglera roller (personuppgiftsansvarig/biträde) för specifika delar av tjänsten.
+        Om ni är kund och ett personuppgiftsbiträdesavtal (PUB-avtal) gäller i er relation, kompletterar det denna policy.
       </p>
     </div>
 
-    <div class="cardN">
-      <h2>2. Vilka uppgifter vi behandlar</h2>
+    <div class="cardN" id="what">
+      <h2>2. vilka uppgifter vi behandlar</h2>
 
-      <h3>A) Kontakt och affärsdialog</h3>
+      <p><b>a) kontakt och affärsdialog (b2b)</b></p>
       <ul>
-        <li>Namn, e-post, företag/roll och andra uppgifter du lämnar i kontaktformulär eller via e-post.</li>
-        <li>Innehåll i meddelanden (t.ex. frågor om demo, pilot eller support).</li>
+        <li>Namn, e-post, företag/byrå och andra uppgifter som ni själva lämnar via formulär eller e-post.</li>
+        <li>Innehåll i meddelanden som ni väljer att skriva till oss (t.ex. behov, frågor, bokningsönskemål).</li>
       </ul>
 
       <div class="hr"></div>
 
-      <h3>B) Drift- och säkerhetsdata</h3>
+      <p><b>b) drift och säkerhet</b></p>
       <ul>
-        <li>Teknisk loggdata som behövs för drift, felsökning och säkerhet (t.ex. tidsstämplar, felkoder, grundläggande anslutningsdata).</li>
-        <li>Uppgifter som behövs för att utföra registrering och kontroll av Verifierings-ID och visa spårbarhetsinformation (t.ex. tidpunkt för registrering och andra tekniska referenser).</li>
+        <li>Teknisk loggdata som behövs för drift, felsökning och säkerhet (t.ex. tidsstämplar, felkoder och grundläggande anslutningsdata).</li>
+      </ul>
+
+      <div class="hr"></div>
+
+      <p><b>c) uppgifter kopplade till tjänstens funktion</b></p>
+      <ul>
+        <li>Uppgifter som behövs för att registrera och kontrollera ett verifierings-ID samt tidpunkt för registrering/kontroll.</li>
       </ul>
 
       <p class="muted">
-        Proofy är utformat för att inte lagra dokumentinnehåll som en del av grundfunktionen.
-        Skicka inte dokumentinnehåll eller känsliga personuppgifter i kontaktformulär.
+        Vi eftersträvar att inte behandla dokumentinnehåll i samband med registrering/kontroll.
+        Skicka därför inte dokumentinnehåll eller känsliga personuppgifter till oss i formulär eller meddelanden.
       </p>
     </div>
 
-    <div class="cardN">
-      <h2>3. Ändamål och rättslig grund</h2>
+    <div class="cardN" id="why">
+      <h2>3. varför vi behandlar uppgifter</h2>
       <ul>
-        <li><b>Leverera tjänsten</b> (registrering/kontroll, visa verifieringsstatus och spårbarhet) – rättslig grund: <b>avtal</b> eller <b>berättigat intresse</b> beroende på relation.</li>
-        <li><b>Kommunicera</b> om demo/pilot, kunddialog och support – rättslig grund: <b>berättigat intresse</b> eller <b>avtal</b>.</li>
-        <li><b>Drift och säkerhet</b> (felsökning, incidenthantering, missbruksförebyggande) – rättslig grund: <b>berättigat intresse</b>.</li>
-        <li><b>Uppfylla rättsliga krav</b> om tillämpligt – rättslig grund: <b>rättslig förpliktelse</b>.</li>
+        <li><b>för att leverera tjänsten</b> (registrering och kontroll av verifierings-ID samt relaterad funktion)</li>
+        <li><b>för att kommunicera med er</b> om demo, pilot, kundrelation, frågor och support</li>
+        <li><b>för att driva, förbättra och skydda</b> webbplatsen och tjänsten (drift, felsökning, incidenthantering och missbruksförebyggande)</li>
+        <li><b>för att uppfylla rättsliga skyldigheter</b> om sådana blir tillämpliga</li>
+      </ul>
+    </div>
+
+    <div class="cardN" id="legalbasis">
+      <h2>4. rättslig grund</h2>
+      <p>Vi behandlar personuppgifter baserat på:</p>
+      <ul>
+        <li><b>avtal</b> (när behandling krävs för att leverera tjänsten eller hantera kundrelationen)</li>
+        <li><b>berättigat intresse</b> (drift, säkerhet, förbättring samt b2b-kommunikation)</li>
+        <li><b>rättslig förpliktelse</b> (om vi måste uppfylla lagkrav)</li>
+        <li><b>samtycke</b> (om vi ber om det i ett specifikt fall)</li>
+      </ul>
+    </div>
+
+    <div class="cardN" id="sharing">
+      <h2>5. delning och personuppgiftsbiträden</h2>
+      <p>
+        Vi delar endast uppgifter med leverantörer som behövs för att driva tjänsten (t.ex. drift, hosting, e-post).
+        Sådana leverantörer agerar normalt som personuppgiftsbiträden och omfattas av avtalsmässiga skyddsåtgärder.
+      </p>
+      <ul>
+        <li>
+          <b>Cloudflare</b> – används för drift, säkerhet och innehållsleverans.
+          Cloudflare kan behandla uppgifter som personuppgiftsbiträde för Proofy.
+        </li>
+      </ul>
+      <p>
+        Vi säljer inte personuppgifter.
+      </p>
+    </div>
+
+    <div class="cardN" id="transfers">
+      <h2>6. överföring utanför eu/ees</h2>
+      <p>
+        Vissa leverantörer (t.ex. Cloudflare) kan behandla uppgifter utanför EU/EES.
+        Om sådan överföring sker används lämpliga skyddsåtgärder enligt GDPR, exempelvis EU-kommissionens standardavtalsklausuler
+        och kompletterande skydd när det krävs.
+      </p>
+    </div>
+
+    <div class="cardN" id="retention">
+      <h2>7. hur länge vi sparar uppgifter</h2>
+      <ul>
+        <li>
+          <b>kontaktuppgifter och dialog</b> sparas så länge det behövs för att hantera ärendet och vår relation, eller enligt avtal.
+        </li>
+        <li>
+          <b>tekniska loggar</b> sparas i den omfattning och tid som behövs för drift och säkerhet och rensas löpande.
+        </li>
+        <li>
+          <b>uppgifter kopplade till tjänstens funktion</b> sparas i enlighet med tjänstens syfte och kundens behov, eller enligt avtal.
+        </li>
       </ul>
       <p class="muted">
-        I vissa fall kan vi be om samtycke (t.ex. om vi inför icke-nödvändiga cookies). Då kan samtycke återkallas.
+        Exakta tider kan bero på avtal, säkerhetsbehov och kundens användning.
       </p>
     </div>
 
-    <div class="cardN">
-      <h2>4. Mottagare och personuppgiftsbiträden</h2>
+    <div class="cardN" id="security">
+      <h2>8. säkerhet</h2>
       <p>
-        Vi delar endast personuppgifter när det behövs för att driva tjänsten, t.ex. hosting/drift, e-post och säkerhetsfunktioner.
-        Sådana leverantörer agerar normalt som personuppgiftsbiträden och omfattas av avtal samt lämpliga skyddsåtgärder.
-      </p>
-      <p><b>Vi säljer inte personuppgifter.</b></p>
-    </div>
-
-    <div class="cardN">
-      <h2>5. Överföring utanför EU/EES</h2>
-      <p>
-        Om personuppgifter överförs utanför EU/EES säkerställer vi lämpliga skyddsåtgärder enligt GDPR,
-        t.ex. EU-kommissionens standardavtalsklausuler och kompletterande skydd när det krävs.
+        Vi arbetar med tekniska och organisatoriska säkerhetsåtgärder för att skydda uppgifter mot obehörig åtkomst,
+        förlust och otillåten behandling. Åtkomst styrs och loggas i rimlig omfattning.
       </p>
     </div>
 
-    <div class="cardN">
-      <h2>6. Lagringstid</h2>
+    <div class="cardN" id="rights">
+      <h2>9. dina rättigheter</h2>
+      <p>Du har rätt att, enligt GDPR och i tillämplig omfattning:</p>
       <ul>
-        <li><b>Kontaktuppgifter och dialog</b>: sparas så länge det behövs för att hantera ärendet och vår relation, eller enligt avtal.</li>
-        <li><b>Drift- och säkerhetsloggar</b>: sparas i den omfattning och tid som behövs för drift och säkerhet och rensas löpande.</li>
-        <li><b>Tjänstdata för registrering/kontroll</b>: sparas i enlighet med tjänstens syfte och kundens behov, eller enligt avtal.</li>
+        <li>begära registerutdrag</li>
+        <li>begära rättelse</li>
+        <li>begära radering (när vi inte behöver uppgifterna längre)</li>
+        <li>invända mot viss behandling</li>
+        <li>begära begränsning</li>
+        <li>begära dataportabilitet (i vissa fall)</li>
       </ul>
+      <p>
+        Kontakta oss på <b>kontakt@proofy.se</b>. Du har även rätt att klaga hos Integritetsskyddsmyndigheten (IMY).
+      </p>
+    </div>
+
+    <div class="cardN" id="cookies">
+      <h2>10. cookies</h2>
+      <p>
+        Proofy använder inte cookies för marknadsföring eller spårning.
+        Eventuella tekniska cookies används endast om det krävs för grundläggande funktion och säkerhet.
+      </p>
       <p class="muted">
-        Exakta tider kan variera beroende på avtal, kundkrav och legala skyldigheter.
+        Om vi börjar använda cookies som kräver samtycke informerar vi tydligt och ber om samtycke innan de används.
       </p>
     </div>
 
-    <div class="cardN">
-      <h2>7. Dina rättigheter</h2>
-      <p>Du har, i tillämplig omfattning enligt GDPR, rätt att:</p>
-      <ul>
-        <li>begära registerutdrag,</li>
-        <li>begära rättelse,</li>
-        <li>begära radering,</li>
-        <li>invända mot viss behandling,</li>
-        <li>begära begränsning,</li>
-        <li>begära dataportabilitet (i vissa fall).</li>
-      </ul>
-      <p>
-        Kontakta oss på <b>kontakt@proofy.se</b>. Du har även rätt att lämna klagomål till Integritetsskyddsmyndigheten (IMY).
-      </p>
-    </div>
-
-    <div class="cardN">
-      <h2>8. Säkerhet</h2>
-      <p>
-        Vi använder tekniska och organisatoriska åtgärder för att skydda personuppgifter mot obehörig åtkomst, förlust och otillåten behandling.
-        Åtkomst begränsas och loggas i rimlig omfattning. Vi arbetar löpande med förbättringar av säkerhet.
-      </p>
-    </div>
-
-    <div class="cardN">
-      <h2>9. Cookies</h2>
-      <p>
-        Om vi använder cookies eller liknande tekniker beskriver vi det här eller i en separat cookie-information.
-        Om ni inte använder icke-nödvändiga cookies kan ni skriva det uttryckligen, t.ex.:
-        “Vi använder endast cookies som krävs för grundfunktion.”
-      </p>
-    </div>
-
-    <div class="cardN">
-      <h2>10. Ändringar av policyn</h2>
+    <div class="cardN" id="changes">
+      <h2>11. ändringar</h2>
       <p>
         Vi kan uppdatera denna policy. Vid väsentliga ändringar informerar vi på webbplatsen eller via e-post när det är relevant.
       </p>
