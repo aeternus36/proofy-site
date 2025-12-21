@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pilotupplägg – Proofy</title>
-  <meta name="description" content="Starta en pilot med Proofy. Fast månadspris, faktura och support. Testa dokumentverifiering i er byrårutin." />
+  <meta name="description" content="Starta en pilot med Proofy. Fast månadspris, faktura och support. Testa dokumentverifiering i er byrå-rutin." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/pilot.html" />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-21" />
 </head>
 
 <body>
@@ -22,7 +22,7 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Beslut A: inga ankarlänkar i headern -->
+      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
 
       <div class="navActions">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
@@ -49,7 +49,7 @@
       <div class="tile">
         <b>Ingår</b>
         <span class="small">
-          Registrering + verifiering, verifierings-ID samt support under piloten.
+          Registrering + verifiering, Verifierings-ID samt support under piloten.
         </span>
       </div>
       <div class="tile">
@@ -71,7 +71,7 @@
       <h2>Rekommenderad rutin (exempel)</h2>
       <ol class="cleanList">
         <li>Registrera underlag som är särskilt viktiga (bokslut, rapporter, avtal).</li>
-        <li>Spara verifierings-ID i ärendet/noteringar.</li>
+        <li>Spara Verifierings-ID i ärendet/noteringar.</li>
         <li>Vid granskning: verifiera filen och visa match/ingen match.</li>
       </ol>
 
@@ -90,25 +90,27 @@
         <div class="formGrid">
           <div>
             <label class="label" for="p-name">Namn <span class="req">*</span></label>
-            <input id="p-name" name="name" type="text" required />
+            <input id="p-name" name="name" type="text" required autocomplete="name" />
           </div>
           <div>
             <label class="label" for="p-email">E-post <span class="req">*</span></label>
-            <input id="p-email" name="email" type="email" required />
+            <input id="p-email" name="email" type="email" required autocomplete="email" />
           </div>
           <div>
             <label class="label" for="p-company">Byrå/Företag <span class="req">*</span></label>
-            <input id="p-company" name="company" type="text" required />
+            <input id="p-company" name="company" type="text" required autocomplete="organization" />
           </div>
           <div>
             <label class="label" for="p-role">Roll</label>
-            <input id="p-role" name="role" type="text" />
+            <input id="p-role" name="role" type="text" autocomplete="organization-title" />
           </div>
         </div>
 
         <div style="margin-top:12px;">
           <label class="label" for="p-message">Kort om ert case (valfritt)</label>
-          <textarea id="p-message" name="message"
+          <textarea
+            id="p-message"
+            name="message"
             placeholder="T.ex. vilken typ av dokument ni vill kunna verifiera och i vilken process."></textarea>
         </div>
 
@@ -135,8 +137,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer.
-          Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
         </div>
       </div>
       <div class="links">
