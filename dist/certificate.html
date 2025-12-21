@@ -214,10 +214,10 @@
       </div>
 
       <div class="actions" aria-label="Åtgärder">
-        <button class="btn" id="btnPrint" type="button">Skriv ut / Spara som PDF</button>
-        <button class="btn soft" id="btnRefresh" type="button">Uppdatera</button>
-        <a class="btn primary" id="btnVerify" href="/verify.html">Öppna verifiering</a>
+        <button class="btn primary" id="btnPrint" type="button">Skriv ut / Spara som PDF</button>
         <button class="btn" id="btnCopyLink" type="button" disabled>Kopiera intygslänk</button>
+        <button class="btn soft" id="btnRefresh" type="button">Uppdatera</button>
+        <a class="btn" id="btnVerify" href="/verify.html">Öppna verifiering</a>
       </div>
 
       <div id="openBox" class="openBox">
@@ -244,7 +244,7 @@
           <div class="label">Verifierings-ID</div>
           <div id="hashOut" class="value mono">—</div>
           <div class="meta" style="margin-top:8px;">
-            ID:t avser en <b>filversion</b>. Minsta ändring ger ett nytt ID.
+            ID:t avser en <b>filversion</b>. Minsta ändring ger ett nytt ID, även om dokumentet i sak kan uppfattas som oförändrat.
           </div>
         </div>
 
@@ -284,6 +284,9 @@
                 <div class="label" style="margin-top:12px;">QR-kod</div>
                 <div id="qrBox" class="qrBox" aria-label="QR-kod">—</div>
                 <div id="qrStatus" class="meta" style="margin-top:8px;">—</div>
+                <div class="meta" style="margin-top:8px;">
+                  QR-koden leder till verifieringssidan där ID:t kan kontrolleras i efterhand.
+                </div>
               </div>
               <div style="flex:1; min-width:240px;">
                 <div class="note" style="margin-top:12px;">
@@ -477,6 +480,11 @@
     return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
   }
 
+  function isoUtcNoMs(d){
+    // "YYYY-MM-DD HH:MM:SS UTC" (ingen falsk precision)
+    return d.toISOString().replace("T"," ").replace(/\.\d{3}Z$/, " UTC");
+  }
+
   function fmtSe(ts){
     try{
       return new Intl.DateTimeFormat("sv-SE", {
@@ -490,7 +498,7 @@
   }
   function fmtUtc(ts){
     try{
-      return new Date(Number(ts) * 1000).toISOString().replace("T"," ").replace(".000Z"," UTC");
+      return isoUtcNoMs(new Date(Number(ts) * 1000));
     } catch {
       return "—";
     }
@@ -498,7 +506,7 @@
 
   function setCheckedNow(){
     const se = new Date().toLocaleString("sv-SE", { timeZone:"Europe/Stockholm" });
-    const utc = new Date().toISOString().replace("T"," ").replace("Z"," UTC");
+    const utc = isoUtcNoMs(new Date());
     checkedOut.textContent = `${se} (Europe/Stockholm)\n${utc}`;
   }
 
@@ -576,7 +584,7 @@
     try{
       const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}`, { method:"GET" });
       const j = await r.json().catch(() => ({}));
-      if (r.ok) return { ok:true, data:j };
+      if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
     } catch { /* ignore */ }
 
     const r2 = await fetch(`/api/verify`, {
@@ -653,14 +661,14 @@
       const ts = data.timestamp ? Number(data.timestamp) : null;
 
       if (exists){
-        setStatus("Registrerad", "ok");
-        resultOut.textContent = "Registrerad (Verifierings-ID finns i registret)";
+        setStatus("Registrerad vid kontrolltillfället", "ok");
+        resultOut.textContent = "Registrerad (registrering hittades)";
         tsSeOut.textContent = ts ? fmtSe(ts) : "—";
         tsUtcOut.textContent = ts ? fmtUtc(ts) : "—";
         interpretation.textContent = "Kontrollen visar att Verifierings-ID:t fanns registrerat vid angiven registreringstid.";
       } else {
-        setStatus("Inte registrerad", "err");
-        resultOut.textContent = "Inte registrerad (Verifierings-ID saknas i registret)";
+        setStatus("Ingen registrering hittad", "err");
+        resultOut.textContent = "Inte registrerad (ingen registrering hittades)";
         tsSeOut.textContent = "—";
         tsUtcOut.textContent = "—";
         interpretation.textContent = "Kontrollen visar att ingen registrering hittades för angivet Verifierings-ID vid kontrolltillfället.";
