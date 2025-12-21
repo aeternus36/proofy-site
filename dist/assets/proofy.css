@@ -61,8 +61,8 @@ header{
   align-items:center;
   justify-content:space-between;
   gap:14px;
-  padding: 14px 0; /* lite större än innan */
-  min-height: 74px; /* stabil höjd över alla sidor */
+  padding: 14px 0;
+  min-height: 74px;
 }
 .brand{
   display:flex;
@@ -90,44 +90,20 @@ header{
   border: 1px solid rgba(255,255,255,.20);
 }
 
-/* Nav links i mitten – större & mer “enterprise” */
-.navLinks{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  padding: 8px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  border-radius: 999px;
-}
-.navLinks a{
-  text-decoration:none;
-  padding: 10px 14px;         /* större klickyta */
-  border-radius: 999px;
-  color: rgba(169,183,211,.95);
-  font-weight: 900;
-  font-size: 14px;            /* större text */
-  line-height: 1;
-}
-.navLinks a:hover{
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-}
+/* =========================
+   NAV LINKS (AVSTÄNGT)
+   Beslut A: inga ankarlänkar i headern.
+   Detta tvingar bort navLinks även om någon sida råkar ha kvar HTML-blocket.
+   ========================= */
+.navLinks{ display:none !important; }
 
-/* Höger: EN primär CTA */
+/* Höger: CTA */
 .navActions{
   display:flex;
   align-items:center;
   gap:10px;
-  flex-wrap:nowrap;
-}
-
-/* Mobil */
-@media (max-width: 920px){
-  .navLinks{ display:none; }
-}
-@media (max-width: 520px){
-  .nav{ align-items:center; }
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
 
 /* Buttons */
@@ -448,6 +424,18 @@ pre.mono{
   width: 150px !important;
   height: 150px !important;
   image-rendering: pixelated;
+}
+
+/* Hero CTA layout (från index, centraliserad) */
+.heroCtas{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.heroCtas .btn{ min-width: 180px; }
+@media (max-width: 560px){
+  .heroCtas .btn{ width: 100%; min-width: unset; }
 }
 
 /* Footer */
