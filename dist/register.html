@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Skapa verifierings-ID</title>
-  <meta name="description" content="Skapa ett verifierings-ID för en filversion. Filen lämnar aldrig din dator." />
+  <title>Proofy – Skapa Verifierings-ID</title>
+  <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 </head>
@@ -34,7 +34,7 @@
 
       <div class="navActions">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
-        <a class="btn soft" href="/verify.html">Verifiera underlag</a>
+        <a class="btn soft" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
 
@@ -44,123 +44,117 @@
 
 <main id="main">
   <div class="wrap">
+    <div class="badge">För redovisningsbyråer · revision · granskning</div>
 
-    <div class="badge">Registrering · revision · granskning</div>
-
-    <h1 class="pageTitle">Skapa verifierings-ID</h1>
+    <h1 class="pageTitle">Skapa Verifierings-ID</h1>
 
     <p class="lead">
-      Skapa ett verifierings-ID för den filversion som ska vara <b>referens</b> i ärendet.
-      Filen lämnar aldrig din dator. Proofy lagrar inte dokument.
+      Skapa ett Verifierings-ID för den filversion som ska vara
+      <b>referens</b> i ärendet. Filen lämnar aldrig din dator.
     </p>
 
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <!-- VÄNSTER -->
-        <section aria-label="Registrering av fil">
-          <div style="font-weight:950;font-size:16px;">1. Välj referensfil</div>
+        <!-- LEFT -->
+        <section aria-label="Skapa via fil">
+          <div style="font-weight:950; font-size:16px;">Välj referensfil</div>
+          <p class="meta" style="margin-top:8px">
+            Välj den filversion som ska gälla som referens.
+            Du får Verifierings-ID, delbar länk och QR-kod.
+          </p>
 
-          <input id="fileInput" type="file" style="margin-top:8px" />
-          <div id="dropZone" class="drop" style="margin-top:10px">
-            Dra & släpp fil här
-          </div>
+          <input id="fileInput" type="file" />
+          <div id="dropZone" class="drop" style="margin-top:10px">Dra & släpp fil här</div>
 
-          <div id="fileInfo" class="meta" style="margin-top:8px">
-            Ingen fil vald.
-          </div>
+          <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
 
-          <div class="actions" style="margin-top:14px">
-            <button class="btn primary" id="createBtn" disabled>
-              Skapa & registrera
-            </button>
-
-            <button class="btn" id="copyIdBtn" disabled>
-              Kopiera ID
-            </button>
-
-            <button class="btn" id="copyLinkBtn" disabled>
-              Kopiera länk
-            </button>
-
-            <a
-              class="btn soft"
-              id="receiptBtn"
-              href="#"
-              target="_blank"
-              rel="noopener"
-              style="display:none;"
-            >
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" id="createBtn" disabled>Skapa & registrera</button>
+            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
+            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
+            <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">
               Öppna certifikat
             </a>
-
             <span id="statusPill" class="pill">Välj en fil</span>
           </div>
 
-          <div id="localIdBox" style="display:none;margin-top:12px;">
-            <div class="meta">Verifierings-ID (spara i ärendet):</div>
-            <pre class="mono" id="localIdOut">—</pre>
+          <div id="localIdBox" style="display:none;margin-top:12px">
+            <div class="meta">Verifierings-ID (för notering i ärendet):</div>
+            <div id="localIdOut" class="mono">—</div>
           </div>
 
-          <p class="small" style="margin-top:10px;">
-            Alla filtyper stöds (PDF, Excel, bilder, ZIP).  
-            Minsta ändring ger ett nytt verifierings-ID.
-          </p>
+          <div class="small" style="margin-top:10px">
+            Alla filtyper stöds (PDF, Excel, bilder, ZIP).
+            <br />
+            <b>Obs:</b> Ny export eller omskanning räknas som ny filversion.
+          </div>
         </section>
 
-        <!-- HÖGER -->
+        <!-- RIGHT -->
         <section aria-label="Resultat">
-          <div style="font-weight:950;font-size:16px;">Resultat</div>
+          <div style="font-weight:950; font-size:16px;">Resultat</div>
           <div class="hr"></div>
 
           <div class="meta">Verifierings-ID</div>
-          <pre class="mono" id="idOut">—</pre>
+          <div id="idOut" class="mono" style="margin-top:8px">—</div>
 
-          <div id="resultBox" style="display:none;margin-top:12px;">
-            <div id="headline" style="font-size:18px;margin-bottom:10px;"></div>
+          <div class="hr"></div>
+
+          <div id="resultBox" style="display:none;">
+            <div id="headline" style="font-size:18px; margin-bottom:10px;"></div>
 
             <div class="meta">Delbar verifieringslänk</div>
-            <pre class="mono" id="linkOut">—</pre>
+            <div id="linkOut" class="mono" style="margin-top:8px">—</div>
 
-            <div class="qrWrap" style="margin-top:12px;">
+            <div class="qrWrap" style="margin-top:12px">
               <div>
-                <div class="meta" style="margin-bottom:6px;">QR-kod</div>
-                <div id="qrBox" class="qrBox"></div>
+                <div class="meta" style="margin-bottom:8px">QR-kod</div>
+                <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
               </div>
 
-              <div style="min-width:240px;flex:1;">
+              <div style="min-width:240px; flex:1">
                 <div class="meta">Registreringstid</div>
-                <pre class="mono" id="timeOut">—</pre>
+                <div id="timeOut" class="mono" style="margin-top:8px">—</div>
 
-                <div class="meta">Referens</div>
-                <pre class="mono" id="txOut">—</pre>
+                <div class="meta" style="margin-top:10px;">Registrerad av</div>
+                <div id="submitterOut" class="mono" style="margin-top:8px">—</div>
 
-                <p class="small" style="margin-top:8px;">
-                  För revision räcker normalt: verifierings-ID + datum i ärendet.
-                </p>
+                <div class="meta" style="margin-top:10px;">Referens</div>
+                <div id="txOut" class="mono" style="margin-top:8px">—</div>
+
+                <div class="small" style="margin-top:10px">
+                  Spara ID i ärendet. Dela länken vid behov av granskning.
+                </div>
               </div>
             </div>
           </div>
 
           <div id="errorBox" style="display:none;">
-            <div class="err">Registrering misslyckades</div>
-            <pre class="mono" id="errorMsg"></pre>
+            <div class="err">Tillfälligt tekniskt problem</div>
+            <div id="errorMsg" class="mono" style="margin-top:8px"></div>
           </div>
         </section>
 
       </div>
     </div>
 
-    <p class="meta" style="margin-top:14px;">
-      Proofy tillhandahåller teknisk verifiering – inte juridisk rådgivning.
+    <p class="meta" style="margin-top:14px">
+      Proofy lagrar inte dokument. Verifiering bygger på jämförelse av filversioner.
     </p>
-
   </div>
 </main>
 
-<script src="/qr.min.js?v=2025-12-20"></script>
-<script src="/chat-widget.js?v=2025-01" defer></script>
+<!-- QR lib -->
+<script
+  src="/qr.min.js?v=2025-12-20"
+  onload="window.__proofyQrLibLoaded = true"
+  onerror="window.__proofyQrLibError = true"
+></script>
 
-<!-- JS för register.html är OFÖRÄNDRAD och antas redan ligga korrekt -->
+<!-- DIN BEFINTLIGA JS – OÄNDRAD -->
+<script src="/assets/register.js?v=2025-12-20" defer></script>
+
+<script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
