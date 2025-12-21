@@ -6,7 +6,7 @@
   <title>Proofy – Verifiera underlag</title>
   <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-21" />
 </head>
 
 <body>
@@ -154,7 +154,7 @@
   let currentFile = null;
 
   function isValidHash(h){
-    return /^0x[0-9a-fA-F]{64}$/.test(h || "");
+    return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
   }
 
   function setStatus(text){
@@ -178,16 +178,32 @@
   }
 
   function updateState(){
-    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value.trim()));
+    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value));
   }
 
-  // ✅ Prefill from URL: support ?id= (standard) + legacy ?hash=
-  const params = new URLSearchParams(location.search);
-  const urlId = params.get("id");
-  const urlHash = params.get("hash");
-  const initial = isValidHash(urlId) ? urlId : (isValidHash(urlHash) ? urlHash : null);
-  if (initial) {
-    hashInput.value = initial;
+  // ✅ Prefill from URL: support both ?id= and legacy ?hash=
+  function getIdFromUrl(){
+    const url = new URL(location.href);
+    return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
+  }
+
+  // ✅ Normalize URL to ?id= if we have a valid id (keep things consistent)
+  function setIdInUrl(id){
+    const url = new URL(location.href);
+    if (id) {
+      url.searchParams.set("id", id);
+      url.searchParams.delete("hash");
+    } else {
+      url.searchParams.delete("id");
+      url.searchParams.delete("hash");
+    }
+    history.replaceState({}, "", url.toString());
+  }
+
+  const urlId = getIdFromUrl();
+  if (isValidHash(urlId)) {
+    hashInput.value = urlId;
+    setIdInUrl(urlId);
   }
 
   hashInput.addEventListener("input", updateState);
@@ -208,6 +224,9 @@
       const refHash = hashInput.value.trim();
       if (!isValidHash(refHash)) throw new Error("Ogiltigt Verifierings-ID.");
       if (!currentFile) throw new Error("Välj en fil att verifiera.");
+
+      // Keep URL consistent if user pasted a valid ID
+      setIdInUrl(refHash);
 
       const fileHash = await sha256Hex(currentFile);
 
@@ -233,7 +252,7 @@
       setStatus("Klar");
     } catch (e){
       errorBox.style.display = "block";
-      errorMsg.textContent = e.message || "Tekniskt fel.";
+      errorMsg.textContent = e?.message || "Tekniskt fel.";
       setStatus("Fel");
     }
   });
