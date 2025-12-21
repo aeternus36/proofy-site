@@ -243,11 +243,9 @@
 
 <main id="main">
   <div class="certWrap">
-
     <div class="badge" style="margin-top:18px;">Intyg · spårbarhet · byrå &amp; granskning</div>
 
     <section class="certTop" aria-label="Verifieringsintyg">
-
       <div class="certHead">
         <div style="flex:1;min-width:260px;">
           <h1 class="certTitle">Verifieringsintyg</h1>
@@ -302,7 +300,7 @@
           <b>Öppna intyget</b><br />
           Klistra in Verifierings-ID eller öppna via länk:
           <span class="mono">/certificate.html?id=0x…</span>
-          <span class="meta"> (även <span class="mono">?hash=0x…</span> fungerar)</span>
+          <span class="meta"> (även legacy <span class="mono">?hash=0x…</span> fungerar)</span>
         </div>
         <div class="openRow">
           <input id="hashInput" type="text" placeholder="Verifierings-ID (0x…)" />
@@ -369,7 +367,7 @@
             <div class="qrRow">
               <div>
                 <div class="label" style="margin-top:12px;">QR-KOD</div>
-                <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
+                <div id="qrBox" class="qrBox" aria-label="QR-kod">—</div>
                 <div id="qrStatus" class="meta" style="margin-top:8px;">—</div>
                 <div class="meta" style="margin-top:8px;">
                   QR-koden leder till verifieringssidan för ID:t.
@@ -402,46 +400,46 @@
           <summary>Visa fullständig text</summary>
 
           <p>
-            <b>1) Utfärdare och kontakt</b><br/>
+            <b>1) Utfärdare och kontakt</b><br />
             Intyget tillhandahålls via tjänsten <b>proofy.se</b> (Proofy). Kontakt: <b>kontakt@proofy.se</b>.
           </p>
 
           <p>
-            <b>2) Vad intyget visar</b><br/>
+            <b>2) Vad intyget visar</b><br />
             Intyget visar utfallet av en kontroll av ett Verifierings-ID och (om registrerad) registreringstid.
           </p>
 
           <p>
-            <b>3) Vad intyget inte visar</b><br/>
+            <b>3) Vad intyget inte visar</b><br />
             Intyget visar inte vem som skapat dokumentet, vem som haft tillgång till det, om behörig person godkänt det,
             eller om filen hanterats/ändrats efter registrering. Intyget är inte e-signering, inte arkivering och inte ett avtal i sig.
           </p>
 
           <p>
-            <b>4) Sekretess och personuppgifter</b><br/>
+            <b>4) Sekretess och personuppgifter</b><br />
             Proofy lagrar inte dokumentinnehåll i samband med intyget. Intyget kan innehålla Verifierings-ID, tider och delbara länkar.
             Hantering av personuppgifter regleras i tillämplig integritetspolicy och villkor.
           </p>
 
           <p>
-            <b>5) Användning i byrå-/revisionssammanhang</b><br/>
+            <b>5) Användning i byrå-/revisionssammanhang</b><br />
             Intyget är avsett som stöd för spårbarhet och dokumentation. Professionell bedömning, övriga kontrollåtgärder
             och krav på dokumentation kvarstår.
           </p>
 
           <p>
-            <b>6) Drift, fel och tillgänglighet</b><br/>
+            <b>6) Drift, fel och tillgänglighet</b><br />
             Tillfälliga driftstörningar kan påverka möjligheten att genomföra kontrollen vid ett visst tillfälle.
             Vid avvikelse rekommenderas att kontrollen görs om.
           </p>
 
           <p>
-            <b>7) Ansvar</b><br/>
+            <b>7) Ansvar</b><br />
             Intyget lämnas som tekniskt underlag. Eventuellt ansvar och ansvarsbegränsningar regleras i Proofys villkor.
           </p>
 
           <p>
-            <b>8) Tillämplig lag</b><br/>
+            <b>8) Tillämplig lag</b><br />
             Svensk lag ska tillämpas i den mån annat inte följer av tvingande regler. Tvist hanteras enligt Proofys villkor.
           </p>
 
@@ -565,19 +563,21 @@
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h.trim());
   }
 
-  // Stöd både ?id= (standard) och legacy ?hash=
+  // ✅ New: ?id= (legacy ?hash= stöds)
   function getIdFromUrl(){
     const url = new URL(location.href);
     return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
   }
 
-  // Intyg-ID: stöd ?cert= i URL
+  // Intyg-ID: stöd ?cert= i URL (för att kunna hänvisa exakt till ett intyg)
   function getCertIdFromUrl(){
     const url = new URL(location.href);
     return (url.searchParams.get("cert") || "").trim();
   }
 
+  // Skapa "cert-" ID (kort och läsbart) lokalt
   function makeCertId(){
+    // cert-YYYYMMDD-HHMMSS-xxxxxx
     const d = new Date();
     const pad = (n) => String(n).padStart(2,"0");
     const y = d.getFullYear();
@@ -590,6 +590,7 @@
     return `cert-${y}${m}${day}-${hh}${mm}${ss}-${rnd}`;
   }
 
+  // Skriv tillbaka som ?id= (och behåll cert om finns)
   function setIdInUrl(id, certId){
     const url = new URL(location.href);
     if (id) {
@@ -607,6 +608,7 @@
     const base = `${location.origin}/certificate.html?id=${encodeURIComponent(id)}`;
     return certId ? `${base}&cert=${encodeURIComponent(certId)}` : base;
   }
+
   function buildVerifyLink(id){
     return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
   }
@@ -626,6 +628,7 @@
       return "—";
     }
   }
+
   function fmtUtc(ts){
     try{
       return isoUtcNoMs(new Date(Number(ts) * 1000));
@@ -648,7 +651,7 @@
     certLinkOut.textContent = "—";
     verifyLinkOut.textContent = "—";
     interpretation.textContent = "—";
-    if (qrBox) qrBox.innerHTML = "";
+    if (qrBox) qrBox.innerHTML = "—";
     if (qrStatus) qrStatus.textContent = "—";
     btnVerify.href = "/verify.html";
     setBusy(false);
@@ -699,7 +702,6 @@
     qrStatus.textContent = "";
   }
 
-  // ✅ QR-stil matchar register-sidan (dark theme)
   function doRender(text){
     qrBox.innerHTML = "";
     const correctLevel =
@@ -707,14 +709,7 @@
         ? window.QRCodeCorrectLevel.M
         : undefined;
 
-    new QRCode(qrBox, {
-      text,
-      width:150,
-      height:150,
-      colorDark: "#0b1220",
-      colorLight: "#eaf0ff",
-      correctLevel
-    });
+    new QRCode(qrBox, { text, width:150, height:150, correctLevel });
   }
 
   async function copyText(btn, text){
@@ -732,6 +727,7 @@
     }
   }
 
+  // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
   async function fetchVerify(id){
     try{
       const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}`, { method:"GET" });
@@ -749,7 +745,7 @@
     return { ok:true, data:j2 };
   }
 
-  function setInterpretationForState(state, hasTs){
+  function setInterpretationForState(state){
     if (state === "registered") {
       return "Resultatet betyder att Verifierings-ID:t har en registrering. Registreringstiden anger när referensen registrerades i Proofy.";
     }
@@ -762,7 +758,7 @@
     if (state === "technical") {
       return "Kontrollen kunde inte genomföras på grund av ett tillfälligt tekniskt problem. Försök igen senare eller kör om kontrollen.";
     }
-    return hasTs ? "Registrering hittades." : "Ingen registrering hittades.";
+    return "Kontrollen genomfördes.";
   }
 
   async function loadCertificate(id, certId){
@@ -795,6 +791,7 @@
     btnVerify.href = verifyLink;
     renderQr(verifyLink);
 
+    // Copy state update (buttons)
     setBusy(busy);
 
     if(!isBytes32Hex(id)){
@@ -802,7 +799,7 @@
       resultOut.textContent = "Ogiltigt format (kan inte kontrollera)";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
-      interpretation.textContent = setInterpretationForState("invalid", false);
+      interpretation.textContent = setInterpretationForState("invalid");
       setBusy(false);
       return;
     }
@@ -818,7 +815,7 @@
         resultOut.textContent = "Kontroll kunde inte genomföras";
         tsSeOut.textContent = "—";
         tsUtcOut.textContent = "—";
-        interpretation.textContent = setInterpretationForState("technical", false);
+        interpretation.textContent = setInterpretationForState("technical");
         showProblem(res.error || "Okänt fel.");
         setBusy(false);
         return;
@@ -833,13 +830,13 @@
         resultOut.textContent = "Registrerad (registrering hittades)";
         tsSeOut.textContent = ts ? fmtSe(ts) : "—";
         tsUtcOut.textContent = ts ? fmtUtc(ts) : "—";
-        interpretation.textContent = setInterpretationForState("registered", !!ts);
+        interpretation.textContent = setInterpretationForState("registered");
       } else {
         setStatus("EJ REGISTRERAD", "err");
         resultOut.textContent = "Inte registrerad (ingen registrering hittades)";
         tsSeOut.textContent = "—";
         tsUtcOut.textContent = "—";
-        interpretation.textContent = setInterpretationForState("not_registered", false);
+        interpretation.textContent = setInterpretationForState("not_registered");
       }
 
       setBusy(false);
@@ -849,12 +846,13 @@
       resultOut.textContent = "Kontroll kunde inte genomföras";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
-      interpretation.textContent = setInterpretationForState("technical", false);
+      interpretation.textContent = setInterpretationForState("technical");
       showProblem(String(e?.message || e));
       setBusy(false);
     }
   }
 
+  // Actions
   btnPrint.addEventListener("click", () => window.print());
   btnRefresh.addEventListener("click", () => {
     const id = getIdFromUrl();
@@ -864,10 +862,12 @@
     loadCertificate(id, certId);
   });
 
+  // Copy buttons
   btnCopyId.addEventListener("click", () => copyText(btnCopyId, hashOut.textContent));
   btnCopyCert.addEventListener("click", () => copyText(btnCopyCert, certLinkOut.textContent));
   btnCopyVerify.addEventListener("click", () => copyText(btnCopyVerify, verifyLinkOut.textContent));
 
+  // Open box
   btnOpen?.addEventListener("click", () => {
     const id = (hashInput.value || "").trim();
     if (!id){
@@ -894,6 +894,7 @@
     }
   });
 
+  // Start: sätt certId om saknas
   const initialId = getIdFromUrl();
   const initialCert = getCertIdFromUrl() || makeCertId();
 
