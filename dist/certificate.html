@@ -76,7 +76,8 @@
       padding: 16px;
     }
 
-    .label{
+    /* Lokalt label/value för cert-layout (kan samexistera med global CSS) */
+    .cLabel{
       color: rgba(169,183,211,.92);
       font-size: 12.5px;
       font-weight: 900;
@@ -84,17 +85,11 @@
       margin-bottom: 6px;
       text-transform: uppercase;
     }
-
-    .value{
+    .cValue{
       color: rgba(234,240,255,.92);
       line-height: 1.55;
       white-space: pre-wrap;
       word-break: break-word;
-    }
-
-    .mono{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      word-break: break-all;
     }
 
     .hr{ height:1px; background: rgba(255,255,255,.12); margin: 14px 0; }
@@ -188,10 +183,7 @@
       flex-wrap:wrap;
       margin-top:6px;
     }
-    .copyLine .mono{
-      flex:1;
-      min-width:240px;
-    }
+    .copyLine .mono{ flex:1; min-width:240px; }
     .copyBtn{ min-width: 120px; }
 
     details{
@@ -211,8 +203,8 @@
       .certTop{ box-shadow:none !important; background:#fff !important; border:1px solid #ddd !important; }
       .panel, .note, details{ background:#fff !important; border:1px solid #ddd !important; }
       .chip{ background:#fff !important; border:1px solid #ddd !important; }
-      .label{ color:#444 !important; }
-      .value{ color:#000 !important; }
+      .cLabel{ color:#444 !important; }
+      .cValue{ color:#000 !important; }
       a{ color:#000 !important; text-decoration:none !important; }
     }
   </style>
@@ -243,9 +235,11 @@
 
 <main id="main">
   <div class="certWrap">
+
     <div class="badge" style="margin-top:18px;">Intyg · spårbarhet · byrå &amp; granskning</div>
 
     <section class="certTop" aria-label="Verifieringsintyg">
+
       <div class="certHead">
         <div style="flex:1;min-width:260px;">
           <h1 class="certTitle">Verifieringsintyg</h1>
@@ -268,8 +262,8 @@
 
       <div class="topMetaGrid" aria-label="Intygsmetadata">
         <div class="panel">
-          <div class="label">UTFÄRDAD AV</div>
-          <div class="value">
+          <div class="cLabel">UTFÄRDAD AV</div>
+          <div class="cValue">
             Proofy (proofy.se)
             <div class="meta" style="margin-top:8px;">
               Kontakt: <b>kontakt@proofy.se</b>
@@ -278,8 +272,8 @@
         </div>
 
         <div class="panel">
-          <div class="label">INTYG-ID (KONTROLL-ID)</div>
-          <div id="certIdOut" class="value mono">—</div>
+          <div class="cLabel">INTYG-ID (KONTROLL-ID)</div>
+          <div id="certIdOut" class="cValue mono">—</div>
           <div class="meta" style="margin-top:8px;">
             Unikt ID för detta intyg (genereras lokalt). Bra för hänvisning i ärendeanteckning.
           </div>
@@ -300,7 +294,7 @@
           <b>Öppna intyget</b><br />
           Klistra in Verifierings-ID eller öppna via länk:
           <span class="mono">/certificate.html?id=0x…</span>
-          <span class="meta"> (även legacy <span class="mono">?hash=0x…</span> fungerar)</span>
+          <span class="meta"> (även <span class="mono">?hash=0x…</span> fungerar)</span>
         </div>
         <div class="openRow">
           <input id="hashInput" type="text" placeholder="Verifierings-ID (0x…)" />
@@ -315,9 +309,9 @@
 
       <div class="grid">
         <div class="panel">
-          <div class="label">VERIFIERINGS-ID</div>
+          <div class="cLabel">VERIFIERINGS-ID</div>
           <div class="copyLine">
-            <div id="hashOut" class="value mono">—</div>
+            <div id="hashOut" class="cValue mono">—</div>
             <button class="btn soft copyBtn" id="btnCopyId" type="button" disabled>Kopiera</button>
           </div>
           <div class="meta" style="margin-top:8px;">
@@ -326,8 +320,8 @@
         </div>
 
         <div class="panel">
-          <div class="label">KONTROLL GENOMFÖRD</div>
-          <div id="checkedOut" class="value">—</div>
+          <div class="cLabel">KONTROLL GENOMFÖRD</div>
+          <div id="checkedOut" class="cValue">—</div>
           <div class="meta" style="margin-top:8px;">
             Tidpunkt när denna kontroll kördes (uppdatering av intyget).
           </div>
@@ -336,46 +330,47 @@
 
       <div class="grid">
         <div class="panel">
-          <div class="label">RESULTAT</div>
-          <div id="resultOut" class="value">—</div>
+          <div class="cLabel">RESULTAT</div>
+          <div id="resultOut" class="cValue">—</div>
 
           <div class="hr"></div>
 
-          <div class="label">REGISTRERINGSTID (SVERIGE)</div>
-          <div id="tsSeOut" class="value">—</div>
+          <div class="cLabel">REGISTRERINGSTID (SVERIGE)</div>
+          <div id="tsSeOut" class="cValue">—</div>
 
-          <div class="label" style="margin-top:10px;">REGISTRERINGSTID (UTC)</div>
-          <div id="tsUtcOut" class="value">—</div>
+          <div class="cLabel" style="margin-top:10px;">REGISTRERINGSTID (UTC)</div>
+          <div id="tsUtcOut" class="cValue">—</div>
         </div>
 
         <div class="panel">
-          <div class="label">LÄNKAR</div>
+          <div class="cLabel">LÄNKAR</div>
 
-          <div class="label" style="margin-top:0;">Länk till intyg</div>
+          <div class="cLabel" style="margin-top:0;">Länk till intyg</div>
           <div class="copyLine">
-            <div id="certLinkOut" class="value mono">—</div>
+            <div id="certLinkOut" class="cValue mono">—</div>
             <button class="btn soft copyBtn" id="btnCopyCert" type="button" disabled>Kopiera</button>
           </div>
 
-          <div class="label" style="margin-top:10px;">Verifieringslänk</div>
+          <div class="cLabel" style="margin-top:10px;">Verifieringslänk</div>
           <div class="copyLine">
-            <div id="verifyLinkOut" class="value mono">—</div>
+            <div id="verifyLinkOut" class="cValue mono">—</div>
             <button class="btn soft copyBtn" id="btnCopyVerify" type="button" disabled>Kopiera</button>
           </div>
 
           <div id="qrWrap">
             <div class="qrRow">
               <div>
-                <div class="label" style="margin-top:12px;">QR-KOD</div>
+                <div class="cLabel" style="margin-top:12px;">QR-KOD</div>
                 <div id="qrBox" class="qrBox" aria-label="QR-kod">—</div>
                 <div id="qrStatus" class="meta" style="margin-top:8px;">—</div>
                 <div class="meta" style="margin-top:8px;">
                   QR-koden leder till verifieringssidan för ID:t.
                 </div>
               </div>
+
               <div style="flex:1; min-width:240px;">
                 <div class="note" style="margin-top:12px;">
-                  <b>Tips för byrå:</b> Spara Verifierings-ID + Intyg-ID i ärendet. Dela intygslänken för dokumentation och verifieringslänken/QR för snabb kontroll.
+                  <b>Tips:</b> Spara Verifierings-ID + Intyg-ID i ärendet. Dela intygslänken för dokumentation och verifieringslänken/QR för snabb kontroll.
                 </div>
               </div>
             </div>
@@ -385,14 +380,14 @@
       </div>
 
       <div class="panel" style="margin-top:12px;">
-        <div class="label">TOLKNING</div>
-        <div id="interpretation" class="value">—</div>
+        <div class="cLabel">TOLKNING</div>
+        <div id="interpretation" class="cValue">—</div>
       </div>
 
       <div class="panel" style="margin-top:12px;">
-        <div class="label">JURIDISK INFORMATION</div>
-        <div class="value" style="color: rgba(169,183,211,.95);">
-          Detta intyg är ett tekniskt underlag för dokumentation och spårbarhet. Det ersätter inte juridisk rådgivning,
+        <div class="cLabel">JURIDISK INFORMATION</div>
+        <div class="cValue" style="color: rgba(169,183,211,.95);">
+          Detta intyg är ett tekniskt underlag för dokumentation och spårbarhet. Det ersätter inte juridisk rådgivning
           och ersätter inte professionell bedömning i granskning/revision. Bevisvärde bedöms alltid i sitt sammanhang.
         </div>
 
@@ -400,46 +395,46 @@
           <summary>Visa fullständig text</summary>
 
           <p>
-            <b>1) Utfärdare och kontakt</b><br />
+            <b>1) Utfärdare och kontakt</b><br/>
             Intyget tillhandahålls via tjänsten <b>proofy.se</b> (Proofy). Kontakt: <b>kontakt@proofy.se</b>.
           </p>
 
           <p>
-            <b>2) Vad intyget visar</b><br />
+            <b>2) Vad intyget visar</b><br/>
             Intyget visar utfallet av en kontroll av ett Verifierings-ID och (om registrerad) registreringstid.
           </p>
 
           <p>
-            <b>3) Vad intyget inte visar</b><br />
+            <b>3) Vad intyget inte visar</b><br/>
             Intyget visar inte vem som skapat dokumentet, vem som haft tillgång till det, om behörig person godkänt det,
             eller om filen hanterats/ändrats efter registrering. Intyget är inte e-signering, inte arkivering och inte ett avtal i sig.
           </p>
 
           <p>
-            <b>4) Sekretess och personuppgifter</b><br />
+            <b>4) Sekretess och personuppgifter</b><br/>
             Proofy lagrar inte dokumentinnehåll i samband med intyget. Intyget kan innehålla Verifierings-ID, tider och delbara länkar.
             Hantering av personuppgifter regleras i tillämplig integritetspolicy och villkor.
           </p>
 
           <p>
-            <b>5) Användning i byrå-/revisionssammanhang</b><br />
+            <b>5) Användning i byrå-/revisionssammanhang</b><br/>
             Intyget är avsett som stöd för spårbarhet och dokumentation. Professionell bedömning, övriga kontrollåtgärder
             och krav på dokumentation kvarstår.
           </p>
 
           <p>
-            <b>6) Drift, fel och tillgänglighet</b><br />
+            <b>6) Drift, fel och tillgänglighet</b><br/>
             Tillfälliga driftstörningar kan påverka möjligheten att genomföra kontrollen vid ett visst tillfälle.
             Vid avvikelse rekommenderas att kontrollen görs om.
           </p>
 
           <p>
-            <b>7) Ansvar</b><br />
+            <b>7) Ansvar</b><br/>
             Intyget lämnas som tekniskt underlag. Eventuellt ansvar och ansvarsbegränsningar regleras i Proofys villkor.
           </p>
 
           <p>
-            <b>8) Tillämplig lag</b><br />
+            <b>8) Tillämplig lag</b><br/>
             Svensk lag ska tillämpas i den mån annat inte följer av tvingande regler. Tvist hanteras enligt Proofys villkor.
           </p>
 
@@ -485,7 +480,7 @@
 
 <!-- QR-bibliotek -->
 <script
-  src="/qr.min.js?v=2025-12-20"
+  src="/qr.min.js?v=2025-12-21"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"
 ></script>
@@ -563,21 +558,19 @@
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h.trim());
   }
 
-  // ✅ New: ?id= (legacy ?hash= stöds)
+  // Stöd både ?id= och legacy ?hash=
   function getIdFromUrl(){
     const url = new URL(location.href);
     return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
   }
 
-  // Intyg-ID: stöd ?cert= i URL (för att kunna hänvisa exakt till ett intyg)
+  // Intyg-ID: stöd ?cert= i URL
   function getCertIdFromUrl(){
     const url = new URL(location.href);
     return (url.searchParams.get("cert") || "").trim();
   }
 
-  // Skapa "cert-" ID (kort och läsbart) lokalt
   function makeCertId(){
-    // cert-YYYYMMDD-HHMMSS-xxxxxx
     const d = new Date();
     const pad = (n) => String(n).padStart(2,"0");
     const y = d.getFullYear();
@@ -590,7 +583,6 @@
     return `cert-${y}${m}${day}-${hh}${mm}${ss}-${rnd}`;
   }
 
-  // Skriv tillbaka som ?id= (och behåll cert om finns)
   function setIdInUrl(id, certId){
     const url = new URL(location.href);
     if (id) {
@@ -727,7 +719,6 @@
     }
   }
 
-  // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
   async function fetchVerify(id){
     try{
       const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}`, { method:"GET" });
@@ -758,7 +749,7 @@
     if (state === "technical") {
       return "Kontrollen kunde inte genomföras på grund av ett tillfälligt tekniskt problem. Försök igen senare eller kör om kontrollen.";
     }
-    return "Kontrollen genomfördes.";
+    return "—";
   }
 
   async function loadCertificate(id, certId){
@@ -772,7 +763,7 @@
     if(!id){
       resetView();
       openBox.style.display = "block";
-      setStatus("Saknar Verifierings-ID", "err");
+      setStatus("SAKNAR VERIFIERINGS-ID", "err");
       resultOut.textContent = "Kan inte kontrollera (saknar ID)";
       interpretation.textContent = "Ingen kontroll kunde göras eftersom Verifierings-ID saknas.";
       setBusy(false);
@@ -791,7 +782,6 @@
     btnVerify.href = verifyLink;
     renderQr(verifyLink);
 
-    // Copy state update (buttons)
     setBusy(busy);
 
     if(!isBytes32Hex(id)){
@@ -894,7 +884,7 @@
     }
   });
 
-  // Start: sätt certId om saknas
+  // Start
   const initialId = getIdFromUrl();
   const initialCert = getCertIdFromUrl() || makeCertId();
 
@@ -907,7 +897,7 @@
     resetView();
     setCheckedNow();
     openBox.style.display = "block";
-    setStatus("Saknar Verifierings-ID", "err");
+    setStatus("SAKNAR VERIFIERINGS-ID", "err");
     resultOut.textContent = "Kan inte kontrollera (saknar ID)";
     interpretation.textContent = "Ingen kontroll kunde göras eftersom Verifierings-ID saknas.";
     setBusy(false);
