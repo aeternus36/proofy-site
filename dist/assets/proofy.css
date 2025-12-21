@@ -170,6 +170,20 @@ header{
 }
 .btn.ghost:hover{ background: rgba(255,255,255,.06); }
 
+/* =========================
+   HEADER-KNAPPAR (OBLIGATORISKT)
+   Större än övriga knappar, konsekvent på alla sidor
+   ========================= */
+header .btn{
+  padding: 14px 20px;
+  font-size: 14.5px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+header .btn.primary{
+  padding: 14px 22px;
+}
+
 /* Accessibility focus (stabil) */
 @supports selector(:focus-visible){
   .btn:focus{ outline:none; }
