@@ -12,32 +12,25 @@
 <body>
 <a class="skip" href="#main">Hoppa till innehåll</a>
 
-<!-- ===================== -->
-<!-- GEMENSAM HEADER (A) -->
-<!-- ===================== -->
 <header>
   <div class="wrap">
     <div class="nav">
-
       <a class="brand" href="/" aria-label="Proofy">
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
 
-      <nav class="navLinks" aria-label="Huvudnavigation">
-        <a href="/#nytta">För byråer</a>
+      <nav class="navLinks" aria-label="Navigation">
+        <a href="/#forbyraer">För byråer</a>
         <a href="/#hur">Hur det fungerar</a>
         <a href="/#trygghet">Säkerhet</a>
-        <a href="/#faq">FAQ</a>
+        <a href="/#faq">Frågor &amp; svar</a>
         <a href="/#kontakt">Kontakt</a>
       </nav>
 
       <div class="navActions">
-        <a class="btn soft" href="/pilot.html">Starta pilot</a>
-        <a class="btn soft" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
-
     </div>
   </div>
 </header>
@@ -49,8 +42,8 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om en fil är <b>identisk</b> med den version som tidigare
-      registrerats. Filen lämnar aldrig din dator.
+      Kontrollera om en fil är <b>identisk</b> med den version som tidigare registrerats.
+      Filen lämnar aldrig din dator.
     </p>
 
     <div class="card content" style="margin-top:14px;">
@@ -73,7 +66,7 @@
           />
 
           <div class="small" style="margin-top:8px">
-            ID fylls automatiskt om sidan öppnas via verifieringslänk.
+            ID:t hämtas automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
           <div class="hr"></div>
@@ -104,8 +97,7 @@
             <pre class="mono" id="outFileHash">—</pre>
 
             <div class="small" style="margin-top:10px">
-              Match betyder att filen är <b>exakt samma version</b> som referensen.
-              Ingen tolkning av innehåll görs.
+              Match betyder att filen är <b>exakt samma version</b> (samma bytes) som den som registrerades.
             </div>
           </div>
 
@@ -119,14 +111,117 @@
     </div>
 
     <p class="meta" style="margin-top:14px">
-      Proofy avgör inte om innehållet är korrekt – endast om filen är oförändrad
-      jämfört med registrerad referens.
+      Proofy avgör inte om innehållet är korrekt – endast om filen är oförändrad jämfört med referensen.
     </p>
   </div>
 </main>
 
-<!-- DIN BEFINTLIGA JS – OÄNDRAD -->
-<script src="/assets/verify.js?v=2025-12-20" defer></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const hashInput = $("hashInput");
+  const fileInput = $("fileInput");
+  const fileInfo = $("fileInfo");
+  const verifyBtn = $("verifyBtn");
+  const statusPill = $("statusPill");
+
+  const resultBox = $("resultBox");
+  const resultHeadline = $("resultHeadline");
+  const outHash = $("outHash");
+  const outFileHash = $("outFileHash");
+
+  const errorBox = $("errorBox");
+  const errorMsg = $("errorMsg");
+
+  let currentFile = null;
+
+  function isValidHash(h){
+    return /^0x[0-9a-fA-F]{64}$/.test(h || "");
+  }
+
+  function setStatus(text){
+    statusPill.textContent = text;
+  }
+
+  function bytesToHex(bytes){
+    return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  async function sha256Hex(file){
+    const buf = await file.arrayBuffer();
+    const dig = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + bytesToHex(new Uint8Array(dig));
+  }
+
+  function resetUI(){
+    resultBox.style.display = "none";
+    errorBox.style.display = "none";
+    errorMsg.textContent = "";
+  }
+
+  function updateState(){
+    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value.trim()));
+  }
+
+  // Prefill from URL (?hash=)
+  const params = new URLSearchParams(location.search);
+  const urlHash = params.get("hash");
+  if (isValidHash(urlHash)) {
+    hashInput.value = urlHash;
+  }
+
+  hashInput.addEventListener("input", updateState);
+
+  fileInput.addEventListener("change", () => {
+    currentFile = fileInput.files?.[0] || null;
+    fileInfo.textContent = currentFile
+      ? `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
+      : "Ingen fil vald.";
+    updateState();
+  });
+
+  verifyBtn.addEventListener("click", async () => {
+    resetUI();
+    setStatus("Verifierar…");
+
+    try{
+      const refHash = hashInput.value.trim();
+      if (!isValidHash(refHash)) throw new Error("Ogiltigt Verifierings-ID.");
+      if (!currentFile) throw new Error("Välj en fil att verifiera.");
+
+      const fileHash = await sha256Hex(currentFile);
+
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ hash: refHash, fileHash })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Verifiering misslyckades.");
+
+      resultBox.style.display = "block";
+      outHash.textContent = refHash;
+      outFileHash.textContent = fileHash;
+
+      if (data.match === true) {
+        resultHeadline.innerHTML = `<span class="ok">✅ Match</span>`;
+      } else {
+        resultHeadline.innerHTML = `<span class="err">❌ Ingen match</span>`;
+      }
+
+      setStatus("Klar");
+    } catch (e){
+      errorBox.style.display = "block";
+      errorMsg.textContent = e.message || "Tekniskt fel.";
+      setStatus("Fel");
+    }
+  });
+
+  setStatus("Väntar");
+})();
+</script>
 
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
