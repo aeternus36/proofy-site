@@ -32,7 +32,6 @@ body{
 a{ color:inherit; }
 .wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
 
-/* Skip link */
 .skip{
   position:absolute;
   left:-9999px;
@@ -45,8 +44,7 @@ a{ color:inherit; }
 }
 .skip:focus{ left:10px; }
 
-/* ================= HEADER ================= */
-
+/* Header */
 header{
   position: sticky;
   top:0;
@@ -56,13 +54,19 @@ header{
   border-bottom: 1px solid var(--border);
 }
 
+/* ✅ Robust header layout: desktop = 1 rad, mobil = 2 rader (actions på egen rad) */
 .nav{
-  display:flex;
+  display:grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "brand links actions";
   align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  padding: 14px 0;
+  gap:12px;
+  padding: 12px 0;
 }
+
+.brand{ grid-area: brand; }
+.navLinks{ grid-area: links; }
+.navActions{ grid-area: actions; }
 
 .brand{
   display:flex;
@@ -90,10 +94,11 @@ header{
   border: 1px solid rgba(255,255,255,.20);
 }
 
-/* Desktop nav links */
+/* Nav links (desktop) */
 .navLinks{
   display:flex;
   align-items:center;
+  justify-content:center;
   gap:6px;
   padding: 6px;
   border: 1px solid rgba(255,255,255,.10);
@@ -102,41 +107,44 @@ header{
 }
 .navLinks a{
   text-decoration:none;
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-radius: 999px;
   color: rgba(169,183,211,.95);
   font-weight: 850;
-  font-size: 14px;
+  font-size: 13.5px;
+  line-height: 1;
+  white-space: nowrap;
 }
 .navLinks a:hover{
   background: rgba(255,255,255,.06);
   color: var(--text);
 }
 
-/* Header actions */
+/* Nav actions */
 .navActions{
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:10px;
   flex-wrap:nowrap;
+  justify-content:flex-end;
 }
 
-/* ================= BUTTONS ================= */
-
+/* Buttons (✅ större + touchvänliga) */
 .btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
   gap:10px;
-  padding: 14px 20px;          /* större baseline */
-  border-radius: 16px;
+  padding: 14px 18px;            /* ✅ större */
+  border-radius: 16px;            /* ✅ lite större radie */
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
   color: inherit;
   text-decoration:none;
   font-weight: 900;
-  font-size: 14.5px;
-  line-height: 1.1;
+  font-size: 14.5px;              /* ✅ större text */
+  line-height: 1;
+  min-height: 46px;               /* ✅ stabil höjd i header */
   transition: transform .08s ease, background .15s ease, border-color .15s ease;
   white-space: nowrap;
   cursor:pointer;
@@ -164,62 +172,96 @@ header{
 }
 .btn.ghost:hover{ background: rgba(255,255,255,.06); }
 
-/* ================= MOBILE HEADER FIX ================= */
-/* Detta är den kritiska delen som löser ditt problem */
-
-@media (max-width: 560px){
-
+/* ✅ Mobil: actions på egen rad och horisontellt scroll (snyggt istället för stapling) */
+@media (max-width: 920px){
   .nav{
-    display:grid;
     grid-template-columns: 1fr;
-    gap:10px;
-    padding: 12px 0;
+    grid-template-areas:
+      "brand"
+      "actions";
+    justify-items: start;
+    gap: 10px;
+    padding: 12px 0 12px;
   }
+  .navLinks{ display:none; }
 
-  .brand{
-    justify-self:start;
-  }
-
-  /* dölj desktop-menyer */
-  .navLinks{
-    display:none !important;
-  }
-
-  /* EXAKT två stora knappar bredvid varandra */
   .navActions{
-    width:100%;
-    display:grid !important;
-    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    justify-content: flex-start;
     gap:10px;
-    align-items:stretch;
+    flex-wrap: nowrap;                /* ✅ inga rader */
+    overflow-x: auto;                 /* ✅ scroll istället för “under varandra” */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;            /* Firefox */
+    padding-bottom: 2px;
   }
+  .navActions::-webkit-scrollbar{ display:none; } /* Chrome/Safari */
 
+  /* gör knappar lite kompaktare på mobil men fortfarande stora */
   .navActions .btn{
-    width:100%;
-    padding:16px 12px;       /* stora touch targets */
-    font-size:15px;
-    border-radius:16px;
+    min-height: 44px;
+    padding: 13px 16px;
+    font-size: 14px;
+    border-radius: 16px;
   }
 }
 
-/* ================= CONTENT ================= */
+/* Extra liten mobil: lite tightare padding så fler knappar syns */
+@media (max-width: 420px){
+  .wrap{ padding: 0 16px; }
+  .navActions .btn{
+    padding: 12px 14px;
+    font-size: 13.7px;
+    min-height: 42px;
+  }
+}
 
+/* Accessibility focus (diskret och stabil) */
+@supports selector(:focus-visible){
+  .btn:focus{ outline:none; }
+  input[type="file"]:focus,
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  textarea:focus,
+  select:focus,
+  summary:focus{ outline:none; }
+
+  .btn:focus-visible,
+  input[type="file"]:focus-visible,
+  input[type="text"]:focus-visible,
+  input[type="email"]:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  summary:focus-visible{
+    box-shadow: 0 0 0 3px rgba(110,168,255,.35);
+  }
+}
+@supports not selector(:focus-visible){
+  .btn:focus,
+  input[type="file"]:focus,
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  textarea:focus,
+  select:focus,
+  summary:focus{
+    box-shadow: 0 0 0 3px rgba(110,168,255,.25);
+  }
+}
+
+/* Text blocks */
 main{ padding: 34px 0 42px; }
-
 .pageTitle{
   margin: 18px 0 10px;
   font-size: clamp(28px, 3.2vw, 52px);
   letter-spacing: -.5px;
   line-height:1.1;
 }
-
 .lead{
   color: rgba(234,240,255,.92);
   max-width: 90ch;
   margin: 0 0 18px;
   font-size: 16.8px;
 }
-
 .meta{ color: var(--muted); font-size: 13px; }
 .small{ font-size: 12.5px; color: rgba(169,183,211,.92); max-width: 92ch; }
 .muted{ color: var(--muted); }
@@ -228,7 +270,7 @@ main{ padding: 34px 0 42px; }
   display:inline-flex;
   align-items:center;
   gap:8px;
-  padding:8px 12px;
+  padding:8px 10px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.04);
@@ -236,19 +278,15 @@ main{ padding: 34px 0 42px; }
   color: rgba(234,240,255,.92);
 }
 
-/* Cards / layout */
-
+/* Cards / grids */
 .card{
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
   box-shadow: var(--shadow);
 }
-
 .content{ padding: 18px; }
 .hr{ height:1px; background: var(--border); margin: 14px 0; }
-
-/* grids */
 
 .grid2{
   display:grid;
@@ -268,14 +306,35 @@ main{ padding: 34px 0 42px; }
   .grid3{ grid-template-columns: 1fr; }
 }
 
-/* inputs */
+.tile{
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(11,18,32,.25);
+}
+.tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
 
-input[type="file"],
-input[type="text"],
-input[type="email"],
-textarea{
+/* Lists / details */
+.cleanList{
+  margin: 0;
+  padding-left: 18px;
+}
+.cleanList li{ color: rgba(169,183,211,.95); margin: 8px 0; }
+
+details{
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255,255,255,.04);
+}
+summary{ cursor:pointer; font-weight: 950; list-style: none; }
+summary::-webkit-details-marker{ display:none; }
+details p{ color: var(--muted); margin: 10px 0 0; }
+
+/* Inputs / forms */
+input[type="file"], input[type="text"], input[type="email"], textarea{
   width:100%;
-  padding:14px;
+  padding:12px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(11,18,32,.35);
@@ -283,26 +342,187 @@ textarea{
   outline:none;
   font: inherit;
 }
+textarea{ min-height: 120px; resize: vertical; }
 
-textarea{ min-height:120px; resize:vertical; }
+.label{
+  display:block;
+  margin: 0 0 6px;
+  color: rgba(234,240,255,.86);
+  font-size: 12.5px;
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+.req{ color: var(--err); font-weight: 900; }
 
-/* footer */
+.formGrid{
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  margin-top:12px;
+}
+.formActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top: 12px;
+}
+.help{
+  margin-top: 8px;
+  color: rgba(169,183,211,.95);
+  font-size: 12.5px;
+}
+.fineprint{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.10);
+  color: rgba(169,183,211,.9);
+  font-size: 12px;
+  line-height: 1.5;
+}
 
+/* Actions row */
+.actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+/* Status styles */
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 800;
+}
+.ok{ color: var(--ok); font-weight: 900; }
+.err{ color: var(--err); font-weight: 900; }
+
+/* Drag & drop */
+.drop{
+  border:2px dashed rgba(255,255,255,.18);
+  background: rgba(255,255,255,.03);
+  border-radius:16px;
+  padding:16px;
+  text-align:center;
+  user-select:none;
+}
+.drop.drag{
+  border-color: rgba(255,255,255,.35);
+  background: rgba(255,255,255,.05);
+}
+
+/* Mono */
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  word-break: break-all;
+}
+pre.mono{
+  margin:0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(11,18,32,.35);
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* Copy row (kodblock + kopiera) */
+.copyLine{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+  margin-top: 6px;
+}
+.copyLine > .mono,
+.copyLine > .value.mono,
+.copyLine > pre.mono{
+  flex: 1;
+  min-width: 240px;
+}
+.copyLine > .btn{
+  min-width: 120px;
+}
+@media (max-width:560px){
+  .copyLine > .btn{
+    width:100%;
+    min-width: unset;
+  }
+}
+
+/* QR */
+.qrWrap{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+.qrBox{
+  width: 170px;
+  height: 170px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(11,18,32,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.qrBox canvas, .qrBox img{
+  width: 150px !important;
+  height: 150px !important;
+  image-rendering: pixelated;
+}
+
+/* Footer */
 footer{
   padding: 26px 0 44px;
   color: var(--muted);
   border-top: 1px solid var(--border);
   background: rgba(11,18,32,.45);
 }
+.foot{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.links a{
+  color: rgba(169,183,211,.95);
+  text-decoration:none;
+  margin-right: 12px;
+}
+.links a:hover{ color: var(--text); }
 
-/* print */
-
+/* Print */
 @media print{
-  header, .navActions, .btn{ display:none !important; }
+  header{ position: static; backdrop-filter:none; background:#fff; border-bottom:none; }
   body{ background:#fff; color:#000; }
+  .btn, .actions, .note, .navLinks, .navActions{ display:none !important; }
   .card{
     box-shadow:none !important;
     background:#fff !important;
     border:1px solid #ddd !important;
   }
+  .badge, .pill{
+    border:1px solid #ddd !important;
+    background:#fff !important;
+    color:#000 !important;
+  }
+  .meta, .muted, .small{ color:#444 !important; }
+  pre.mono{
+    background:#fff !important;
+    color:#000 !important;
+    border:1px solid #ddd !important;
+  }
+  a{ color:#000 !important; text-decoration:none !important; }
 }
