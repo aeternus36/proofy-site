@@ -3,229 +3,96 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Skapa verifierings-ID</title>
+  <title>Proofy – Fastställ referens</title>
+  <meta name="description" content="Fastställ en referensfil och skapa ett verifierings-ID. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
-
-  <style>
-    :root{
-      --bg:#0b1220;--text:#eaf0ff;--muted:#a9b7d3;
-      --border:rgba(255,255,255,.12);--brand:#6ea8ff;--brand2:#7cf1c6;
-      --shadow:0 18px 60px rgba(0,0,0,.38);--r:18px;--max:1100px;
-      --ok:#7cf1c6; --err:#ff8aa1;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
-      color:var(--text);
-      background:
-        radial-gradient(900px 600px at 15% 10%, rgba(110,168,255,.18), transparent 60%),
-        radial-gradient(900px 600px at 80% 20%, rgba(124,241,198,.10), transparent 65%),
-        var(--bg);
-    }
-    .wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
-    header{border-bottom:1px solid var(--border);background:rgba(11,18,32,.75);position:sticky;top:0;z-index:10}
-    .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0;gap:12px}
-    .brand{display:flex;gap:10px;font-weight:900;text-decoration:none;align-items:center;color:inherit}
-    .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2))}
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;
-      padding:12px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.06);color:inherit;font-weight:900;cursor:pointer;
-      text-decoration:none;
-      transition: transform .08s ease, background .15s ease, border-color .15s ease;
-      white-space: nowrap;
-    }
-    .btn:hover{ background:rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
-    .btn:active{ transform: translateY(1px); }
-    .btn.primary{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#08101e}
-    .btn:disabled{opacity:.45;cursor:not-allowed}
-    .card{
-      border:1px solid var(--border);border-radius:var(--r);
-      background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
-      box-shadow:var(--shadow)
-    }
-    .content{padding:18px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all}
-    .meta{color:var(--muted);font-size:13px}
-    .ok{color:var(--ok);font-weight:900}
-    .err{color:var(--err);font-weight:900}
-    .hr{height:1px;background:rgba(255,255,255,.12);margin:14px 0}
-    input[type="file"], input[type="text"]{
-      width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
-      background:rgba(11,18,32,.35);color:var(--text);outline:none
-    }
-    .drop{
-      border:2px dashed rgba(255,255,255,.18);
-      background:rgba(255,255,255,.03);
-      border-radius:16px;
-      padding:16px;
-      text-align:center;
-      user-select:none;
-    }
-    .drop.drag{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.05)}
-    .small{font-size:12.5px;color:rgba(169,183,211,.92)}
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:8px 12px;border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.04);
-      font-size:13px;color:var(--muted);font-weight:800;
-    }
-
-    /* QR box */
-    .qrWrap{
-      display:flex;
-      gap:12px;
-      align-items:flex-start;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
-    .qrBox{
-      width:180px; height:180px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      overflow:hidden;
-    }
-    .qrBox canvas, .qrBox img{ width:180px; height:180px; display:block; }
-    .linkBox{
-      flex:1;
-      min-width: 240px;
-    }
-
-    details{
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 16px;
-      padding: 12px;
-      background: rgba(255,255,255,.04);
-    }
-    summary{ cursor:pointer; font-weight:950; list-style:none; }
-    summary::-webkit-details-marker{ display:none; }
-  </style>
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 </head>
 
 <body>
+<a class="skip" href="#main">Hoppa till innehåll</a>
+
 <header>
-  <div class="wrap nav">
-    <a class="brand" href="/"><span class="logo"></span>Proofy</a>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn" href="/verify.html">Verifiera underlag</a>
-      <a class="btn primary" href="/#kontakt">Boka demo</a>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/" aria-label="Proofy">
+        <span class="logo" aria-hidden="true"></span>
+        <span>Proofy</span>
+      </a>
+
+      <div class="navActions">
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn primary" href="/#kontakt">Boka demo</a>
+      </div>
     </div>
   </div>
 </header>
 
-<main>
+<main id="main">
   <div class="wrap">
-    <h1>Skapa verifierings-ID</h1>
-    <p class="meta">
-      Filen lämnar aldrig din dator. Proofy beräknar ett <b>digitalt fingeravtryck</b> (SHA-256) lokalt i webbläsaren
-      och skapar en <b>tidsstämplad verifieringspost</b> för den filversionen.
+    <div class="badge">För redovisningsbyråer · revision · granskning</div>
+
+    <h1 class="pageTitle">Fastställ referens</h1>
+
+    <p class="lead">
+      Välj den <b>filversion</b> som ska vara referens i ärendet.
+      Ett verifierings-ID skapas lokalt i webbläsaren. Filen lämnar aldrig din dator.
     </p>
 
-    <section class="card content">
-      <div class="grid">
+    <section class="card content" style="margin-top:14px; max-width:820px;">
+      
+      <!-- FILVAL -->
+      <div style="font-weight:950; font-size:16px;">Referensfil</div>
+      <p class="meta" style="margin-top:6px;">
+        Klicka eller dra in filen som ska gälla som referens.
+      </p>
 
-        <!-- LEFT: file register -->
-        <div>
-          <b>Välj fil</b>
-          <p class="meta" style="margin-top:8px">
-            Dra in en fil eller välj via knappen. Vi beräknar fingeravtrycket lokalt och skapar ett verifierings-ID.
-          </p>
+      <label id="dropZone" class="drop" for="fileInput" style="margin-top:10px; cursor:pointer;">
+        Dra & släpp fil här eller klicka för att välja
+      </label>
+      <input id="fileInput" type="file" hidden />
 
-          <input id="fileInput" type="file" />
-          <div id="dropZone" class="drop" style="margin-top:10px">Dra & släpp fil här</div>
+      <div id="fileInfo" class="meta" style="margin-top:10px;">Ingen fil vald.</div>
 
-          <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
-
-          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-            <button class="btn primary" id="registerBtn" disabled>Skapa verifierings-ID</button>
-            <a class="btn" id="certLink" href="#" target="_blank" rel="noopener" style="display:none;">Öppna kvitto</a>
-            <span id="status" class="pill">Välj en fil</span>
-          </div>
-
-          <div id="localHashBox" style="display:none;margin-top:12px">
-            <div class="meta">Digitalt fingeravtryck (SHA-256 / bytes32):</div>
-            <div id="localHashOut" class="mono">—</div>
-          </div>
-
-          <div class="small" style="margin-top:10px">
-            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP). Minsta ändring ger ett helt nytt fingeravtryck.
-          </div>
-        </div>
-
-        <!-- RIGHT: result -->
-        <div>
-          <b>Resultat</b>
-          <div class="hr"></div>
-
-          <div class="meta">Verifierings-ID (digitalt fingeravtryck)</div>
-          <div id="hashOut" class="mono" style="margin-top:8px">—</div>
-
-          <div id="result" style="display:none;margin-top:12px;">
-            <div id="resultLine" style="font-size:18px; margin-bottom:10px;"></div>
-
-            <div class="meta">Delbar verifieringslänk</div>
-            <div class="mono" id="shareLinkOut" style="margin-top:8px">—</div>
-
-            <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-              <button class="btn" id="copyLinkBtn" type="button">Kopiera länk</button>
-              <a class="btn" id="openVerifyBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna verifiering</a>
-            </div>
-
-            <div class="qrWrap">
-              <div class="qrBox" aria-label="QR-kod för verifieringslänk">
-                <canvas id="qrCanvas" width="180" height="180" aria-hidden="true"></canvas>
-              </div>
-              <div class="linkBox">
-                <div class="small">
-                  <b>QR-kod</b>: Skanna för att öppna verifieringssidan på mobil.
-                  Bra när ni vill hänvisa kund eller intern granskare till exakt verifieringspost.
-                </div>
-
-                <details style="margin-top:12px;">
-                  <summary>Teknisk detalj (för spårbarhet)</summary>
-                  <div class="hr"></div>
-
-                  <div class="meta">Postreferens</div>
-                  <div id="txOut" class="mono" style="margin-top:8px">—</div>
-
-                  <div class="meta" style="margin-top:10px;">Batch/sekvens</div>
-                  <div id="blockOut" class="mono" style="margin-top:8px">—</div>
-
-                  <div class="meta" style="margin-top:10px;">Åtgärd</div>
-                  <div id="fnOut" class="mono" style="margin-top:8px">—</div>
-
-                  <div class="small" style="margin-top:10px;">
-                    Detta är tekniska fält för felsökning/spårbarhet. För byråarbete räcker normalt verifierings-ID + datum/notering i ärendet.
-                  </div>
-                </details>
-              </div>
-            </div>
-          </div>
-
-          <div id="error" style="display:none;margin-top:12px;">
-            <div class="err">Tillfälligt tekniskt problem</div>
-            <div id="errorMsg" class="mono" style="margin-top:8px"></div>
-          </div>
-        </div>
-
+      <!-- ÅTGÄRD -->
+      <div class="actions" style="margin-top:16px;">
+        <button class="btn primary" id="createBtn" disabled>Fastställ referens</button>
+        <span id="statusPill" class="pill">Välj en fil</span>
       </div>
+
+      <!-- RESULTAT -->
+      <div id="resultBox" style="display:none; margin-top:20px;">
+        <div class="hr"></div>
+
+        <div class="meta">Verifierings-ID</div>
+        <pre class="codeblock" id="idOut"></pre>
+
+        <div class="meta" style="margin-top:12px;">Verifieringslänk</div>
+        <pre class="codeblock" id="linkOut"></pre>
+
+        <div class="meta" style="margin-top:12px;">QR-kod (för extern kontroll)</div>
+        <div id="qrBox" class="qrBox" style="margin-top:8px;"></div>
+
+        <div class="small" style="margin-top:12px;">
+          Spara verifierings-ID i ärendet. Länken eller QR-koden kan användas vid senare kontroll.
+        </div>
+      </div>
+
+      <!-- FEL -->
+      <div id="errorBox" style="display:none; margin-top:16px;">
+        <div class="err">Tillfälligt tekniskt problem</div>
+        <div id="errorMsg" class="mono" style="margin-top:6px;"></div>
+      </div>
+
     </section>
 
-    <p class="meta" style="margin-top:14px">
-      Proofy lagrar inte dokument. Ni kan alltid verifiera en filversion i efterhand genom att jämföra dess digitala fingeravtryck mot verifieringsposten.
+    <p class="meta" style="margin-top:14px; max-width:820px;">
+      Proofy lagrar inte dokument. Verifiering sker genom jämförelse av filversioner mot fastställd referens.
     </p>
   </div>
 </main>
 
-<!-- QR generator library (only downloads code; QR is generated locally in your browser) -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+<script src="/qr.min.js?v=2025-12-20"></script>
 
 <script>
 (() => {
@@ -234,222 +101,90 @@
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
-  const registerBtn = $("registerBtn");
-  const statusEl = $("status");
-  const hashOut = $("hashOut");
-  const certLink = $("certLink");
+  const createBtn = $("createBtn");
+  const statusPill = $("statusPill");
 
-  const localHashBox = $("localHashBox");
-  const localHashOut = $("localHashOut");
+  const resultBox = $("resultBox");
+  const idOut = $("idOut");
+  const linkOut = $("linkOut");
+  const qrBox = $("qrBox");
 
-  const resultBox = $("result");
-  const resultLine = $("resultLine");
-
-  const shareLinkOut = $("shareLinkOut");
-  const copyLinkBtn = $("copyLinkBtn");
-  const openVerifyBtn = $("openVerifyBtn");
-
-  const qrCanvas = $("qrCanvas");
-
-  const txOut = $("txOut");
-  const blockOut = $("blockOut");
-  const fnOut = $("fnOut");
-
-  const errorBox = $("error");
+  const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
-  let currentFile = null;
-  let currentHash = null;
+  let file = null;
   let busy = false;
-  let opId = 0;
 
-  function setBusy(v){
-    busy = v;
-    registerBtn.disabled = !currentFile || busy;
-    copyLinkBtn.disabled = busy || !currentHash;
-  }
+  function setStatus(t){ statusPill.textContent = t; }
 
-  function resetUI(){
+  function reset(){
     resultBox.style.display = "none";
     errorBox.style.display = "none";
-    errorMsg.textContent = "";
-    shareLinkOut.textContent = "—";
-    openVerifyBtn.style.display = "none";
-    txOut.textContent = "—";
-    blockOut.textContent = "—";
-    fnOut.textContent = "—";
-    clearQr();
+    idOut.textContent = "";
+    linkOut.textContent = "";
+    qrBox.innerHTML = "";
   }
 
-  function clearQr(){
-    if(!qrCanvas) return;
-    const ctx = qrCanvas.getContext("2d");
-    ctx.clearRect(0,0,qrCanvas.width,qrCanvas.height);
-    ctx.fillStyle = "rgba(255,255,255,.06)";
-    ctx.fillRect(0,0,qrCanvas.width,qrCanvas.height);
-  }
-
-  function bytesToHex(bytes){
-    return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
-  }
-
-  async function sha256Bytes32Hex(file){
-    const buf = await file.arrayBuffer();
-    const dig = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + bytesToHex(new Uint8Array(dig));
-  }
-
-  function isBytes32Hex(h){
-    return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
-  }
-
-  function shareUrlForHash(h){
-    return `${location.origin}/verify.html?hash=${h}`;
-  }
-
-  function setFile(file){
-    currentFile = file || null;
-    currentHash = null;
-
-    resetUI();
-    localHashBox.style.display = "none";
-    localHashOut.textContent = "—";
-    hashOut.textContent = "—";
-    certLink.style.display = "none";
-
-    if(!currentFile){
-      fileInfo.textContent = "Ingen fil vald.";
-      statusEl.textContent = "Välj en fil";
-      registerBtn.disabled = true;
-      return;
-    }
-
-    fileInfo.textContent = `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
-    statusEl.textContent = "Redo";
-    setBusy(false);
-  }
-
-  async function renderQr(link){
-    clearQr();
-    // library loads with defer; wait until available
-    if(!window.QRCode){
-      // fallback: show link only
-      return;
-    }
-    try{
-      await window.QRCode.toCanvas(qrCanvas, link, {
-        errorCorrectionLevel: "M",
-        margin: 1,
-        width: 180
-      });
-    } catch {
-      // if QR fails, still ok: link is visible
-      clearQr();
-    }
-  }
-
-  fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
-
-  dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
+  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
-  dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("drag");
-    const f = e.dataTransfer?.files?.[0];
-    if(f) setFile(f);
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault(); dropZone.classList.remove("drag");
+    if(e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
   });
 
-  registerBtn.addEventListener("click", async () => {
-    if(!currentFile || busy) return;
+  fileInput.addEventListener("change", () => {
+    if(fileInput.files[0]) setFile(fileInput.files[0]);
+  });
 
-    const myOp = ++opId;
-    setBusy(true);
-    resetUI();
+  function setFile(f){
+    file = f;
+    fileInfo.textContent = `Vald fil: ${f.name}`;
+    createBtn.disabled = false;
+    setStatus("Redo");
+    reset();
+  }
 
-    statusEl.textContent = "Beräknar fingeravtryck…";
+  async function sha256(file){
+    const buf = await file.arrayBuffer();
+    const hash = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+
+  createBtn.addEventListener("click", async () => {
+    if(!file || busy) return;
+    busy = true;
+    setStatus("Fastställer…");
+    reset();
 
     try{
-      const h = await sha256Bytes32Hex(currentFile);
-      if(myOp !== opId) return;
-
-      if(!isBytes32Hex(h)){
-        throw new Error("Ogiltigt fingeravtryck (bytes32).");
-      }
-
-      currentHash = h;
-
-      localHashBox.style.display = "block";
-      localHashOut.textContent = h;
-
-      hashOut.textContent = h;
-
-      // optional receipt page if you have it
-      certLink.href = `/certificate.html?hash=${encodeURIComponent(h)}`;
-      certLink.style.display = "inline-flex";
-
-      statusEl.textContent = "Skapar verifieringspost…";
-
+      const id = await sha256(file);
       const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ hash: h })
+        method:"POST",
+        headers:{ "content-type":"application/json" },
+        body: JSON.stringify({ hash:id })
       });
 
-      const data = await res.json().catch(() => ({}));
-      if(myOp !== opId) return;
+      if(!res.ok) throw new Error("Registrering misslyckades.");
 
-      if (!res.ok || data.ok === false) {
-        const msg = data?.error || `Tjänsten svarade med fel (HTTP ${res.status}).`;
-        throw new Error(msg);
-      }
+      const link = `${location.origin}/verify.html?hash=${id}`;
 
-      const link = shareUrlForHash(h);
-
+      idOut.textContent = id;
+      linkOut.textContent = link;
       resultBox.style.display = "block";
 
-      if (data.alreadyExists) {
-        resultLine.innerHTML = `<span class="ok">✅ Verifieringspost finns redan</span> <span class="meta">(ingen ny post behövdes)</span>`;
-      } else {
-        resultLine.innerHTML = `<span class="ok">✅ Verifierings-ID skapat</span> <span class="meta">(tidsstämplat)</span>`;
+      if(window.QRCode){
+        new QRCode(qrBox,{ text:link, width:150, height:150 });
       }
 
-      shareLinkOut.textContent = link;
-      openVerifyBtn.href = link;
-      openVerifyBtn.style.display = "inline-flex";
-
-      // tech details (kept but de-emphasized)
-      txOut.textContent = data.txHash || "—";
-      blockOut.textContent = (data.blockNumber ?? "—");
-      fnOut.textContent = (data.functionUsed ?? "—");
-
-      await renderQr(link);
-
-      statusEl.textContent = "Klar ✅";
-      setBusy(false);
-    } catch (e){
-      console.error(e);
-      if(myOp !== opId) return;
+      setStatus("Klar");
+    } catch(e){
       errorBox.style.display = "block";
-      errorMsg.textContent = (e?.message || "Tjänsten kunde inte nås just nu.");
-      statusEl.textContent = "Fel";
-      setBusy(false);
+      errorMsg.textContent = e.message;
+      setStatus("Fel");
+    } finally {
+      busy = false;
     }
   });
-
-  copyLinkBtn.addEventListener("click", async () => {
-    if(!currentHash || busy) return;
-    const link = shareUrlForHash(currentHash);
-    try{
-      await navigator.clipboard.writeText(link);
-      statusEl.textContent = "Länk kopierad ✅";
-    } catch {
-      statusEl.textContent = "Kunde inte kopiera (tillåt clipboard)";
-    }
-  });
-
-  // initial
-  clearQr();
-  setBusy(false);
 })();
 </script>
 
