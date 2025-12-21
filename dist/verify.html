@@ -154,7 +154,7 @@
   let currentFile = null;
 
   function isValidHash(h){
-    return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
+    return /^0x[0-9a-fA-F]{64}$/.test(h || "");
   }
 
   function setStatus(text){
@@ -178,18 +178,16 @@
   }
 
   function updateState(){
-    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value));
+    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value.trim()));
   }
 
-  // ✅ Prefill from URL:
-  // support both ?id= (new) and legacy ?hash=
+  // ✅ Prefill from URL: support ?id= (standard) + legacy ?hash=
   const params = new URLSearchParams(location.search);
   const urlId = params.get("id");
   const urlHash = params.get("hash");
-  const prefill = (urlId && isValidHash(urlId)) ? urlId : urlHash;
-
-  if (isValidHash(prefill)) {
-    hashInput.value = prefill.trim();
+  const initial = isValidHash(urlId) ? urlId : (isValidHash(urlHash) ? urlHash : null);
+  if (initial) {
+    hashInput.value = initial;
   }
 
   hashInput.addEventListener("input", updateState);
@@ -235,13 +233,12 @@
       setStatus("Klar");
     } catch (e){
       errorBox.style.display = "block";
-      errorMsg.textContent = e?.message || "Tekniskt fel.";
+      errorMsg.textContent = e.message || "Tekniskt fel.";
       setStatus("Fel");
     }
   });
 
   setStatus("Väntar");
-  updateState();
 })();
 </script>
 
