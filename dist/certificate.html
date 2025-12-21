@@ -229,7 +229,7 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Beslut A: inga ankarlänkar i headern -->
+      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
 
       <div class="navActions">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
@@ -268,7 +268,6 @@
         <a class="btn" id="btnVerify" href="/verify.html">Öppna verifiering</a>
       </div>
 
-      <!-- Revisionsvänliga toppfält -->
       <div class="topMetaGrid" aria-label="Intygsmetadata">
         <div class="panel">
           <div class="label">UTFÄRDAD AV</div>
@@ -370,7 +369,7 @@
             <div class="qrRow">
               <div>
                 <div class="label" style="margin-top:12px;">QR-KOD</div>
-                <div id="qrBox" class="qrBox" aria-label="QR-kod">—</div>
+                <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
                 <div id="qrStatus" class="meta" style="margin-top:8px;">—</div>
                 <div class="meta" style="margin-top:8px;">
                   QR-koden leder till verifieringssidan för ID:t.
@@ -473,8 +472,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer.
-          Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -567,7 +565,7 @@
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h.trim());
   }
 
-  // ✅ Stöd både ?id= och legacy ?hash=
+  // Stöd både ?id= (standard) och legacy ?hash=
   function getIdFromUrl(){
     const url = new URL(location.href);
     return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
@@ -592,7 +590,6 @@
     return `cert-${y}${m}${day}-${hh}${mm}${ss}-${rnd}`;
   }
 
-  // ✅ Skriv alltid tillbaka som ?id=
   function setIdInUrl(id, certId){
     const url = new URL(location.href);
     if (id) {
@@ -651,7 +648,7 @@
     certLinkOut.textContent = "—";
     verifyLinkOut.textContent = "—";
     interpretation.textContent = "—";
-    if (qrBox) qrBox.innerHTML = "—";
+    if (qrBox) qrBox.innerHTML = "";
     if (qrStatus) qrStatus.textContent = "—";
     btnVerify.href = "/verify.html";
     setBusy(false);
@@ -702,6 +699,7 @@
     qrStatus.textContent = "";
   }
 
+  // ✅ QR-stil matchar register-sidan (dark theme)
   function doRender(text){
     qrBox.innerHTML = "";
     const correctLevel =
@@ -709,7 +707,14 @@
         ? window.QRCodeCorrectLevel.M
         : undefined;
 
-    new QRCode(qrBox, { text, width:150, height:150, correctLevel });
+    new QRCode(qrBox, {
+      text,
+      width:150,
+      height:150,
+      colorDark: "#0b1220",
+      colorLight: "#eaf0ff",
+      correctLevel
+    });
   }
 
   async function copyText(btn, text){
@@ -727,7 +732,6 @@
     }
   }
 
-  // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
   async function fetchVerify(id){
     try{
       const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}`, { method:"GET" });
@@ -851,7 +855,6 @@
     }
   }
 
-  // Actions
   btnPrint.addEventListener("click", () => window.print());
   btnRefresh.addEventListener("click", () => {
     const id = getIdFromUrl();
@@ -861,12 +864,10 @@
     loadCertificate(id, certId);
   });
 
-  // Copy buttons
   btnCopyId.addEventListener("click", () => copyText(btnCopyId, hashOut.textContent));
   btnCopyCert.addEventListener("click", () => copyText(btnCopyCert, certLinkOut.textContent));
   btnCopyVerify.addEventListener("click", () => copyText(btnCopyVerify, verifyLinkOut.textContent));
 
-  // Open box
   btnOpen?.addEventListener("click", () => {
     const id = (hashInput.value || "").trim();
     if (!id){
@@ -893,7 +894,6 @@
     }
   });
 
-  // Start
   const initialId = getIdFromUrl();
   const initialCert = getCertIdFromUrl() || makeCertId();
 
