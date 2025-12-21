@@ -7,11 +7,10 @@
   <meta name="description" content="Verifieringsintyg som sammanfattar om ett Verifierings-ID är registrerat och när registreringen skedde." />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- Om du har gemensam CSS, behåll. Annars går sidan ändå bra med inline-stilen nedan -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 
   <style>
-    /* Målet: en sida, mindre “flik-känsla”, bättre mobilheader, tydlig intygslayout */
+    /* En sida, tydligt intyg, bra mobil. */
     .certWrap{ max-width: 920px; margin:0 auto; padding: 0 20px; }
     .certTop{
       margin-top: 14px;
@@ -105,10 +104,7 @@
     }
     .note b{ color: rgba(234,240,255,.92); }
 
-    .openBox{
-      display:none;
-      margin-top: 12px;
-    }
+    .openBox{ display:none; margin-top: 12px; }
     .openRow{
       display:flex;
       gap:10px;
@@ -156,12 +152,17 @@
       image-rendering: pixelated;
     }
 
-    details{ border:1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.04); }
+    details{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,.04);
+    }
     summary{ cursor:pointer; font-weight: 950; list-style:none; }
     summary::-webkit-details-marker{ display:none; }
     details p{ margin: 10px 0 0; color: rgba(169,183,211,.95); line-height:1.6; }
 
-    /* Print/PDF: ren och “intygig” */
+    /* Print/PDF */
     @media print{
       header, .actions, .openBox, #qrWrap, #btnCopyLink { display:none !important; }
       body{ background:#fff !important; color:#000 !important; }
@@ -224,7 +225,8 @@
         <div class="note">
           <b>Öppna intyget</b><br />
           Klistra in Verifierings-ID eller öppna via länk:
-          <span class="mono">/certificate.html?hash=0x…</span>
+          <span class="mono">/certificate.html?id=0x…</span>
+          <span class="meta"> (även <span class="mono">?hash=0x…</span> fungerar)</span>
         </div>
         <div class="openRow">
           <input id="hashInput" type="text" placeholder="Verifierings-ID (0x…)" />
@@ -237,7 +239,6 @@
 
       <div class="hr"></div>
 
-      <!-- Kärninformation: kompakt men komplett -->
       <div class="grid">
         <div class="panel">
           <div class="label">Verifierings-ID</div>
@@ -302,54 +303,60 @@
         </div>
       </div>
 
-      <!-- Svensk juridik-/revisionsdel: kort synlig + detaljer i “visa mer” -->
       <div class="panel" style="margin-top:12px;">
         <div class="label">Juridisk information</div>
         <div class="value" style="color: rgba(169,183,211,.95);">
-          Detta intyg är ett tekniskt underlag för dokumentation/spårbarhet. Det ersätter inte juridisk rådgivning
-          eller professionell bedömning i granskning/revision. Bevisvärde bedöms i sitt sammanhang.
+          Detta intyg är ett tekniskt underlag för dokumentation och spårbarhet. Det ersätter inte juridisk rådgivning,
+          och ersätter inte professionell bedömning i granskning/revision. Bevisvärde bedöms alltid i sitt sammanhang.
         </div>
 
         <details style="margin-top:12px;">
           <summary>Visa fullständig text</summary>
+
           <p>
             <b>1) Utfärdare och kontakt</b><br/>
-            Intyget tillhandahålls av Proofy (”tjänsten”). Kontakt: <b>kontakt@proofy.se</b>.
+            Intyget tillhandahålls av Proofy. Kontakt: <b>kontakt@proofy.se</b>.
           </p>
+
           <p>
-            <b>2) Vad intyget omfattar</b><br/>
-            Intyget beskriver utfallet av en kontroll av ett Verifierings-ID och (om registrerad) registreringstid.
-            Intyget tar inte ställning till dokumentets innehåll, tolkning, riktighet eller rättsliga giltighet.
+            <b>2) Vad intyget visar</b><br/>
+            Intyget visar utfallet av en kontroll av ett Verifierings-ID och (om registrerad) registreringstid.
           </p>
+
           <p>
-            <b>3) Vad intyget inte omfattar</b><br/>
+            <b>3) Vad intyget inte visar</b><br/>
             Intyget visar inte vem som skapat dokumentet, vem som haft tillgång till det, om behörig person godkänt det,
             eller om filen hanterats/ändrats efter registrering. Intyget är inte e-signering, inte arkivering och inte ett avtal i sig.
           </p>
+
           <p>
-            <b>4) Integritet och sekretess</b><br/>
-            Proofy lagrar inte dokumentinnehåll i samband med intyget. Intyget kan innehålla Verifierings-ID och tider.
-            Hantering av personuppgifter och övrig information regleras i tillämplig integritetspolicy och villkor.
+            <b>4) Sekretess och personuppgifter</b><br/>
+            Proofy lagrar inte dokumentinnehåll i samband med intyget. Intyget kan innehålla Verifierings-ID, tider och en delbar länk.
+            Hantering av personuppgifter regleras i tillämplig integritetspolicy och villkor.
           </p>
+
           <p>
             <b>5) Användning i byrå-/revisionssammanhang</b><br/>
             Intyget är avsett som stöd för spårbarhet och dokumentation. Professionell bedömning, övriga kontrollåtgärder
-            och krav på dokumentation kvarstår. Vid tvist eller granskning är intyget en del av helheten.
+            och krav på dokumentation kvarstår.
           </p>
+
           <p>
             <b>6) Drift, fel och tillgänglighet</b><br/>
             Tillfälliga driftstörningar kan påverka möjligheten att genomföra kontrollen vid ett visst tillfälle.
-            Vid avvikelse rekommenderas att kontrollen görs om, samt att underlaget verifieras genom etablerade rutiner.
+            Vid avvikelse rekommenderas att kontrollen görs om.
           </p>
+
           <p>
-            <b>7) Ansvar och ansvarsbegränsning</b><br/>
-            Intyget lämnas ”i befintligt skick” som tekniskt underlag. Proofy lämnar inga garantier om att intyget uppfyller
-            särskilda branschkrav i varje enskilt fall. Eventuellt ansvar regleras i Proofys villkor.
+            <b>7) Ansvar</b><br/>
+            Intyget lämnas som tekniskt underlag. Eventuellt ansvar och ansvarsbegränsningar regleras i Proofys villkor.
           </p>
+
           <p>
-            <b>8) Tillämplig lag och tvist</b><br/>
+            <b>8) Tillämplig lag</b><br/>
             Svensk lag ska tillämpas i den mån annat inte följer av tvingande regler. Tvist hanteras enligt Proofys villkor.
           </p>
+
           <p class="meta">
             Länkar: <a href="/terms.html">Villkor</a> · <a href="/privacy.html">Integritet</a>
           </p>
@@ -436,20 +443,29 @@
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h.trim());
   }
 
-  function getHashFromUrl(){
+  // ✅ Viktigt: stöd både ?id= och legacy ?hash=
+  function getIdFromUrl(){
     const url = new URL(location.href);
-    return (url.searchParams.get("hash") || "").trim();
+    return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
   }
 
-  function setHashInUrl(hash){
+  // ✅ Skriv alltid tillbaka som ?id= (enhetligt med övriga sidor),
+  // men rör inte övriga query-parametrar.
+  function setIdInUrl(id){
     const url = new URL(location.href);
-    if (hash) url.searchParams.set("hash", hash);
-    else url.searchParams.delete("hash");
+    if (id) {
+      url.searchParams.set("id", id);
+      url.searchParams.delete("hash");
+    } else {
+      url.searchParams.delete("id");
+      url.searchParams.delete("hash");
+    }
     history.replaceState({}, "", url.toString());
   }
 
-  function buildVerifyLink(hash){
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
+  // ✅ Enhetlig verifieringslänk: /verify.html?id=...
+  function buildVerifyLink(id){
+    return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
   }
 
   function fmtSe(ts){
@@ -546,9 +562,9 @@
   }
 
   // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
-  async function fetchVerify(hash){
+  async function fetchVerify(id){
     try{
-      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+      const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}`, { method:"GET" });
       const j = await r.json().catch(() => ({}));
       if (r.ok) return { ok:true, data:j };
     } catch { /* ignore */ }
@@ -556,20 +572,20 @@
     const r2 = await fetch(`/api/verify`, {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash })
+      body: JSON.stringify({ hash: id })
     });
     const j2 = await r2.json().catch(() => ({}));
     if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
     return { ok:true, data:j2 };
   }
 
-  async function loadCertificate(hash){
+  async function loadCertificate(id){
     const myOp = ++opId;
     hideProblem();
     setBusy(true);
     setCheckedNow();
 
-    if(!hash){
+    if(!id){
       resetView();
       openBox.style.display = "block";
       setStatus("Saknar Verifierings-ID", "err");
@@ -579,16 +595,16 @@
     }
 
     openBox.style.display = "none";
-    hashOut.textContent = hash;
+    hashOut.textContent = id;
 
-    // Länk/QR även om formatet är fel – men tydlig status
-    const vlink = buildVerifyLink(hash);
+    // Länk/QR (för delning) – även om formatet är fel, men vi visar tydlig status
+    const vlink = buildVerifyLink(id);
     btnVerify.href = vlink;
     verifyLinkOut.textContent = vlink;
     renderQr(vlink);
     btnCopyLink.disabled = false;
 
-    if(!isBytes32Hex(hash)){
+    if(!isBytes32Hex(id)){
       setStatus("Ogiltigt Verifierings-ID", "err");
       resultOut.textContent = "Kan inte kontrollera (fel format)";
       tsSeOut.textContent = "—";
@@ -601,7 +617,7 @@
     setStatus("Kontrollerar…", "neutral");
 
     try{
-      const res = await fetchVerify(hash);
+      const res = await fetchVerify(id);
       if (myOp !== opId) return;
 
       if(!res.ok){
@@ -648,7 +664,7 @@
 
   // Actions
   btnPrint.addEventListener("click", () => window.print());
-  btnRefresh.addEventListener("click", () => loadCertificate(getHashFromUrl()));
+  btnRefresh.addEventListener("click", () => loadCertificate(getIdFromUrl()));
 
   btnCopyLink.addEventListener("click", async () => {
     const txt = (verifyLinkOut.textContent || "").trim();
@@ -657,8 +673,8 @@
       await navigator.clipboard.writeText(txt);
       setStatus("Länk kopierad", "ok");
       setTimeout(() => {
-        const h = getHashFromUrl();
-        if (h) loadCertificate(h);
+        const id = getIdFromUrl();
+        if (id) loadCertificate(id);
         else setStatus("Saknar Verifierings-ID", "err");
       }, 900);
     } catch {
@@ -668,14 +684,14 @@
 
   // Open box
   btnOpen?.addEventListener("click", () => {
-    const h = (hashInput.value || "").trim();
-    if (!h){
+    const id = (hashInput.value || "").trim();
+    if (!id){
       openHint.textContent = "Klistra in Verifierings-ID för att öppna intyget.";
       return;
     }
     openHint.textContent = "";
-    setHashInUrl(h);
-    loadCertificate(h);
+    setIdInUrl(id);
+    loadCertificate(id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
@@ -690,15 +706,20 @@
   });
 
   // Start
-  const initialHash = getHashFromUrl();
-  if (initialHash) loadCertificate(initialHash);
-  else {
+  const initialId = getIdFromUrl();
+  if (initialId){
+    // Normalisera URL direkt (så du slipper “hash/id”-förvirring)
+    setIdInUrl(initialId);
+    loadCertificate(initialId);
+  } else {
     resetView();
     setCheckedNow();
     openBox.style.display = "block";
     setStatus("Saknar Verifierings-ID", "err");
     interpretation.textContent = "Ingen kontroll kunde göras eftersom Verifierings-ID saknas.";
   }
+
+  setBusy(false);
 })();
 </script>
 
