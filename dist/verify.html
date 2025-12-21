@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
-  <meta name="description" content="Verifiera om en fil är identisk med ett tidigare registrerat Verifierings-ID." />
+  <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 </head>
@@ -44,32 +44,32 @@
 
         <!-- LEFT -->
         <section aria-label="Verifieringsuppgifter">
-          <div style="font-weight:950;font-size:16px;">1. Ange Verifierings-ID</div>
+          <div style="font-weight:950; font-size:16px;">1. Ange Verifierings-ID</div>
 
-          <label class="label" for="hashInput">Verifierings-ID</label>
-          <div class="copyLine">
-            <input
-              id="hashInput"
-              type="text"
-              placeholder="0x…"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <button class="btn" id="pasteBtn" type="button">Klistra in</button>
-          </div>
+          <label class="meta" for="hashInput" style="margin-top:8px;">
+            Verifierings-ID
+          </label>
+          <input
+            id="hashInput"
+            type="text"
+            placeholder="0x…"
+            autocomplete="off"
+            spellcheck="false"
+            style="margin-top:6px"
+          />
 
-          <div class="small" style="margin-top:6px;">
+          <div class="small" style="margin-top:8px">
             ID:t hämtas automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
           <div class="hr"></div>
 
-          <div style="font-weight:950;font-size:16px;">2. Välj fil att kontrollera</div>
+          <div style="font-weight:950; font-size:16px;">2. Välj fil att kontrollera</div>
 
           <input id="fileInput" type="file" style="margin-top:8px" />
           <div id="fileInfo" class="meta" style="margin-top:8px">Ingen fil vald.</div>
 
-          <div class="actions" style="margin-top:14px;">
+          <div class="actions" style="margin-top:14px">
             <button class="btn primary" id="verifyBtn" disabled>Verifiera fil</button>
             <span id="statusPill" class="pill">Väntar</span>
           </div>
@@ -77,21 +77,20 @@
 
         <!-- RIGHT -->
         <section aria-label="Resultat">
-          <div style="font-weight:950;font-size:16px;">Resultat</div>
+          <div style="font-weight:950; font-size:16px;">Resultat</div>
           <div class="hr"></div>
 
           <div id="resultBox" style="display:none;">
-            <div id="resultHeadline" style="font-size:20px;font-weight:900;"></div>
+            <div id="resultHeadline" style="font-size:20px; font-weight:900;"></div>
 
-            <div class="label" style="margin-top:12px;">Verifierings-ID</div>
+            <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
             <pre class="mono" id="outHash">—</pre>
 
-            <div class="label" style="margin-top:10px;">Filens fingeravtryck</div>
+            <div class="meta" style="margin-top:10px;">Filens fingeravtryck</div>
             <pre class="mono" id="outFileHash">—</pre>
 
-            <div class="small" style="margin-top:10px;">
-              <b>Match</b> betyder att filen är exakt samma filversion (samma bytes)
-              som den som registrerades.
+            <div class="small" style="margin-top:10px">
+              Match betyder att filen är <b>exakt samma version</b> (samma bytes) som den som registrerades.
             </div>
           </div>
 
@@ -104,7 +103,7 @@
       </div>
     </div>
 
-    <p class="meta" style="margin-top:14px;">
+    <p class="meta" style="margin-top:14px">
       Proofy avgör inte om innehållet är korrekt – endast om filen är oförändrad jämfört med referensen.
     </p>
   </div>
@@ -115,11 +114,8 @@
   const $ = (id) => document.getElementById(id);
 
   const hashInput = $("hashInput");
-  const pasteBtn = $("pasteBtn");
-
   const fileInput = $("fileInput");
   const fileInfo = $("fileInfo");
-
   const verifyBtn = $("verifyBtn");
   const statusPill = $("statusPill");
 
@@ -137,7 +133,9 @@
     return /^0x[0-9a-fA-F]{64}$/.test(h || "");
   }
 
-  function setStatus(t){ statusPill.textContent = t; }
+  function setStatus(text){
+    statusPill.textContent = text;
+  }
 
   function bytesToHex(bytes){
     return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
@@ -159,22 +157,14 @@
     verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value.trim()));
   }
 
-  /* Prefill från URL (?hash=) */
+  // Prefill from URL (?hash=)
   const params = new URLSearchParams(location.search);
   const urlHash = params.get("hash");
-  if (isValidHash(urlHash)){
+  if (isValidHash(urlHash)) {
     hashInput.value = urlHash;
   }
 
   hashInput.addEventListener("input", updateState);
-
-  pasteBtn.addEventListener("click", async () => {
-    try{
-      const t = await navigator.clipboard.readText();
-      if (t) hashInput.value = t.trim();
-      updateState();
-    } catch {}
-  });
 
   fileInput.addEventListener("change", () => {
     currentFile = fileInput.files?.[0] || null;
@@ -190,27 +180,22 @@
 
     try{
       const refHash = hashInput.value.trim();
-      if (!isValidHash(refHash)) throw new Error("Ogiltigt Verifierings-ID.");
+      if (!isValidHash(refHash)) {
+        throw new Error("Ogiltigt Verifierings-ID.");
+      }
 
       const fileHash = await sha256Hex(currentFile);
 
-      const res = await fetch("/api/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ hash: refHash, fileHash })
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Verifiering misslyckades.");
-
+      resultBox.style.display = "block";
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
 
-      resultHeadline.innerHTML = data.match
-        ? `<span class="ok">✅ Match</span>`
-        : `<span class="err">❌ Ingen match</span>`;
+      if (fileHash === refHash) {
+        resultHeadline.innerHTML = `<span class="ok">✅ Match</span>`;
+      } else {
+        resultHeadline.innerHTML = `<span class="err">❌ Ingen match</span>`;
+      }
 
-      resultBox.style.display = "block";
       setStatus("Klar");
     } catch (e){
       errorBox.style.display = "block";
@@ -220,7 +205,6 @@
   });
 
   setStatus("Väntar");
-  updateState();
 })();
 </script>
 
