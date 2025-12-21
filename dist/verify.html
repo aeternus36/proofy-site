@@ -35,7 +35,7 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om en fil är <b>identisk</b> med den version som tidigare registrerats.
+      Kontrollera om en fil är <b>exakt identisk</b> med den version som tidigare registrerats.
       Filen lämnar aldrig din dator.
     </p>
 
@@ -44,11 +44,12 @@
 
         <!-- LEFT -->
         <section aria-label="Verifieringsuppgifter">
-          <div style="font-weight:950; font-size:16px;">1. Ange Verifierings-ID</div>
+          <div style="font-weight:950;font-size:16px;">1. Verifierings-ID (referens)</div>
 
           <label class="meta" for="hashInput" style="margin-top:8px;">
             Verifierings-ID
           </label>
+
           <input
             id="hashInput"
             type="text"
@@ -59,12 +60,12 @@
           />
 
           <div class="small" style="margin-top:8px">
-            ID:t hämtas automatiskt om du öppnat sidan via verifieringslänk.
+            Om sidan öppnats via verifieringslänk fylls ID:t i automatiskt.
           </div>
 
           <div class="hr"></div>
 
-          <div style="font-weight:950; font-size:16px;">2. Välj fil att kontrollera</div>
+          <div style="font-weight:950;font-size:16px;">2. Fil att kontrollera</div>
 
           <input id="fileInput" type="file" style="margin-top:8px" />
           <div id="fileInfo" class="meta" style="margin-top:8px">Ingen fil vald.</div>
@@ -77,20 +78,27 @@
 
         <!-- RIGHT -->
         <section aria-label="Resultat">
-          <div style="font-weight:950; font-size:16px;">Resultat</div>
+          <div style="font-weight:950;font-size:16px;">Resultat</div>
           <div class="hr"></div>
 
           <div id="resultBox" style="display:none;">
-            <div id="resultHeadline" style="font-size:20px; font-weight:900;"></div>
+            <div id="resultHeadline" style="font-size:20px;font-weight:900;"></div>
 
-            <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
-            <pre class="mono codeblock" id="outHash">—</pre>
+            <div class="meta" style="margin-top:14px;">Verifierings-ID (referens)</div>
+            <div class="copyLine">
+              <pre class="mono" id="outHash">—</pre>
+              <button class="btn" id="copyRefBtn" type="button">Kopiera</button>
+            </div>
 
-            <div class="meta" style="margin-top:10px;">Filens fingeravtryck</div>
-            <pre class="mono codeblock" id="outFileHash">—</pre>
+            <div class="meta" style="margin-top:14px;">Filens digitala fingeravtryck</div>
+            <div class="copyLine">
+              <pre class="mono" id="outFileHash">—</pre>
+              <button class="btn" id="copyFileBtn" type="button">Kopiera</button>
+            </div>
 
-            <div class="small" style="margin-top:10px">
-              Match betyder att filen är <b>exakt samma version</b> (samma bytes) som den som registrerades.
+            <div class="small" style="margin-top:12px">
+              <b>Match</b> betyder att filen är exakt samma byte-för-byte som referensen.
+              Ingen tolkning av innehåll görs.
             </div>
           </div>
 
@@ -123,6 +131,9 @@
   const resultHeadline = $("resultHeadline");
   const outHash = $("outHash");
   const outFileHash = $("outFileHash");
+
+  const copyRefBtn = $("copyRefBtn");
+  const copyFileBtn = $("copyFileBtn");
 
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
@@ -157,7 +168,7 @@
     verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value.trim()));
   }
 
-  // Prefill from URL
+  // Prefill från URL (?hash=)
   const params = new URLSearchParams(location.search);
   const urlHash = params.get("hash");
   if (isValidHash(urlHash)) {
@@ -213,6 +224,20 @@
       errorMsg.textContent = e.message || "Tekniskt fel.";
       setStatus("Fel");
     }
+  });
+
+  copyRefBtn.addEventListener("click", async () => {
+    try{
+      await navigator.clipboard.writeText(outHash.textContent);
+      setStatus("ID kopierat");
+    } catch {}
+  });
+
+  copyFileBtn.addEventListener("click", async () => {
+    try{
+      await navigator.clipboard.writeText(outFileHash.textContent);
+      setStatus("Fingeravtryck kopierat");
+    } catch {}
   });
 
   setStatus("Väntar");
