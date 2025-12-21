@@ -13,7 +13,8 @@
 <a class="skip" href="#main">Hoppa till innehåll</a>
 
 <!-- =========================================================
-     🔒 GEMENSAM HEADER – MÅSTE VARA IDENTISK PÅ ALLA SIDOR
+     GLOBAL HEADER – SKA VARA IDENTISK PÅ ALLA SIDOR
+     index / pilot / register / verify / certificate
 ========================================================= -->
 <header>
   <div class="wrap">
@@ -27,94 +28,118 @@
         <a href="/#forbyraer">För byråer</a>
         <a href="/#hur">Hur det fungerar</a>
         <a href="/#trygghet">Säkerhet</a>
-        <a href="/#faq">FAQ</a>
+        <a href="/#faq">Frågor</a>
       </nav>
 
       <div class="navActions">
-        <a class="btn ghost" href="/verify.html">Verifiera underlag</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
     </div>
   </div>
 </header>
-<!-- ======================================================= -->
 
 <main id="main">
   <div class="wrap">
-
-    <div class="badge">För redovisningsbyråer · revision · granskning</div>
+    <div class="badge">Registrering · revision · spårbarhet</div>
 
     <h1 class="pageTitle">Skapa Verifierings-ID</h1>
 
     <p class="lead">
-      Skapa ett Verifierings-ID för den filversion som ska vara <b>referens</b> i ärendet.
+      Skapa ett <b>Verifierings-ID</b> för den filversion som ska fungera som
+      <b>referens</b> i ärendet.  
       Filen lämnar aldrig din dator. Proofy lagrar inte dokument.
     </p>
 
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <!-- VÄNSTER -->
-        <section aria-label="Skapa Verifierings-ID">
+        <!-- =====================================================
+             VÄNSTER – REFERENSFIL & REGISTRERING
+        ====================================================== -->
+        <section aria-label="Registrera referensfil">
           <div style="font-weight:950; font-size:16px;">1. Välj referensfil</div>
 
-          <p class="meta" style="margin-top:8px">
-            Välj den filversion som ska gälla som referens. Ett Verifierings-ID skapas lokalt i webbläsaren.
+          <p class="meta" style="margin-top:6px">
+            Välj den filversion som ska gälla som referens.
+            Detta är den version som senare kan verifieras.
           </p>
 
           <input id="fileInput" type="file" />
-          <div id="dropZone" class="drop" style="margin-top:10px">Dra & släpp fil här</div>
-
-          <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
-
-          <div class="actions" style="margin-top:14px;">
-            <button class="btn primary" id="createBtn" disabled>Skapa & registrera</button>
-            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
-            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
-            <span id="statusPill" class="pill">Väntar</span>
+          <div id="dropZone" class="drop" style="margin-top:10px">
+            Dra & släpp fil här
           </div>
 
-          <div id="localIdBox" style="display:none;margin-top:12px;">
-            <div class="meta">Verifierings-ID (spara i ärendet):</div>
+          <div id="fileInfo" class="meta" style="margin-top:10px">
+            Ingen fil vald.
+          </div>
+
+          <div class="actions" style="margin-top:14px">
+            <button class="btn primary" id="createBtn" disabled>
+              Skapa & registrera
+            </button>
+
+            <span id="statusPill" class="pill">Välj en fil</span>
+          </div>
+
+          <div id="localIdBox" style="display:none;margin-top:14px">
+            <div class="meta">
+              Verifierings-ID (spara i ärendet):
+            </div>
             <pre id="localIdOut" class="mono">—</pre>
+
+            <div class="actions" style="margin-top:10px">
+              <button class="btn" id="copyIdBtn" type="button">
+                Kopiera ID
+              </button>
+              <button class="btn" id="copyLinkBtn" type="button">
+                Kopiera länk
+              </button>
+              <a class="btn soft" id="openCertBtn" href="#" target="_blank" rel="noopener">
+                Öppna certifikat
+              </a>
+            </div>
           </div>
 
-          <p class="small" style="margin-top:10px">
-            Alla filtyper stöds (PDF, Excel, bilder m.m). Minsta ändring ger ett nytt Verifierings-ID.
-          </p>
+          <div class="small" style="margin-top:12px">
+            <b>Viktigt:</b> Ny export, omskanning eller omkomprimering kan skapa
+            en ny filversion även om innehållet ser likadant ut.
+          </div>
         </section>
 
-        <!-- HÖGER -->
+        <!-- =====================================================
+             HÖGER – RESULTAT & DELNING
+        ====================================================== -->
         <section aria-label="Resultat">
           <div style="font-weight:950; font-size:16px;">2. Resultat</div>
           <div class="hr"></div>
 
-          <div class="meta">Verifierings-ID</div>
-          <pre id="idOut" class="mono">—</pre>
-
-          <div id="resultBox" style="display:none;margin-top:12px;">
+          <div id="resultBox" style="display:none;">
             <div id="headline" style="font-size:18px; font-weight:900;"></div>
 
-            <div class="meta" style="margin-top:10px;">Delbar verifieringslänk</div>
+            <div class="meta" style="margin-top:12px">
+              Delbar verifieringslänk
+            </div>
             <pre id="linkOut" class="mono">—</pre>
 
-            <div class="qrWrap" style="margin-top:12px;">
+            <div class="qrWrap" style="margin-top:12px">
               <div>
-                <div class="meta">QR-kod</div>
+                <div class="meta" style="margin-bottom:6px">QR-kod</div>
                 <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
               </div>
-              <div style="min-width:240px; flex:1;">
-                <p class="small">
-                  Dela länken eller QR-koden när någon behöver verifiera filen i efterhand.
-                </p>
+
+              <div style="min-width:240px; flex:1">
+                <div class="small">
+                  QR-koden kan användas för att låta kund, intern granskare
+                  eller revisor verifiera filen direkt.
+                </div>
               </div>
             </div>
           </div>
 
           <div id="errorBox" style="display:none;">
-            <div class="err">Tekniskt fel</div>
-            <pre id="errorMsg" class="mono"></pre>
+            <div class="err">Registreringen misslyckades</div>
+            <div id="errorMsg" class="mono" style="margin-top:8px"></div>
           </div>
         </section>
 
@@ -122,13 +147,156 @@
     </div>
 
     <p class="meta" style="margin-top:14px">
-      Proofy avgör inte innehåll eller juridisk giltighet – endast om filversioner är identiska.
+      Proofy visar endast om en fil är oförändrad jämfört med referensen.
+      Tjänsten ersätter inte juridisk rådgivning eller revision.
     </p>
-
   </div>
 </main>
 
+<!-- QR -->
 <script src="/qr.min.js?v=2025-12-20"></script>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const fileInput = $("fileInput");
+  const dropZone = $("dropZone");
+  const fileInfo = $("fileInfo");
+  const createBtn = $("createBtn");
+  const statusPill = $("statusPill");
+
+  const localIdBox = $("localIdBox");
+  const localIdOut = $("localIdOut");
+  const copyIdBtn = $("copyIdBtn");
+  const copyLinkBtn = $("copyLinkBtn");
+  const openCertBtn = $("openCertBtn");
+
+  const resultBox = $("resultBox");
+  const headline = $("headline");
+  const linkOut = $("linkOut");
+  const qrBox = $("qrBox");
+
+  const errorBox = $("errorBox");
+  const errorMsg = $("errorMsg");
+
+  let currentFile = null;
+  let currentId = null;
+  let currentLink = null;
+  let busy = false;
+
+  function setStatus(t){ statusPill.textContent = t; }
+
+  function bytesToHex(bytes){
+    return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  async function sha256(file){
+    const buf = await file.arrayBuffer();
+    const dig = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + bytesToHex(new Uint8Array(dig));
+  }
+
+  function buildVerifyLink(id){
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(id)}`;
+  }
+
+  function setFile(file){
+    currentFile = file || null;
+    createBtn.disabled = !currentFile;
+
+    localIdBox.style.display = "none";
+    resultBox.style.display = "none";
+    errorBox.style.display = "none";
+
+    if(!currentFile){
+      fileInfo.textContent = "Ingen fil vald.";
+      setStatus("Välj en fil");
+      return;
+    }
+
+    fileInfo.textContent =
+      `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
+    setStatus("Redo");
+  }
+
+  fileInput.addEventListener("change", () =>
+    setFile(fileInput.files?.[0] || null)
+  );
+
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.classList.add("drag");
+  });
+  dropZone.addEventListener("dragleave", () =>
+    dropZone.classList.remove("drag")
+  );
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("drag");
+    if(e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+
+  createBtn.addEventListener("click", async () => {
+    if(!currentFile || busy) return;
+    busy = true;
+    setStatus("Skapar ID…");
+
+    try{
+      const id = await sha256(currentFile);
+      currentId = id;
+      currentLink = buildVerifyLink(id);
+
+      localIdBox.style.display = "block";
+      localIdOut.textContent = id;
+
+      openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
+
+      setStatus("Registrerar…");
+
+      const res = await fetch("/api/register", {
+        method:"POST",
+        headers:{ "content-type":"application/json" },
+        body: JSON.stringify({ hash:id })
+      });
+
+      const data = await res.json();
+      if(!res.ok) throw new Error(data?.error || "Registrering misslyckades.");
+
+      resultBox.style.display = "block";
+      headline.innerHTML = data.alreadyExists
+        ? `<span class="ok">✅ Redan registrerad</span>`
+        : `<span class="ok">✅ Registrerad</span>`;
+
+      linkOut.textContent = currentLink;
+      qrBox.innerHTML = "";
+      new QRCode(qrBox, { text: currentLink, width:150, height:150 });
+
+      setStatus("Klart");
+    } catch(e){
+      errorBox.style.display = "block";
+      errorMsg.textContent = e.message || "Tekniskt fel.";
+      setStatus("Fel");
+    } finally{
+      busy = false;
+    }
+  });
+
+  copyIdBtn.addEventListener("click", async () => {
+    if(!currentId) return;
+    await navigator.clipboard.writeText(currentId);
+    setStatus("ID kopierat");
+  });
+
+  copyLinkBtn.addEventListener("click", async () => {
+    if(!currentLink) return;
+    await navigator.clipboard.writeText(currentLink);
+    setStatus("Länk kopierad");
+  });
+
+})();
+</script>
+
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
