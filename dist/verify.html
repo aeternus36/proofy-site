@@ -63,7 +63,7 @@
           />
 
           <div class="small" style="margin-top:8px">
-            ID:t hämtas automatiskt om du öppnat sidan via verifieringslänk.
+            ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk eller intygslänk.
           </div>
 
           <div class="hr"></div>
@@ -77,6 +77,10 @@
             <button class="btn primary" id="verifyBtn" disabled>Verifiera fil</button>
             <span id="statusPill" class="pill">Väntar</span>
           </div>
+
+          <p class="small" style="margin-top:12px; margin-bottom:0;">
+            <b>Tips:</b> Ny export/omskanning kan ge annan filversion även om dokumentet “ser likadant ut”.
+          </p>
         </section>
 
         <!-- RIGHT -->
@@ -95,6 +99,10 @@
 
             <div class="small" style="margin-top:10px">
               Match betyder att filen är <b>exakt samma version</b> (samma bytes) som den som registrerades.
+            </div>
+
+            <div class="actions" style="margin-top:12px">
+              <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
             </div>
           </div>
 
@@ -147,6 +155,7 @@
   const resultHeadline = $("resultHeadline");
   const outHash = $("outHash");
   const outFileHash = $("outFileHash");
+  const openCertBtn = $("openCertBtn");
 
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
@@ -175,19 +184,18 @@
     resultBox.style.display = "none";
     errorBox.style.display = "none";
     errorMsg.textContent = "";
+    if (openCertBtn) openCertBtn.style.display = "none";
   }
 
   function updateState(){
     verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value));
   }
 
-  // ✅ Prefill from URL: support both ?id= and legacy ?hash=
   function getIdFromUrl(){
     const url = new URL(location.href);
     return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
   }
 
-  // ✅ Normalize URL to ?id= if we have a valid id (keep things consistent)
   function setIdInUrl(id){
     const url = new URL(location.href);
     if (id) {
@@ -200,13 +208,18 @@
     history.replaceState({}, "", url.toString());
   }
 
+  // Prefill from URL (?id= or legacy ?hash=)
   const urlId = getIdFromUrl();
   if (isValidHash(urlId)) {
     hashInput.value = urlId;
     setIdInUrl(urlId);
   }
 
-  hashInput.addEventListener("input", updateState);
+  hashInput.addEventListener("input", () => {
+    const v = hashInput.value.trim();
+    if (isValidHash(v)) setIdInUrl(v);
+    updateState();
+  });
 
   fileInput.addEventListener("change", () => {
     currentFile = fileInput.files?.[0] || null;
@@ -224,9 +237,6 @@
       const refHash = hashInput.value.trim();
       if (!isValidHash(refHash)) throw new Error("Ogiltigt Verifierings-ID.");
       if (!currentFile) throw new Error("Välj en fil att verifiera.");
-
-      // Keep URL consistent if user pasted a valid ID
-      setIdInUrl(refHash);
 
       const fileHash = await sha256Hex(currentFile);
 
@@ -249,6 +259,11 @@
         resultHeadline.innerHTML = `<span class="err">❌ Ingen match</span>`;
       }
 
+      if (openCertBtn) {
+        openCertBtn.href = `/certificate.html?id=${encodeURIComponent(refHash)}`;
+        openCertBtn.style.display = "inline-flex";
+      }
+
       setStatus("Klar");
     } catch (e){
       errorBox.style.display = "block";
@@ -258,6 +273,7 @@
   });
 
   setStatus("Väntar");
+  updateState();
 })();
 </script>
 
