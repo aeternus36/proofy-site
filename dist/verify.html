@@ -20,6 +20,15 @@
         <span>Proofy</span>
       </a>
 
+      <!-- Samma menystruktur som övriga sidor -->
+      <nav class="navLinks" aria-label="Navigation">
+        <a href="/#nytta">Nytta</a>
+        <a href="/#hur">Så funkar det</a>
+        <a href="/#trygghet">Säkerhet</a>
+        <a href="/#faq">Frågor</a>
+        <a href="/#kontakt">Kontakt</a>
+      </nav>
+
       <div class="navActions">
         <a class="btn soft" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
@@ -59,7 +68,7 @@
           />
 
           <div class="small" style="margin-top:8px">
-            ID:t hämtas automatiskt om du öppnat sidan via verifieringslänk.
+            ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
           <div class="hr"></div>
@@ -130,7 +139,7 @@
   let currentFile = null;
 
   function isValidHash(h){
-    return /^0x[0-9a-fA-F]{64}$/.test(h || "");
+    return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
   }
 
   function setStatus(text){
@@ -154,14 +163,14 @@
   }
 
   function updateState(){
-    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value.trim()));
+    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value));
   }
 
-  // Prefill from URL (?hash=)
+  // Prefill from URL (?hash=...)
   const params = new URLSearchParams(location.search);
   const urlHash = params.get("hash");
   if (isValidHash(urlHash)) {
-    hashInput.value = urlHash;
+    hashInput.value = urlHash.trim();
   }
 
   hashInput.addEventListener("input", updateState);
@@ -179,18 +188,32 @@
     setStatus("Verifierar…");
 
     try{
-      const refHash = hashInput.value.trim();
+      const refHash = (hashInput.value || "").trim();
       if (!isValidHash(refHash)) {
         throw new Error("Ogiltigt Verifierings-ID.");
       }
+      if (!currentFile) {
+        throw new Error("Välj en fil att verifiera.");
+      }
 
       const fileHash = await sha256Hex(currentFile);
+
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ hash: refHash, fileHash })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "Verifiering misslyckades.");
+      }
 
       resultBox.style.display = "block";
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
 
-      if (fileHash === refHash) {
+      if (data.match === true) {
         resultHeadline.innerHTML = `<span class="ok">✅ Match</span>`;
       } else {
         resultHeadline.innerHTML = `<span class="err">❌ Ingen match</span>`;
@@ -199,12 +222,13 @@
       setStatus("Klar");
     } catch (e){
       errorBox.style.display = "block";
-      errorMsg.textContent = e.message || "Tekniskt fel.";
+      errorMsg.textContent = (e?.message || "Tekniskt fel.");
       setStatus("Fel");
     }
   });
 
   setStatus("Väntar");
+  updateState();
 })();
 </script>
 
