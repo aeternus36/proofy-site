@@ -166,7 +166,7 @@ header{
 }
 .btn.ghost:hover{ background: rgba(255,255,255,.06); }
 
-/* Accessibility focus (keyboard-only där det stöds) */
+/* Accessibility focus (diskret och stabil) */
 @supports selector(:focus-visible){
   .btn:focus{ outline:none; }
   input[type="file"]:focus,
@@ -186,8 +186,6 @@ header{
     box-shadow: 0 0 0 3px rgba(110,168,255,.35);
   }
 }
-
-/* Fallback för browsers utan :focus-visible (diskret, men tydligt) */
 @supports not selector(:focus-visible){
   .btn:focus,
   input[type="file"]:focus,
@@ -384,6 +382,31 @@ pre.mono{
   background: rgba(11,18,32,.35);
   color: var(--text);
   white-space: pre-wrap;
+}
+
+/* Copy row (kodblock + kopiera) */
+/* Påverkar inget om klassen inte används. */
+.copyLine{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+  margin-top: 6px;
+}
+.copyLine > .mono,
+.copyLine > .value.mono,
+.copyLine > pre.mono{
+  flex: 1;
+  min-width: 240px;
+}
+.copyLine > .btn{
+  min-width: 120px;
+}
+@media (max-width:560px){
+  .copyLine > .btn{
+    width:100%;
+    min-width: unset;
+  }
 }
 
 /* QR */
