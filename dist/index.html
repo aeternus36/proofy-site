@@ -54,6 +54,18 @@ body{
 a{ color:inherit }
 .wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
 
+.skip{
+  position:absolute;
+  left:-9999px;
+  top:10px;
+  background:#fff;
+  color:#000;
+  padding:10px 12px;
+  border-radius:10px;
+  z-index:999999;
+}
+.skip:focus{ left:10px; }
+
 header{
   position: sticky; top:0; z-index:50;
   backdrop-filter: blur(12px) saturate(160%);
@@ -62,7 +74,7 @@ header{
 }
 .nav{
   display:flex; align-items:center; justify-content:space-between;
-  gap: 14px; padding: 14px 0;
+  gap: 14px; padding: 12px 0;
 }
 .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight: 900; letter-spacing:.2px }
 .logo{
@@ -78,9 +90,37 @@ header{
   background: rgba(11,18,32,.65);
   border: 1px solid rgba(255,255,255,.20);
 }
-nav{ display:flex; gap: 10px; align-items:center; color: var(--muted); font-weight: 800; }
-nav a{ text-decoration:none; padding: 8px 10px; border-radius: 12px; }
-nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
+
+/* Header v1 navLinks */
+.navLinks{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 999px;
+}
+.navLinks a{
+  text-decoration:none;
+  padding: 9px 12px;
+  border-radius: 999px;
+  color: rgba(169,183,211,.95);
+  font-weight: 850;
+  font-size: 13.5px;
+  line-height: 1;
+}
+.navLinks a:hover{
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+}
+.navActions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
 
 .btn{
   display:inline-flex; align-items:center; justify-content:center;
@@ -116,6 +156,19 @@ nav a:hover{ background: rgba(255,255,255,.06); color: var(--text); }
   background: rgba(255,255,255,.06);
 }
 
+/* ✅ större header-knappar även här */
+header .btn{
+  padding: 14px 20px;
+  font-size: 14.5px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+header .btn.primary{ padding: 14px 22px; }
+
+@media (max-width: 920px){
+  .navLinks{ display:none; }
+}
+
 main{ padding: 34px 0 22px; }
 
 .card{
@@ -146,7 +199,6 @@ main{ padding: 34px 0 22px; }
 .grid3{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 
 @media (max-width: 920px){
-  nav{ display:none; }
   .grid3{ grid-template-columns: 1fr; }
 }
 
@@ -243,21 +295,30 @@ textarea{ min-height: 120px; resize: vertical; }
 </head>
 
 <body>
+<a class="skip" href="#top">Hoppa till innehåll</a>
+
 <header>
   <div class="wrap">
     <div class="nav">
-      <a class="brand" href="#top" aria-label="Proofy">
+      <a class="brand" href="/" aria-label="Proofy">
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
-      <nav aria-label="Navigation">
-        <a href="#forbyraer">För byråer</a>
-        <a href="#hur">Hur det fungerar</a>
+
+      <nav class="navLinks" aria-label="Navigation">
+        <a href="#nytta">Nytta</a>
+        <a href="#hur">Så funkar det</a>
         <a href="#trygghet">Säkerhet</a>
-        <a href="#faq">Frågor & svar</a>
+        <a href="#faq">Frågor</a>
         <a href="#kontakt">Kontakt</a>
       </nav>
-      <a class="btn primary" href="#kontakt">Boka demo</a>
+
+      <div class="navActions">
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn primary" href="#kontakt">Boka demo</a>
+      </div>
     </div>
   </div>
 </header>
@@ -279,7 +340,7 @@ textarea{ min-height: 120px; resize: vertical; }
         <a class="btn primary" href="#kontakt">Boka demo</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
-        <a class="btn ghost" href="/hash.html">Skapa Verifierings-ID</a>
+        <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
       </div>
 
       <div class="hr"></div>
@@ -299,7 +360,7 @@ textarea{ min-height: 120px; resize: vertical; }
       </p>
     </div>
 
-    <section id="forbyraer" style="margin-top:28px;">
+    <section id="nytta" style="margin-top:28px;">
       <h2>För byråer</h2>
       <div class="card content">
         <p>
