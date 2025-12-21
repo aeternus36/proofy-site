@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="sv">
 <head>
@@ -10,13 +11,24 @@
 </head>
 
 <body>
+<a class="skip" href="#main">Hoppa till innehåll</a>
+
 <header>
   <div class="wrap">
     <div class="nav">
       <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo"></span>
+        <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
+
+      <nav class="navLinks" aria-label="Navigation">
+        <a href="/#nytta">Nytta</a>
+        <a href="/#hur">Så funkar det</a>
+        <a href="/#trygghet">Säkerhet</a>
+        <a href="/#faq">Frågor</a>
+        <a href="/#kontakt">Kontakt</a>
+      </nav>
+
       <div class="navActions">
         <a class="btn" href="/hash.html">Skapa ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
@@ -25,60 +37,26 @@
   </div>
 </header>
 
-<main>
+<main id="main">
   <div class="wrap">
     <div class="badge">För redovisningsbyråer · revision · granskning</div>
+
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om ett underlag motsvarar en tidigare registrerad referens.
-      Verifiering sker utan att dokumentinnehåll lagras.
+      Verifiera om ett underlag matchar en tidigare registrerad referens.
+      Du kan verifiera via fil eller genom att klistra in ett Verifierings-ID.
+      Proofy lagrar inte dokument.
     </p>
 
     <section class="card content">
       <div class="grid2">
 
-        <!-- PRIMÄRT: VERIFIERA VIA ID -->
-        <section aria-label="Verifiera via Verifierings-ID">
-          <b>Verifiera via Verifierings-ID</b>
-
-          <label class="label" for="idInput">Verifierings-ID</label>
-          <input id="idInput" type="text" placeholder="Klistra in Verifierings-ID (0x…)" />
-
-          <div class="actions" style="margin-top:12px">
-            <button class="btn primary" id="verifyBtn">Verifiera</button>
-          </div>
-
-          <div id="status" class="meta" style="margin-top:10px;"></div>
-
-          <div id="resultBox" style="display:none;margin-top:12px">
-            <div class="tile">
-
-              <div id="resultTop" style="font-weight:950;"></div>
-
-              <div class="hr"></div>
-
-              <div class="label">Verifierings-ID</div>
-              <pre class="mono" id="resultId">—</pre>
-              <button class="btn soft copyBtn" data-copy="resultId">Kopiera</button>
-
-              <div class="label" style="margin-top:12px;">Verifieringslänk</div>
-              <pre class="mono" id="resultLink">—</pre>
-              <button class="btn soft copyBtn" data-copy="resultLink">Kopiera</button>
-
-              <div class="label" style="margin-top:12px;">Registreringstid</div>
-              <div class="mono" id="resultTime">—</div>
-
-            </div>
-          </div>
-        </section>
-
-        <!-- SEKUNDÄRT: VERIFIERA VIA FIL -->
+        <!-- LEFT -->
         <section aria-label="Verifiera via fil">
-          <b>Verifiera via fil (alternativ)</b>
-
-          <p class="meta">
-            Används när Verifierings-ID saknas. Ett ID beräknas lokalt i webbläsaren.
+          <div style="font-weight:950; font-size:16px;">Verifiera via fil</div>
+          <p class="meta" style="margin-top:8px">
+            Välj filen du vill kontrollera. Vi skapar ett Verifierings-ID lokalt och söker efter en matchande referens.
           </p>
 
           <input id="fileInput" type="file" />
@@ -87,18 +65,67 @@
           <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
 
           <div class="actions" style="margin-top:12px">
-            <button class="btn" id="fileVerifyBtn" disabled>Verifiera via fil</button>
+            <button class="btn primary" id="fileVerifyBtn" disabled>Verifiera via fil</button>
+            <span id="statusPill" class="pill">Välj en fil eller ange ID</span>
           </div>
 
           <div id="localIdBox" style="display:none;margin-top:12px">
-            <div class="label">Verifierings-ID (lokalt beräknat)</div>
-            <pre class="mono" id="localIdOut">—</pre>
-            <button class="btn soft copyBtn" data-copy="localIdOut">Kopiera</button>
+            <div class="meta">Verifierings-ID (skapat lokalt för kontroll):</div>
+            <div id="localIdOut" class="mono">—</div>
+          </div>
+
+          <div class="small" style="margin-top:10px">
+            Tips: Om någon exporterat om/omsannat kan det räknas som en ny filversion även om dokumentet ser likadant ut.
+          </div>
+        </section>
+
+        <!-- RIGHT -->
+        <section aria-label="Verifiera via Verifierings-ID">
+          <div style="font-weight:950; font-size:16px;">Verifiera via Verifierings-ID</div>
+
+          <label class="meta" style="display:block;margin-top:10px" for="idInput">Verifierings-ID</label>
+          <input id="idInput" type="text" placeholder="Klistra in Verifierings-ID…" />
+
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" id="verifyBtn" type="button">Verifiera</button>
+            <button class="btn" id="copyLinkBtn" type="button">Kopiera verifieringslänk</button>
+          </div>
+
+          <div class="hr"></div>
+
+          <div id="status" class="meta"></div>
+
+          <div id="resultBox" style="display:none;margin-top:10px">
+            <div class="tile">
+              <div id="resultTop" style="font-weight:950;"></div>
+
+              <div class="hr" style="margin:12px 0;"></div>
+
+              <div class="meta">Verifierings-ID</div>
+              <div class="mono" id="resultId" style="margin-top:6px;">—</div>
+
+              <div class="meta" style="margin-top:10px;">Delbar verifieringslänk</div>
+              <div class="mono" id="resultLink" style="margin-top:6px;">—</div>
+
+              <div class="meta" style="margin-top:10px;">Registreringstid</div>
+              <div class="mono" id="resultTime" style="margin-top:6px;">—</div>
+
+              <div class="meta" style="margin-top:10px;">Registrerad av</div>
+              <div class="mono" id="resultWho" style="margin-top:6px;">—</div>
+
+              <div class="small" style="margin-top:10px;">
+                Vid behov: spara resultatet i ärendet (t.ex. som notering eller i er granskningsdokumentation).
+              </div>
+            </div>
           </div>
         </section>
 
       </div>
     </section>
+
+    <p class="small" style="margin-top:14px">
+      Tips: Spara Verifierings-ID i ärendet (gärna med datum/tid). Vid behov kan samma fil verifieras senare.
+    </p>
   </div>
 </main>
 
@@ -106,16 +133,242 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  document.querySelectorAll(".copyBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const el = $(btn.dataset.copy);
-      if(!el) return;
-      await navigator.clipboard.writeText(el.textContent.trim());
-      btn.textContent = "Kopierad";
-      setTimeout(() => btn.textContent = "Kopiera", 1200);
-    });
+  const fileInput = $("fileInput");
+  const dropZone = $("dropZone");
+  const fileInfo = $("fileInfo");
+  const fileVerifyBtn = $("fileVerifyBtn");
+  const localIdBox = $("localIdBox");
+  const localIdOut = $("localIdOut");
+
+  const idInput = $("idInput");
+  const verifyBtn = $("verifyBtn");
+  const copyLinkBtn = $("copyLinkBtn");
+  const status = $("status");
+  const statusPill = $("statusPill");
+
+  const resultBox = $("resultBox");
+  const resultTop = $("resultTop");
+  const resultId = $("resultId");
+  const resultLink = $("resultLink");
+  const resultTime = $("resultTime");
+  const resultWho = $("resultWho");
+
+  let currentFile = null;
+  let busy = false;
+  let opId = 0;
+
+  function setBusy(v){
+    busy = v;
+    fileVerifyBtn.disabled = !currentFile || busy;
+    verifyBtn.disabled = busy;
+    copyLinkBtn.disabled = busy;
+  }
+
+  function setStatus(msg, cls="meta"){
+    status.textContent = msg || "";
+    status.className = cls;
+  }
+
+  function setPill(msg){
+    statusPill.textContent = msg || "—";
+  }
+
+  function resetResults(){
+    localIdBox.style.display = "none";
+    localIdOut.textContent = "—";
+    resultBox.style.display = "none";
+    resultTop.textContent = "";
+    resultId.textContent = "—";
+    resultLink.textContent = "—";
+    resultTime.textContent = "—";
+    resultWho.textContent = "—";
+    setStatus("");
+  }
+
+  function bytesToHex(bytes){
+    return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  async function makeLocalId(file){
+    // Teknisk beräkning (ordet visas inte i UI)
+    const buf = await file.arrayBuffer();
+    const dig = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + bytesToHex(new Uint8Array(dig));
+  }
+
+  function isIdFormat(v){
+    return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v);
+  }
+
+  function shareUrlForId(id){
+    return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
+  }
+
+  function fmtDateSv(timestampSeconds){
+    try{
+      return new Date(timestampSeconds * 1000).toLocaleString("sv-SE");
+    } catch {
+      return "—";
+    }
+  }
+
+  async function verifyId(id, showWorking=true){
+    const clean = (id || "").trim();
+
+    if(!isIdFormat(clean)){
+      setStatus("Ange ett giltigt Verifierings-ID.", "err");
+      setPill("Ogiltigt ID");
+      return;
+    }
+
+    const myOp = ++opId;
+    setBusy(true);
+
+    if(showWorking){
+      setStatus("Verifierar…");
+      setPill("Verifierar…");
+    }
+
+    resultBox.style.display = "none";
+
+    try{
+      const r = await fetch("/api/verify",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ hash: clean }) // backend-fält
+      });
+
+      const j = await r.json().catch(() => ({}));
+      if(myOp !== opId) return;
+
+      if(!r.ok || !j.ok){
+        setStatus("Tekniskt fel vid verifiering.", "err");
+        setPill("Tekniskt fel");
+        return;
+      }
+
+      const link = shareUrlForId(clean);
+
+      resultId.textContent = clean;
+      resultLink.textContent = link;
+
+      if(!j.exists){
+        resultTop.innerHTML = `<span class="err">❌ Ingen match</span> <span class="meta">(ingen referens hittades)</span>`;
+        resultTime.textContent = "—";
+        resultWho.textContent = "—";
+        setPill("Ingen match");
+      } else {
+        resultTop.innerHTML = `<span class="ok">✅ Match</span> <span class="meta">(referens finns registrerad)</span>`;
+        resultTime.textContent = j.timestamp ? fmtDateSv(j.timestamp) : "—";
+        resultWho.textContent = j.submitter || "—";
+        setPill("Match ✅");
+      }
+
+      resultBox.style.display = "block";
+      setStatus("");
+    } finally {
+      if(myOp === opId) setBusy(false);
+    }
+  }
+
+  function setFile(file){
+    currentFile = file || null;
+    resetResults();
+
+    if(!currentFile){
+      fileInfo.textContent = "Ingen fil vald.";
+      setPill("Välj en fil eller ange ID");
+      fileVerifyBtn.disabled = true;
+      return;
+    }
+
+    fileInfo.textContent = `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
+    setPill("Redo att verifiera");
+    setBusy(false);
+  }
+
+  fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
+
+  dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("drag");
+    const f = e.dataTransfer?.files?.[0];
+    if(f) setFile(f);
   });
+
+  fileVerifyBtn.addEventListener("click", async () => {
+    if(!currentFile || busy) return;
+
+    const myOp = ++opId;
+    setBusy(true);
+    setStatus("Skapar ID lokalt…");
+    setPill("Arbetar…");
+
+    try{
+      const id = await makeLocalId(currentFile);
+      if(myOp !== opId) return;
+
+      localIdBox.style.display = "block";
+      localIdOut.textContent = id;
+
+      idInput.value = id;
+
+      setStatus("");
+      setPill("Verifierar…");
+      await verifyId(id, false);
+    } catch (e){
+      console.error(e);
+      if(myOp !== opId) return;
+      setStatus("Fel: kunde inte skapa ID lokalt.", "err");
+      setPill("Fel");
+    } finally {
+      if(myOp === opId) setBusy(false);
+    }
+  });
+
+  verifyBtn.addEventListener("click", () => {
+    verifyId(idInput.value, true);
+  });
+
+  copyLinkBtn.addEventListener("click", async () => {
+    const id = (idInput.value || "").trim();
+    if(!isIdFormat(id)){
+      setStatus("Ange ett giltigt Verifierings-ID innan du kopierar länk.", "err");
+      setPill("Ogiltigt ID");
+      return;
+    }
+    try{
+      await navigator.clipboard.writeText(shareUrlForId(id));
+      setStatus("Verifieringslänk kopierad ✅", "ok");
+      setPill("Länk kopierad");
+    } catch {
+      setStatus("Kunde inte kopiera. Tillåt clipboard i webbläsaren.", "err");
+      setPill("Kunde inte kopiera");
+    }
+  });
+
+  // Auto från URL: stöd både ?id= och legacy ?hash=
+  const p = new URLSearchParams(location.search);
+  const urlId = p.get("id") || p.get("hash");
+  if(urlId){
+    idInput.value = urlId;
+    if(isIdFormat(urlId)){
+      verifyId(urlId, true);
+    } else {
+      setStatus("Ogiltigt Verifierings-ID i länken.", "err");
+      setPill("Ogiltigt ID");
+    }
+  } else {
+    setPill("Välj en fil eller ange ID");
+  }
+
+  setBusy(false);
 })();
 </script>
+
+<script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
+
