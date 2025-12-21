@@ -265,7 +265,6 @@
   }
 
   async function makeLocalId(file){
-    // Teknisk beräkning (visas inte med tekniska ord i UI)
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
     return "0x" + bytesToHex(new Uint8Array(dig));
@@ -275,8 +274,9 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v);
   }
 
-  function buildVerifyLink(id){
-    return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
+  // ✅ Standard: dela alltid via ?hash=
+  function buildVerifyLink(hash){
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
   function showQrError(targetEl, extra){
@@ -400,7 +400,8 @@
       idOut.textContent = id;
       linkOut.textContent = currentLink;
 
-      receiptBtn.href = `/certificate.html?id=${encodeURIComponent(id)}`;
+      // ✅ Certifikat ska också använda ?hash=
+      receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
       renderQr(qrBox, currentLink);
@@ -410,7 +411,7 @@
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ hash: id }) // backend-fält, ok att lämna
+        body: JSON.stringify({ hash: id })
       });
 
       const data = await res.json().catch(() => ({}));
@@ -517,4 +518,4 @@
 
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
-  </html>
+</html>
