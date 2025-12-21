@@ -7,7 +7,7 @@
   <meta name="description" content="Verifieringsintyg som sammanfattar om ett Verifierings-ID är registrerat och när registreringen skedde." />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-21" />
 
   <style>
     /* En sida, tydligt intyg, bra mobil. */
@@ -192,6 +192,8 @@
 </head>
 
 <body>
+<a class="skip" href="#main">Hoppa till innehåll</a>
+
 <header>
   <div class="wrap">
     <div class="nav">
@@ -199,15 +201,26 @@
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:nowrap;">
-        <a class="btn" href="/verify.html">Verifiera</a>
+
+      <nav class="navLinks" aria-label="Navigation">
+        <a href="/#nytta">Nytta</a>
+        <a href="/#hur">Så funkar det</a>
+        <a href="/#trygghet">Säkerhet</a>
+        <a href="/#faq">Frågor</a>
+        <a href="/#kontakt">Kontakt</a>
+      </nav>
+
+      <div class="navActions">
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
     </div>
   </div>
 </header>
 
-<main>
+<main id="main">
   <div class="certWrap">
 
     <div class="badge" style="margin-top:18px;">Intyg · spårbarhet · byrå & granskning</div>
