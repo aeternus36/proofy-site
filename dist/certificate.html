@@ -152,6 +152,21 @@
       image-rendering: pixelated;
     }
 
+    .copyLine{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-top:6px;
+    }
+    .copyLine .mono{
+      flex:1;
+      min-width:240px;
+    }
+    .copyBtn{
+      min-width: 120px;
+    }
+
     details{
       border:1px solid rgba(255,255,255,.12);
       border-radius: 16px;
@@ -164,7 +179,7 @@
 
     /* Print/PDF */
     @media print{
-      header, .actions, .openBox, #qrWrap, #btnCopyLink { display:none !important; }
+      header, .actions, .openBox, #qrWrap, .copyBtn { display:none !important; }
       body{ background:#fff !important; color:#000 !important; }
       .certTop{ box-shadow:none !important; background:#fff !important; border:1px solid #ddd !important; }
       .panel, .note, details{ background:#fff !important; border:1px solid #ddd !important; }
@@ -215,7 +230,6 @@
 
       <div class="actions" aria-label="Åtgärder">
         <button class="btn primary" id="btnPrint" type="button">Skriv ut / Spara som PDF</button>
-        <button class="btn" id="btnCopyLink" type="button" disabled>Kopiera intygslänk</button>
         <button class="btn soft" id="btnRefresh" type="button">Uppdatera</button>
         <a class="btn" id="btnVerify" href="/verify.html">Öppna verifiering</a>
       </div>
@@ -242,7 +256,10 @@
       <div class="grid">
         <div class="panel">
           <div class="label">Verifierings-ID</div>
-          <div id="hashOut" class="value mono">—</div>
+          <div class="copyLine">
+            <div id="hashOut" class="value mono">—</div>
+            <button class="btn soft copyBtn" id="btnCopyId" type="button" disabled>Kopiera</button>
+          </div>
           <div class="meta" style="margin-top:8px;">
             ID:t avser en <b>filversion</b>. Minsta ändring ger ett nytt ID, även om dokumentet i sak kan uppfattas som oförändrat.
           </div>
@@ -273,10 +290,16 @@
 
         <div class="panel">
           <div class="label">Länk till intyg</div>
-          <div id="certLinkOut" class="value mono">—</div>
+          <div class="copyLine">
+            <div id="certLinkOut" class="value mono">—</div>
+            <button class="btn soft copyBtn" id="btnCopyCert" type="button" disabled>Kopiera</button>
+          </div>
 
           <div class="label" style="margin-top:10px;">Verifieringslänk</div>
-          <div id="verifyLinkOut" class="value mono">—</div>
+          <div class="copyLine">
+            <div id="verifyLinkOut" class="value mono">—</div>
+            <button class="btn soft copyBtn" id="btnCopyVerify" type="button" disabled>Kopiera</button>
+          </div>
 
           <div id="qrWrap">
             <div class="qrRow">
@@ -398,7 +421,6 @@
   const btnPrint = $("btnPrint");
   const btnRefresh = $("btnRefresh");
   const btnVerify = $("btnVerify");
-  const btnCopyLink = $("btnCopyLink");
 
   const openBox = $("openBox");
   const hashInput = $("hashInput");
@@ -415,6 +437,10 @@
   const certLinkOut = $("certLinkOut");
   const verifyLinkOut = $("verifyLinkOut");
 
+  const btnCopyId = $("btnCopyId");
+  const btnCopyCert = $("btnCopyCert");
+  const btnCopyVerify = $("btnCopyVerify");
+
   const qrBox = $("qrBox");
   const qrStatus = $("qrStatus");
 
@@ -429,7 +455,14 @@
   function setBusy(v){
     busy = v;
     btnRefresh.disabled = v;
-    btnCopyLink.disabled = v || !certLinkOut.textContent || certLinkOut.textContent === "—";
+
+    const canCopyId = !!hashOut.textContent && hashOut.textContent !== "—";
+    const canCopyCert = !!certLinkOut.textContent && certLinkOut.textContent !== "—";
+    const canCopyVerify = !!verifyLinkOut.textContent && verifyLinkOut.textContent !== "—";
+
+    btnCopyId.disabled = v || !canCopyId;
+    btnCopyCert.disabled = v || !canCopyCert;
+    btnCopyVerify.disabled = v || !canCopyVerify;
   }
 
   function setStatus(text, kind){
@@ -457,8 +490,7 @@
     return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
   }
 
-  // ✅ Skriv alltid tillbaka som ?id= (enhetligt med övriga sidor),
-  // men rör inte övriga query-parametrar.
+  // ✅ Skriv alltid tillbaka som ?id=
   function setIdInUrl(id){
     const url = new URL(location.href);
     if (id) {
@@ -474,14 +506,11 @@
   function buildCertificateLink(id){
     return `${location.origin}/certificate.html?id=${encodeURIComponent(id)}`;
   }
-
-  // ✅ Enhetlig verifieringslänk: /verify.html?id=...
   function buildVerifyLink(id){
     return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
   }
 
   function isoUtcNoMs(d){
-    // "YYYY-MM-DD HH:MM:SS UTC" (ingen falsk precision)
     return d.toISOString().replace("T"," ").replace(/\.\d{3}Z$/, " UTC");
   }
 
@@ -521,7 +550,7 @@
     if (qrBox) qrBox.innerHTML = "—";
     if (qrStatus) qrStatus.textContent = "—";
     btnVerify.href = "/verify.html";
-    btnCopyLink.disabled = true;
+    setBusy(false);
   }
 
   function canRenderQr(){
@@ -579,6 +608,21 @@
     new QRCode(qrBox, { text, width:150, height:150, correctLevel });
   }
 
+  async function copyText(btn, text){
+    const t = (text || "").trim();
+    if(!t || t === "—") return;
+    try{
+      await navigator.clipboard.writeText(t);
+      const old = btn.textContent;
+      btn.textContent = "Kopierad";
+      setTimeout(() => btn.textContent = old, 1200);
+    } catch {
+      const old = btn.textContent;
+      btn.textContent = "Kunde inte kopiera";
+      setTimeout(() => btn.textContent = old, 1400);
+    }
+  }
+
   // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
   async function fetchVerify(id){
     try{
@@ -615,7 +659,6 @@
     openBox.style.display = "none";
     hashOut.textContent = id;
 
-    // Länkar/QR (för delning) – även om formatet är fel, men vi visar tydlig status
     const certLink = buildCertificateLink(id);
     const verifyLink = buildVerifyLink(id);
 
@@ -623,11 +666,7 @@
     verifyLinkOut.textContent = verifyLink;
 
     btnVerify.href = verifyLink;
-
-    // QR för verifiering i efterhand
     renderQr(verifyLink);
-
-    btnCopyLink.disabled = false;
 
     if(!isBytes32Hex(id)){
       setStatus("Ogiltigt Verifierings-ID", "err");
@@ -691,22 +730,10 @@
   btnPrint.addEventListener("click", () => window.print());
   btnRefresh.addEventListener("click", () => loadCertificate(getIdFromUrl()));
 
-  // Kopiera intygslänk (primärt för dokumentation)
-  btnCopyLink.addEventListener("click", async () => {
-    const txt = (certLinkOut.textContent || "").trim();
-    if (!txt || txt === "—") return;
-    try{
-      await navigator.clipboard.writeText(txt);
-      setStatus("Intygslänk kopierad", "ok");
-      setTimeout(() => {
-        const id = getIdFromUrl();
-        if (id) loadCertificate(id);
-        else setStatus("Saknar Verifierings-ID", "err");
-      }, 900);
-    } catch {
-      setStatus("Kunde inte kopiera", "err");
-    }
-  });
+  // Copy buttons
+  btnCopyId.addEventListener("click", () => copyText(btnCopyId, hashOut.textContent));
+  btnCopyCert.addEventListener("click", () => copyText(btnCopyCert, certLinkOut.textContent));
+  btnCopyVerify.addEventListener("click", () => copyText(btnCopyVerify, verifyLinkOut.textContent));
 
   // Open box
   btnOpen?.addEventListener("click", () => {
@@ -734,7 +761,6 @@
   // Start
   const initialId = getIdFromUrl();
   if (initialId){
-    // Normalisera URL direkt (så du slipper “hash/id”-förvirring)
     setIdInUrl(initialId);
     loadCertificate(initialId);
   } else {
@@ -743,9 +769,8 @@
     openBox.style.display = "block";
     setStatus("Saknar Verifierings-ID", "err");
     interpretation.textContent = "Ingen kontroll kunde göras eftersom Verifierings-ID saknas.";
+    setBusy(false);
   }
-
-  // OBS: Ingen setBusy(false) här, eftersom det avbröt pågående kontroll
 })();
 </script>
 
