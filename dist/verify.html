@@ -63,7 +63,7 @@
           />
 
           <div class="small" style="margin-top:8px">
-            ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk eller intygslänk.
+            ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
           <div class="hr"></div>
@@ -97,8 +97,21 @@
             <div class="meta" style="margin-top:10px;">Filens fingeravtryck</div>
             <pre class="mono" id="outFileHash">—</pre>
 
+            <div class="hr"></div>
+
+            <div class="meta">Registreringsstatus</div>
+            <div id="outRegStatus" class="mono">—</div>
+
+            <div class="meta" style="margin-top:10px;">Registreringstid (Sverige)</div>
+            <pre class="mono" id="outRegSe">—</pre>
+
+            <div class="meta" style="margin-top:10px;">Registreringstid (UTC)</div>
+            <pre class="mono" id="outRegUtc">—</pre>
+
             <div class="small" style="margin-top:10px">
-              Match betyder att filen är <b>exakt samma version</b> (samma bytes) som den som registrerades.
+              <b>Match</b> betyder att filen är <b>exakt samma version</b> (samma bytes) som den som ID:t avser.
+              <br />
+              Proofy avgör inte vem som skapat filen eller om innehållet är korrekt – endast om filversionen är identisk.
             </div>
 
             <div class="actions" style="margin-top:12px">
@@ -155,19 +168,29 @@
   const resultHeadline = $("resultHeadline");
   const outHash = $("outHash");
   const outFileHash = $("outFileHash");
+  const outRegStatus = $("outRegStatus");
+  const outRegSe = $("outRegSe");
+  const outRegUtc = $("outRegUtc");
   const openCertBtn = $("openCertBtn");
 
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
   let currentFile = null;
+  let busy = false;
+  let opId = 0;
 
-  function isValidHash(h){
+  function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
   }
 
   function setStatus(text){
     statusPill.textContent = text;
+  }
+
+  function setBusy(v){
+    busy = v;
+    verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
   }
 
   function bytesToHex(bytes){
@@ -185,40 +208,86 @@
     errorBox.style.display = "none";
     errorMsg.textContent = "";
     if (openCertBtn) openCertBtn.style.display = "none";
-  }
 
-  function updateState(){
-    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value));
+    outHash.textContent = "—";
+    outFileHash.textContent = "—";
+    outRegStatus.textContent = "—";
+    outRegSe.textContent = "—";
+    outRegUtc.textContent = "—";
+    resultHeadline.textContent = "";
   }
 
   function getIdFromUrl(){
     const url = new URL(location.href);
-    return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
+    return (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
   }
 
+  // Skriv alltid tillbaka som ?hash= (och rensa legacy ?id=)
   function setIdInUrl(id){
     const url = new URL(location.href);
     if (id) {
-      url.searchParams.set("id", id);
-      url.searchParams.delete("hash");
-    } else {
+      url.searchParams.set("hash", id);
       url.searchParams.delete("id");
+    } else {
       url.searchParams.delete("hash");
+      url.searchParams.delete("id");
     }
     history.replaceState({}, "", url.toString());
   }
 
-  // Prefill from URL (?id= or legacy ?hash=)
+  function isoUtcNoMs(d){
+    return d.toISOString().replace("T"," ").replace(/\.\d{3}Z$/, " UTC");
+  }
+
+  function fmtSe(ts){
+    try{
+      return new Intl.DateTimeFormat("sv-SE", {
+        timeZone:"Europe/Stockholm",
+        year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit"
+      }).format(new Date(Number(ts) * 1000)) + " (Europe/Stockholm)";
+    } catch {
+      return "—";
+    }
+  }
+
+  function fmtUtc(ts){
+    try{
+      return isoUtcNoMs(new Date(Number(ts) * 1000));
+    } catch {
+      return "—";
+    }
+  }
+
+  // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
+  async function fetchVerify(hash){
+    try{
+      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
+    } catch { /* ignore */ }
+
+    const r2 = await fetch(`/api/verify`, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hash })
+    });
+    const j2 = await r2.json().catch(() => ({}));
+    if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
+    return { ok:true, data:j2 };
+  }
+
+  // Prefill from URL (?hash= or legacy ?id=)
   const urlId = getIdFromUrl();
-  if (isValidHash(urlId)) {
+  if (isValidId(urlId)) {
     hashInput.value = urlId;
     setIdInUrl(urlId);
   }
 
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
-    if (isValidHash(v)) setIdInUrl(v);
-    updateState();
+    if (isValidId(v)) setIdInUrl(v);
+    setBusy(false);
   });
 
   fileInput.addEventListener("change", () => {
@@ -226,54 +295,77 @@
     fileInfo.textContent = currentFile
       ? `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
       : "Ingen fil vald.";
-    updateState();
+    setBusy(false);
   });
 
   verifyBtn.addEventListener("click", async () => {
+    if (busy) return;
+
     resetUI();
     setStatus("Verifierar…");
+    setBusy(true);
+
+    const myOp = ++opId;
 
     try{
       const refHash = hashInput.value.trim();
-      if (!isValidHash(refHash)) throw new Error("Ogiltigt Verifierings-ID.");
+      if (!isValidId(refHash)) throw new Error("Ogiltigt Verifierings-ID (måste vara 0x + 64 hex-tecken).");
       if (!currentFile) throw new Error("Välj en fil att verifiera.");
 
+      // 1) Lokal kontroll: filens fingeravtryck
       const fileHash = await sha256Hex(currentFile);
+      if (myOp !== opId) return;
 
-      const res = await fetch("/api/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ hash: refHash, fileHash })
-      });
+      const match = (fileHash.toLowerCase() === refHash.toLowerCase());
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Verifiering misslyckades.");
+      // 2) API-kontroll: är Verifierings-ID registrerat och när?
+      const verifyRes = await fetchVerify(refHash);
+      if (myOp !== opId) return;
 
+      // Render resultat
       resultBox.style.display = "block";
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
 
-      if (data.match === true) {
+      if (match) {
         resultHeadline.innerHTML = `<span class="ok">✅ Match</span>`;
       } else {
         resultHeadline.innerHTML = `<span class="err">❌ Ingen match</span>`;
       }
 
+      if (!verifyRes.ok) {
+        // Vi har fortfarande en korrekt lokal match/ingen match, men registreringsstatus kunde inte hämtas.
+        outRegStatus.textContent = "Kunde inte kontrollera registreringsstatus (tillfälligt tekniskt problem).";
+        outRegSe.textContent = "—";
+        outRegUtc.textContent = "—";
+      } else {
+        const data = verifyRes.data || {};
+        const exists = Boolean(data.exists);
+        const ts = data.timestamp ? Number(data.timestamp) : null;
+
+        outRegStatus.textContent = exists ? "Registrerad" : "Ej registrerad";
+        outRegSe.textContent = (exists && ts) ? fmtSe(ts) : "—";
+        outRegUtc.textContent = (exists && ts) ? fmtUtc(ts) : "—";
+      }
+
       if (openCertBtn) {
-        openCertBtn.href = `/certificate.html?id=${encodeURIComponent(refHash)}`;
+        openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refHash)}`;
         openCertBtn.style.display = "inline-flex";
       }
 
       setStatus("Klar");
+      setBusy(false);
     } catch (e){
+      if (myOp !== opId) return;
       errorBox.style.display = "block";
       errorMsg.textContent = e?.message || "Tekniskt fel.";
       setStatus("Fel");
+      setBusy(false);
     }
   });
 
   setStatus("Väntar");
-  updateState();
+  setBusy(false);
 })();
 </script>
 
