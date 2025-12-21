@@ -286,8 +286,9 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v);
   }
 
-  function buildVerifyLink(hash){
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
+  // ✅ Uppdaterat: använd alltid ?id=
+  function buildVerifyLink(id){
+    return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
   }
 
   function showQrError(targetEl, extra){
@@ -405,7 +406,8 @@
       idOut.textContent = id;
       linkOut.textContent = currentLink;
 
-      receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
+      // ✅ Uppdaterat: certifikat ska använda ?id= (certificate.html stödjer även legacy ?hash=)
+      receiptBtn.href = `/certificate.html?id=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
       renderQr(qrBox, currentLink);
