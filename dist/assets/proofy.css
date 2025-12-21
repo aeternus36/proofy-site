@@ -32,7 +32,6 @@ body{
 a{ color:inherit; }
 .wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
 
-/* Skip link (a11y) */
 .skip{
   position:absolute;
   left:-9999px;
@@ -45,80 +44,101 @@ a{ color:inherit; }
 }
 .skip:focus{ left:10px; }
 
-/* =========================
-   HEADER v1 (ENHETLIG)
-   ========================= */
+/* Header */
 header{
   position: sticky;
   top:0;
   z-index:50;
   backdrop-filter: blur(12px) saturate(160%);
-  background: rgba(11,18,32,.78);
+  background: rgba(11,18,32,.70);
   border-bottom: 1px solid var(--border);
 }
 .nav{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:14px;
+  gap:12px;
   padding: 14px 0;
-  min-height: 74px;
+  min-height: 64px;
 }
+
+/* Brand */
 .brand{
   display:flex;
   align-items:center;
   gap:10px;
   text-decoration:none;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing:.2px;
+  flex: 0 0 auto;
 }
 .logo{
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   background: linear-gradient(135deg, var(--brand), var(--brand2));
   box-shadow: 0 16px 40px rgba(110,168,255,.22);
   position: relative;
-  flex: 0 0 auto;
 }
 .logo:after{
   content:"";
   position:absolute;
-  inset: 10px 11px;
-  border-radius: 8px;
+  inset: 9px 10px;
+  border-radius: 7px;
   background: rgba(11,18,32,.65);
   border: 1px solid rgba(255,255,255,.20);
 }
 
-/* =========================
-   NAV LINKS (AVSTÄNGT)
-   Beslut A: inga ankarlänkar i headern.
-   Detta tvingar bort navLinks även om någon sida råkar ha kvar HTML-blocket.
-   ========================= */
-.navLinks{ display:none !important; }
+/* Nav links (desktop) */
+.navLinks{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 999px;
+  flex: 0 1 auto;
+}
+.navLinks a{
+  text-decoration:none;
+  padding: 10px 12px;
+  border-radius: 999px;
+  color: rgba(169,183,211,.95);
+  font-weight: 850;
+  font-size: 13px;
+  line-height: 1;
+}
+.navLinks a:hover{
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+}
 
-/* Höger: CTA */
+/* Nav actions (all pages) */
 .navActions{
   display:flex;
   align-items:center;
   gap:10px;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
   justify-content:flex-end;
+  flex: 0 0 auto;
 }
 
-/* Buttons */
+/* Buttons (global) */
 .btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
   gap:10px;
-  padding: 12px 16px;
+  padding: 14px 18px;          /* större, bättre för mobil + byrå */
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
   color: inherit;
   text-decoration:none;
   font-weight: 900;
+  font-size: 14px;             /* konsekvent storlek */
+  line-height: 1;
   transition: transform .08s ease, background .15s ease, border-color .15s ease;
   white-space: nowrap;
   cursor:pointer;
@@ -146,21 +166,46 @@ header{
 }
 .btn.ghost:hover{ background: rgba(255,255,255,.06); }
 
-/* =========================
-   HEADER-KNAPPAR (OBLIGATORISKT)
-   Större än övriga knappar, konsekvent på alla sidor
-   ========================= */
-header .btn{
-  padding: 14px 20px;
-  font-size: 14.5px;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.22);
-}
-header .btn.primary{
-  padding: 14px 22px;
+/* ✅ Mobil: stabil header (slutar “sitta konstigt”) */
+@media (max-width: 920px){
+  .navLinks{ display:none; }
+
+  .nav{
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* actions får egen rad om det behövs */
+  .navActions{
+    margin-left: auto;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 }
 
-/* Accessibility focus (stabil) */
+/* ✅ Små mobiler: knappar blir tydliga och klickbara */
+@media (max-width: 560px){
+  .wrap{ padding: 0 16px; }
+
+  .nav{
+    padding: 12px 0;
+    gap: 10px;
+  }
+
+  /* actions tar full bredd på egen rad */
+  .navActions{
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .navActions .btn{
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* Accessibility focus */
 @supports selector(:focus-visible){
   .btn:focus{ outline:none; }
   input[type="file"]:focus,
@@ -424,18 +469,6 @@ pre.mono{
   width: 150px !important;
   height: 150px !important;
   image-rendering: pixelated;
-}
-
-/* Hero CTA layout (från index, centraliserad) */
-.heroCtas{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-}
-.heroCtas .btn{ min-width: 180px; }
-@media (max-width: 560px){
-  .heroCtas .btn{ width: 100%; min-width: unset; }
 }
 
 /* Footer */
