@@ -229,8 +229,6 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
-
       <div class="navActions">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
@@ -252,7 +250,7 @@
         <div style="flex:1;min-width:260px;">
           <h1 class="certTitle">Verifieringsintyg</h1>
           <p class="certLead">
-            Detta intyg sammanfattar resultatet av en kontroll av ett <b>Verifierings-ID</b> (SHA-256-fingeravtryck för en filversion).
+            Detta intyg sammanfattar resultatet av en kontroll av ett <b>Verifierings-ID</b> (ett kontrollvärde för en filversion).
             Det visar om ID:t är registrerat och, i så fall, <b>när registreringen skedde</b>.
             <b>Inget dokumentinnehåll lagras</b> i Proofy.
           </p>
@@ -271,7 +269,7 @@
       <!-- Revisionsvänliga toppfält -->
       <div class="topMetaGrid" aria-label="Intygsmetadata">
         <div class="certPanel">
-          <div class="certLabel">UTFÄRDAD AV</div>
+          <div class="certLabel">TILLHANDAHÅLLET VIA</div>
           <div class="certValue">
             Proofy (proofy.se)
             <div class="meta" style="margin-top:8px;">
@@ -281,10 +279,11 @@
         </div>
 
         <div class="certPanel">
-          <div class="certLabel">INTYG-ID (KONTROLL-ID)</div>
+          <div class="certLabel">INTYG-ID</div>
           <div id="certIdOut" class="certValue mono">—</div>
           <div class="meta" style="margin-top:8px;">
-            Unikt ID för detta intyg (genereras lokalt). Bra för hänvisning i ärendeanteckning.
+            Referens-ID som skapas i din webbläsare för att kunna hänvisa till en viss kontroll/utskrift.
+            Det är inte ett registrerat Verifierings-ID och ersätter inte kontrollen av Verifierings-ID.
           </div>
         </div>
       </div>
@@ -292,8 +291,8 @@
       <div class="hr"></div>
 
       <div class="note">
-        <b>Omfattning (Scope)</b><br />
-        Intyget avser endast om en <b>filversion</b> (identiska bytes) kan knytas till en registreringstid via Verifierings-ID.
+        <b>Omfattning</b><br />
+        Intyget avser endast om en <b>filversion</b> kan knytas till en registreringstid via Verifierings-ID.
         Det är <b>inte</b> e-signering, inte arkivering och inte en bedömning av dokumentets innehåll eller riktighet.
       </div>
 
@@ -302,11 +301,11 @@
         <div class="note">
           <b>Öppna intyget</b><br />
           Klistra in Verifierings-ID eller öppna via länk:
-          <span class="mono">/certificate.html?hash=0x…</span>
-          <span class="meta"> (även <span class="mono">?id=0x…</span> fungerar för bakåtkompatibilitet)</span>
+          <span class="mono">/certificate.html?id=…</span>
+          <span class="meta"> (äldre länkar med <span class="mono">?hash=…</span> fungerar också)</span>
         </div>
         <div class="openRow">
-          <input id="hashInput" type="text" placeholder="Verifierings-ID (0x…)" />
+          <input id="hashInput" type="text" placeholder="Verifierings-ID" />
           <button id="btnOpen" class="btn primary" type="button">Öppna intyg</button>
           <button id="btnPaste" class="btn soft" type="button">Klistra in ID</button>
           <a class="btn" href="/verify.html">Gå till verifiering</a>
@@ -403,7 +402,7 @@
           <summary>Visa fullständig text</summary>
 
           <p>
-            <b>1) Utfärdare och kontakt</b><br/>
+            <b>1) Tillhandahållande och kontakt</b><br/>
             Intyget tillhandahålls via tjänsten <b>proofy.se</b> (Proofy). Kontakt: <b>kontakt@proofy.se</b>.
           </p>
 
@@ -566,19 +565,17 @@
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h.trim());
   }
 
-  // ✅ Stöd både ?hash= (primärt) och ?id= (bakåtkompatibelt)
-  function getHashFromUrl(){
+  // ✅ Stöd både ?id= (primärt) och äldre ?hash= (bakåtkompatibelt)
+  function getIdFromUrl(){
     const url = new URL(location.href);
-    return (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
+    return (url.searchParams.get("id") || url.searchParams.get("hash") || "").trim();
   }
 
-  // Intyg-ID: stöd ?cert= i URL (för att kunna hänvisa exakt till ett intyg)
   function getCertIdFromUrl(){
     const url = new URL(location.href);
     return (url.searchParams.get("cert") || "").trim();
   }
 
-  // Skapa "cert-" ID (kort och läsbart) lokalt
   function makeCertId(){
     // cert-YYYYMMDD-HHMMSS-xxxxxx
     const d = new Date();
@@ -593,28 +590,27 @@
     return `cert-${y}${m}${day}-${hh}${mm}${ss}-${rnd}`;
   }
 
-  // ✅ Skriv alltid tillbaka som ?hash= (och behåll cert om finns)
-  function setHashInUrl(hash, certId){
+  // ✅ Skriv alltid tillbaka som ?id= (och behåll cert om finns)
+  function setIdInUrl(id, certId){
     const url = new URL(location.href);
-    if (hash) {
-      url.searchParams.set("hash", hash);
-      url.searchParams.delete("id");
-    } else {
+    if (id) {
+      url.searchParams.set("id", id);
       url.searchParams.delete("hash");
+    } else {
       url.searchParams.delete("id");
+      url.searchParams.delete("hash");
     }
     if (certId) url.searchParams.set("cert", certId);
     history.replaceState({}, "", url.toString());
   }
 
-  function buildCertificateLink(hash, certId){
-    const base = `${location.origin}/certificate.html?hash=${encodeURIComponent(hash)}`;
+  function buildCertificateLink(id, certId){
+    const base = `${location.origin}/certificate.html?id=${encodeURIComponent(id)}`;
     return certId ? `${base}&cert=${encodeURIComponent(certId)}` : base;
   }
 
-  // Viktigt: verify.html använder ?hash=
-  function buildVerifyLink(hash){
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
+  function buildVerifyLink(id){
+    return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
   }
 
   function isoUtcNoMs(d){
@@ -731,9 +727,9 @@
   }
 
   // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
-  async function fetchVerify(hash){
+  async function fetchVerify(id){
     try{
-      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+      const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}`, { method:"GET" });
       const j = await r.json().catch(() => ({}));
       if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
     } catch { /* ignore */ }
@@ -741,7 +737,7 @@
     const r2 = await fetch(`/api/verify`, {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash })
+      body: JSON.stringify({ hash: id })
     });
     const j2 = await r2.json().catch(() => ({}));
     if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
@@ -756,7 +752,7 @@
       return "Resultatet betyder att ingen registrering hittades för detta Verifierings-ID vid kontrolltillfället. Kontrollera att du kopierat hela ID:t.";
     }
     if (state === "invalid") {
-      return "Verifierings-ID:t har fel format. Kontrollera att det börjar med 0x och innehåller 64 hex-tecken.";
+      return "Verifierings-ID:t har fel format. Kontrollera att du kopierat hela ID:t.";
     }
     if (state === "technical") {
       return "Kontrollen kunde inte genomföras på grund av ett tillfälligt tekniskt problem. Försök igen senare eller kör om kontrollen.";
@@ -764,16 +760,15 @@
     return "—";
   }
 
-  async function loadCertificate(hash, certId){
+  async function loadCertificate(id, certId){
     const myOp = ++opId;
     hideProblem();
     setBusy(true);
     setCheckedNow();
 
-    // Sätt/visa certId
     certIdOut.textContent = certId || "—";
 
-    if(!hash){
+    if(!id){
       resetView();
       openBox.style.display = "block";
       setStatus("Saknar Verifierings-ID", "err");
@@ -784,10 +779,10 @@
     }
 
     openBox.style.display = "none";
-    hashOut.textContent = hash;
+    hashOut.textContent = id;
 
-    const verifyLink = buildVerifyLink(hash);
-    const certLink = buildCertificateLink(hash, certId);
+    const verifyLink = buildVerifyLink(id);
+    const certLink = buildCertificateLink(id, certId);
 
     certLinkOut.textContent = certLink;
     verifyLinkOut.textContent = verifyLink;
@@ -795,12 +790,11 @@
     btnVerify.href = verifyLink;
     renderQr(verifyLink);
 
-    // uppdatera kopier-knappar
     setBusy(busy);
 
-    if(!isBytes32Hex(hash)){
+    if(!isBytes32Hex(id)){
       setStatus("OGILTIGT VERIFIERINGS-ID", "err");
-      resultOut.textContent = "Ogiltigt format (kan inte kontrollera)";
+      resultOut.textContent = "Ogiltigt Verifierings-ID (kan inte kontrollera)";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
       interpretation.textContent = setInterpretationForState("invalid");
@@ -811,7 +805,7 @@
     setStatus("KONTROLLERAR…", "neutral");
 
     try{
-      const res = await fetchVerify(hash);
+      const res = await fetchVerify(id);
       if (myOp !== opId) return;
 
       if(!res.ok){
@@ -856,35 +850,32 @@
     }
   }
 
-  // Actions
   btnPrint.addEventListener("click", () => window.print());
   btnRefresh.addEventListener("click", () => {
-    const hash = getHashFromUrl();
+    const id = getIdFromUrl();
     const certId = getCertIdFromUrl() || makeCertId();
-    setHashInUrl(hash, certId);
+    setIdInUrl(id, certId);
     certIdOut.textContent = certId;
-    loadCertificate(hash, certId);
+    loadCertificate(id, certId);
   });
 
-  // Copy buttons
   btnCopyId.addEventListener("click", () => copyText(btnCopyId, hashOut.textContent));
   btnCopyCert.addEventListener("click", () => copyText(btnCopyCert, certLinkOut.textContent));
   btnCopyVerify.addEventListener("click", () => copyText(btnCopyVerify, verifyLinkOut.textContent));
 
-  // Open box
   btnOpen?.addEventListener("click", () => {
-    const hash = (hashInput.value || "").trim();
-    if (!hash){
+    const id = (hashInput.value || "").trim();
+    if (!id){
       openHint.textContent = "Klistra in Verifierings-ID för att öppna intyget.";
       return;
     }
     openHint.textContent = "";
 
     const certId = getCertIdFromUrl() || makeCertId();
-    setHashInUrl(hash, certId);
+    setIdInUrl(id, certId);
     certIdOut.textContent = certId;
 
-    loadCertificate(hash, certId);
+    loadCertificate(id, certId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
@@ -898,15 +889,14 @@
     }
   });
 
-  // Start: sätt certId om saknas
-  const initialHash = getHashFromUrl();
+  const initialId = getIdFromUrl();
   const initialCert = getCertIdFromUrl() || makeCertId();
 
   certIdOut.textContent = initialCert;
-  setHashInUrl(initialHash, initialCert);
+  setIdInUrl(initialId, initialCert);
 
-  if (initialHash){
-    loadCertificate(initialHash, initialCert);
+  if (initialId){
+    loadCertificate(initialId, initialCert);
   } else {
     resetView();
     setCheckedNow();
