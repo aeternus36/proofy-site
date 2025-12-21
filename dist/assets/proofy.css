@@ -14,13 +14,13 @@
   --ok:#7cf1c6;
   --err:#ff8aa1;
 
-  /* Header baseline */
+  /* Header / nav height consistency */
   --header-h: 72px;
+  --nav-item-h: 40px;
 }
 
 *{ box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
-
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -33,10 +33,9 @@ body{
   line-height:1.55;
 }
 
-a{ color:inherit; text-decoration:none; }
+a{ color:inherit; }
 .wrap{ max-width: var(--max); margin:0 auto; padding: 0 20px; }
 
-/* Skip link */
 .skip{
   position:absolute;
   left:-9999px;
@@ -49,33 +48,37 @@ a{ color:inherit; text-decoration:none; }
 }
 .skip:focus{ left:10px; }
 
-/* ================= HEADER (NORMALIZED) ================= */
-
+/* =========================
+   Header (normalized)
+   ========================= */
 header{
   position: sticky;
   top:0;
   z-index:50;
-  min-height: var(--header-h);
   backdrop-filter: blur(12px) saturate(160%);
   background: rgba(11,18,32,.70);
   border-bottom: 1px solid var(--border);
+  min-height: var(--header-h);
 }
 
 .nav{
+  /* unified 3-column layout: Brand | Links | Actions */
   min-height: var(--header-h);
-  display:flex;
+  display:grid;
+  grid-template-columns: auto 1fr auto;
   align-items:center;
-  justify-content:space-between;
   gap:12px;
+  padding: 12px 0;
 }
 
-/* Brand */
 .brand{
   display:flex;
   align-items:center;
   gap:10px;
+  text-decoration:none;
   font-weight: 900;
   letter-spacing:.2px;
+  min-height: var(--nav-item-h);
 }
 
 .logo{
@@ -97,64 +100,85 @@ header{
 
 /* Nav links (desktop) */
 .navLinks{
+  justify-self:center;
   display:flex;
   align-items:center;
+  justify-content:center;
   gap:6px;
+
   padding: 6px;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
   border-radius: 999px;
-  min-height: 40px;
+
+  min-height: var(--nav-item-h);
 }
 
-/* Placeholder när navLinks saknas */
-.navLinks:empty{
-  visibility:hidden;
-}
+/* If a page doesn't include navLinks, keeping grid column avoids "different header feel".
+   (No HTML changes needed; this just keeps sizing stable when present.) */
+.navLinks:empty{ visibility:hidden; }
 
-/* Links */
 .navLinks a{
-  padding: 8px 10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  min-height: var(--nav-item-h);
+  padding: 0 12px;
+
+  text-decoration:none;
   border-radius: 999px;
   color: rgba(169,183,211,.95);
   font-weight: 850;
   font-size: 13px;
+  white-space: nowrap;
 }
 .navLinks a:hover{
   background: rgba(255,255,255,.06);
   color: var(--text);
 }
 
-/* Actions */
+/* Nav actions */
 .navActions{
+  justify-self:end;
   display:flex;
   align-items:center;
   gap:10px;
-  min-height: 40px;
+  flex-wrap:nowrap;
+  min-height: var(--nav-item-h);
 }
 
 @media (max-width: 920px){
   .navLinks{ display:none; }
 }
 @media (max-width: 520px){
-  .navActions{ gap:8px; }
+  /* Keep stable spacing on small screens */
+  .nav{ gap:8px; padding: 10px 0; }
+  .navActions{ gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 }
 
-/* ================= BUTTONS ================= */
-
+/* =========================
+   Buttons (normalized)
+   ========================= */
 .btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  min-height: 40px;
+  gap:10px;
+
+  /* normalize height across all pages */
+  min-height: var(--nav-item-h);
   padding: 0 16px;
+
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
+  color: inherit;
+  text-decoration:none;
   font-weight: 900;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
   white-space: nowrap;
   cursor:pointer;
-  transition: transform .08s ease, background .15s ease, border-color .15s ease;
 }
 .btn:hover{
   background: rgba(255,255,255,.10);
@@ -173,51 +197,79 @@ header{
   border: 1px solid rgba(255,255,255,.16);
   background: rgba(255,255,255,.05);
 }
+.btn.ghost{
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.14);
+}
+.btn.ghost:hover{ background: rgba(255,255,255,.06); }
 
-/* ================= ACCESSIBILITY ================= */
-
+/* Accessibility focus (diskret och stabil) */
 @supports selector(:focus-visible){
   .btn:focus{ outline:none; }
-  input:focus, textarea:focus, summary:focus{ outline:none; }
+  input[type="file"]:focus,
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  textarea:focus,
+  select:focus,
+  summary:focus{ outline:none; }
 
   .btn:focus-visible,
-  input:focus-visible,
+  input[type="file"]:focus-visible,
+  input[type="text"]:focus-visible,
+  input[type="email"]:focus-visible,
   textarea:focus-visible,
+  select:focus-visible,
   summary:focus-visible{
     box-shadow: 0 0 0 3px rgba(110,168,255,.35);
   }
 }
+@supports not selector(:focus-visible){
+  .btn:focus,
+  input[type="file"]:focus,
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  textarea:focus,
+  select:focus,
+  summary:focus{
+    box-shadow: 0 0 0 3px rgba(110,168,255,.25);
+  }
+}
 
-/* ================= CONTENT ================= */
-
+/* =========================
+   Text blocks
+   ========================= */
 main{ padding: 34px 0 42px; }
-
 .pageTitle{
   margin: 18px 0 10px;
   font-size: clamp(28px, 3.2vw, 52px);
+  letter-spacing: -.5px;
   line-height:1.1;
 }
-
 .lead{
+  color: rgba(234,240,255,.92);
   max-width: 90ch;
   margin: 0 0 18px;
-  color: rgba(234,240,255,.92);
+  font-size: 16.8px;
 }
-
 .meta{ color: var(--muted); font-size: 13px; }
-.small{ font-size: 12.5px; color: rgba(169,183,211,.92); }
+.small{ font-size: 12.5px; color: rgba(169,183,211,.92); max-width: 92ch; }
+.muted{ color: var(--muted); }
 
 .badge{
   display:inline-flex;
+  align-items:center;
+  gap:8px;
   padding:8px 10px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.04);
   font-size: 12.5px;
+  color: rgba(234,240,255,.92);
 }
 
-/* ================= CARDS & GRID ================= */
-
+/* =========================
+   Cards / grids
+   ========================= */
 .card{
   border: 1px solid var(--border);
   border-radius: var(--r);
@@ -236,34 +288,233 @@ main{ padding: 34px 0 42px; }
   .grid2{ grid-template-columns: 1fr; }
 }
 
-/* ================= FORMS ================= */
+.grid3{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 920px){
+  .grid3{ grid-template-columns: 1fr; }
+}
 
-input[type="file"],
-input[type="text"],
-input[type="email"],
-textarea{
+.tile{
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(11,18,32,.25);
+}
+.tile b{ display:block; margin-bottom:6px; color: rgba(234,240,255,.92); }
+
+/* Lists / details */
+.cleanList{
+  margin: 0;
+  padding-left: 18px;
+}
+.cleanList li{ color: rgba(169,183,211,.95); margin: 8px 0; }
+
+details{
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255,255,255,.04);
+}
+summary{ cursor:pointer; font-weight: 950; list-style: none; }
+summary::-webkit-details-marker{ display:none; }
+details p{ color: var(--muted); margin: 10px 0 0; }
+
+/* Inputs / forms */
+input[type="file"], input[type="text"], input[type="email"], textarea{
   width:100%;
   padding:12px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(11,18,32,.35);
   color: var(--text);
+  outline:none;
   font: inherit;
 }
+textarea{ min-height: 120px; resize: vertical; }
 
-textarea{ min-height: 120px; }
+.label{
+  display:block;
+  margin: 0 0 6px;
+  color: rgba(234,240,255,.86);
+  font-size: 12.5px;
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+.req{ color: var(--err); font-weight: 900; }
 
-/* ================= MONO / CODE ================= */
+.formGrid{
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  margin-top:12px;
+}
+.formActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top: 12px;
+}
+.help{
+  margin-top: 8px;
+  color: rgba(169,183,211,.95);
+  font-size: 12.5px;
+}
+.fineprint{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.10);
+  color: rgba(169,183,211,.9);
+  font-size: 12px;
+  line-height: 1.5;
+}
 
+/* Actions row */
+.actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+/* Status styles */
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 800;
+}
+.ok{ color: var(--ok); font-weight: 900; }
+.err{ color: var(--err); font-weight: 900; }
+
+/* Drag & drop */
+.drop{
+  border:2px dashed rgba(255,255,255,.18);
+  background: rgba(255,255,255,.03);
+  border-radius:16px;
+  padding:16px;
+  text-align:center;
+  user-select:none;
+}
+.drop.drag{
+  border-color: rgba(255,255,255,.35);
+  background: rgba(255,255,255,.05);
+}
+
+/* Mono */
 .mono{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   word-break: break-all;
 }
+pre.mono{
+  margin:0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(11,18,32,.35);
+  color: var(--text);
+  white-space: pre-wrap;
+}
 
-/* ================= FOOTER ================= */
+/* Copy row (kodblock + kopiera) */
+/* Påverkar inget om klassen inte används. */
+.copyLine{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+  margin-top: 6px;
+}
+.copyLine > .mono,
+.copyLine > .value.mono,
+.copyLine > pre.mono{
+  flex: 1;
+  min-width: 240px;
+}
+.copyLine > .btn{
+  min-width: 120px;
+}
+@media (max-width:560px){
+  .copyLine > .btn{
+    width:100%;
+    min-width: unset;
+  }
+}
 
+/* QR */
+.qrWrap{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+.qrBox{
+  width: 170px;
+  height: 170px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(11,18,32,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.qrBox canvas, .qrBox img{
+  width: 150px !important;
+  height: 150px !important;
+  image-rendering: pixelated;
+}
+
+/* Footer */
 footer{
   padding: 26px 0 44px;
+  color: var(--muted);
   border-top: 1px solid var(--border);
   background: rgba(11,18,32,.45);
+}
+.foot{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.links a{
+  color: rgba(169,183,211,.95);
+  text-decoration:none;
+  margin-right: 12px;
+}
+.links a:hover{ color: var(--text); }
+
+/* Print */
+@media print{
+  header{ position: static; backdrop-filter:none; background:#fff; border-bottom:none; }
+  body{ background:#fff; color:#000; }
+  .btn, .actions, .note, .navLinks, .navActions{ display:none !important; }
+  .card{
+    box-shadow:none !important;
+    background:#fff !important;
+    border:1px solid #ddd !important;
+  }
+  .badge, .pill{
+    border:1px solid #ddd !important;
+    background:#fff !important;
+    color:#000 !important;
+  }
+  .meta, .muted, .small{ color:#444 !important; }
+  pre.mono{
+    background:#fff !important;
+    color:#000 !important;
+    border:1px solid #ddd !important;
+  }
+  a{ color:#000 !important; text-decoration:none !important; }
 }
