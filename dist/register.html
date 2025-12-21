@@ -6,7 +6,7 @@
   <title>Proofy – Skapa Verifierings-ID</title>
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
 </head>
 
 <body>
@@ -62,7 +62,7 @@
             <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
-            <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna certifikat</a>
+            <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
             <span id="statusPill" class="pill">Välj en fil</span>
           </div>
 
@@ -101,20 +101,34 @@
               </div>
 
               <div style="min-width:240px; flex:1">
-                <div class="meta">Registreringstid</div>
+                <div class="meta">Registreringsstatus</div>
+                <div id="regStatusOut" class="mono" style="margin-top:8px">—</div>
+
+                <div class="meta" style="margin-top:10px;">Registreringstid</div>
                 <div id="timeOut" class="mono" style="margin-top:8px">—</div>
-
-                <div class="meta" style="margin-top:10px;">Registrerad av</div>
-                <div id="submitterOut" class="mono" style="margin-top:8px">—</div>
-
-                <div class="meta" style="margin-top:10px;">Referens</div>
-                <div id="txOut" class="mono" style="margin-top:8px">—</div>
 
                 <div class="small" style="margin-top:10px">
                   Tips: Spara ID i ärendet. Dela länken om någon behöver kontrollera senare.
+                  <br />
+                  <span class="meta">Obs: Vid ny registrering kan det ta en kort stund innan registreringstid kan visas.</span>
                 </div>
               </div>
             </div>
+
+            <details style="margin-top:12px;">
+              <summary>Tekniska detaljer (valfritt)</summary>
+              <p style="margin: 10px 0 0;" class="meta">
+                Dessa uppgifter kan vara användbara vid teknisk felsökning, men behövs normalt inte i byråprocessen.
+              </p>
+
+              <div class="hr"></div>
+
+              <div class="meta">Teknisk referens</div>
+              <div id="txOut" class="mono" style="margin-top:8px">—</div>
+
+              <div class="meta" style="margin-top:10px;">Teknisk identitet</div>
+              <div id="submitterOut" class="mono" style="margin-top:8px">—</div>
+            </details>
           </div>
 
           <div id="errorBox" style="display:none;">
@@ -226,6 +240,7 @@
   const headline = $("headline");
   const linkOut = $("linkOut");
   const qrBox = $("qrBox");
+  const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
   const submitterOut = $("submitterOut");
   const txOut = $("txOut");
@@ -265,6 +280,7 @@
     headline.textContent = "";
     idOut.textContent = "—";
     linkOut.textContent = "—";
+    regStatusOut.textContent = "—";
     timeOut.textContent = "—";
     submitterOut.textContent = "—";
     txOut.textContent = "—";
@@ -290,16 +306,16 @@
     return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
+  function canRenderQr(){
+    return typeof window.QRCode === "function";
+  }
+
   function showQrError(targetEl, extra){
     const parts = [];
     parts.push("QR-funktionen kunde inte laddas.");
     if (window.__proofyQrLibError) parts.push("Kontrollera att /qr.min.js finns i deploy.");
     if (extra) parts.push(extra);
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
-  }
-
-  function canRenderQr(){
-    return typeof window.QRCode === "function";
   }
 
   function renderQr(targetEl, text){
@@ -345,6 +361,24 @@
       colorLight: "#eaf0ff",
       correctLevel
     });
+  }
+
+  // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
+  async function fetchVerify(hash){
+    try{
+      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
+    } catch { /* ignore */ }
+
+    const r2 = await fetch(`/api/verify`, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hash })
+    });
+    const j2 = await r2.json().catch(() => ({}));
+    if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
+    return { ok:true, data:j2 };
   }
 
   function setFile(file){
@@ -410,6 +444,11 @@
 
       renderQr(qrBox, currentLink);
 
+      // Visa preliminärt innan API-svar
+      resultBox.style.display = "block";
+      regStatusOut.textContent = "Kontrollerar…";
+      timeOut.textContent = "—";
+
       setPill("Registrerar…");
 
       const res = await fetch("/api/register", {
@@ -425,20 +464,31 @@
         throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
       }
 
-      resultBox.style.display = "block";
-
       if (data.alreadyExists) {
         headline.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`;
+        regStatusOut.textContent = "Registrerad";
+        if (data.timestamp) {
+          timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
+        } else {
+          timeOut.textContent = "—";
+        }
       } else {
-        headline.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="meta">(ny referens skapad)</span>`;
-      }
-
-      if (data.timestamp) {
-        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
-      } else {
+        // Ny registrering: visa försiktigt, och försök hämta registreringstid via verify
+        headline.innerHTML = `<span class="ok">✅ Registrering påbörjad</span> <span class="meta">(kan ta en kort stund att bekräfta)</span>`;
+        regStatusOut.textContent = "Registrering pågår";
         timeOut.textContent = "—";
+
+        // Försök hämta registreringstid direkt (kan lyckas om den redan hunnit bli synlig)
+        const v = await fetchVerify(id);
+        if (myOp !== opId) return;
+
+        if (v.ok && v.data && v.data.exists === true && v.data.timestamp) {
+          regStatusOut.textContent = "Registrerad";
+          timeOut.textContent = new Date(Number(v.data.timestamp) * 1000).toLocaleString("sv-SE");
+        }
       }
 
+      // Tekniska detaljer (valfritt)
       submitterOut.textContent = data.submitter || "—";
       txOut.textContent = data.txHash || "—";
 
