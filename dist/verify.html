@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
-  <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
+  <meta name="description" content="Verifiera om en fil är identisk med ett tidigare registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 </head>
@@ -15,24 +15,24 @@
 <header>
   <div class="wrap">
     <div class="nav">
+
       <a class="brand" href="/" aria-label="Proofy">
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
 
-      <!-- Samma menystruktur som övriga sidor -->
-      <nav class="navLinks" aria-label="Navigation">
+      <nav class="navLinks" aria-label="Huvudmeny">
         <a href="/#nytta">Nytta</a>
-        <a href="/#hur">Så funkar det</a>
+        <a href="/#hur">Hur det fungerar</a>
         <a href="/#trygghet">Säkerhet</a>
-        <a href="/#faq">Frågor</a>
-        <a href="/#kontakt">Kontakt</a>
       </nav>
 
       <div class="navActions">
-        <a class="btn soft" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn active" href="/verify.html">Verifiera underlag</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
+
     </div>
   </div>
 </header>
@@ -68,7 +68,7 @@
           />
 
           <div class="small" style="margin-top:8px">
-            ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
+            ID:t fylls i automatiskt om sidan öppnats via verifieringslänk.
           </div>
 
           <div class="hr"></div>
@@ -99,7 +99,8 @@
             <pre class="mono" id="outFileHash">—</pre>
 
             <div class="small" style="margin-top:10px">
-              Match betyder att filen är <b>exakt samma version</b> (samma bytes) som den som registrerades.
+              <b>Match</b> betyder att filen är exakt samma version (samma bytes)
+              som den som registrerades.
             </div>
           </div>
 
@@ -139,7 +140,7 @@
   let currentFile = null;
 
   function isValidHash(h){
-    return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
+    return /^0x[0-9a-fA-F]{64}$/.test(h || "");
   }
 
   function setStatus(text){
@@ -163,14 +164,14 @@
   }
 
   function updateState(){
-    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value));
+    verifyBtn.disabled = !(currentFile && isValidHash(hashInput.value.trim()));
   }
 
-  // Prefill from URL (?hash=...)
+  // Prefill from URL
   const params = new URLSearchParams(location.search);
   const urlHash = params.get("hash");
   if (isValidHash(urlHash)) {
-    hashInput.value = urlHash.trim();
+    hashInput.value = urlHash;
   }
 
   hashInput.addEventListener("input", updateState);
@@ -188,12 +189,9 @@
     setStatus("Verifierar…");
 
     try{
-      const refHash = (hashInput.value || "").trim();
+      const refHash = hashInput.value.trim();
       if (!isValidHash(refHash)) {
         throw new Error("Ogiltigt Verifierings-ID.");
-      }
-      if (!currentFile) {
-        throw new Error("Välj en fil att verifiera.");
       }
 
       const fileHash = await sha256Hex(currentFile);
@@ -222,13 +220,12 @@
       setStatus("Klar");
     } catch (e){
       errorBox.style.display = "block";
-      errorMsg.textContent = (e?.message || "Tekniskt fel.");
+      errorMsg.textContent = e.message || "Tekniskt fel.";
       setStatus("Fel");
     }
   });
 
   setStatus("Väntar");
-  updateState();
 })();
 </script>
 
