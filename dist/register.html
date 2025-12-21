@@ -177,26 +177,6 @@
   </div>
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot">
-      <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
-        </div>
-      </div>
-      <div class="links">
-        <a href="/security.html">Säkerhet</a>
-        <a href="/privacy.html">Integritet</a>
-        <a href="/terms.html">Villkor</a>
-        <a href="/#kontakt">Kontakt</a>
-      </div>
-    </div>
-  </div>
-</footer>
-
 <!-- QR lib -->
 <script
   src="/qr.min.js?v=2025-12-20"
@@ -286,9 +266,14 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v);
   }
 
-  // ✅ Uppdaterat: använd alltid ?id=
+  // ✅ Standard: verify uses ?id=
   function buildVerifyLink(id){
     return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
+  }
+
+  // ✅ Standard: certificate uses ?id= (certificate supports legacy too)
+  function buildCertificateLink(id){
+    return `${location.origin}/certificate.html?id=${encodeURIComponent(id)}`;
   }
 
   function showQrError(targetEl, extra){
@@ -406,8 +391,8 @@
       idOut.textContent = id;
       linkOut.textContent = currentLink;
 
-      // ✅ Uppdaterat: certifikat ska använda ?id= (certificate.html stödjer även legacy ?hash=)
-      receiptBtn.href = `/certificate.html?id=${encodeURIComponent(id)}`;
+      // ✅ cert link with ?id=
+      receiptBtn.href = buildCertificateLink(id);
       receiptBtn.style.display = "inline-flex";
 
       renderQr(qrBox, currentLink);
