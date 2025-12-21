@@ -322,7 +322,6 @@
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <!-- Netlify form -->
         <form class="form" name="demo" method="POST" data-netlify="true" netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="demo" />
           <input type="hidden" name="redirect" value="/thanks.html" />
@@ -351,11 +350,7 @@
 
           <div style="margin-top:12px;">
             <label class="label" for="message">Vad vill ni kunna visa/verifiera? <span class="req">*</span></label>
-            <textarea
-              id="message"
-              name="message"
-              rows="6"
-              required
+            <textarea id="message" name="message" rows="6" required
               placeholder="Ex: kundunderlag som ifrågasätts i efterhand, underlag i granskning, beslut/avtal… Skriv också gärna när ni vill ses."></textarea>
             <div class="help">
               Vi återkommer normalt inom 1 arbetsdag. Du kan också mejla <b>kontakt@proofy.se</b>.
@@ -402,7 +397,6 @@
   </div>
 </footer>
 
-<!-- ✅ Endast extern widget (ingen inline-chat i index längre) -->
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
