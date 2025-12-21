@@ -6,7 +6,7 @@
   <title>Proofy – Skapa Verifierings-ID</title>
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-21" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
 </head>
 
 <body>
@@ -61,8 +61,8 @@
           <div class="actions" style="margin-top:12px">
             <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
-            <button class="btn" id="copyLinkBtn" disabled>Kopiera verifieringslänk</button>
-            <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
+            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
+            <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna certifikat</a>
             <span id="statusPill" class="pill">Välj en fil</span>
           </div>
 
@@ -91,7 +91,7 @@
           <div id="resultBox" style="display:none;">
             <div id="headline" style="font-size:18px; margin-bottom:10px;"></div>
 
-            <div class="meta">Verifieringslänk</div>
+            <div class="meta">Delbar verifieringslänk</div>
             <div id="linkOut" class="mono" style="margin-top:8px">—</div>
 
             <div class="qrWrap" style="margin-top:12px">
@@ -111,7 +111,7 @@
                 <div id="txOut" class="mono" style="margin-top:8px">—</div>
 
                 <div class="small" style="margin-top:10px">
-                  Tips: Spara ID i ärendet. Dela verifieringslänken/QR om någon behöver kontrollera senare.
+                  Tips: Spara ID i ärendet. Dela länken om någon behöver kontrollera senare.
                 </div>
               </div>
             </div>
@@ -131,7 +131,7 @@
       <div class="card content">
         <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
         <p class="meta" style="margin:0 0 10px;">
-          Klistra in ett Verifierings-ID så skapar vi verifieringslänk och QR direkt.
+          Klistra in ett Verifierings-ID så skapar vi delbar länk och QR direkt.
         </p>
 
         <div class="grid2">
@@ -140,15 +140,14 @@
             <input id="manualId" type="text" placeholder="Klistra in Verifierings-ID…" style="margin-top:8px" />
             <div class="actions" style="margin-top:12px">
               <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
-              <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera verifieringslänk</button>
+              <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
               <a class="btn soft" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
-              <a class="btn" id="manualCertBtn" href="/certificate.html" style="pointer-events:none;opacity:.55;">Öppna intyg</a>
               <span id="manualPill" class="pill">Klistra in ID</span>
             </div>
           </div>
 
           <div>
-            <div class="meta">Verifieringslänk</div>
+            <div class="meta">Delbar verifieringslänk</div>
             <div id="manualLinkOut" class="mono" style="margin-top:8px">—</div>
 
             <div class="qrWrap" style="margin-top:12px">
@@ -200,7 +199,7 @@
 
 <!-- QR lib -->
 <script
-  src="/qr.min.js?v=2025-12-21"
+  src="/qr.min.js?v=2025-12-20"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"
 ></script>
@@ -238,7 +237,6 @@
   const manualBuildBtn = $("manualBuildBtn");
   const manualCopyLinkBtn = $("manualCopyLinkBtn");
   const manualVerifyBtn = $("manualVerifyBtn");
-  const manualCertBtn = $("manualCertBtn");
   const manualPill = $("manualPill");
   const manualLinkOut = $("manualLinkOut");
   const manualQrBox = $("manualQrBox");
@@ -285,12 +283,11 @@
   }
 
   function isIdFormat(v){
-    return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test((v || "").trim());
+    return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v);
   }
 
-  // ✅ Standard: använd ?id= (men verify.html stödjer även legacy ?hash=)
-  function buildVerifyLink(id){
-    return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
+  function buildVerifyLink(hash){
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
   function showQrError(targetEl, extra){
@@ -408,8 +405,7 @@
       idOut.textContent = id;
       linkOut.textContent = currentLink;
 
-      // ✅ Intyg går till /certificate.html?id=
-      receiptBtn.href = `/certificate.html?id=${encodeURIComponent(id)}`;
+      receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
       renderQr(qrBox, currentLink);
@@ -473,7 +469,7 @@
     if(!currentLink) return;
     try{
       await navigator.clipboard.writeText(currentLink);
-      setPill("Verifieringslänk kopierad ✅");
+      setPill("Länk kopierad ✅");
     } catch {
       setPill("Kunde inte kopiera");
     }
@@ -485,15 +481,9 @@
       manualLinkOut.textContent = "—";
       manualQrBox.innerHTML = "";
       manualCopyLinkBtn.disabled = true;
-
       manualVerifyBtn.href = "/verify.html";
       manualVerifyBtn.style.pointerEvents = "none";
       manualVerifyBtn.style.opacity = ".55";
-
-      manualCertBtn.href = "/certificate.html";
-      manualCertBtn.style.pointerEvents = "none";
-      manualCertBtn.style.opacity = ".55";
-
       setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
       return null;
     }
@@ -503,15 +493,9 @@
     renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
-
     manualVerifyBtn.href = link;
     manualVerifyBtn.style.pointerEvents = "auto";
     manualVerifyBtn.style.opacity = "1";
-
-    manualCertBtn.href = `/certificate.html?id=${encodeURIComponent(clean)}`;
-    manualCertBtn.style.pointerEvents = "auto";
-    manualCertBtn.style.opacity = "1";
-
     setManualPill("Redo ✅");
     return link;
   }
