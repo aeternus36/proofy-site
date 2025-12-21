@@ -109,8 +109,6 @@
 
                 <div class="small" style="margin-top:10px">
                   Tips: Spara ID i ärendet. Dela länken om någon behöver kontrollera senare.
-                  <br />
-                  <span class="meta">Obs: Vid ny registrering kan det ta en kort stund innan registreringstid kan visas.</span>
                 </div>
               </div>
             </div>
@@ -363,24 +361,6 @@
     });
   }
 
-  // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
-  async function fetchVerify(hash){
-    try{
-      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
-      const j = await r.json().catch(() => ({}));
-      if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
-    } catch { /* ignore */ }
-
-    const r2 = await fetch(`/api/verify`, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash })
-    });
-    const j2 = await r2.json().catch(() => ({}));
-    if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
-    return { ok:true, data:j2 };
-  }
-
   function setFile(file){
     currentFile = file || null;
     currentId = null;
@@ -446,7 +426,7 @@
 
       // Visa preliminärt innan API-svar
       resultBox.style.display = "block";
-      regStatusOut.textContent = "Kontrollerar…";
+      regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
 
       setPill("Registrerar…");
@@ -466,26 +446,17 @@
 
       if (data.alreadyExists) {
         headline.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`;
-        regStatusOut.textContent = "Registrerad";
-        if (data.timestamp) {
-          timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
-        } else {
-          timeOut.textContent = "—";
-        }
       } else {
-        // Ny registrering: visa försiktigt, och försök hämta registreringstid via verify
-        headline.innerHTML = `<span class="ok">✅ Registrering påbörjad</span> <span class="meta">(kan ta en kort stund att bekräfta)</span>`;
-        regStatusOut.textContent = "Registrering pågår";
+        headline.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="meta">(ny referens skapad)</span>`;
+      }
+
+      regStatusOut.textContent = "Registrerad";
+
+      if (data.timestamp) {
+        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
+      } else {
+        // Efter API-ändringen ska detta inte inträffa vid ok:true.
         timeOut.textContent = "—";
-
-        // Försök hämta registreringstid direkt (kan lyckas om den redan hunnit bli synlig)
-        const v = await fetchVerify(id);
-        if (myOp !== opId) return;
-
-        if (v.ok && v.data && v.data.exists === true && v.data.timestamp) {
-          regStatusOut.textContent = "Registrerad";
-          timeOut.textContent = new Date(Number(v.data.timestamp) * 1000).toLocaleString("sv-SE");
-        }
       }
 
       // Tekniska detaljer (valfritt)
