@@ -217,7 +217,7 @@
         <button class="btn" id="btnPrint" type="button">Skriv ut / Spara som PDF</button>
         <button class="btn soft" id="btnRefresh" type="button">Uppdatera</button>
         <a class="btn primary" id="btnVerify" href="/verify.html">Öppna verifiering</a>
-        <button class="btn" id="btnCopyLink" type="button" disabled>Kopiera länk</button>
+        <button class="btn" id="btnCopyLink" type="button" disabled>Kopiera intygslänk</button>
       </div>
 
       <div id="openBox" class="openBox">
@@ -272,7 +272,10 @@
         </div>
 
         <div class="panel">
-          <div class="label">Verifieringslänk</div>
+          <div class="label">Länk till intyg</div>
+          <div id="certLinkOut" class="value mono">—</div>
+
+          <div class="label" style="margin-top:10px;">Verifieringslänk</div>
           <div id="verifyLinkOut" class="value mono">—</div>
 
           <div id="qrWrap">
@@ -284,7 +287,7 @@
               </div>
               <div style="flex:1; min-width:240px;">
                 <div class="note" style="margin-top:12px;">
-                  Dela länken eller QR-koden när någon behöver kontrollera ID:t i efterhand.
+                  Dela intygslänken vid dokumentation. Dela verifieringslänken eller QR-koden när någon behöver kontrollera ID:t i efterhand.
                 </div>
               </div>
             </div>
@@ -315,7 +318,7 @@
 
           <p>
             <b>1) Utfärdare och kontakt</b><br/>
-            Intyget tillhandahålls av Proofy. Kontakt: <b>kontakt@proofy.se</b>.
+            Intyget tillhandahålls via tjänsten <b>proofy.se</b> (Proofy). Kontakt: <b>kontakt@proofy.se</b>.
           </p>
 
           <p>
@@ -331,7 +334,7 @@
 
           <p>
             <b>4) Sekretess och personuppgifter</b><br/>
-            Proofy lagrar inte dokumentinnehåll i samband med intyget. Intyget kan innehålla Verifierings-ID, tider och en delbar länk.
+            Proofy lagrar inte dokumentinnehåll i samband med intyget. Intyget kan innehålla Verifierings-ID, tider och delbara länkar.
             Hantering av personuppgifter regleras i tillämplig integritetspolicy och villkor.
           </p>
 
@@ -405,6 +408,8 @@
   const resultOut = $("resultOut");
   const tsSeOut = $("tsSeOut");
   const tsUtcOut = $("tsUtcOut");
+
+  const certLinkOut = $("certLinkOut");
   const verifyLinkOut = $("verifyLinkOut");
 
   const qrBox = $("qrBox");
@@ -421,7 +426,7 @@
   function setBusy(v){
     busy = v;
     btnRefresh.disabled = v;
-    btnCopyLink.disabled = v || !verifyLinkOut.textContent || verifyLinkOut.textContent === "—";
+    btnCopyLink.disabled = v || !certLinkOut.textContent || certLinkOut.textContent === "—";
   }
 
   function setStatus(text, kind){
@@ -463,6 +468,10 @@
     history.replaceState({}, "", url.toString());
   }
 
+  function buildCertificateLink(id){
+    return `${location.origin}/certificate.html?id=${encodeURIComponent(id)}`;
+  }
+
   // ✅ Enhetlig verifieringslänk: /verify.html?id=...
   function buildVerifyLink(id){
     return `${location.origin}/verify.html?id=${encodeURIComponent(id)}`;
@@ -498,6 +507,7 @@
     resultOut.textContent = "—";
     tsSeOut.textContent = "—";
     tsUtcOut.textContent = "—";
+    certLinkOut.textContent = "—";
     verifyLinkOut.textContent = "—";
     interpretation.textContent = "—";
     if (qrBox) qrBox.innerHTML = "—";
@@ -597,11 +607,18 @@
     openBox.style.display = "none";
     hashOut.textContent = id;
 
-    // Länk/QR (för delning) – även om formatet är fel, men vi visar tydlig status
-    const vlink = buildVerifyLink(id);
-    btnVerify.href = vlink;
-    verifyLinkOut.textContent = vlink;
-    renderQr(vlink);
+    // Länkar/QR (för delning) – även om formatet är fel, men vi visar tydlig status
+    const certLink = buildCertificateLink(id);
+    const verifyLink = buildVerifyLink(id);
+
+    certLinkOut.textContent = certLink;
+    verifyLinkOut.textContent = verifyLink;
+
+    btnVerify.href = verifyLink;
+
+    // QR för verifiering i efterhand
+    renderQr(verifyLink);
+
     btnCopyLink.disabled = false;
 
     if(!isBytes32Hex(id)){
@@ -666,12 +683,13 @@
   btnPrint.addEventListener("click", () => window.print());
   btnRefresh.addEventListener("click", () => loadCertificate(getIdFromUrl()));
 
+  // Kopiera intygslänk (primärt för dokumentation)
   btnCopyLink.addEventListener("click", async () => {
-    const txt = (verifyLinkOut.textContent || "").trim();
+    const txt = (certLinkOut.textContent || "").trim();
     if (!txt || txt === "—") return;
     try{
       await navigator.clipboard.writeText(txt);
-      setStatus("Länk kopierad", "ok");
+      setStatus("Intygslänk kopierad", "ok");
       setTimeout(() => {
         const id = getIdFromUrl();
         if (id) loadCertificate(id);
@@ -719,7 +737,7 @@
     interpretation.textContent = "Ingen kontroll kunde göras eftersom Verifierings-ID saknas.";
   }
 
-  // OBS: Tog bort setBusy(false) här eftersom det avbröt pågående kontroll
+  // OBS: Ingen setBusy(false) här, eftersom det avbröt pågående kontroll
 })();
 </script>
 
