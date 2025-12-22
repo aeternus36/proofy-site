@@ -3,7 +3,7 @@
    - pointerdown (pålitligt på mobil)
    - togglar body.mnav-open
    - stänger via overlay, close, Esc, och klick på meny-länk
-   - blockerar touchmove utanför menyn när öppen (hindrar swipe/pan i bakgrunden)
+   - blockerar touchmove utanför menyn när öppen
 */
 
 (function () {
@@ -46,6 +46,7 @@
       else openMenu();
     }
 
+    // Pointerdown funkar bättre än click på mobiler
     document.addEventListener(
       "pointerdown",
       function (e) {
@@ -74,6 +75,7 @@
       { passive: false }
     );
 
+    // Esc
     document.addEventListener("keydown", function (e) {
       if (!isOpen()) return;
       if (e.key === "Escape") {
@@ -82,6 +84,7 @@
       }
     });
 
+    // Blockera touchmove utanför menyn när öppen
     document.addEventListener(
       "touchmove",
       function (e) {
