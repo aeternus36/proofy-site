@@ -3,6 +3,7 @@
    - pointerdown (pålitligt på mobil)
    - togglar body.mnav-open
    - stänger via overlay, close-knapp, Esc, och klick på meny-länk
+   - BOMBSÄKER: blockerar touchmove utanför menyn när den är öppen (hindrar swipe/pan/scroll-bakgrund)
 */
 
 (function () {
@@ -85,6 +86,22 @@
         closeMenu();
       }
     });
+
+    // ✅ BOMBSÄKER: Blockera touchmove utanför menyn när öppen
+    document.addEventListener(
+      "touchmove",
+      function (e) {
+        if (!isOpen()) return;
+
+        // Tillåt scroll inne i drawer
+        const t = e.target;
+        if (t && t.closest && t.closest("#mnav-menu")) return;
+
+        // Allt annat: stoppa (hindrar swipe/pan och bakgrundscroll)
+        e.preventDefault();
+      },
+      { passive: false }
+    );
 
     setAria(false);
   }
