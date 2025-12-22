@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Dokumentverifiering för redovisningsbyråer</title>
-  <meta name="description" content="Proofy hjälper redovisningsbyråer att visa att underlag inte har ändrats sedan en viss tidpunkt – utan att lagra filinnehåll." />
+  <meta name="description" content="Proofy hjälper redovisningsbyråer att visa om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/" />
   <meta name="theme-color" content="#0b1220" />
@@ -22,7 +22,7 @@
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
 
   <!-- Global CSS -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
 
   <!-- Structured data: Organization -->
   <script type="application/ld+json">
@@ -63,12 +63,13 @@
   <div class="wrap">
     <div class="badge">För redovisningsbyråer · revision · granskning</div>
 
-    <h1 class="pageTitle">Visa att underlag inte har ändrats – när det faktiskt spelar roll.</h1>
+    <h1 class="pageTitle">Visa om underlag har ändrats – när det faktiskt spelar roll.</h1>
 
     <p class="lead">
       När ett underlag ifrågasätts i efterhand uppstår onödiga diskussioner.
       Proofy ger dig ett <strong>Verifierings-ID</strong> som gör det enkelt att kontrollera om en fil är
-      <strong>oförändrad</strong> sedan en viss tidpunkt. <strong>Vi lagrar inte filinnehåll.</strong>
+      <strong>oförändrad</strong> jämfört med den version som registrerades vid en viss tidpunkt.
+      <strong>Vi lagrar inte filinnehåll.</strong>
     </p>
 
     <div class="card" style="padding:18px; margin-top:14px;">
@@ -92,7 +93,8 @@
       </p>
 
       <p class="small" style="margin-top:12px;">
-        Proofy är ett tekniskt verifieringsunderlag. Inte e-signering, inte filarkiv och inte juridisk rådgivning.
+        Proofy är ett <b>tekniskt underlag</b> för dokumentation och spårbarhet.
+        Inte e-signering, inte filarkiv och inte juridisk rådgivning.
       </p>
     </div>
 
@@ -101,12 +103,12 @@
       <div class="card content">
         <p>
           Proofy är byggt för byråers vardag: många ärenden, många versioner, och hög kostnad när någon ifrågasätter ett underlag i efterhand.
-          Ni får ett Verifierings-ID att spara i ärendet, som gör det lätt att visa om filen ni verifierar är samma version som den registrerade.
+          Ni får ett Verifierings-ID att spara i ärendet, som gör det lätt att visa om filen ni verifierar är samma version som den som registrerades.
         </p>
         <div class="grid3" style="margin-top:14px;">
           <div class="tile">
             <b>Passar när</b>
-            <span class="small">Ni behöver ett objektivt sätt att visa att ett underlag (en fil) inte ändrats efter ett visst datum.</span>
+            <span class="small">Ni behöver ett objektivt sätt att kontrollera om ett underlag (en fil) har ändrats efter ett visst datum.</span>
           </div>
           <div class="tile">
             <b>Inte för</b>
@@ -131,11 +133,11 @@
         <div class="grid3" style="margin-top:14px;">
           <div class="tile">
             <b>Dialog med kund</b>
-            <span class="small">Visa att underlaget ni arbetade på är samma filversion som kunden skickade vid ett visst datum.</span>
+            <span class="small">Visa om underlaget ni arbetade på är samma filversion som kunden skickade vid en viss tidpunkt.</span>
           </div>
           <div class="tile">
             <b>Granskning / revision</b>
-            <span class="small">Stärk er dokumentation genom att kunna verifiera att en filversion är oförändrad.</span>
+            <span class="small">Stärk er dokumentation genom att kunna verifiera att en filversion är oförändrad jämfört med registrerad referens.</span>
           </div>
           <div class="tile">
             <b>Efterfrågor i efterhand</b>
@@ -155,8 +157,9 @@
       <div class="card content">
         <ul>
           <li><b>Skapar ett Verifierings-ID</b> för en filversion.</li>
-          <li><b>Ger en tidsstämplad verifieringspost</b> kopplad till filens digitala fingeravtryck.</li>
+          <li><b>Registrerar Verifierings-ID</b> med en registreringstid i Proofys register.</li>
           <li><b>Låter er verifiera</b> senare: match / ingen match.</li>
+          <li><b>Ger möjlighet att öppna ett Verifieringsintyg</b> som sammanfattar om ID:t är registrerat och vilken registreringstid som finns.</li>
           <li><b>Lagrar inte filinnehåll</b> (Proofy är inte ett arkiv).</li>
         </ul>
 
@@ -217,9 +220,9 @@
         <details>
           <summary>Vad är Proofy i praktiken?</summary>
           <p>
-            Proofy ger en <b>tidsstämplad verifieringspost</b> kopplad till ett dokuments <b>digitala fingeravtryck</b>.
-            Det gör att ni i efterhand kan kontrollera om en fil är <b>samma version</b> som den som registrerades.
-            Proofy är ett tekniskt verifieringsunderlag – inte ett arkiv, inte e-signering och inte juridisk rådgivning.
+            Proofy ger en <b>registrering</b> kopplad till ett dokuments <b>digitala fingeravtryck</b>.
+            Det gör att ni i efterhand kan kontrollera om en fil är <b>samma version</b> som den som registrerades vid en viss tidpunkt.
+            Proofy är ett tekniskt underlag – inte ett arkiv, inte e-signering och inte juridisk rådgivning.
           </p>
         </details>
 
@@ -229,7 +232,7 @@
           <summary>Lagrar Proofy dokument eller filinnehåll?</summary>
           <p>
             Nej. Filen används lokalt för att beräkna ett digitalt fingeravtryck. Proofy lagrar inte filinnehåll,
-            bara den tekniska referens som krävs för verifiering (fingeravtryck + tidsstämpling/verifieringspost).
+            utan endast den tekniska referens som krävs för kontroll och registrering (Verifierings-ID + registreringstid).
           </p>
         </details>
 
@@ -269,8 +272,8 @@
         <details>
           <summary>Är detta juridiskt bindande?</summary>
           <p>
-            Proofy är ett <b>tekniskt verifieringsunderlag</b>. Hur det används i en juridisk bedömning beror på sammanhang och parter.
-            I praktiken används det som en del av dokumentation/spårbarhet vid granskning eller vid ifrågasättanden i efterhand.
+            Proofy är ett <b>tekniskt underlag</b>. Hur det används i en juridisk bedömning beror på sammanhang och parter.
+            Bevisvärde och relevans bedöms alltid i sitt sammanhang.
           </p>
         </details>
 
@@ -280,7 +283,7 @@
           <summary>Vilken information sparar vi i ärendet?</summary>
           <p>
             Ni sparar normalt <b>Verifierings-ID</b> (och gärna datum/tid i er notering).
-            Vid behov kan ni senare verifiera filen mot den registrerade posten.
+            Vid behov kan ni senare verifiera filen mot den registrerade referensen och öppna ett verifieringsintyg som sammanfattar registreringsstatus och registreringstid.
           </p>
         </details>
 
@@ -302,13 +305,13 @@
         "@context":"https://schema.org",
         "@type":"FAQPage",
         "mainEntity":[
-          {"@type":"Question","name":"Vad är Proofy i praktiken?","acceptedAnswer":{"@type":"Answer","text":"Proofy ger en tidsstämplad verifieringspost kopplad till ett dokuments digitala fingeravtryck. Det gör att ni i efterhand kan kontrollera om en fil är samma version som den som registrerades. Proofy är ett tekniskt verifieringsunderlag – inte ett arkiv, inte e-signering och inte juridisk rådgivning."}},
-          {"@type":"Question","name":"Lagrar Proofy dokument eller filinnehåll?","acceptedAnswer":{"@type":"Answer","text":"Nej. Proofy lagrar inte filinnehåll, bara den tekniska referens som krävs för verifiering (fingeravtryck + tidsstämpling/verifieringspost)."}},
+          {"@type":"Question","name":"Vad är Proofy i praktiken?","acceptedAnswer":{"@type":"Answer","text":"Proofy ger en registrering kopplad till ett dokuments digitala fingeravtryck. Det gör att ni i efterhand kan kontrollera om en fil är samma version som den som registrerades vid en viss tidpunkt. Proofy är ett tekniskt underlag – inte ett arkiv, inte e-signering och inte juridisk rådgivning."}},
+          {"@type":"Question","name":"Lagrar Proofy dokument eller filinnehåll?","acceptedAnswer":{"@type":"Answer","text":"Nej. Proofy lagrar inte filinnehåll, utan endast den tekniska referens som krävs för kontroll och registrering (Verifierings-ID + registreringstid)."}},
           {"@type":"Question","name":"Vad visar verifieringen – och vad visar den inte?","acceptedAnswer":{"@type":"Answer","text":"Verifiering visar om filen ni kontrollerar är identisk med den registrerade versionen. Proofy säger inte vem som skapade filen eller om innehållet är korrekt – bara om filen är oförändrad jämfört med registrerad version."}},
           {"@type":"Question","name":"Om någon exporterar om / skannar om – kan det bli “ingen match”?","acceptedAnswer":{"@type":"Answer","text":"Ja. Ny export, omskanning eller omkomprimering kan skapa en ny filversion tekniskt. I pilot brukar man sätta rutin för vilken filversion som ska registreras som referens."}},
           {"@type":"Question","name":"Vad händer om kunden skickar en annan version i efterhand?","acceptedAnswer":{"@type":"Answer","text":"En annan version får ett annat digitalt fingeravtryck och matchar inte den registrerade posten. Då kan ni visa att filen inte är samma version som den som registrerades vid ett visst datum."}},
-          {"@type":"Question","name":"Är detta juridiskt bindande?","acceptedAnswer":{"@type":"Answer","text":"Proofy är ett tekniskt verifieringsunderlag. Hur det används i en juridisk bedömning beror på sammanhang och parter."}},
-          {"@type":"Question","name":"Vilken information sparar vi i ärendet?","acceptedAnswer":{"@type":"Answer","text":"Ni sparar normalt Verifierings-ID (och gärna datum/tid i er notering). Vid behov kan ni senare verifiera filen mot den registrerade posten."}},
+          {"@type":"Question","name":"Är detta juridiskt bindande?","acceptedAnswer":{"@type":"Answer","text":"Proofy är ett tekniskt underlag. Hur det används i en juridisk bedömning beror på sammanhang och parter. Bevisvärde och relevans bedöms alltid i sitt sammanhang."}},
+          {"@type":"Question","name":"Vilken information sparar vi i ärendet?","acceptedAnswer":{"@type":"Answer","text":"Ni sparar normalt Verifierings-ID (och gärna datum/tid i er notering). Vid behov kan ni senare verifiera filen mot den registrerade referensen och öppna ett verifieringsintyg som sammanfattar registreringsstatus och registreringstid."}},
           {"@type":"Question","name":"Hur bokar vi demo eller startar pilot?","acceptedAnswer":{"@type":"Answer","text":"Använd formuläret eller maila kontakt@proofy.se. En demo tar normalt 10–15 min och en pilot kan startas med tydliga ramar och enkel onboarding."}}
         ]
       }
