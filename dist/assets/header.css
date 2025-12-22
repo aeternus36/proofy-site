@@ -1,8 +1,10 @@
 /* /assets/header.css
-   Mobilmeny (drawer) som matchar din header (.wrap .nav .navActions)
-   Viktigt:
-   - proofy.css gömmer .mnav-overlay/.mnav-drawer som failsafe
-   - här aktiverar vi dem på mobil (display + position + transform)
+   Mobilmeny (drawer) – städad, proffsig, mindre "slarvig".
+   Fixar:
+   - Snyggare proportioner (mindre tom yta, mindre pill-kort)
+   - Bättre close-knapp
+   - Drawer ovanpå chat-widget (z-index)
+   - Bättre spacing + typografi
 */
 
 header{
@@ -11,7 +13,7 @@ header{
   z-index: 1000;
 }
 
-/* Toggle-knapp: syns bara på mobil */
+/* Toggle-knapp (hamburger) */
 .mnav-toggle{
   display:none;
   background:none;
@@ -30,7 +32,7 @@ header{
   outline-offset:2px;
 }
 
-/* Hamburger */
+/* Hamburger-ikon */
 .mnav-icon{
   display:inline-block;
   width:22px;
@@ -53,32 +55,37 @@ header{
 }
 .mnav-icon::after{ bottom:0; }
 
-/* Overlay & Drawer grund (inactive) */
+/* Overlay */
 .mnav-overlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.45);
+  background: rgba(0,0,0,.50);
   opacity: 0;
   pointer-events: none;
   transition: opacity 180ms ease;
-  z-index: 1001;
+  z-index: 6000; /* över chat-widget */
 }
 
+/* Drawer */
 .mnav-drawer{
   position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: min(340px, 90vw);
-  background: #0e1628;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  width: min(360px, calc(100vw - 20px)); /* "card drawer" istället för helskärm */
+  background: rgba(14,22,40,.92);
+  backdrop-filter: blur(14px) saturate(140%);
   color: rgba(234,240,255,.92);
-  transform: translateX(102%);
+  transform: translateX(120%);
   transition: transform 220ms ease;
-  z-index: 1002;
-  box-shadow: -12px 0 28px rgba(0,0,0,.35);
-  padding: 16px;
+  z-index: 6100; /* över overlay + chat */
+  box-shadow: -12px 0 32px rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 18px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* Drawer top */
@@ -87,17 +94,26 @@ header{
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  padding: 8px 4px 12px;
+  padding: 8px 6px 12px;
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
-.mnav-title{ font-weight: 900; letter-spacing:.2px; }
+.mnav-title{
+  font-weight: 950;
+  letter-spacing:.2px;
+  font-size: 16px;
+}
 
+/* Close – mindre och renare */
 .mnav-close{
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.10);
   color: rgba(234,240,255,.92);
-  padding:10px;
-  border-radius:12px;
+  width: 42px;
+  height: 42px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius: 14px;
   cursor:pointer;
 }
 .mnav-close:hover{ background: rgba(255,255,255,.09); }
@@ -112,7 +128,9 @@ header{
 .mnav-x::after{
   content:"";
   position:absolute;
-  inset: 7px 0 7px 0;
+  left:0;
+  right:0;
+  top:7px;
   height:2px;
   background: rgba(234,240,255,.92);
   border-radius:2px;
@@ -120,46 +138,51 @@ header{
 .mnav-x::before{ transform: rotate(45deg); }
 .mnav-x::after{ transform: rotate(-45deg); }
 
-/* Links */
+/* Links – tighter, mindre "pills" */
 .mnav-links{
   display:flex;
   flex-direction:column;
   gap:10px;
-  padding: 14px 2px;
+  padding: 12px 4px;
+  overflow: auto; /* om man lägger till fler länkar */
+  -webkit-overflow-scrolling: touch;
 }
+
 .mnav-drawer a{
   color: rgba(234,240,255,.92);
   text-decoration:none;
-  padding: 12px 12px;
-  border-radius: 14px;
+  padding: 14px 14px;
+  border-radius: 16px;
   border: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.03);
-  font-weight: 850;
+  background: rgba(255,255,255,.04);
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1.2;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
 }
 .mnav-drawer a:hover{
-  background: rgba(255,255,255,.06);
+  background: rgba(255,255,255,.07);
   border-color: rgba(255,255,255,.12);
 }
 
-/* Meta */
+/* Meta – sitter "snyggt" längst ner, inte flyter runt */
 .mnav-meta{
-  margin-top:auto;
-  padding: 12px 4px 6px;
+  margin-top: auto;
+  padding: 12px 6px 6px;
   border-top: 1px solid rgba(255,255,255,.08);
 }
 .mnav-note{
-  font-size:13px;
-  opacity:.85;
-  margin-bottom:8px;
+  font-size: 13px;
+  opacity: .85;
+  margin-bottom: 8px;
 }
 .mnav-mail{
   display:inline-block;
-  font-size:14px;
-  opacity:.95;
-  border:0;
-  background:transparent;
-  padding:0;
+  font-size: 14px;
+  opacity: .95;
+  text-decoration: none;
 }
+.mnav-mail:hover{ text-decoration: underline; }
 
 /* Open state */
 body.mnav-open{ overflow:hidden; }
@@ -171,10 +194,9 @@ body.mnav-open .mnav-drawer{
   transform: translateX(0);
 }
 
-/* ✅ Mobil: AKTIVERA menyn visuellt + göm desktop actions */
+/* ✅ Mobil: slå på overlay/drawer + dölj desktop actions */
 @media (max-width: 860px){
-  /* VIKTIGT: proofy.css gömmer dessa med display:none !important.
-     Därför måste vi slå på dem här med !important. */
+  /* proofy.css gömmer dessa med display:none !important, så vi tvingar på här */
   .mnav-overlay{ display:block !important; }
   .mnav-drawer{ display:flex !important; }
 
@@ -186,9 +208,25 @@ body.mnav-open .mnav-drawer{
   }
 }
 
-/* Desktop: overlay/drawer dolda (och togglen döljs) */
+/* Desktop: allt av */
 @media (min-width: 861px){
   .mnav-overlay,
   .mnav-drawer{ display:none !important; }
   .mnav-toggle{ display:none !important; }
+}
+
+/* Extra små mobiler: lite smalare och tajtare */
+@media (max-width: 420px){
+  .mnav-drawer{
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: calc(100vw - 16px);
+    padding: 12px;
+  }
+  .mnav-drawer a{
+    padding: 13px 13px;
+    border-radius: 15px;
+    font-size: 15.5px;
+  }
 }
