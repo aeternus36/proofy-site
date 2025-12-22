@@ -1,5 +1,5 @@
 /* /assets/header.css
-   Mobilmeny – BOMBSÄKER (vänster-drawer för att undvika chat-bubbla nere till höger)
+   Stabil mobilmeny – max-z-index, inga off-screen tricks
 */
 
 header{
@@ -26,7 +26,7 @@ body.mnav-open{
   background:none;
   border:0;
   padding:10px;
-  margin-left:auto; /* håller den till höger */
+  margin-left:auto;
   cursor:pointer;
   border-radius:12px;
 }
@@ -75,7 +75,8 @@ body.mnav-open{
   pointer-events: none;
 
   transition: opacity 160ms ease, visibility 0s linear 160ms;
-  z-index: 9998;
+
+  z-index: 2147483646; /* max */
   touch-action: none;
 }
 
@@ -86,13 +87,12 @@ body.mnav-open .mnav-overlay{
   transition: opacity 160ms ease, visibility 0s linear 0s;
 }
 
-/* ===== DRAWER (VÄNSTER) ===== */
+/* ===== DRAWER ===== */
 
 .mnav-drawer{
   position: fixed;
   top: 0;
-  left: 0;     /* ✅ VÄNSTER */
-  right: auto;
+  right: 0;
   bottom: 0;
 
   width: 360px;
@@ -104,23 +104,23 @@ body.mnav-open .mnav-overlay{
   background: #0e1628;
   color: rgba(234,240,255,.92);
 
-  /* Stängd: osynlig (aldrig off-screen på höger sida) */
+  /* stängd */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
 
   transform: scale(.985);
-  transform-origin: left top;
+  transform-origin: right top;
 
   transition:
     opacity 180ms ease,
     transform 180ms ease,
     visibility 0s linear 180ms;
 
-  z-index: 9999;
+  z-index: 2147483647; /* max */
 
-  box-shadow: 14px 0 34px rgba(0,0,0,.45);
-  border-right: 1px solid rgba(255,255,255,.10);
+  box-shadow: -14px 0 34px rgba(0,0,0,.45);
+  border-left: 1px solid rgba(255,255,255,.10);
 
   padding:
     calc(14px + env(safe-area-inset-top, 0px))
@@ -131,8 +131,7 @@ body.mnav-open .mnav-overlay{
   display: flex;
   flex-direction: column;
 
-  /* Tillåt scroll i menyn */
-  touch-action: pan-y;
+  touch-action: pan-y; /* tillåt scroll i menyn */
 }
 
 body.mnav-open .mnav-drawer{
@@ -181,8 +180,8 @@ body.mnav-open .mnav-drawer{
   height:16px;
   position:relative;
 }
-.mnav-x::before,
-.mnav-x::after{
+.mnav_x::before,
+.mnav_x::after{
   content:"";
   position:absolute;
   top:7px;
@@ -192,8 +191,8 @@ body.mnav-open .mnav-drawer{
   background: rgba(234,240,255,.92);
   border-radius:2px;
 }
-.mnav-x::before{ transform: rotate(45deg); }
-.mnav-x::after{ transform: rotate(-45deg); }
+.mnav_x::before{ transform: rotate(45deg); }
+.mnav_x::after{ transform: rotate(-45deg); }
 
 /* ===== LÄNKAR ===== */
 
