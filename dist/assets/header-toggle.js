@@ -2,17 +2,13 @@
    Robust mobilmeny för .mnav-* markup
 */
 (() => {
-  const root = document.documentElement;
   const body = document.body;
 
   const toggle = document.querySelector(".mnav-toggle");
   const drawer = document.getElementById("mnav-menu");
   const overlay = document.querySelector(".mnav-overlay");
 
-  if (!toggle || !drawer || !overlay) {
-    // Ingen mobilmeny på denna sida – gör inget.
-    return;
-  }
+  if (!toggle || !drawer || !overlay) return;
 
   const CLOSE_SELECTORS = "[data-mnav-close]";
   const FOCUSABLE =
@@ -25,9 +21,8 @@
   }
 
   function lockScroll(lock) {
-    // Enkel och kompatibel “scroll lock”
     if (lock) {
-      body.classList.add("menu-open"); // om du redan använder den klassen
+      body.classList.add("menu-open");
       body.style.overflow = "hidden";
       body.style.touchAction = "none";
     } else {
@@ -39,13 +34,12 @@
 
   function openMenu() {
     if (isOpen()) return;
-
     lastFocus = document.activeElement;
+
     body.classList.add("mnav-open");
     toggle.setAttribute("aria-expanded", "true");
     lockScroll(true);
 
-    // Sätt fokus i drawer
     const first = drawer.querySelector(FOCUSABLE);
     if (first) first.focus({ preventScroll: true });
   }
@@ -57,7 +51,6 @@
     toggle.setAttribute("aria-expanded", "false");
     lockScroll(false);
 
-    // Återställ fokus
     if (lastFocus && typeof lastFocus.focus === "function") {
       lastFocus.focus({ preventScroll: true });
     } else {
@@ -70,20 +63,17 @@
     else openMenu();
   }
 
-  // Klick på hamburgaren
   toggle.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     toggleMenu();
   });
 
-  // Klick på overlay stänger
   overlay.addEventListener("click", (e) => {
     e.preventDefault();
     closeMenu();
   });
 
-  // Alla element med data-mnav-close stänger (X, overlay om du vill, etc.)
   document.addEventListener("click", (e) => {
     const t = e.target;
     if (!(t instanceof Element)) return;
@@ -93,7 +83,6 @@
     }
   });
 
-  // Klick på en länk i menyn stänger (för interna ankare/sidor)
   drawer.addEventListener("click", (e) => {
     const t = e.target;
     if (!(t instanceof Element)) return;
@@ -101,12 +90,11 @@
     if (link) closeMenu();
   });
 
-  // ESC stänger
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeMenu();
   });
 
-  // Enkel focus-trap (så fokus inte “flyr” bakom)
+  // Focus trap när öppen
   document.addEventListener("keydown", (e) => {
     if (!isOpen() || e.key !== "Tab") return;
 
@@ -127,10 +115,8 @@
     }
   });
 
-  // Säkerställ korrekt state vid resize: om man går till desktop, stäng.
+  // Byt till desktop -> stäng
   window.addEventListener("resize", () => {
-    // matcha din breakpoint (920px)
     if (window.innerWidth > 920) closeMenu();
   });
-
 })();
