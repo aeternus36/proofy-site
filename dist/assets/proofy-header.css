@@ -1,0 +1,83 @@
+/* proofy-header.css */
+header {
+  background: linear-gradient(to right, #0b1220, #101e33);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  position: relative;
+  z-index: 1000;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  text-decoration: none;
+  color: #fff;
+}
+.logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6ea8ff, #7cf1c6);
+}
+.hamburger {
+  font-size: 1.8rem;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  z-index: 1010;
+}
+.menu {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 260px;
+  height: 100vh;
+  background: #111a2c;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  transition: left 0.3s ease;
+  z-index: 1005;
+}
+.menu.active {
+  left: 0;
+}
+.menu a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+.menu .btn {
+  display: block;
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 700;
+  background: #1a243b;
+  border: 1px solid #33415f;
+}
+.menu .btn.primary {
+  background: linear-gradient(to right, #59d, #4f9);
+  color: #000;
+}
+@media (min-width: 920px) {
+  .hamburger { display: none; }
+  .menu {
+    position: static;
+    flex-direction: row;
+    background: transparent;
+    height: auto;
+    padding: 0;
+    gap: 1rem;
+    left: 0;
+  }
+  .menu a.btn { margin-left: 0.5rem; }
+}
