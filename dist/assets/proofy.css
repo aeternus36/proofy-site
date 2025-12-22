@@ -56,190 +56,13 @@ header{
   border-bottom: 1px solid var(--border);
 }
 
-/* =========================================================
-   ✅ MOBILMENY BAS (så den aldrig blir “rå text”)
-   - OBS: Ingen display:none !important här.
-   - Menyn är off-canvas tills body får .mnav-open.
-   - header.css (om du laddar den) kan fortfarande overridea.
-   ========================================================= */
-
-/* Toggle-knapp (hamburger) - döljs på desktop, visas på mobil */
-.mnav-toggle{
-  display:none;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: inherit;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  cursor: pointer;
-  align-items:center;
-  justify-content:center;
-  flex: 0 0 auto;
-  position: relative;
-  z-index: 5;
-}
-.mnav-icon{
-  width: 20px;
-  height: 14px;
-  position: relative;
-  display:block;
-}
-.mnav-icon::before,
-.mnav-icon::after{
-  content:"";
-  position:absolute;
-  left:0;
-  right:0;
-  height:2px;
-  border-radius: 2px;
-  background: rgba(234,240,255,.92);
-}
-.mnav-icon::before{ top:0; }
-.mnav-icon::after{ bottom:0; }
-.mnav-icon{ box-shadow: 0 6px 0 rgba(234,240,255,.92); }
-
-/* Overlay + drawer: alltid utanför flödet (fixerad) */
-.mnav-overlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .18s ease;
-  z-index: 1200;
-}
-
+/* ✅ FAILSAFE (utan !important):
+   Om header.css inte laddas ska mobilmenyn inte ligga som rå text.
+   header.css laddas efter och kan då visa menyn korrekt. */
+.mnav-overlay,
 .mnav-drawer{
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: min(88vw, 360px);
-  background: rgba(11,18,32,.98);
-  border-left: 1px solid rgba(255,255,255,.12);
-  box-shadow: 0 18px 60px rgba(0,0,0,.55);
-  transform: translateX(102%);
-  transition: transform .22s ease;
-  z-index: 1300;
-
-  display:flex;
-  flex-direction:column;
-  padding: 18px;
-  gap: 14px;
-
-  overscroll-behavior: contain;
-  pointer-events: none;
+  display:none;
 }
-
-/* Öppet läge */
-body.mnav-open .mnav-overlay{
-  opacity: 1;
-  pointer-events: auto;
-}
-body.mnav-open .mnav-drawer{
-  transform: translateX(0);
-  pointer-events: auto;
-}
-
-/* Drawer innehåll */
-.mnav-drawerTop{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 10px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255,255,255,.10);
-}
-.mnav-title{
-  font-size: 18px;
-  font-weight: 950;
-  color: rgba(234,240,255,.92);
-}
-.mnav-close{
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.mnav-x{
-  width: 18px;
-  height: 18px;
-  position: relative;
-  display:block;
-}
-.mnav-x::before,
-.mnav-x::after{
-  content:"";
-  position:absolute;
-  left: 50%;
-  top: 50%;
-  width: 18px;
-  height: 2px;
-  background: rgba(234,240,255,.92);
-  border-radius: 2px;
-  transform-origin: center;
-}
-.mnav-x::before{ transform: translate(-50%,-50%) rotate(45deg); }
-.mnav-x::after{ transform: translate(-50%,-50%) rotate(-45deg); }
-
-.mnav-links{
-  display:flex;
-  flex-direction:column;
-  gap: 12px;
-  padding-top: 6px;
-}
-.mnav-links a{
-  text-decoration:none;
-  color: rgba(234,240,255,.92);
-  font-weight: 900;
-  font-size: 16px;
-  padding: 16px 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-}
-.mnav-links a:hover{ background: rgba(255,255,255,.07); }
-.mnav-links a:active{ transform: translateY(1px); }
-
-.mnav-meta{
-  margin-top:auto;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,.10);
-  display:flex;
-  flex-direction:column;
-  gap: 10px;
-}
-.mnav-note{
-  color: rgba(169,183,211,.92);
-  font-size: 13px;
-}
-.mnav-mail{
-  display:inline-flex;
-  align-items:center;
-  gap: 10px;
-  text-decoration:none;
-  color: rgba(234,240,255,.92);
-  font-weight: 900;
-  padding: 14px 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-}
-
-/* Mobil: visa hamburgare, göm desktop actions (om du har id="navActionsDesktop") */
-@media (max-width: 920px){
-  .mnav-toggle{ display:inline-flex; }
-  #navActionsDesktop{ display:none !important; }
-}
-
-/* ========================================================= */
 
 /* ✅ Default: flex row */
 .nav{
@@ -379,9 +202,8 @@ body.mnav-open .mnav-drawer{
     white-space: nowrap;
   }
 
-  /* ✅ FALLBACK om du är på en sida UTAN mobilmeny-markup:
-     Bryt navActions snyggt istället för horisontell swipe.
-     (Om du använder mobilmeny med #navActionsDesktop göms den ändå av regeln ovan.) */
+  /* ✅ FALLBACK om header.css saknas:
+     Bryt navActions snyggt istället för horisontell swipe. */
   .nav{
     flex-wrap: wrap;
   }
