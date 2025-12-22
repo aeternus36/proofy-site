@@ -1,10 +1,8 @@
 /* /assets/header.css
-   Mobilmeny (drawer) – STABIL på Samsung Internet/Chrome.
-   Fixar "slarvig/dålig" drawer genom att:
-   - ta bort backdrop-filter (vanlig buggkälla)
-   - använda fullhöjd drawer (top/right/bottom:0)
-   - använda 100dvh + fallback
-   - säkra z-index över chat-widget
+   BOMBSÄKER mobilmeny för Samsung Internet/Chrome:
+   - Stoppar horisontell swipe/overflow
+   - Drawer öppnas via right:-Npx -> right:0 (inte transform)
+   - Hög z-index över chat-widget
    - CTA-highlight för #kontakt
 */
 
@@ -12,6 +10,11 @@ header{
   position: sticky;
   top: 0;
   z-index: 1000;
+}
+
+/* ✅ Stoppa horisontell scroll (orsaken till "syns först när man swipar") */
+html, body{
+  overflow-x: hidden;
 }
 
 /* Toggle-knapp (hamburger) */
@@ -67,26 +70,27 @@ header{
   z-index: 9998; /* över chat-widget */
 }
 
-/* Drawer (fullhöjd, stabil) */
+/* Drawer – stabil off-canvas via right istället för transform */
 .mnav-drawer{
   position: fixed;
   top: 0;
-  right: 0;
   bottom: 0;
 
-  /* Stabil höjd i mobila browsers (adressrad) */
+  /* Stabil viewport-höjd på mobil */
   height: 100vh;
   height: 100dvh;
 
   width: min(360px, 88vw);
 
-  background: #0e1628; /* solid (stabil) */
+  /* start: utanför skärmen */
+  right: calc(-1 * min(360px, 88vw));
+
+  background: #0e1628;
   color: rgba(234,240,255,.92);
 
-  transform: translate3d(110%, 0, 0);
-  transition: transform 220ms ease;
+  transition: right 220ms ease;
 
-  z-index: 9999; /* över overlay */
+  z-index: 9999;
   box-shadow: -14px 0 34px rgba(0,0,0,.45);
   border-left: 1px solid rgba(255,255,255,.10);
 
@@ -95,8 +99,6 @@ header{
 
   display: flex;
   flex-direction: column;
-
-  will-change: transform;
 }
 
 /* Drawer top */
@@ -159,7 +161,6 @@ header{
   -webkit-overflow-scrolling: touch;
 }
 
-/* Standard-länk */
 .mnav-drawer a{
   color: rgba(234,240,255,.92);
   text-decoration:none;
@@ -176,7 +177,7 @@ header{
   border-color: rgba(255,255,255,.12);
 }
 
-/* ✅ CTA: "Boka demo" (länk till #kontakt) */
+/* CTA: "Boka demo" */
 .mnav-links a[href="#kontakt"]{
   border: none;
   color: #08101e;
@@ -213,16 +214,17 @@ body.mnav-open .mnav-overlay{
   pointer-events: auto;
 }
 body.mnav-open .mnav-drawer{
-  transform: translate3d(0, 0, 0);
+  right: 0; /* in på skärmen */
 }
 
-/* ✅ Mobil: slå på overlay/drawer + dölj desktop actions */
+/* Mobil: slå på overlay/drawer + dölj desktop actions */
 @media (max-width: 860px){
-  /* proofy.css gömmer dessa med display:none !important, så vi tvingar på här */
+  /* proofy.css gömmer dessa med display:none !important */
   .mnav-overlay{ display:block !important; }
   .mnav-drawer{ display:flex !important; }
 
   header .navActions{ display:none !important; }
+
   .mnav-toggle{
     display:inline-flex;
     align-items:center;
