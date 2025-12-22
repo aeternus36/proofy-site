@@ -1,5 +1,8 @@
 /* /assets/header.css
-   Stabil mobilmeny – max-z-index, inga off-screen tricks
+   BOMBSÄKER mobilmeny:
+   - Drawer är FULLSKÄRM (inset:0) => kan aldrig hamna off-screen
+   - Panelen ritas som ::before på höger sida
+   - Innehåll ligger alltid på panelen (fast width/max-width)
 */
 
 header{
@@ -8,7 +11,7 @@ header{
   z-index: 1000;
 }
 
-/* Stoppa horisontell scroll/pan */
+/* Stoppa horisontell scroll/pan på sidan */
 html, body{
   overflow-x: hidden;
   overscroll-behavior-x: none;
@@ -63,7 +66,7 @@ body.mnav-open{
   bottom:0;
 }
 
-/* ===== OVERLAY ===== */
+/* ===== OVERLAY (bakgrundsdim) ===== */
 
 .mnav-overlay{
   position: fixed;
@@ -76,7 +79,7 @@ body.mnav-open{
 
   transition: opacity 160ms ease, visibility 0s linear 160ms;
 
-  z-index: 2147483646; /* max */
+  z-index: 2147483646;
   touch-action: none;
 }
 
@@ -87,62 +90,64 @@ body.mnav-open .mnav-overlay{
   transition: opacity 160ms ease, visibility 0s linear 0s;
 }
 
-/* ===== DRAWER ===== */
+/* ===== DRAWER (FULLSKÄRM) ===== */
 
 .mnav-drawer{
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;                 /* ✅ FULLSKÄRM */
+  z-index: 2147483647;      /* max */
+  background: transparent;  /* panelen ligger i ::before */
 
-  width: 360px;
-  max-width: 88vw;
-
-  height: 100vh;
-  height: 100dvh;
-
-  background: #0e1628;
-  color: rgba(234,240,255,.92);
-
-  /* stängd */
+  /* Stängd */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
 
-  transform: scale(.985);
-  transform-origin: right top;
+  transition: opacity 180ms ease, visibility 0s linear 180ms;
 
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease,
-    visibility 0s linear 180ms;
-
-  z-index: 2147483647; /* max */
-
-  box-shadow: -14px 0 34px rgba(0,0,0,.45);
-  border-left: 1px solid rgba(255,255,255,.10);
-
+  /* layout */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;    /* innehåll till höger */
   padding:
     calc(14px + env(safe-area-inset-top, 0px))
     14px
     calc(24px + env(safe-area-inset-bottom, 16px))
     14px;
 
-  display: flex;
-  flex-direction: column;
-
-  touch-action: pan-y; /* tillåt scroll i menyn */
+  /* viktigt: inget sidledspan */
+  overflow: hidden;
 }
 
 body.mnav-open .mnav-drawer{
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: scale(1);
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease,
-    visibility 0s linear 0s;
+  transition: opacity 180ms ease, visibility 0s linear 0s;
+}
+
+/* Panelen (alltid synlig, aldrig off-screen) */
+.mnav-drawer::before{
+  content:"";
+  position:absolute;
+  top:0;
+  right:0;
+  bottom:0;
+
+  width: 360px;
+  max-width: 88vw;
+
+  background: #0e1628;
+  border-left: 1px solid rgba(255,255,255,.10);
+  box-shadow: -14px 0 34px rgba(0,0,0,.45);
+}
+
+/* Alla direkta barn ligger ovanpå panelen och får panel-bredd */
+.mnav-drawer > *{
+  position: relative;
+  z-index: 1;
+  width: 360px;
+  max-width: 88vw;
 }
 
 /* ===== TOPP ===== */
@@ -152,7 +157,7 @@ body.mnav-open .mnav-drawer{
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  padding-bottom: 12px;
+  padding: 0 0 12px;
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
@@ -160,6 +165,7 @@ body.mnav-open .mnav-drawer{
   font-size: 16px;
   font-weight: 900;
   letter-spacing:.2px;
+  color: rgba(234,240,255,.92);
 }
 
 .mnav-close{
@@ -180,8 +186,8 @@ body.mnav-open .mnav-drawer{
   height:16px;
   position:relative;
 }
-.mnav_x::before,
-.mnav_x::after{
+.mnav-x::before,
+.mnav-x::after{
   content:"";
   position:absolute;
   top:7px;
@@ -191,8 +197,8 @@ body.mnav-open .mnav-drawer{
   background: rgba(234,240,255,.92);
   border-radius:2px;
 }
-.mnav_x::before{ transform: rotate(45deg); }
-.mnav_x::after{ transform: rotate(-45deg); }
+.mnav-x::before{ transform: rotate(45deg); }
+.mnav-x::after{ transform: rotate(-45deg); }
 
 /* ===== LÄNKAR ===== */
 
@@ -201,8 +207,13 @@ body.mnav-open .mnav-drawer{
   flex-direction:column;
   gap:10px;
   padding: 16px 0;
+
+  /* scroll inne i panelen om det behövs */
   overflow:auto;
   -webkit-overflow-scrolling: touch;
+
+  /* fyll höjd snyggt */
+  flex: 1 1 auto;
 }
 
 .mnav-drawer a{
@@ -229,9 +240,9 @@ body.mnav-open .mnav-drawer{
 /* ===== META ===== */
 
 .mnav-meta{
-  margin-top: auto;
   padding-top: 16px;
   border-top: 1px solid rgba(255,255,255,.08);
+  color: rgba(234,240,255,.92);
 }
 
 .mnav-note{
@@ -250,9 +261,6 @@ body.mnav-open .mnav-drawer{
 /* ===== RESPONSIVT ===== */
 
 @media (max-width: 860px){
-  .mnav-overlay{ display:block !important; }
-  .mnav-drawer{ display:flex !important; }
-
   header .navActions{ display:none !important; }
 
   .mnav-toggle{
