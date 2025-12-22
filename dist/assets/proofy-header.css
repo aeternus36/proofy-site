@@ -1,1 +1,128 @@
+/* proofy-header.css */
+
+:root {
+  --bg: #0b1220;
+  --text: #eaf0ff;
+  --muted: #a9b7d3;
+  --brand: #6ea8ff;
+  --brand2: #7cf1c6;
+  --border: rgba(255,255,255,0.12);
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: rgba(11, 18, 32, 0.95);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 14px 20px;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  font-weight: bold;
+  color: var(--text);
+  gap: 10px;
+}
+
+.logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  box-shadow: 0 8px 20px rgba(110, 168, 255, 0.3);
+  position: relative;
+}
+
+.logo:after {
+  content: "";
+  position: absolute;
+  inset: 9px 10px;
+  border-radius: 7px;
+  background: rgba(11,18,32,.65);
+  border: 1px solid rgba(255,255,255,.2);
+}
+
+#mainnav {
+  display: flex;
+  gap: 14px;
+}
+
+#mainnav a {
+  text-decoration: none;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+#mainnav a:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+}
+
+.btn {
+  padding: 10px 16px;
+  border-radius: 14px;
+  text-decoration: none;
+  font-weight: 900;
+  color: #08101e;
+  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
+  box-shadow: 0 8px 20px rgba(110,168,255,.25);
+  white-space: nowrap;
+}
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.hamburger span {
+  width: 24px;
+  height: 2px;
+  background: var(--text);
+  display: block;
+}
+
+@media (max-width: 768px) {
+  #mainnav {
+    display: none;
+    flex-direction: column;
+    background: rgba(11,18,32,0.98);
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  #mainnav.show {
+    display: flex;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+}
 
