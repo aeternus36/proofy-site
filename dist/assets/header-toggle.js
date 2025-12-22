@@ -1,8 +1,8 @@
 /* /assets/header-toggle.js
-   BOMBSÄKER mobilmeny:
-   - Lyssnar på pointerdown (bättre än click på mobil)
-   - Sätter inline-style på drawer (right:0 / right:-400px)
-   - Toggler body.mnav-open (för overlay/scroll lock)
+   Stabil mobilmeny:
+   - pointerdown (pålitligt på mobil)
+   - togglar body.mnav-open
+   - stänger via overlay, close-knapp, Esc, och klick på meny-länk
 */
 
 (function () {
@@ -19,9 +19,6 @@
 
     if (!toggle || !drawer || !overlay) return;
 
-    // Säker default-läge (om CSS inte hunnit)
-    drawer.style.right = "-400px";
-
     function isOpen() {
       return document.body.classList.contains("mnav-open");
     }
@@ -34,15 +31,12 @@
     function openMenu() {
       if (isOpen()) return;
       document.body.classList.add("mnav-open");
-      // Inline style: oberoende av CSS-buggar
-      drawer.style.right = "0px";
       setAria(true);
     }
 
     function closeMenu() {
       if (!isOpen()) return;
       document.body.classList.remove("mnav-open");
-      drawer.style.right = "-400px";
       setAria(false);
     }
 
@@ -51,28 +45,28 @@
       else openMenu();
     }
 
-    // Pointerdown är stabilare på mobil än click
+    // Pointerdown funkar bättre än click på mobiler
     document.addEventListener(
       "pointerdown",
       function (e) {
         const t = e.target;
 
-        // Öppna/stäng via hamburger
+        // Hamburger
         if (t && t.closest && t.closest(".mnav-toggle")) {
           e.preventDefault();
           toggleMenu();
           return;
         }
 
-        // Stäng via overlay eller element med data-mnav-close
+        // Overlay / stängknapp
         if (t && t.closest && t.closest("[data-mnav-close]")) {
           e.preventDefault();
           closeMenu();
           return;
         }
 
-        // Stäng om man klickar på en länk i menyn
-        if (t && t.closest && isOpen()) {
+        // Klick på länk i menyn
+        if (isOpen() && t && t.closest) {
           const a = t.closest("#mnav-menu a");
           if (a) {
             closeMenu();
@@ -83,7 +77,7 @@
       { passive: false }
     );
 
-    // Esc stänger
+    // Esc
     document.addEventListener("keydown", function (e) {
       if (!isOpen()) return;
       if (e.key === "Escape") {
@@ -92,7 +86,6 @@
       }
     });
 
-    // Init aria
     setAria(false);
   }
 
