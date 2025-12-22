@@ -54,6 +54,12 @@ header{
   border-bottom: 1px solid var(--border);
 }
 
+/* ✅ FAILSAFE: om header.css inte laddas ska mobil-drawer aldrig “förstöra layouten” */
+.mnav-overlay,
+.mnav-drawer{
+  display:none;
+}
+
 /* ✅ Default: flex row */
 .nav{
   display:flex;
@@ -170,64 +176,31 @@ header{
 }
 .btn.ghost:hover{ background: rgba(255,255,255,.06); }
 
-/* ✅ Mobil: knapparna ligger på SAMMA RAD som loggan och scrollar horisontellt istället för att gå ner */
+/* ✅ Mobil */
 @media (max-width: 920px){
   .navLinks{ display:none; }
 
-  /* Gör headern tightare och “1-rad”-säker */
   .nav{
     gap:10px;
     padding: 10px 0;
   }
 
-  /* Lite kompaktare brand så actions får plats */
-  .brand{
-    gap:9px;
-  }
-  .logo{
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-  }
+  .brand{ gap:9px; }
+  .logo{ width: 32px; height: 32px; border-radius: 10px; }
   .logo:after{ inset: 8px 9px; border-radius: 7px; }
   .brand span:last-child{
-    font-size: 15px;              /* “Proofy” text */
+    font-size: 15px;
     line-height: 1;
     white-space: nowrap;
   }
 
-  /* Actions tar resterande bredd och scrollar */
-  .navActions{
-    flex: 1 1 auto;
-    min-width: 0;                 /* KRITISKT för overflow */
-    justify-content: flex-end;
-    overflow-x: auto;             /* scroll i sidled */
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;        /* Firefox */
-    gap:8px;
-    padding-bottom: 2px;
-  }
-  .navActions::-webkit-scrollbar{ display:none; }
-
-  /* Knappar på mobil: fortfarande stora men något tightare så fler får plats */
-  .navActions .btn{
-    min-height: 42px;
-    padding: 12px 14px;
-    font-size: 13.8px;
-    border-radius: 16px;
-  }
+  /* OBS: navActions hanteras av header.css (hamburger). Här låter vi den vara neutral. */
 }
 
 /* Extra liten mobil */
 @media (max-width: 420px){
   .wrap{ padding: 0 16px; }
   .nav{ gap:8px; }
-  .navActions{ gap:7px; }
-  .navActions .btn{
-    padding: 11px 13px;
-    font-size: 13.4px;
-    min-height: 40px;
-  }
 }
 
 /* Accessibility focus */
@@ -516,52 +489,6 @@ footer{
   margin-right: 12px;
 }
 .links a:hover{ color: var(--text); }
-
-/* =========================
-   ✅ NYTT: CTA-layout (Hero + Form) för proffsig mobil
-   ========================= */
-
-/* Hero CTA-rad: konsekvent även utan inline-styling */
-.heroCtas{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-/* Desktop: låt knapparna vara "auto" men med bra rytm */
-.heroCtas .btn{
-  flex: 0 0 auto;
-}
-
-/* Mobil: stacka, fullbredd, tydlig hierarki */
-@media (max-width: 680px){
-  .heroCtas{
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .heroCtas .btn{
-    width: 100%;
-    justify-content: center;
-  }
-
-  /* Tillåt radbrytning i knappar om texten blir lång på små enheter */
-  .btn{
-    white-space: normal;
-    text-align: center;
-  }
-
-  /* Form actions: gör dem tydliga och fullbredd på mobil */
-  .formActions{
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .formActions .btn,
-  .formActions button.btn{
-    width: 100%;
-  }
-}
 
 /* Print */
 @media print{
