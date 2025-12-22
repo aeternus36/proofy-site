@@ -517,6 +517,52 @@ footer{
 }
 .links a:hover{ color: var(--text); }
 
+/* =========================
+   ✅ NYTT: CTA-layout (Hero + Form) för proffsig mobil
+   ========================= */
+
+/* Hero CTA-rad: konsekvent även utan inline-styling */
+.heroCtas{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Desktop: låt knapparna vara "auto" men med bra rytm */
+.heroCtas .btn{
+  flex: 0 0 auto;
+}
+
+/* Mobil: stacka, fullbredd, tydlig hierarki */
+@media (max-width: 680px){
+  .heroCtas{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .heroCtas .btn{
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tillåt radbrytning i knappar om texten blir lång på små enheter */
+  .btn{
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* Form actions: gör dem tydliga och fullbredd på mobil */
+  .formActions{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .formActions .btn,
+  .formActions button.btn{
+    width: 100%;
+  }
+}
+
 /* Print */
 @media print{
   header{ position: static; backdrop-filter:none; background:#fff; border-bottom:none; }
