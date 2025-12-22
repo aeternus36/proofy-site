@@ -1,71 +1,33 @@
-/* /assets/header-toggle.js
-   Robust mobilmeny för .mnav-* markup
-*/
+/* /assets/header-toggle.js */
 (() => {
-  const body = document.body;
+  "use strict";
 
   const toggle = document.querySelector(".mnav-toggle");
-  const drawer = document.getElementById("mnav-menu");
+  const drawer = document.querySelector(".mnav-drawer");
   const overlay = document.querySelector(".mnav-overlay");
 
   if (!toggle || !drawer || !overlay) return;
 
-  const CLOSE_SELECTORS = "[data-mnav-close]";
-  const FOCUSABLE =
-    'a[href], button:not([disabled]), textarea, input, select, details, summary, [tabindex]:not([tabindex="-1"])';
+  const closeBtns = document.querySelectorAll("[data-mnav-close]");
+  const mqDesktop = window.matchMedia("(min-width: 921px)");
 
-  let lastFocus = null;
+  function setOpen(isOpen) {
+    document.body.classList.toggle("mnav-open", isOpen);
+    toggle.setAttribute("aria-expanded", String(isOpen));
 
-  function isOpen() {
-    return body.classList.contains("mnav-open");
+    // Lås scroll när menyn är öppen
+    document.documentElement.classList.toggle("mnav-lock", isOpen);
   }
 
-  function lockScroll(lock) {
-    if (lock) {
-      body.classList.add("menu-open");
-      body.style.overflow = "hidden";
-      body.style.touchAction = "none";
-    } else {
-      body.classList.remove("menu-open");
-      body.style.overflow = "";
-      body.style.touchAction = "";
-    }
-  }
+  function openMenu() { setOpen(true); }
+  function closeMenu() { setOpen(false); }
+  function toggleMenu() { setOpen(!document.body.classList.contains("mnav-open")); }
 
-  function openMenu() {
-    if (isOpen()) return;
-    lastFocus = document.activeElement;
-
-    body.classList.add("mnav-open");
-    toggle.setAttribute("aria-expanded", "true");
-    lockScroll(true);
-
-    const first = drawer.querySelector(FOCUSABLE);
-    if (first) first.focus({ preventScroll: true });
-  }
-
-  function closeMenu() {
-    if (!isOpen()) return;
-
-    body.classList.remove("mnav-open");
-    toggle.setAttribute("aria-expanded", "false");
-    lockScroll(false);
-
-    if (lastFocus && typeof lastFocus.focus === "function") {
-      lastFocus.focus({ preventScroll: true });
-    } else {
-      toggle.focus({ preventScroll: true });
-    }
-  }
-
-  function toggleMenu() {
-    if (isOpen()) closeMenu();
-    else openMenu();
-  }
+  // Markera att JS är igång (CSS använder detta)
+  document.documentElement.setAttribute("data-mnav-ready", "1");
 
   toggle.addEventListener("click", (e) => {
     e.preventDefault();
-    e.stopPropagation();
     toggleMenu();
   });
 
@@ -74,49 +36,29 @@
     closeMenu();
   });
 
-  document.addEventListener("click", (e) => {
-    const t = e.target;
-    if (!(t instanceof Element)) return;
-    if (t.closest(CLOSE_SELECTORS)) {
+  closeBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
       e.preventDefault();
       closeMenu();
-    }
+    });
   });
 
-  drawer.addEventListener("click", (e) => {
-    const t = e.target;
-    if (!(t instanceof Element)) return;
-    const link = t.closest("a[href]");
-    if (link) closeMenu();
-  });
-
+  // Stäng på ESC
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeMenu();
   });
 
-  // Focus trap när öppen
-  document.addEventListener("keydown", (e) => {
-    if (!isOpen() || e.key !== "Tab") return;
-
-    const focusables = Array.from(drawer.querySelectorAll(FOCUSABLE))
-      .filter((el) => el.offsetParent !== null);
-
-    if (focusables.length === 0) return;
-
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
+  // Stäng när man klickar på en länk i menyn
+  drawer.addEventListener("click", (e) => {
+    const a = e.target && e.target.closest ? e.target.closest("a") : null;
+    if (a) closeMenu();
   });
 
-  // Byt till desktop -> stäng
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 920) closeMenu();
+  // Om man går till desktop-läge: stäng menyn
+  mqDesktop.addEventListener("change", () => {
+    if (mqDesktop.matches) closeMenu();
   });
+
+  // Startläge
+  setOpen(false);
 })();
