@@ -1,7 +1,8 @@
 /* /assets/header.css
-   Mobilmeny (drawer). Variant: hamburger till VÄNSTER på mobil.
-   OBS: proofy.css har FAILSAFE som gömmer .mnav-overlay/.mnav-drawer med !important.
-   Därför slår vi på display på mobil med !important här.
+   Mobilmeny (drawer) som matchar din header (.wrap .nav .navActions)
+   Viktigt:
+   - proofy.css gömmer .mnav-overlay/.mnav-drawer som failsafe
+   - här aktiverar vi dem på mobil (display + position + transform)
 */
 
 header{
@@ -10,13 +11,13 @@ header{
   z-index: 1000;
 }
 
-/* Toggle-knapp (hamburger) */
+/* Toggle-knapp: syns bara på mobil */
 .mnav-toggle{
   display:none;
   background:none;
   border:0;
   padding:10px;
-  margin-left:auto; /* default desktop (dold ändå) */
+  margin-left:auto;
   cursor:pointer;
   border-radius:12px;
 }
@@ -29,7 +30,7 @@ header{
   outline-offset:2px;
 }
 
-/* Hamburger-ikon */
+/* Hamburger */
 .mnav-icon{
   display:inline-block;
   width:22px;
@@ -52,7 +53,7 @@ header{
 }
 .mnav-icon::after{ bottom:0; }
 
-/* Overlay */
+/* Overlay & Drawer grund (inactive) */
 .mnav-overlay{
   position: fixed;
   inset: 0;
@@ -63,7 +64,6 @@ header{
   z-index: 1001;
 }
 
-/* Drawer */
 .mnav-drawer{
   position: fixed;
   top: 0;
@@ -171,32 +171,22 @@ body.mnav-open .mnav-drawer{
   transform: translateX(0);
 }
 
-/* ✅ Mobil: aktivera overlay/drawer + dölj desktop actions + flytta hamburger till vänster */
+/* ✅ Mobil: AKTIVERA menyn visuellt + göm desktop actions */
 @media (max-width: 860px){
+  /* VIKTIGT: proofy.css gömmer dessa med display:none !important.
+     Därför måste vi slå på dem här med !important. */
   .mnav-overlay{ display:block !important; }
   .mnav-drawer{ display:flex !important; }
 
   header .navActions{ display:none !important; }
-
-  /* Visa knapp */
   .mnav-toggle{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-
-    /* VÄNSTERPLACERING */
-    order: -1;
-    margin-left: 0;       /* tar bort "push to right" */
-    margin-right: 10px;   /* luft till loggan */
-  }
-
-  /* Se till att brand hamnar efter toggle visuellt */
-  header .nav .brand{
-    order: 0;
   }
 }
 
-/* Desktop: allt av */
+/* Desktop: overlay/drawer dolda (och togglen döljs) */
 @media (min-width: 861px){
   .mnav-overlay,
   .mnav-drawer{ display:none !important; }
