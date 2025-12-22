@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="sv">
 <head>
@@ -24,6 +23,8 @@
 
   <!-- Global CSS -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-01" />
+  <!-- Mobile header/menu CSS (loads after global to safely override where needed) -->
+  <link rel="stylesheet" href="/assets/header.css?v=2025-01" />
 
   <!-- Structured data: Organization -->
   <script type="application/ld+json">
@@ -48,9 +49,18 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Beslut A: inga ankarlänkar i headern -->
+      <!-- Mobile menu toggle (only visible on small screens via header.css) -->
+      <button
+        class="mnav-toggle"
+        type="button"
+        aria-label="Öppna meny"
+        aria-controls="mnav-menu"
+        aria-expanded="false">
+        <span class="mnav-icon" aria-hidden="true"></span>
+      </button>
 
-      <div class="navActions">
+      <!-- Desktop actions (stays as-is; hidden on mobile via header.css) -->
+      <div class="navActions" id="navActionsDesktop">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
@@ -58,6 +68,30 @@
       </div>
     </div>
   </div>
+
+  <!-- Mobile overlay + drawer menu -->
+  <div class="mnav-overlay" data-mnav-close></div>
+
+  <nav class="mnav-drawer" id="mnav-menu" aria-label="Meny">
+    <div class="mnav-drawerTop">
+      <div class="mnav-title">Meny</div>
+      <button class="mnav-close" type="button" aria-label="Stäng meny" data-mnav-close>
+        <span class="mnav-x" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="mnav-links">
+      <a href="/pilot.html">Starta pilot</a>
+      <a href="/verify.html">Verifiera underlag</a>
+      <a href="/register.html">Skapa Verifierings-ID</a>
+      <a href="#kontakt">Boka demo</a>
+    </div>
+
+    <div class="mnav-meta">
+      <div class="mnav-note">För byråer · revision · granskning</div>
+      <a class="mnav-mail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+    </div>
+  </nav>
 </header>
 
 <main id="top">
@@ -398,6 +432,7 @@
   </div>
 </footer>
 
+<script src="/assets/header-toggle.js?v=2025-01" defer></script>
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
