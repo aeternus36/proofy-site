@@ -1,8 +1,9 @@
 /* /assets/header.css
-   BOMBSÄKER mobilmeny – stabil i alla mobila webviews
+   Mobilmeny – stabil och "över allt".
+   Fixar:
+   - Chat-widget ovanpå menyn (vi döljer/avaktiverar aggressivt när mnav-open)
+   - Swipe/pan-känsla (touch-action + overlay)
 */
-
-/* ===== GRUND ===== */
 
 header{
   position: sticky;
@@ -10,9 +11,16 @@ header{
   z-index: 1000;
 }
 
-/* Stoppa horisontell scroll helt */
+/* Stoppa horisontell scroll/pan */
 html, body{
   overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+/* När menyn är öppen: minska all touch/pan utanför menyn */
+body.mnav-open{
+  overflow: hidden;
+  touch-action: none; /* förhindrar pan/zoom på body */
 }
 
 /* ===== HAMBURGER ===== */
@@ -26,8 +34,13 @@ html, body{
   cursor:pointer;
   border-radius:12px;
 }
-.mnav-toggle:hover{
-  background: rgba(255,255,255,.06);
+.mnav-toggle:hover{ background: rgba(255,255,255,.06); }
+
+.mnav-toggle:focus-visible,
+.mnav-close:focus-visible,
+.mnav-drawer a:focus-visible{
+  outline:2px solid rgba(124,241,198,.9);
+  outline-offset:2px;
 }
 
 .mnav-icon{
@@ -60,18 +73,30 @@ html, body{
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.55);
+
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 160ms ease;
-  z-index: 10000;
+
+  transition: opacity 160ms ease, visibility 0s linear 160ms;
+
+  z-index: 2147483000; /* extremt högt för att slå chat */
+  touch-action: none;
 }
 
-/* ===== DRAWER ===== */
+body.mnav-open .mnav-overlay{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 160ms ease, visibility 0s linear 0s;
+}
+
+/* ===== DRAWER (aldrig off-screen) ===== */
 
 .mnav-drawer{
   position: fixed;
   top: 0;
-  right: -400px; /* start utanför */
+  right: 0;
   bottom: 0;
 
   width: 360px;
@@ -83,8 +108,20 @@ html, body{
   background: #0e1628;
   color: rgba(234,240,255,.92);
 
-  transition: right 220ms ease;
-  z-index: 10001;
+  /* stängd */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transform: scale(.985);
+  transform-origin: right top;
+
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    visibility 0s linear 180ms;
+
+  z-index: 2147483001;
 
   box-shadow: -14px 0 34px rgba(0,0,0,.45);
   border-left: 1px solid rgba(255,255,255,.10);
@@ -97,6 +134,19 @@ html, body{
 
   display: flex;
   flex-direction: column;
+
+  touch-action: pan-y; /* tillåt scroll i menyn */
+}
+
+body.mnav-open .mnav-drawer{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    visibility 0s linear 0s;
 }
 
 /* ===== TOPP ===== */
@@ -143,6 +193,7 @@ html, body{
   right:0;
   height:2px;
   background: rgba(234,240,255,.92);
+  border-radius:2px;
 }
 .mnav-x::before{ transform: rotate(45deg); }
 .mnav-x::after{ transform: rotate(-45deg); }
@@ -155,6 +206,7 @@ html, body{
   gap:10px;
   padding: 16px 0;
   overflow:auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mnav-drawer a{
@@ -167,6 +219,7 @@ html, body{
   text-decoration:none;
   font-weight: 900;
   font-size: 16px;
+  line-height: 1.2;
 }
 
 /* CTA – Boka demo */
@@ -196,36 +249,35 @@ html, body{
   text-decoration:none;
   opacity:.95;
 }
+.mnav-mail:hover{ text-decoration: underline; }
 
-/* ===== ÖPPET LÄGE ===== */
-
-body.mnav-open{
-  overflow:hidden;
+/* ===== BOMBSÄKER: dölj/avaktivera chat när meny är öppen =====
+   Vi kan inte veta exakt klass/id från chat-widget.js,
+   så vi är avsiktligt aggressiva här.
+*/
+body.mnav-open iframe{
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
-
-body.mnav-open .mnav-overlay{
-  opacity:1;
-  pointer-events:auto;
-}
-
-body.mnav-open .mnav-drawer{
-  right: 0;
-}
-
-/* Dölj chat-widget helt när meny är öppen */
-body.mnav-open iframe,
 body.mnav-open .chat-widget,
-body.mnav-open .chat-bubble{
-  opacity:0 !important;
-  pointer-events:none !important;
+body.mnav-open .chat-bubble,
+body.mnav-open #chat-widget,
+body.mnav-open #chat,
+body.mnav-open [id*="chat"],
+body.mnav-open [class*="chat"]{
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* ===== RESPONSIVT ===== */
 
 @media (max-width: 860px){
+  /* proofy.css kan ha display:none !important, så vi tvingar på */
   .mnav-overlay{ display:block !important; }
   .mnav-drawer{ display:flex !important; }
+
   header .navActions{ display:none !important; }
+
   .mnav-toggle{
     display:inline-flex;
     align-items:center;
@@ -238,5 +290,13 @@ body.mnav-open .chat-bubble{
   .mnav-drawer,
   .mnav-toggle{
     display:none !important;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .mnav-overlay,
+  .mnav-drawer{
+    transition: none !important;
   }
 }
