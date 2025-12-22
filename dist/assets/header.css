@@ -1,10 +1,11 @@
 /* /assets/header.css
-   Mobilmeny (drawer) – städad, proffsig, mindre "slarvig".
-   Fixar:
-   - Snyggare proportioner (mindre tom yta, mindre pill-kort)
-   - Bättre close-knapp
-   - Drawer ovanpå chat-widget (z-index)
-   - Bättre spacing + typografi
+   Mobilmeny (drawer) – STABIL på Samsung Internet/Chrome.
+   Fixar "slarvig/dålig" drawer genom att:
+   - ta bort backdrop-filter (vanlig buggkälla)
+   - använda fullhöjd drawer (top/right/bottom:0)
+   - använda 100dvh + fallback
+   - säkra z-index över chat-widget
+   - CTA-highlight för #kontakt
 */
 
 header{
@@ -59,33 +60,43 @@ header{
 .mnav-overlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.50);
+  background: rgba(0,0,0,.55);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 180ms ease;
-  z-index: 6000; /* över chat-widget */
+  transition: opacity 160ms ease;
+  z-index: 9998; /* över chat-widget */
 }
 
-/* Drawer */
+/* Drawer (fullhöjd, stabil) */
 .mnav-drawer{
   position: fixed;
-  top: 10px;
-  right: 10px;
-  bottom: 10px;
-  width: min(360px, calc(100vw - 20px)); /* "card drawer" istället för helskärm */
-  background: rgba(14,22,40,.92);
-  backdrop-filter: blur(14px) saturate(140%);
+  top: 0;
+  right: 0;
+  bottom: 0;
+
+  /* Stabil höjd i mobila browsers (adressrad) */
+  height: 100vh;
+  height: 100dvh;
+
+  width: min(360px, 88vw);
+
+  background: #0e1628; /* solid (stabil) */
   color: rgba(234,240,255,.92);
-  transform: translateX(120%);
+
+  transform: translate3d(110%, 0, 0);
   transition: transform 220ms ease;
-  z-index: 6100; /* över overlay + chat */
-  box-shadow: -12px 0 32px rgba(0,0,0,.45);
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 18px;
-  padding: 14px;
+
+  z-index: 9999; /* över overlay */
+  box-shadow: -14px 0 34px rgba(0,0,0,.45);
+  border-left: 1px solid rgba(255,255,255,.10);
+
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 14px
+           calc(14px + env(safe-area-inset-bottom, 0px)) 14px;
+
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+
+  will-change: transform;
 }
 
 /* Drawer top */
@@ -94,7 +105,7 @@ header{
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  padding: 8px 6px 12px;
+  padding: 8px 2px 12px;
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
 .mnav-title{
@@ -103,13 +114,13 @@ header{
   font-size: 16px;
 }
 
-/* Close – mindre och renare */
+/* Close */
 .mnav-close{
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.10);
   color: rgba(234,240,255,.92);
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -138,16 +149,17 @@ header{
 .mnav-x::before{ transform: rotate(45deg); }
 .mnav-x::after{ transform: rotate(-45deg); }
 
-/* Links – tighter, mindre "pills" */
+/* Links */
 .mnav-links{
   display:flex;
   flex-direction:column;
   gap:10px;
-  padding: 12px 4px;
-  overflow: auto; /* om man lägger till fler länkar */
+  padding: 14px 2px;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
 
+/* Standard-länk */
 .mnav-drawer a{
   color: rgba(234,240,255,.92);
   text-decoration:none;
@@ -158,17 +170,27 @@ header{
   font-weight: 900;
   font-size: 16px;
   line-height: 1.2;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
 }
 .mnav-drawer a:hover{
   background: rgba(255,255,255,.07);
   border-color: rgba(255,255,255,.12);
 }
 
-/* Meta – sitter "snyggt" längst ner, inte flyter runt */
+/* ✅ CTA: "Boka demo" (länk till #kontakt) */
+.mnav-links a[href="#kontakt"]{
+  border: none;
+  color: #08101e;
+  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
+  box-shadow: 0 16px 38px rgba(110,168,255,.20);
+}
+.mnav-links a[href="#kontakt"]:hover{
+  filter: brightness(1.03);
+}
+
+/* Meta */
 .mnav-meta{
   margin-top: auto;
-  padding: 12px 6px 6px;
+  padding: 12px 2px 2px;
   border-top: 1px solid rgba(255,255,255,.08);
 }
 .mnav-note{
@@ -191,7 +213,7 @@ body.mnav-open .mnav-overlay{
   pointer-events: auto;
 }
 body.mnav-open .mnav-drawer{
-  transform: translateX(0);
+  transform: translate3d(0, 0, 0);
 }
 
 /* ✅ Mobil: slå på overlay/drawer + dölj desktop actions */
@@ -215,18 +237,10 @@ body.mnav-open .mnav-drawer{
   .mnav-toggle{ display:none !important; }
 }
 
-/* Extra små mobiler: lite smalare och tajtare */
-@media (max-width: 420px){
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .mnav-overlay,
   .mnav-drawer{
-    top: 8px;
-    right: 8px;
-    bottom: 8px;
-    width: calc(100vw - 16px);
-    padding: 12px;
-  }
-  .mnav-drawer a{
-    padding: 13px 13px;
-    border-radius: 15px;
-    font-size: 15.5px;
+    transition: none !important;
   }
 }
