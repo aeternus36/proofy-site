@@ -8,33 +8,31 @@
   <meta name="theme-color" content="#0b1220" />
   <link rel="canonical" href="https://proofy.se/privacy.html" />
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
-  <link rel="stylesheet" href="/assets/proofy-header.css?v=2025-12-22" />
+  <link rel="stylesheet" href="/assets/proofy-header.css" />
 </head>
 
 <body>
 <a class="skip" href="#main">Hoppa till innehåll</a>
 
 <header>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo" aria-hidden="true"></span>
-        <span>Proofy</span>
-      </a>
-
-      <button id="menuToggle" class="hamburger" aria-label="Meny">☰</button>
-
-      <nav id="mainnav" class="menu">
-        <a href="/#forbyraer">Byrå</a>
-        <a href="/#hur">Så funkar det</a>
-        <a href="/#trygghet">Säkerhet</a>
-        <a href="/#faq">Frågor & svar</a>
-        <a href="/#kontakt">Kontakt</a>
-        <a class="btn secondary" href="/verify.html">Verifiera</a>
-        <a class="btn primary" href="/#kontakt">Boka demo</a>
-      </nav>
-    </div>
+  <div class="navbar">
+    <a class="brand" href="/" aria-label="Proofy">
+      <span class="logo" aria-hidden="true"></span>
+      <span>Proofy</span>
+    </a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Meny">☰</button>
   </div>
+  <nav class="menu" id="mainnav">
+    <a href="/#forbyraer">För byråer</a>
+    <a href="/#hur">Så fungerar det</a>
+    <a href="/security.html">Säkerhet</a>
+    <a href="/#faq">Vanliga frågor</a>
+    <a href="/#kontakt">Kontakta oss</a>
+    <div class="cta">
+      <a href="/verify.html" class="secondary">Verifiera</a>
+      <a href="/#kontakt" class="primary">Boka demo</a>
+    </div>
+  </nav>
 </header>
 
 <main id="main">
