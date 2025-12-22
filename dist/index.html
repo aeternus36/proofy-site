@@ -238,6 +238,37 @@
 </footer>
 
 <script src="/assets/header-toggle.js?v=2025-01c" defer></script>
-<script src="/chat-widget.js?v=2025-01" defer></script>
+
+<!-- ✅ BOMBSÄKER: Ladda chat-widget ENDAST på desktop -->
+<script>
+(function () {
+  "use strict";
+
+  function loadChat() {
+    if (window.__proofyChatLoaded) return;
+    window.__proofyChatLoaded = true;
+
+    var s = document.createElement("script");
+    s.src = "/chat-widget.js?v=2025-01";
+    s.defer = true;
+    document.body.appendChild(s);
+  }
+
+  // Desktop = minst 861px (matchar din header-breakpoint)
+  var mq = window.matchMedia("(min-width: 861px)");
+
+  function onChange() {
+    if (mq.matches) loadChat();
+  }
+
+  // Ladda direkt om vi redan är på desktop
+  onChange();
+
+  // Om någon roterar/plattar upp -> ladda då
+  if (mq.addEventListener) mq.addEventListener("change", onChange);
+  else if (mq.addListener) mq.addListener(onChange);
+})();
+</script>
+
 </body>
 </html>
