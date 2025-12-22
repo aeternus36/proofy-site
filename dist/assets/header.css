@@ -1,8 +1,8 @@
 /* /assets/header.css
-   Mobilmeny – stabil och "över allt".
-   Fixar:
-   - Chat-widget ovanpå menyn (vi döljer/avaktiverar aggressivt när mnav-open)
-   - Swipe/pan-känsla (touch-action + overlay)
+   Mobilmeny – BOMBSÄKER:
+   - mnav-open på html + body
+   - MAX z-index så ingen widget kan ligga över
+   - döljer iframes/chat-liknande element via html.mnav-open (inte bara body)
 */
 
 header{
@@ -17,10 +17,11 @@ html, body{
   overscroll-behavior-x: none;
 }
 
-/* När menyn är öppen: minska all touch/pan utanför menyn */
+/* När menyn är öppen: lås sidans touch */
+html.mnav-open,
 body.mnav-open{
   overflow: hidden;
-  touch-action: none; /* förhindrar pan/zoom på body */
+  touch-action: none;
 }
 
 /* ===== HAMBURGER ===== */
@@ -67,7 +68,7 @@ body.mnav-open{
   bottom:0;
 }
 
-/* ===== OVERLAY ===== */
+/* ===== OVERLAY (MAX) ===== */
 
 .mnav-overlay{
   position: fixed;
@@ -80,18 +81,20 @@ body.mnav-open{
 
   transition: opacity 160ms ease, visibility 0s linear 160ms;
 
-  z-index: 2147483000; /* extremt högt för att slå chat */
+  /* MAX — ska slå alla widgets */
+  z-index: 2147483646;
+
   touch-action: none;
 }
 
-body.mnav-open .mnav-overlay{
+html.mnav-open .mnav-overlay{
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transition: opacity 160ms ease, visibility 0s linear 0s;
 }
 
-/* ===== DRAWER (aldrig off-screen) ===== */
+/* ===== DRAWER (MAX) ===== */
 
 .mnav-drawer{
   position: fixed;
@@ -108,7 +111,6 @@ body.mnav-open .mnav-overlay{
   background: #0e1628;
   color: rgba(234,240,255,.92);
 
-  /* stängd */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -121,7 +123,8 @@ body.mnav-open .mnav-overlay{
     transform 180ms ease,
     visibility 0s linear 180ms;
 
-  z-index: 2147483001;
+  /* MAX — över overlay */
+  z-index: 2147483647;
 
   box-shadow: -14px 0 34px rgba(0,0,0,.45);
   border-left: 1px solid rgba(255,255,255,.10);
@@ -135,10 +138,11 @@ body.mnav-open .mnav-overlay{
   display: flex;
   flex-direction: column;
 
-  touch-action: pan-y; /* tillåt scroll i menyn */
+  /* Tillåt scroll i menyn */
+  touch-action: pan-y;
 }
 
-body.mnav-open .mnav-drawer{
+html.mnav-open .mnav-drawer{
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -251,20 +255,24 @@ body.mnav-open .mnav-drawer{
 }
 .mnav-mail:hover{ text-decoration: underline; }
 
-/* ===== BOMBSÄKER: dölj/avaktivera chat när meny är öppen =====
-   Vi kan inte veta exakt klass/id från chat-widget.js,
-   så vi är avsiktligt aggressiva här.
+/* ===== BOMBSÄKER: dölj/avaktivera widgets när menyn är öppen =====
+   Viktigt: vi targetar html.mnav-open (inte body)
 */
-body.mnav-open iframe{
+html.mnav-open iframe{
+  display: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
 }
-body.mnav-open .chat-widget,
-body.mnav-open .chat-bubble,
-body.mnav-open #chat-widget,
-body.mnav-open #chat,
-body.mnav-open [id*="chat"],
-body.mnav-open [class*="chat"]{
+
+html.mnav-open .chat-widget,
+html.mnav-open .chat-bubble,
+html.mnav-open #chat-widget,
+html.mnav-open #chat,
+html.mnav-open [id*="chat"],
+html.mnav-open [class*="chat"],
+html.mnav-open [aria-label*="chat"],
+html.mnav-open [aria-label*="Chat"]{
+  display: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
 }
@@ -272,7 +280,6 @@ body.mnav-open [class*="chat"]{
 /* ===== RESPONSIVT ===== */
 
 @media (max-width: 860px){
-  /* proofy.css kan ha display:none !important, så vi tvingar på */
   .mnav-overlay{ display:block !important; }
   .mnav-drawer{ display:flex !important; }
 
@@ -293,7 +300,6 @@ body.mnav-open [class*="chat"]{
   }
 }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce){
   .mnav-overlay,
   .mnav-drawer{
