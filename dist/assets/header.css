@@ -1,4 +1,4 @@
-/* header.css */
+/* /assets/header.css */
 
 header {
   background: linear-gradient(to right, #0b1220, #101e33);
@@ -6,9 +6,10 @@ header {
   padding: 0.75rem 1rem;
   position: relative;
   z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.navbar, .nav {
+.navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,13 +27,20 @@ header {
   text-decoration: none;
 }
 
-.hamburger {
+.logo {
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: #fff;
+  border-radius: 50%;
+}
+
+.menu-toggle {
+  font-size: 1.75rem;
   background: none;
   border: none;
-  font-size: 1.75rem;
   color: #fff;
   cursor: pointer;
-  display: block;
+  margin-left: auto;
 }
 
 .menu {
@@ -40,14 +48,15 @@ header {
   top: 0;
   left: -100%;
   width: 260px;
-  height: 100%;
-  background: #111a2c;
+  height: 100vh;
+  background: #0e1628;
+  padding: 2rem 1.25rem;
   display: flex;
   flex-direction: column;
-  padding: 2rem 1.25rem;
   gap: 1.25rem;
-  transition: left 0.3s ease-in-out;
-  z-index: 9999;
+  transition: left 0.3s ease;
+  z-index: 999;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .menu.active {
@@ -55,51 +64,54 @@ header {
 }
 
 .menu a {
-  color: #fff;
+  color: #f0f4ff;
   text-decoration: none;
   font-size: 1.1rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  transition: color 0.2s ease;
 }
 
-.menu .btn {
+.menu a:hover {
+  color: #89f;
+}
+
+.cta {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cta a {
   display: block;
-  width: 100%;
   text-align: center;
   padding: 0.75rem;
-  margin-top: 1rem;
-  border-radius: 0.5rem;
   font-weight: 600;
-  background: #222b40;
-  color: #fff;
-  border: 1px solid #3c4a64;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-size: 1rem;
 }
 
-.menu .btn.primary {
-  background: linear-gradient(to right, #59d, #4f9);
-  color: #000;
+.primary {
+  background: linear-gradient(to right, #4cc4f3, #82f7c3);
+  color: #0b1220;
 }
 
-@media (min-width: 768px) {
-  .hamburger {
-    display: none;
-  }
+.secondary {
+  background: #1f2b45;
+  color: #ffffff;
+  border: 1px solid #4c5b78;
+}
+
+/* Body overlay (prevents scroll if menu open) */
+body.menu-open {
+  overflow: hidden;
+}
+
+/* Responsive fallback (optional) */
+@media(min-width: 768px) {
   .menu {
-    position: static;
-    flex-direction: row;
-    height: auto;
-    padding: 0;
-    background: transparent;
-    left: 0 !important;
-    width: auto;
-    gap: 1rem;
-  }
-  .menu a, .menu .btn {
-    border: none;
-    font-size: 0.95rem;
-    padding: 0.5rem 1rem;
-  }
-  .menu .btn {
-    margin-top: 0;
+    display: none !important;
   }
 }
