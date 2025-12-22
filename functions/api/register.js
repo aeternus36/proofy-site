@@ -69,7 +69,7 @@ async function readProof({ publicClient, contractAddress, hash }) {
 
   const exists = BigInt(timestampBig) !== 0n;
 
-  // Timestamp i sekunder: returnera Number om säkert, annars string (men vi kräver existens vid OK)
+  // Timestamp i sekunder: returnera Number om säkert, annars string
   const tsBig = BigInt(timestampBig);
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
 
@@ -83,6 +83,28 @@ async function readProof({ publicClient, contractAddress, hash }) {
       ? submitter
       : "0x0000000000000000000000000000000000000000",
   };
+}
+
+/**
+ * 🔒 Robust post-read:
+ * Efter registrering kan vissa RPC:er returnera receipt
+ * innan state är helt läsbart. Vi retry:ar försiktigt.
+ */
+async function readProofWithRetry({
+  publicClient,
+  contractAddress,
+  hash,
+  retries = 3,
+  delayMs = 800,
+}) {
+  for (let i = 0; i < retries; i++) {
+    const proof = await readProof({ publicClient, contractAddress, hash });
+    if (proof.exists && proof.timestamp && proof.timestamp !== 0) {
+      return proof;
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return readProof({ publicClient, contractAddress, hash });
 }
 
 export async function onRequest({ request, env }) {
@@ -166,11 +188,10 @@ export async function onRequest({ request, env }) {
 
     const chainId = polygonAmoy.id;
 
-    // 5) Pre-check: if already registered, return timestamp + submitter
+    // 5) Pre-check: if already registered
     const pre = await readProof({ publicClient, contractAddress, hash });
 
     if (pre.exists) {
-      // Här garanterar vi timestamp på 200
       if (!pre.timestamp || pre.timestamp === 0) {
         return json(500, {
           ok: false,
@@ -206,19 +227,26 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
-    // 7) Wait for confirmation (so we can return timestamp reliably)
+    // 7) Wait for confirmation
     await publicClient.waitForTransactionReceipt({
       hash: txHash,
       confirmations: 1,
     });
 
-    // 8) Read proof again (must exist now)
-    const post = await readProof({ publicClient, contractAddress, hash });
+    // 8) Read proof again (with retry)
+    const post = await readProofWithRetry({
+      publicClient,
+      contractAddress,
+      hash,
+      retries: 3,
+      delayMs: 800,
+    });
 
     if (!post.exists || !post.timestamp || post.timestamp === 0) {
       return json(500, {
         ok: false,
-        error: "Registration confirmation succeeded, but proof was not readable afterwards",
+        error:
+          "Registration confirmation succeeded, but proof was not readable afterwards",
         chainId,
         hash,
         txHash,
