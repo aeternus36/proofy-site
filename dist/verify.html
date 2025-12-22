@@ -6,7 +6,9 @@
   <title>Proofy – Verifiera underlag</title>
   <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-21" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-21a" />
+  <!-- Mobile header/menu CSS MUST load after global -->
+  <link rel="stylesheet" href="/assets/header.css?v=2025-12-21a" />
 </head>
 
 <body>
@@ -20,9 +22,18 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
+      <!-- Mobile menu toggle -->
+      <button
+        class="mnav-toggle"
+        type="button"
+        aria-label="Öppna meny"
+        aria-controls="mnav-menu"
+        aria-expanded="false">
+        <span class="mnav-icon" aria-hidden="true"></span>
+      </button>
 
-      <div class="navActions">
+      <!-- Desktop actions -->
+      <div class="navActions" id="navActionsDesktop">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
@@ -30,6 +41,30 @@
       </div>
     </div>
   </div>
+
+  <!-- Mobile overlay + drawer -->
+  <div class="mnav-overlay" data-mnav-close></div>
+
+  <nav class="mnav-drawer" id="mnav-menu" aria-label="Meny">
+    <div class="mnav-drawerTop">
+      <div class="mnav-title">Meny</div>
+      <button class="mnav-close" type="button" aria-label="Stäng meny" data-mnav-close>
+        <span class="mnav-x" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="mnav-links">
+      <a href="/pilot.html">Starta pilot</a>
+      <a href="/verify.html">Verifiera underlag</a>
+      <a href="/register.html">Skapa Verifierings-ID</a>
+      <a href="/#kontakt">Boka demo</a>
+    </div>
+
+    <div class="mnav-meta">
+      <div class="mnav-note">Verifiering · revision · granskning</div>
+      <a class="mnav-mail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+    </div>
+  </nav>
 </header>
 
 <main id="main">
@@ -222,7 +257,6 @@
     return (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
   }
 
-  // Skriv alltid tillbaka som ?hash= (och rensa legacy ?id=)
   function setIdInUrl(id){
     const url = new URL(location.href);
     if (id) {
@@ -259,7 +293,6 @@
     }
   }
 
-  // Robust: prova GET /api/verify?hash=... och fall tillbaka till POST {hash}
   async function fetchVerify(hash){
     try{
       const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
@@ -277,7 +310,6 @@
     return { ok:true, data:j2 };
   }
 
-  // Prefill from URL (?hash= or legacy ?id=)
   const urlId = getIdFromUrl();
   if (isValidId(urlId)) {
     hashInput.value = urlId;
@@ -312,17 +344,14 @@
       if (!isValidId(refHash)) throw new Error("Ogiltigt Verifierings-ID (måste vara 0x + 64 hex-tecken).");
       if (!currentFile) throw new Error("Välj en fil att verifiera.");
 
-      // 1) Lokal kontroll: filens fingeravtryck
       const fileHash = await sha256Hex(currentFile);
       if (myOp !== opId) return;
 
       const match = (fileHash.toLowerCase() === refHash.toLowerCase());
 
-      // 2) API-kontroll: är Verifierings-ID registrerat och när?
       const verifyRes = await fetchVerify(refHash);
       if (myOp !== opId) return;
 
-      // Render resultat
       resultBox.style.display = "block";
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
@@ -334,7 +363,6 @@
       }
 
       if (!verifyRes.ok) {
-        // Vi har fortfarande en korrekt lokal match/ingen match, men registreringsstatus kunde inte hämtas.
         outRegStatus.textContent = "Kunde inte kontrollera registreringsstatus (tillfälligt tekniskt problem).";
         outRegSe.textContent = "—";
         outRegUtc.textContent = "—";
@@ -369,6 +397,7 @@
 })();
 </script>
 
+<script src="/assets/header-toggle.js?v=2025-12-21a" defer></script>
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
