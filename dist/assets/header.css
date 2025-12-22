@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proofy</title>
+  <link rel="stylesheet" href="/assets/proofy.css" />
+  <link rel="stylesheet" href="/assets/header.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <button class="menu-toggle" id="menu-toggle" aria-label="Meny">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </button>
+      <a href="/" class="brand">
+        <span class="logo"></span>
+        <span class="brand-name">Proofy</span>
+      </a>
+      <nav class="nav" id="nav">
+        <a href="/#byraer">För byråer</a>
+        <a href="/#hur">Hur det fungerar</a>
+        <a href="/security.html">Säkerhet</a>
+        <a href="/#faq">FAQ</a>
+        <a href="/#kontakt">Kontakt</a>
+        <a class="btn dark" href="/verify.html">Verifiera underlag</a>
+        <a class="btn primary" href="/#kontakt">Boka demo</a>
+      </nav>
+    </div>
+  </header>
+
+  <script src="/assets/header.js"></script>
+</body>
+</html>
