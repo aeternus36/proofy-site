@@ -1,7 +1,7 @@
 /* /assets/header-toggle.js
    Stabil mobilmeny:
    - pointerdown (pålitligt på mobil)
-   - togglar mnav-open på BÅDE html och body (bombsäker mot widgets som ligger utanför body)
+   - togglar body.mnav-open
    - stänger via overlay, close, Esc, och klick på meny-länk
    - blockerar touchmove utanför menyn när öppen (hindrar swipe/pan i bakgrunden)
 */
@@ -20,10 +20,8 @@
 
     if (!toggle || !drawer || !overlay) return;
 
-    const root = document.documentElement;
-
     function isOpen() {
-      return root.classList.contains("mnav-open");
+      return document.body.classList.contains("mnav-open");
     }
 
     function setAria(open) {
@@ -33,14 +31,12 @@
 
     function openMenu() {
       if (isOpen()) return;
-      root.classList.add("mnav-open");
       document.body.classList.add("mnav-open");
       setAria(true);
     }
 
     function closeMenu() {
       if (!isOpen()) return;
-      root.classList.remove("mnav-open");
       document.body.classList.remove("mnav-open");
       setAria(false);
     }
@@ -55,21 +51,18 @@
       function (e) {
         const t = e.target;
 
-        // Hamburger
         if (t && t.closest && t.closest(".mnav-toggle")) {
           e.preventDefault();
           toggleMenu();
           return;
         }
 
-        // Overlay / stängknapp
         if (t && t.closest && t.closest("[data-mnav-close]")) {
           e.preventDefault();
           closeMenu();
           return;
         }
 
-        // Klick på länk i menyn
         if (isOpen() && t && t.closest) {
           const a = t.closest("#mnav-menu a");
           if (a) {
@@ -81,7 +74,6 @@
       { passive: false }
     );
 
-    // Esc
     document.addEventListener("keydown", function (e) {
       if (!isOpen()) return;
       if (e.key === "Escape") {
@@ -90,14 +82,12 @@
       }
     });
 
-    // Blockera touchmove utanför menyn när öppen
     document.addEventListener(
       "touchmove",
       function (e) {
         if (!isOpen()) return;
-
         const t = e.target;
-        if (t && t.closest && t.closest("#mnav-menu")) return; // tillåt scroll i menyn
+        if (t && t.closest && t.closest("#mnav-menu")) return;
         e.preventDefault();
       },
       { passive: false }
