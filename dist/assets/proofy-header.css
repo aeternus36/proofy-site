@@ -1,128 +1,156 @@
-/* proofy-header.css */
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy</title>
+  <link rel="stylesheet" href="/assets/proofy.css" />
+  <link rel="stylesheet" href="/assets/header.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #0b1220;
+      color: #eaf0ff;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(11,18,32,0.95);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      font-weight: 900;
+      color: #fff;
+      font-size: 20px;
+    }
+    .brand .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      margin-right: 10px;
+      background: linear-gradient(135deg, #6ea8ff, #7cf1c6);
+    }
+    .hamburger {
+      font-size: 28px;
+      color: #fff;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .menu-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+    }
+    .side-menu {
+      position: fixed;
+      top: 0; left: -260px;
+      width: 260px;
+      height: 100%;
+      background: #111827;
+      padding: 24px;
+      box-shadow: 2px 0 16px rgba(0,0,0,0.6);
+      transition: left 0.3s ease;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .side-menu.open {
+      left: 0;
+    }
+    .side-menu nav ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .side-menu nav ul li {
+      margin: 12px 0;
+    }
+    .side-menu nav ul li a {
+      color: #eaf0ff;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .side-menu nav ul li a:hover {
+      color: #7cf1c6;
+    }
+    .side-menu .menu-actions {
+      margin-top: 40px;
+    }
+    .side-menu .btn {
+      display: block;
+      margin: 10px 0;
+      padding: 12px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: bold;
+      text-decoration: none;
+    }
+    .side-menu .btn.primary {
+      background: linear-gradient(135deg, #6ea8ff, #7cf1c6);
+      color: #0b1220;
+    }
+    .side-menu .btn.outline {
+      border: 1px solid #6ea8ff;
+      color: #6ea8ff;
+    }
+  </style>
+</head>
+<body>
 
-:root {
-  --bg: #0b1220;
-  --text: #eaf0ff;
-  --muted: #a9b7d3;
-  --brand: #6ea8ff;
-  --brand2: #7cf1c6;
-  --border: rgba(255,255,255,0.12);
-}
+<div class="menu-overlay" id="menuOverlay"></div>
 
-body {
-  margin: 0;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  background-color: var(--bg);
-  color: var(--text);
-}
+<aside class="side-menu" id="sideMenu" aria-label="Huvudmeny">
+  <nav>
+    <ul>
+      <li><a href="/#forbyraer">För byråer</a></li>
+      <li><a href="/#hur">Hur det fungerar</a></li>
+      <li><a href="/#trygghet">Säkerhet</a></li>
+      <li><a href="/#faq">FAQ</a></li>
+      <li><a href="/#kontakt">Kontakt</a></li>
+    </ul>
+  </nav>
+  <div class="menu-actions">
+    <a class="btn outline" href="/verify.html">Verifiera underlag</a>
+    <a class="btn primary" href="/#kontakt">Boka demo</a>
+  </div>
+</aside>
 
-header {
-  background: rgba(11, 18, 32, 0.95);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  padding: 14px 20px;
-}
+<header>
+  <a class="brand" href="/">
+    <span class="logo"></span>
+    <span>Proofy</span>
+  </a>
+  <button class="hamburger" id="menuToggle" aria-label="Öppna meny">☰</button>
+</header>
 
-.nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1140px;
-  margin: 0 auto;
-}
+<script>
+  const toggleBtn = document.getElementById("menuToggle");
+  const sideMenu = document.getElementById("sideMenu");
+  const overlay = document.getElementById("menuOverlay");
 
-.brand {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-  font-weight: bold;
-  color: var(--text);
-  gap: 10px;
-}
+  toggleBtn.onclick = () => {
+    sideMenu.classList.toggle("open");
+    overlay.style.display = sideMenu.classList.contains("open") ? "block" : "none";
+  };
+  overlay.onclick = () => {
+    sideMenu.classList.remove("open");
+    overlay.style.display = "none";
+  };
+</script>
 
-.logo {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--brand), var(--brand2));
-  box-shadow: 0 8px 20px rgba(110, 168, 255, 0.3);
-  position: relative;
-}
-
-.logo:after {
-  content: "";
-  position: absolute;
-  inset: 9px 10px;
-  border-radius: 7px;
-  background: rgba(11,18,32,.65);
-  border: 1px solid rgba(255,255,255,.2);
-}
-
-#mainnav {
-  display: flex;
-  gap: 14px;
-}
-
-#mainnav a {
-  text-decoration: none;
-  padding: 10px 12px;
-  color: var(--muted);
-  font-weight: 600;
-  border-radius: 12px;
-}
-
-#mainnav a:hover {
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-}
-
-.btn {
-  padding: 10px 16px;
-  border-radius: 14px;
-  text-decoration: none;
-  font-weight: 900;
-  color: #08101e;
-  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-  box-shadow: 0 8px 20px rgba(110,168,255,.25);
-  white-space: nowrap;
-}
-
-.hamburger {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  cursor: pointer;
-}
-
-.hamburger span {
-  width: 24px;
-  height: 2px;
-  background: var(--text);
-  display: block;
-}
-
-@media (max-width: 768px) {
-  #mainnav {
-    display: none;
-    flex-direction: column;
-    background: rgba(11,18,32,0.98);
-    position: absolute;
-    top: 60px;
-    right: 20px;
-    padding: 14px;
-    border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-  }
-
-  #mainnav.show {
-    display: flex;
-  }
-
-  .hamburger {
-    display: flex;
-  }
-}
-
+</body>
+</html>
