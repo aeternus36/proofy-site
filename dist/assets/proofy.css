@@ -17,6 +17,8 @@
 
 *{ box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
+html, body{ overflow-x:hidden; } /* ✅ stoppar horisontell swipe globalt */
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -68,7 +70,7 @@ header{
   justify-content:space-between;
   gap:12px;
   padding: 12px 0;
-  min-width: 0; /* important for scroll containers */
+  min-width: 0;
 }
 
 .brand{
@@ -134,7 +136,7 @@ header{
   flex: 0 0 auto;
 }
 
-/* Buttons (större + touchvänliga) */
+/* Buttons */
 .btn{
   display:inline-flex;
   align-items:center;
@@ -199,13 +201,33 @@ header{
     white-space: nowrap;
   }
 
-  /* OBS: navActions hanteras av header.css (hamburger). */
+  /* ✅ FALLBACK om header.css saknas:
+     Bryt navActions snyggt istället för horisontell swipe. */
+  .nav{
+    flex-wrap: wrap;
+  }
+  .navActions{
+    width: 100%;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    overflow: visible;
+    min-width: 0;
+  }
+  .navActions .btn{
+    flex: 1 1 calc(50% - 10px);
+    white-space: normal;
+    text-align: center;
+    min-height: 44px;
+    padding: 12px 14px;
+    font-size: 13.8px;
+  }
 }
 
-/* Extra liten mobil */
 @media (max-width: 420px){
   .wrap{ padding: 0 16px; }
   .nav{ gap:8px; }
+  .navActions .btn{ flex: 1 1 100%; }
 }
 
 /* Accessibility focus */
@@ -426,7 +448,7 @@ pre.mono{
   white-space: pre-wrap;
 }
 
-/* Copy row (kodblock + kopiera) */
+/* Copy row */
 .copyLine{
   display:flex;
   gap:10px;
@@ -494,41 +516,6 @@ footer{
   margin-right: 12px;
 }
 .links a:hover{ color: var(--text); }
-
-/* ✅ NYTT: CTA-layout (Hero + Form) för proffsig mobil */
-.heroCtas{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  align-items:center;
-}
-.heroCtas .btn{ flex: 0 0 auto; }
-
-@media (max-width: 680px){
-  .heroCtas{
-    flex-direction:column;
-    align-items:stretch;
-    gap:10px;
-  }
-  .heroCtas .btn{
-    width:100%;
-    justify-content:center;
-  }
-
-  .btn{
-    white-space: normal;
-    text-align: center;
-  }
-
-  .formActions{
-    flex-direction:column;
-    align-items:stretch;
-  }
-  .formActions .btn,
-  .formActions button.btn{
-    width:100%;
-  }
-}
 
 /* Print */
 @media print{
