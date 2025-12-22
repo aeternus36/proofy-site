@@ -22,9 +22,9 @@
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
 
   <!-- Global CSS -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01c" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01d" />
   <!-- Mobile header/menu CSS MUST load after global -->
-  <link rel="stylesheet" href="/assets/header.css?v=2025-01c" />
+  <link rel="stylesheet" href="/assets/header.css?v=2025-01d" />
 
   <!-- Structured data: Organization -->
   <script type="application/ld+json">
@@ -232,41 +232,74 @@
         <a href="/privacy.html">Integritet</a>
         <a href="/terms.html">Villkor</a>
         <a href="#kontakt">Kontakt</a>
-      </div>
+      </div
+      >
     </div>
   </div>
 </footer>
 
-<script src="/assets/header-toggle.js?v=2025-01c" defer></script>
+<script src="/assets/header-toggle.js?v=2025-01d" defer></script>
 
-<!-- ✅ BOMBSÄKER: Ladda chat-widget ENDAST på desktop -->
+<!-- ============================= -->
+<!-- Säkerhetskod: dölj eventuella flytande widgets -->
+<!-- ============================= -->
 <script>
 (function () {
   "use strict";
 
-  function loadChat() {
+  // Vi vill inte ladda chat-widget på mobil.
+  // Ladda först på desktop om önskat.
+  // Du kan ta bort här om du inte vill ladda widget alls.
+  function loadChatWidgetIfDesktop() {
+    var mq = window.matchMedia("(min-width: 861px)");
+    if (!mq.matches) return; // mobil – gör inget
+    // Desktop – ladda chat-widget
     if (window.__proofyChatLoaded) return;
     window.__proofyChatLoaded = true;
-
     var s = document.createElement("script");
     s.src = "/chat-widget.js?v=2025-01";
     s.defer = true;
     document.body.appendChild(s);
   }
 
-  // Desktop = minst 861px (matchar din header-breakpoint)
-  var mq = window.matchMedia("(min-width: 861px)");
+  // Ladda vid startup om desktop
+  loadChatWidgetIfDesktop();
 
-  function onChange() {
-    if (mq.matches) loadChat();
-  }
+  // Observer för att dölja nya bubblor/iframes/flytande element som kan dyka upp
+  // när menyn är öppen.
+  var observer = new MutationObserver(function (mutations) {
+    mutations.forEach(function (mut) {
+      // Om menyn är öppen, dölja rätt typ av element.
+      if (!document.body.classList.contains("mnav-open")) return;
 
-  // Ladda direkt om vi redan är på desktop
-  onChange();
+      mut.addedNodes.forEach(function (node) {
+        if (!(node instanceof HTMLElement)) return;
 
-  // Om någon roterar/plattar upp -> ladda då
-  if (mq.addEventListener) mq.addEventListener("change", onChange);
-  else if (mq.addListener) mq.addListener(onChange);
+        // Huvudsaklig heuristik: fast position, nere till höger, liten.
+        var style = window.getComputedStyle(node);
+        if (style.position === "fixed") {
+          var rect = node.getBoundingClientRect();
+          // skip om osynlig
+          if (rect.width <= 0 || rect.height <= 0) return;
+          // längst ner till höger
+          var nearBottom = rect.bottom > window.innerHeight * 0.55;
+          var nearRight = rect.right > window.innerWidth * 0.55;
+          var smallEnough = rect.width < Math.min(420, window.innerWidth) && rect.height < 260;
+          if (nearBottom && nearRight && smallEnough) {
+            // Dölj det
+            node.style.display = "none";
+            node.style.pointerEvents = "none";
+            node.style.opacity = "0";
+          }
+        }
+      });
+    });
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
 })();
 </script>
 
