@@ -3,232 +3,131 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Integritet</title>
-  <meta name="description" content="Integritetspolicy för Proofy (B2B)." />
+  <title>Säkerhet & integritet – Proofy</title>
+  <meta name="description" content="Hur Proofy hanterar säkerhet och integritet: ingen dokumentlagring, begränsad funktionalitet och tydliga avgränsningar." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="canonical" href="https://proofy.se/privacy.html" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
-  <style>
-    .wrapN{ max-width: 920px; margin:0 auto; padding: 0 20px; }
-    .cardN{
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:18px;
-      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
-      box-shadow: 0 18px 60px rgba(0,0,0,.38);
-      padding: 18px;
-      margin: 16px 0;
-    }
-    h1{ margin:18px 0 8px; font-size: clamp(26px, 3vw, 44px); line-height:1.12; }
-    h2{ margin: 18px 0 8px; font-size: 18px; }
-    p, li{ color: rgba(169,183,211,.95); line-height:1.65; }
-    .muted{ color: rgba(169,183,211,.92); }
-    .badgeN{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px; border-radius:14px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      font-size: 12.5px;
-      color: rgba(234,240,255,.92);
-      font-weight: 900;
-    }
-    .hr{ height:1px; background: rgba(255,255,255,.12); margin: 14px 0; }
-    a{ color: inherit; }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; word-break: break-word; }
-    .toc{ margin-top: 12px; }
-    .toc ol{ margin: 10px 0 0; padding-left: 18px; }
-    .toc a{ text-decoration:none; color: rgba(234,240,255,.92); }
-    .toc a:hover{ text-decoration:underline; }
-  </style>
-
-  <script type="application/ld+json">
-  {
-    "@context":"https://schema.org",
-    "@type":"Organization",
-    "name":"Proofy",
-    "url":"https://proofy.se/",
-    "email":"kontakt@proofy.se"
-  }
-  </script>
+  <link rel="canonical" href="https://proofy.se/security.html" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
 </head>
 
 <body>
+<a class="skip" href="#main">Hoppa till innehåll</a>
+
 <header>
   <div class="wrap">
     <div class="nav">
       <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo" aria-hidden="true"></span><span>Proofy</span>
+        <span class="logo" aria-hidden="true"></span>
+        <span>Proofy</span>
       </a>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a class="btn" href="/verify.html">Verifiera</a>
+
+      <!-- Beslut A: inga ankarlänkar i headern -->
+
+      <div class="navActions">
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
     </div>
   </div>
 </header>
 
-<main>
-  <div class="wrapN">
-    <div class="badgeN" style="margin-top:18px;">Integritet · GDPR</div>
-    <h1>Integritetspolicy</h1>
-    <p class="muted">
-      Denna policy beskriver hur Proofy behandlar personuppgifter och annan information när du använder vår webbplats och tjänst.
-      Proofy riktar sig till företagskunder (B2B). Vi strävar efter dataminimering och tydlighet.
+<main id="main">
+  <div class="wrap" style="max-width:920px">
+    <div class="badge">Säkerhet · integritet · riskminimering</div>
+
+    <h1 class="pageTitle">Säkerhet & integritet</h1>
+
+    <p class="lead">
+      Proofy är byggt för byråers verklighet: känsliga underlag, höga krav och låg tolerans för överdrifter.
+      Därför är tjänsten avsiktligt begränsad och utformad för att minimera risk.
     </p>
 
-    <div class="cardN toc" aria-label="Innehåll">
-      <div style="font-weight:900; color: rgba(234,240,255,.92);">Innehåll</div>
-      <ol>
-        <li><a href="#personuppgiftsansvarig">Personuppgiftsansvarig</a></li>
-        <li><a href="#vilka-uppgifter">Vilka uppgifter vi kan behandla</a></li>
-        <li><a href="#andamal">Varför vi behandlar uppgifter</a></li>
-        <li><a href="#rattslig-grund">Rättslig grund</a></li>
-        <li><a href="#lagringstider">Lagringstider</a></li>
-        <li><a href="#mottagare">Mottagare och personuppgiftsbiträden</a></li>
-        <li><a href="#overforing">Överföring utanför EU/EES</a></li>
-        <li><a href="#sakerhet">Säkerhet</a></li>
-        <li><a href="#rattigheter">Dina rättigheter</a></li>
-        <li><a href="#cookies">Cookies</a></li>
-        <li><a href="#andringar">Ändringar</a></li>
-      </ol>
-    </div>
-
-    <div class="cardN" id="personuppgiftsansvarig">
-      <h2>1. Personuppgiftsansvarig</h2>
+    <div class="card content">
+      <h2>Grundprincip</h2>
       <p>
-        <b>Proofy</b>, org.nr <b>[XXXXXX-XXXX]</b>, <b>[Gatuadress, postnummer, ort]</b>, är personuppgiftsansvarig för behandlingen som beskrivs här,
-        om inte annat framgår av avtal.
+        Proofys säkerhetsmodell bygger på principen <b>”minimera vad som kan lagras, läcka eller missbrukas”</b>.
+        Tjänsten är inte ett arkiv, inte ett dokumenthanteringssystem och inte ett analysverktyg för innehåll.
       </p>
-      <p>Kontakt: <b>kontakt@proofy.se</b></p>
     </div>
 
-    <div class="cardN" id="vilka-uppgifter">
-      <h2>2. Vilka uppgifter vi kan behandla</h2>
+    <div class="card content">
+      <h2>1. Dokumentinnehåll lagras inte</h2>
+      <p>
+        Dokumentet används lokalt i webbläsaren för att beräkna ett tekniskt verifieringsvärde.
+        Proofy lagrar inte dokumentinnehåll och har ingen möjlighet att visa, läsa eller återskapa filer.
+      </p>
+    </div>
 
-      <p><b>A) Kontakt och relation (demo/pilot/support)</b></p>
+    <div class="card content">
+      <h2>2. Verifierings-ID är inte dokumentet</h2>
+      <p>
+        Verifierings-ID är ett tekniskt beräknat identifieringsvärde som används för att jämföra filversioner.
+        Det kan inte användas för att tolka, läsa eller rekonstruera dokumentets innehåll.
+      </p>
+    </div>
+
+    <div class="card content">
+      <h2>3. Avsiktligt begränsad funktionalitet</h2>
+      <p>
+        För att minska risk har Proofy valt bort funktioner som ofta ökar attackyta, exempelvis:
+      </p>
       <ul>
-        <li>Namn, e-post, företag/roll och annan information du lämnar via formulär eller e-post.</li>
-        <li>Innehåll i meddelanden du själv skickar till oss.</li>
+        <li>Filrendering (t.ex. PDF-visning)</li>
+        <li>OCR eller textutvinning</li>
+        <li>Metadataanalys eller innehållstolkning</li>
       </ul>
+      <p class="small">
+        Detta är ett medvetet designval – inte en tillfällig begränsning.
+      </p>
+    </div>
+
+    <div class="card content">
+      <h2>4. Skydd mot missbruk</h2>
+      <p>
+        Proofy använder tekniska och organisatoriska åtgärder för att minska risken för missbruk, exempelvis:
+      </p>
+      <ul>
+        <li>Begränsningar i användning (t.ex. volym i pilot)</li>
+        <li>Tekniska skydd mot överbelastning</li>
+        <li>Loggning för felsökning och driftuppföljning</li>
+      </ul>
+      <p class="small">
+        Skyddsnivåer kan variera mellan pilot och kommersiell drift.
+      </p>
+    </div>
+
+    <div class="card content">
+      <h2>5. Nycklar och driftmiljö</h2>
+      <p>
+        Tekniska nycklar och hemligheter hanteras i driftmiljön via miljövariabler.
+        Sådana uppgifter lagras inte i klientkod, versionshantering eller användargränssnitt.
+      </p>
+    </div>
+
+    <div class="card content">
+      <h2>Ansvarsfull hantering</h2>
+      <p>
+        Proofy är ett tekniskt verktyg för verifiering och spårbarhet.
+        Användning i byrå-, gransknings- eller revisionssammanhang kräver alltid professionell bedömning
+        och kompletterande kontrollåtgärder.
+      </p>
+    </div>
+
+    <div class="card content">
+      <h2>Kontakt</h2>
+      <p>
+        Frågor om säkerhet eller integritet:<br />
+        <b>kontakt@proofy.se</b>
+      </p>
 
       <div class="hr"></div>
-
-      <p><b>B) Drift- och säkerhetsdata</b></p>
-      <ul>
-        <li>Teknisk loggdata som behövs för drift, felsökning och säkerhet (t.ex. tidsstämplar, felkoder, grundläggande anslutningsdata).</li>
-        <li>Uppgifter kopplade till tjänstens funktion (t.ex. verifierings-id och tidpunkt för registrering/kontroll), i den omfattning som krävs för att leverera tjänsten.</li>
-      </ul>
-
-      <p class="muted">
-        Vi eftersträvar att inte behandla dokumentinnehåll. Skicka inte dokument eller känsligt innehåll via kontaktformulär.
+      <p class="small">
+        Om du upptäcker ett tekniskt problem eller en möjlig sårbarhet, uppskattar vi att du kontaktar oss
+        så att vi kan utreda och åtgärda vid behov.
       </p>
     </div>
-
-    <div class="cardN" id="andamal">
-      <h2>3. Varför vi behandlar uppgifter</h2>
-      <ul>
-        <li><b>Leverera tjänsten</b> (registrering, kontroll, drift och kvalitet).</li>
-        <li><b>Kommunicera</b> om demo, pilot, support och kundrelation.</li>
-        <li><b>Säkerhet</b> (skydd mot missbruk, incidenthantering, felsökning).</li>
-        <li><b>Uppfylla rättsliga krav</b> om sådana blir tillämpliga.</li>
-      </ul>
-    </div>
-
-    <div class="cardN" id="rattslig-grund">
-      <h2>4. Rättslig grund</h2>
-      <p>Vi behandlar personuppgifter baserat på en eller flera av följande rättsliga grunder:</p>
-      <ul>
-        <li><b>Avtal</b> (när behandling krävs för att leverera tjänsten eller hantera kundrelationen),</li>
-        <li><b>Berättigat intresse</b> (drift, säkerhet, kommunikation med företagskunder),</li>
-        <li><b>Rättslig förpliktelse</b> (om vi behöver uppfylla lagkrav),</li>
-        <li><b>Samtycke</b> (om vi uttryckligen ber om det för ett specifikt ändamål, t.ex. vissa typer av cookies).</li>
-      </ul>
-    </div>
-
-    <div class="cardN" id="lagringstider">
-      <h2>5. Lagringstider</h2>
-      <ul>
-        <li>Kontaktuppgifter och dialog sparas så länge det behövs för ärendet och kundrelationen, eller enligt avtal.</li>
-        <li>Tekniska loggar sparas i den omfattning och tid som behövs för drift och säkerhet och rensas löpande.</li>
-        <li>Uppgifter kopplade till tjänstens funktion sparas i enlighet med tjänstens syfte och kundens behov, eller enligt avtal.</li>
-      </ul>
-      <p class="muted">Exakta tider kan bero på kundavtal, incidentutredningar och tillämpliga krav.</p>
-    </div>
-
-    <div class="cardN" id="mottagare">
-      <h2>6. Mottagare och personuppgiftsbiträden</h2>
-      <p>
-        Vi delar endast uppgifter med leverantörer som behövs för att driva tjänsten. Sådana leverantörer agerar normalt som personuppgiftsbiträden
-        och omfattas av avtal och skyddsåtgärder.
-      </p>
-      <p>
-        För webbplats och API använder vi <b>Cloudflare</b> för leverans, säkerhet och drift (t.ex. CDN, DDoS-skydd, edge-funktioner).
-      </p>
-      <p class="muted">Vi säljer inte personuppgifter.</p>
-    </div>
-
-    <div class="cardN" id="overforing">
-      <h2>7. Överföring utanför EU/EES</h2>
-      <p>
-        Om personuppgifter i något fall överförs utanför EU/EES säkerställer vi lämpliga skyddsåtgärder enligt GDPR,
-        exempelvis standardavtalsklausuler och kompletterande åtgärder när det krävs.
-      </p>
-    </div>
-
-    <div class="cardN" id="sakerhet">
-      <h2>8. Säkerhet</h2>
-      <p>
-        Vi arbetar med tekniska och organisatoriska åtgärder för att skydda uppgifter mot obehörig åtkomst, förlust och otillåten behandling.
-        Åtkomst styrs och loggas i rimlig omfattning. Säkerhetsåtgärder anpassas löpande utifrån risk.
-      </p>
-    </div>
-
-    <div class="cardN" id="rattigheter">
-      <h2>9. Dina rättigheter</h2>
-      <p>Du har rätt att, enligt GDPR och i tillämplig omfattning:</p>
-      <ul>
-        <li>Begära registerutdrag,</li>
-        <li>Begära rättelse,</li>
-        <li>Begära radering (när vi inte behöver uppgifterna längre),</li>
-        <li>Invända mot viss behandling,</li>
-        <li>Begära begränsning,</li>
-        <li>Begära dataportabilitet (i vissa fall).</li>
-      </ul>
-      <p>
-        Kontakta oss på <b>kontakt@proofy.se</b>. Du har även rätt att klaga hos Integritetsskyddsmyndigheten (IMY).
-      </p>
-    </div>
-
-    <div class="cardN" id="cookies">
-      <h2>10. Cookies</h2>
-      <p>
-        Ni bör endast använda cookies om ni behöver dem. För en B2B-sajt är det ofta bäst att:
-      </p>
-      <ul>
-        <li>Inte använda marknadsföringscookies,</li>
-        <li>Om statistik behövs, använda en lösning med låg spårning och tydlig information,</li>
-        <li>Endast använda cookies som krävs för grundfunktion (om sådana finns).</li>
-      </ul>
-      <p class="muted">
-        Om ni inte använder några icke-nödvändiga cookies kan ni skriva detta tydligt här, och då behövs oftast ingen cookie-banner.
-        Om ni använder analys/marknadsföring krävs normalt information och i många fall samtycke.
-      </p>
-      <p>
-        Status: <b>[Välj en rad]</b><br/>
-        • Vi använder endast nödvändiga cookies. <br/>
-        • Vi använder även analyscookies (beskriv vilka och hur samtycke hanteras).
-      </p>
-    </div>
-
-    <div class="cardN" id="andringar">
-      <h2>11. Ändringar</h2>
-      <p>
-        Vi kan uppdatera denna policy. Vid väsentliga ändringar informerar vi på webbplatsen eller via e-post när det är relevant.
-      </p>
-    </div>
-
-    <p class="muted" style="margin:18px 0 34px;">
-      Senast uppdaterad: <span id="updatedAt">2025-12-20</span>.
-    </p>
   </div>
 </main>
 
@@ -237,9 +136,14 @@
     <div class="foot">
       <div>
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy.</div>
+        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
+        <div class="small" style="margin-top:8px; max-width:92ch;">
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer.
+          Tjänsten utgör inte juridisk rådgivning och avgör inte filers rättsliga giltighet.
+        </div>
       </div>
       <div class="links">
+        <a href="/security.html">Säkerhet</a>
         <a href="/privacy.html">Integritet</a>
         <a href="/terms.html">Villkor</a>
         <a href="/#kontakt">Kontakt</a>
@@ -248,8 +152,6 @@
   </div>
 </footer>
 
-<script>
-  // document.getElementById("updatedAt").textContent = new Date().toISOString().slice(0,10);
-</script>
+<script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
-      </html>
+</html>
