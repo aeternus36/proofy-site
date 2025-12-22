@@ -15,7 +15,7 @@
   justify-content:center;
   flex: 0 0 auto;
   position: relative;
-  z-index: 5; /* ligger över headerbakgrunden */
+  z-index: 2000; /* viktig: alltid klickbar över allt i headern */
 }
 
 .mnav-icon{
@@ -23,11 +23,6 @@
   height: 14px;
   position: relative;
   display:block;
-}
-.mnav-icon::before,
-.mnav-icon::after,
-.mnav-icon{
-  background: transparent;
 }
 .mnav-icon::before,
 .mnav-icon::after{
@@ -41,11 +36,9 @@
 }
 .mnav-icon::before{ top:0; }
 .mnav-icon::after{ bottom:0; }
-.mnav-icon{
-  box-shadow: 0 6px 0 rgba(234,240,255,.92);
-}
+.mnav-icon{ box-shadow: 0 6px 0 rgba(234,240,255,.92); }
 
-/* Drawer + overlay (stängda som default – öppnas via body.mnav-open) */
+/* Overlay + drawer: stängda default */
 .mnav-overlay{
   position: fixed;
   inset: 0;
@@ -60,7 +53,7 @@
 .mnav-drawer{
   position: fixed;
   top: 0;
-  right: 0; /* hamburger till höger => drawer från höger */
+  right: 0;
   height: 100vh;
   width: min(88vw, 360px);
   background: rgba(11,18,32,.98);
@@ -75,10 +68,20 @@
   padding: 18px;
   gap: 14px;
 
-  /* viktigt på mobil */
   overscroll-behavior: contain;
+  pointer-events: none;
 }
 
+body.mnav-open .mnav-overlay{
+  opacity: 1;
+  pointer-events: auto;
+}
+body.mnav-open .mnav-drawer{
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* Drawer topp */
 .mnav-drawerTop{
   display:flex;
   align-items:center;
@@ -87,7 +90,6 @@
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255,255,255,.10);
 }
-
 .mnav-title{
   font-size: 18px;
   font-weight: 950;
@@ -105,7 +107,6 @@
   align-items:center;
   justify-content:center;
 }
-
 .mnav-x{
   width: 18px;
   height: 18px;
@@ -133,7 +134,6 @@
   gap: 12px;
   padding-top: 6px;
 }
-
 .mnav-links a{
   text-decoration:none;
   color: rgba(234,240,255,.92);
@@ -144,14 +144,8 @@
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.04);
 }
-
-.mnav-links a:hover{
-  background: rgba(255,255,255,.07);
-}
-
-.mnav-links a:active{
-  transform: translateY(1px);
-}
+.mnav-links a:hover{ background: rgba(255,255,255,.07); }
+.mnav-links a:active{ transform: translateY(1px); }
 
 .mnav-links a[href*="#kontakt"],
 .mnav-links a:last-child{
@@ -169,12 +163,10 @@
   flex-direction:column;
   gap: 10px;
 }
-
 .mnav-note{
   color: rgba(169,183,211,.92);
   font-size: 13px;
 }
-
 .mnav-mail{
   display:inline-flex;
   align-items:center;
@@ -188,26 +180,13 @@
   background: rgba(255,255,255,.04);
 }
 
-/* OPEN state */
-body.mnav-open .mnav-overlay{
-  opacity: 1;
-  pointer-events: auto;
-}
-body.mnav-open .mnav-drawer{
-  transform: translateX(0);
-}
-
 /* Mobil: visa hamburgare, göm desktop actions */
 @media (max-width: 920px){
   .mnav-toggle{ display:inline-flex; }
-
-  /* Denna container finns i din HTML: id="navActionsDesktop" */
-  #navActionsDesktop{
-    display:none !important;
-  }
+  #navActionsDesktop{ display:none !important; }
 }
 
-/* Desktop: dölj drawer/overlay helt (säkerhet) */
+/* Desktop: dölj helt */
 @media (min-width: 921px){
   .mnav-overlay,
   .mnav-drawer{
