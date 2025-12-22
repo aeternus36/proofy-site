@@ -1,9 +1,9 @@
 /* /assets/header-toggle.js
    Stabil mobilmeny:
    - pointerdown (pålitligt på mobil)
-   - togglar body.mnav-open
-   - stänger via overlay, close-knapp, Esc, och klick på meny-länk
-   - BOMBSÄKER: blockerar touchmove utanför menyn när den är öppen (hindrar swipe/pan/scroll-bakgrund)
+   - togglar mnav-open på BÅDE html och body (bombsäker mot widgets som ligger utanför body)
+   - stänger via overlay, close, Esc, och klick på meny-länk
+   - blockerar touchmove utanför menyn när öppen (hindrar swipe/pan i bakgrunden)
 */
 
 (function () {
@@ -20,8 +20,10 @@
 
     if (!toggle || !drawer || !overlay) return;
 
+    const root = document.documentElement;
+
     function isOpen() {
-      return document.body.classList.contains("mnav-open");
+      return root.classList.contains("mnav-open");
     }
 
     function setAria(open) {
@@ -31,12 +33,14 @@
 
     function openMenu() {
       if (isOpen()) return;
+      root.classList.add("mnav-open");
       document.body.classList.add("mnav-open");
       setAria(true);
     }
 
     function closeMenu() {
       if (!isOpen()) return;
+      root.classList.remove("mnav-open");
       document.body.classList.remove("mnav-open");
       setAria(false);
     }
@@ -46,7 +50,6 @@
       else openMenu();
     }
 
-    // Pointerdown funkar bättre än click på mobiler
     document.addEventListener(
       "pointerdown",
       function (e) {
@@ -87,17 +90,14 @@
       }
     });
 
-    // ✅ BOMBSÄKER: Blockera touchmove utanför menyn när öppen
+    // Blockera touchmove utanför menyn när öppen
     document.addEventListener(
       "touchmove",
       function (e) {
         if (!isOpen()) return;
 
-        // Tillåt scroll inne i drawer
         const t = e.target;
-        if (t && t.closest && t.closest("#mnav-menu")) return;
-
-        // Allt annat: stoppa (hindrar swipe/pan och bakgrundscroll)
+        if (t && t.closest && t.closest("#mnav-menu")) return; // tillåt scroll i menyn
         e.preventDefault();
       },
       { passive: false }
