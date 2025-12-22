@@ -54,10 +54,11 @@ header{
   border-bottom: 1px solid var(--border);
 }
 
-/* ✅ FAILSAFE: om header.css inte laddas ska mobil-drawer aldrig “förstöra layouten” */
+/* ✅ BOMBSÄKER FAILSAFE:
+   Om header.css inte laddas ska mobilmenyn ALDRIG synas som rå text i flödet. */
 .mnav-overlay,
 .mnav-drawer{
-  display:none;
+  display:none !important;
 }
 
 /* ✅ Default: flex row */
@@ -186,7 +187,11 @@ header{
   }
 
   .brand{ gap:9px; }
-  .logo{ width: 32px; height: 32px; border-radius: 10px; }
+  .logo{
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
   .logo:after{ inset: 8px 9px; border-radius: 7px; }
   .brand span:last-child{
     font-size: 15px;
@@ -194,7 +199,7 @@ header{
     white-space: nowrap;
   }
 
-  /* OBS: navActions hanteras av header.css (hamburger). Här låter vi den vara neutral. */
+  /* OBS: navActions hanteras av header.css (hamburger). */
 }
 
 /* Extra liten mobil */
@@ -489,6 +494,41 @@ footer{
   margin-right: 12px;
 }
 .links a:hover{ color: var(--text); }
+
+/* ✅ NYTT: CTA-layout (Hero + Form) för proffsig mobil */
+.heroCtas{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+.heroCtas .btn{ flex: 0 0 auto; }
+
+@media (max-width: 680px){
+  .heroCtas{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+  }
+  .heroCtas .btn{
+    width:100%;
+    justify-content:center;
+  }
+
+  .btn{
+    white-space: normal;
+    text-align: center;
+  }
+
+  .formActions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .formActions .btn,
+  .formActions button.btn{
+    width:100%;
+  }
+}
 
 /* Print */
 @media print{
