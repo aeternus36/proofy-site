@@ -1,8 +1,5 @@
 /* /assets/header.css
-   Mobilmeny – BOMBSÄKER:
-   - mnav-open på html + body
-   - MAX z-index så ingen widget kan ligga över
-   - döljer iframes/chat-liknande element via html.mnav-open (inte bara body)
+   Mobilmeny – BOMBSÄKER (vänster-drawer för att undvika chat-bubbla nere till höger)
 */
 
 header{
@@ -17,8 +14,6 @@ html, body{
   overscroll-behavior-x: none;
 }
 
-/* När menyn är öppen: lås sidans touch */
-html.mnav-open,
 body.mnav-open{
   overflow: hidden;
   touch-action: none;
@@ -31,7 +26,7 @@ body.mnav-open{
   background:none;
   border:0;
   padding:10px;
-  margin-left:auto;
+  margin-left:auto; /* håller den till höger */
   cursor:pointer;
   border-radius:12px;
 }
@@ -68,7 +63,7 @@ body.mnav-open{
   bottom:0;
 }
 
-/* ===== OVERLAY (MAX) ===== */
+/* ===== OVERLAY ===== */
 
 .mnav-overlay{
   position: fixed;
@@ -80,26 +75,24 @@ body.mnav-open{
   pointer-events: none;
 
   transition: opacity 160ms ease, visibility 0s linear 160ms;
-
-  /* MAX — ska slå alla widgets */
-  z-index: 2147483646;
-
+  z-index: 9998;
   touch-action: none;
 }
 
-html.mnav-open .mnav-overlay{
+body.mnav-open .mnav-overlay{
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transition: opacity 160ms ease, visibility 0s linear 0s;
 }
 
-/* ===== DRAWER (MAX) ===== */
+/* ===== DRAWER (VÄNSTER) ===== */
 
 .mnav-drawer{
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;     /* ✅ VÄNSTER */
+  right: auto;
   bottom: 0;
 
   width: 360px;
@@ -111,23 +104,23 @@ html.mnav-open .mnav-overlay{
   background: #0e1628;
   color: rgba(234,240,255,.92);
 
+  /* Stängd: osynlig (aldrig off-screen på höger sida) */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
 
   transform: scale(.985);
-  transform-origin: right top;
+  transform-origin: left top;
 
   transition:
     opacity 180ms ease,
     transform 180ms ease,
     visibility 0s linear 180ms;
 
-  /* MAX — över overlay */
-  z-index: 2147483647;
+  z-index: 9999;
 
-  box-shadow: -14px 0 34px rgba(0,0,0,.45);
-  border-left: 1px solid rgba(255,255,255,.10);
+  box-shadow: 14px 0 34px rgba(0,0,0,.45);
+  border-right: 1px solid rgba(255,255,255,.10);
 
   padding:
     calc(14px + env(safe-area-inset-top, 0px))
@@ -142,7 +135,7 @@ html.mnav-open .mnav-overlay{
   touch-action: pan-y;
 }
 
-html.mnav-open .mnav-drawer{
+body.mnav-open .mnav-drawer{
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -255,28 +248,6 @@ html.mnav-open .mnav-drawer{
 }
 .mnav-mail:hover{ text-decoration: underline; }
 
-/* ===== BOMBSÄKER: dölj/avaktivera widgets när menyn är öppen =====
-   Viktigt: vi targetar html.mnav-open (inte body)
-*/
-html.mnav-open iframe{
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-html.mnav-open .chat-widget,
-html.mnav-open .chat-bubble,
-html.mnav-open #chat-widget,
-html.mnav-open #chat,
-html.mnav-open [id*="chat"],
-html.mnav-open [class*="chat"],
-html.mnav-open [aria-label*="chat"],
-html.mnav-open [aria-label*="Chat"]{
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
 /* ===== RESPONSIVT ===== */
 
 @media (max-width: 860px){
@@ -300,6 +271,7 @@ html.mnav-open [aria-label*="Chat"]{
   }
 }
 
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce){
   .mnav-overlay,
   .mnav-drawer{
