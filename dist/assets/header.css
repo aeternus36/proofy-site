@@ -1,52 +1,33 @@
 /* /assets/header.css
-   BOMBSÄKER mobilmeny:
-   - Drawer är FULLSKÄRM (inset:0) => kan aldrig hamna off-screen
-   - Panelen ritas som ::before på höger sida
-   - Innehåll ligger alltid på panelen (fast width/max-width)
+   Mobilheader + drawer för .mnav-* markup
 */
-
-header{
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-/* Stoppa horisontell scroll/pan på sidan */
-html, body{
-  overflow-x: hidden;
-  overscroll-behavior-x: none;
-}
-
-body.mnav-open{
-  overflow: hidden;
-  touch-action: none;
-}
-
-/* ===== HAMBURGER ===== */
 
 .mnav-toggle{
   display:none;
-  background:none;
-  border:0;
-  padding:10px;
-  margin-left:auto;
-  cursor:pointer;
-  border-radius:12px;
-}
-.mnav-toggle:hover{ background: rgba(255,255,255,.06); }
-
-.mnav-toggle:focus-visible,
-.mnav-close:focus-visible,
-.mnav-drawer a:focus-visible{
-  outline:2px solid rgba(124,241,198,.9);
-  outline-offset:2px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  cursor: pointer;
+  align-items:center;
+  justify-content:center;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 5; /* ligger över headerbakgrunden */
 }
 
 .mnav-icon{
-  display:inline-block;
-  width:22px;
-  height:16px;
-  position:relative;
+  width: 20px;
+  height: 14px;
+  position: relative;
+  display:block;
+}
+.mnav-icon::before,
+.mnav-icon::after,
+.mnav-icon{
+  background: transparent;
 }
 .mnav-icon::before,
 .mnav-icon::after{
@@ -55,233 +36,181 @@ body.mnav-open{
   left:0;
   right:0;
   height:2px;
+  border-radius: 2px;
   background: rgba(234,240,255,.92);
-  border-radius:2px;
 }
-.mnav-icon::before{
-  top:0;
-  box-shadow: 0 7px 0 rgba(234,240,255,.92);
-}
-.mnav-icon::after{
-  bottom:0;
+.mnav-icon::before{ top:0; }
+.mnav-icon::after{ bottom:0; }
+.mnav-icon{
+  box-shadow: 0 6px 0 rgba(234,240,255,.92);
 }
 
-/* ===== OVERLAY (bakgrundsdim) ===== */
-
+/* Drawer + overlay (stängda som default – öppnas via body.mnav-open) */
 .mnav-overlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.55);
-
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(2px);
   opacity: 0;
-  visibility: hidden;
   pointer-events: none;
-
-  transition: opacity 160ms ease, visibility 0s linear 160ms;
-
-  z-index: 2147483646;
-  touch-action: none;
+  transition: opacity .18s ease;
+  z-index: 1200;
 }
-
-body.mnav-open .mnav-overlay{
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition: opacity 160ms ease, visibility 0s linear 0s;
-}
-
-/* ===== DRAWER (FULLSKÄRM) ===== */
 
 .mnav-drawer{
   position: fixed;
-  inset: 0;                 /* ✅ FULLSKÄRM */
-  z-index: 2147483647;      /* max */
-  background: transparent;  /* panelen ligger i ::before */
+  top: 0;
+  right: 0; /* hamburger till höger => drawer från höger */
+  height: 100vh;
+  width: min(88vw, 360px);
+  background: rgba(11,18,32,.98);
+  border-left: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 18px 60px rgba(0,0,0,.55);
+  transform: translateX(102%);
+  transition: transform .22s ease;
+  z-index: 1300;
 
-  /* Stängd */
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
+  display:flex;
+  flex-direction:column;
+  padding: 18px;
+  gap: 14px;
 
-  transition: opacity 180ms ease, visibility 0s linear 180ms;
-
-  /* layout */
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;    /* innehåll till höger */
-  padding:
-    calc(14px + env(safe-area-inset-top, 0px))
-    14px
-    calc(24px + env(safe-area-inset-bottom, 16px))
-    14px;
-
-  /* viktigt: inget sidledspan */
-  overflow: hidden;
+  /* viktigt på mobil */
+  overscroll-behavior: contain;
 }
-
-body.mnav-open .mnav-drawer{
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition: opacity 180ms ease, visibility 0s linear 0s;
-}
-
-/* Panelen (alltid synlig, aldrig off-screen) */
-.mnav-drawer::before{
-  content:"";
-  position:absolute;
-  top:0;
-  right:0;
-  bottom:0;
-
-  width: 360px;
-  max-width: 88vw;
-
-  background: #0e1628;
-  border-left: 1px solid rgba(255,255,255,.10);
-  box-shadow: -14px 0 34px rgba(0,0,0,.45);
-}
-
-/* Alla direkta barn ligger ovanpå panelen och får panel-bredd */
-.mnav-drawer > *{
-  position: relative;
-  z-index: 1;
-  width: 360px;
-  max-width: 88vw;
-}
-
-/* ===== TOPP ===== */
 
 .mnav-drawerTop{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
-  padding: 0 0 12px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
 }
 
 .mnav-title{
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing:.2px;
+  font-size: 18px;
+  font-weight: 950;
   color: rgba(234,240,255,.92);
 }
 
 .mnav-close{
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.10);
+  cursor:pointer;
   display:flex;
   align-items:center;
   justify-content:center;
-  cursor:pointer;
-  box-shadow: 0 8px 24px rgba(0,0,0,.35);
 }
 
 .mnav-x{
-  width:16px;
-  height:16px;
-  position:relative;
+  width: 18px;
+  height: 18px;
+  position: relative;
+  display:block;
 }
 .mnav-x::before,
 .mnav-x::after{
   content:"";
   position:absolute;
-  top:7px;
-  left:0;
-  right:0;
-  height:2px;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 2px;
   background: rgba(234,240,255,.92);
-  border-radius:2px;
+  border-radius: 2px;
+  transform-origin: center;
 }
-.mnav-x::before{ transform: rotate(45deg); }
-.mnav-x::after{ transform: rotate(-45deg); }
-
-/* ===== LÄNKAR ===== */
+.mnav-x::before{ transform: translate(-50%,-50%) rotate(45deg); }
+.mnav-x::after{ transform: translate(-50%,-50%) rotate(-45deg); }
 
 .mnav-links{
   display:flex;
   flex-direction:column;
-  gap:10px;
-  padding: 16px 0;
-
-  /* scroll inne i panelen om det behövs */
-  overflow:auto;
-  -webkit-overflow-scrolling: touch;
-
-  /* fyll höjd snyggt */
-  flex: 1 1 auto;
+  gap: 12px;
+  padding-top: 6px;
 }
 
-.mnav-drawer a{
-  display:block;
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.04);
-  color: rgba(234,240,255,.92);
+.mnav-links a{
   text-decoration:none;
+  color: rgba(234,240,255,.92);
   font-weight: 900;
   font-size: 16px;
-  line-height: 1.2;
+  padding: 16px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
 }
 
-/* CTA – Boka demo */
-.mnav-links a[href="#kontakt"]{
-  border:none;
-  color:#08101e;
+.mnav-links a:hover{
+  background: rgba(255,255,255,.07);
+}
+
+.mnav-links a:active{
+  transform: translateY(1px);
+}
+
+.mnav-links a[href*="#kontakt"],
+.mnav-links a:last-child{
+  border: none;
+  color: #08101e;
   background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-  box-shadow: 0 16px 38px rgba(110,168,255,.20);
+  box-shadow: 0 18px 45px rgba(110,168,255,.18);
 }
-
-/* ===== META ===== */
 
 .mnav-meta{
-  padding-top: 16px;
-  border-top: 1px solid rgba(255,255,255,.08);
-  color: rgba(234,240,255,.92);
+  margin-top:auto;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.10);
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
 }
 
 .mnav-note{
+  color: rgba(169,183,211,.92);
   font-size: 13px;
-  opacity:.85;
-  margin-bottom:8px;
 }
 
 .mnav-mail{
-  font-size:14px;
+  display:inline-flex;
+  align-items:center;
+  gap: 10px;
   text-decoration:none;
-  opacity:.95;
-}
-.mnav-mail:hover{ text-decoration: underline; }
-
-/* ===== RESPONSIVT ===== */
-
-@media (max-width: 860px){
-  header .navActions{ display:none !important; }
-
-  .mnav-toggle{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-  }
+  color: rgba(234,240,255,.92);
+  font-weight: 900;
+  padding: 14px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
 }
 
-@media (min-width: 861px){
-  .mnav-overlay,
-  .mnav-drawer,
-  .mnav-toggle{
+/* OPEN state */
+body.mnav-open .mnav-overlay{
+  opacity: 1;
+  pointer-events: auto;
+}
+body.mnav-open .mnav-drawer{
+  transform: translateX(0);
+}
+
+/* Mobil: visa hamburgare, göm desktop actions */
+@media (max-width: 920px){
+  .mnav-toggle{ display:inline-flex; }
+
+  /* Denna container finns i din HTML: id="navActionsDesktop" */
+  #navActionsDesktop{
     display:none !important;
   }
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce){
+/* Desktop: dölj drawer/overlay helt (säkerhet) */
+@media (min-width: 921px){
   .mnav-overlay,
   .mnav-drawer{
-    transition: none !important;
+    display:none !important;
   }
 }
