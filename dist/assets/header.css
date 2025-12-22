@@ -1,9 +1,8 @@
 /* /assets/header.css
-   BOMBSÄKER mobilmeny för Samsung Internet/Chrome:
-   - Stoppar horisontell swipe/overflow
-   - Drawer öppnas via right:-Npx -> right:0 (inte transform)
-   - Hög z-index över chat-widget
-   - CTA-highlight för #kontakt
+   Stabil mobilmeny:
+   - Drawer parkerad med right:-400px
+   - Öppen: body.mnav-open + JS sätter right:0 (inline)
+   - Overlay + drawer över allt (chat-widget)
 */
 
 header{
@@ -12,12 +11,12 @@ header{
   z-index: 1000;
 }
 
-/* ✅ Stoppa horisontell scroll (orsaken till "syns först när man swipar") */
+/* Stoppa horisontell scroll */
 html, body{
   overflow-x: hidden;
 }
 
-/* Toggle-knapp (hamburger) */
+/* Hamburger knapp */
 .mnav-toggle{
   display:none;
   background:none;
@@ -29,14 +28,6 @@ html, body{
 }
 .mnav-toggle:hover{ background: rgba(255,255,255,.06); }
 
-.mnav-toggle:focus-visible,
-.mnav-close:focus-visible,
-.mnav-drawer a:focus-visible{
-  outline:2px solid rgba(124,241,198,.9);
-  outline-offset:2px;
-}
-
-/* Hamburger-ikon */
 .mnav-icon{
   display:inline-block;
   width:22px;
@@ -67,30 +58,28 @@ html, body{
   opacity: 0;
   pointer-events: none;
   transition: opacity 160ms ease;
-  z-index: 9998; /* över chat-widget */
+  z-index: 9998;
 }
 
-/* Drawer – stabil off-canvas via right istället för transform */
+/* Drawer */
 .mnav-drawer{
   position: fixed;
   top: 0;
+  right: -400px; /* default (JS sätter också) */
   bottom: 0;
 
-  /* Stabil viewport-höjd på mobil */
+  width: 360px;
+  max-width: 88vw;
+
   height: 100vh;
   height: 100dvh;
-
-  width: min(360px, 88vw);
-
-  /* start: utanför skärmen */
-  right: calc(-1 * min(360px, 88vw));
 
   background: #0e1628;
   color: rgba(234,240,255,.92);
 
   transition: right 220ms ease;
-
   z-index: 9999;
+
   box-shadow: -14px 0 34px rgba(0,0,0,.45);
   border-left: 1px solid rgba(255,255,255,.10);
 
@@ -101,7 +90,6 @@ html, body{
   flex-direction: column;
 }
 
-/* Drawer top */
 .mnav-drawerTop{
   display:flex;
   align-items:center;
@@ -110,13 +98,13 @@ html, body{
   padding: 8px 2px 12px;
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
+
 .mnav-title{
   font-weight: 950;
   letter-spacing:.2px;
   font-size: 16px;
 }
 
-/* Close */
 .mnav-close{
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.10);
@@ -151,13 +139,12 @@ html, body{
 .mnav-x::before{ transform: rotate(45deg); }
 .mnav-x::after{ transform: rotate(-45deg); }
 
-/* Links */
 .mnav-links{
   display:flex;
   flex-direction:column;
   gap:10px;
   padding: 14px 2px;
-  overflow: auto;
+  overflow:auto;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -172,25 +159,18 @@ html, body{
   font-size: 16px;
   line-height: 1.2;
 }
-.mnav-drawer a:hover{
-  background: rgba(255,255,255,.07);
-  border-color: rgba(255,255,255,.12);
-}
 
-/* CTA: "Boka demo" */
+/* CTA: Boka demo (#kontakt) */
 .mnav-links a[href="#kontakt"]{
-  border: none;
-  color: #08101e;
+  border:none;
+  color:#08101e;
   background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
   box-shadow: 0 16px 38px rgba(110,168,255,.20);
-}
-.mnav-links a[href="#kontakt"]:hover{
-  filter: brightness(1.03);
 }
 
 /* Meta */
 .mnav-meta{
-  margin-top: auto;
+  margin-top:auto;
   padding: 12px 2px 2px;
   border-top: 1px solid rgba(255,255,255,.08);
 }
@@ -203,7 +183,7 @@ html, body{
   display:inline-block;
   font-size: 14px;
   opacity: .95;
-  text-decoration: none;
+  text-decoration:none;
 }
 .mnav-mail:hover{ text-decoration: underline; }
 
@@ -213,18 +193,14 @@ body.mnav-open .mnav-overlay{
   opacity: 1;
   pointer-events: auto;
 }
-body.mnav-open .mnav-drawer{
-  right: 0; /* in på skärmen */
-}
 
-/* Mobil: slå på overlay/drawer + dölj desktop actions */
+/* Mobil */
 @media (max-width: 860px){
   /* proofy.css gömmer dessa med display:none !important */
   .mnav-overlay{ display:block !important; }
   .mnav-drawer{ display:flex !important; }
 
   header .navActions{ display:none !important; }
-
   .mnav-toggle{
     display:inline-flex;
     align-items:center;
@@ -232,17 +208,9 @@ body.mnav-open .mnav-drawer{
   }
 }
 
-/* Desktop: allt av */
+/* Desktop */
 @media (min-width: 861px){
   .mnav-overlay,
   .mnav-drawer{ display:none !important; }
   .mnav-toggle{ display:none !important; }
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce){
-  .mnav-overlay,
-  .mnav-drawer{
-    transition: none !important;
-  }
 }
