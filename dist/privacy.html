@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Säkerhet & integritet – Proofy</title>
-  <meta name="description" content="Hur Proofy hanterar säkerhet och integritet: ingen dokumentlagring, begränsad funktionalitet och tydliga avgränsningar." />
+  <title>Integritet – Proofy</title>
+  <meta name="description" content="Hur Proofy behandlar uppgifter: minimal lagring, inga dokument, tydliga avgränsningar." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="canonical" href="https://proofy.se/security.html" />
+  <link rel="canonical" href="https://proofy.se/privacy.html" />
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
 </head>
 
@@ -21,12 +21,8 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Beslut A: inga ankarlänkar i headern -->
-
       <div class="navActions">
-        <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
-        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
     </div>
@@ -35,99 +31,125 @@
 
 <main id="main">
   <div class="wrap" style="max-width:920px">
-    <div class="badge">Säkerhet · integritet · riskminimering</div>
+    <div class="badge">Integritet · dataminimering · B2B</div>
 
-    <h1 class="pageTitle">Säkerhet & integritet</h1>
+    <h1 class="pageTitle">Integritetspolicy</h1>
 
     <p class="lead">
-      Proofy är byggt för byråers verklighet: känsliga underlag, höga krav och låg tolerans för överdrifter.
-      Därför är tjänsten avsiktligt begränsad och utformad för att minimera risk.
+      Proofy är utformat för professionell användning inom exempelvis redovisning,
+      revision och granskning. Tjänsten är byggd för att minimera hantering av personuppgifter
+      och lagrar inte dokumentinnehåll.
     </p>
 
     <div class="card content">
-      <h2>Grundprincip</h2>
+      <h2>1. Allmänt</h2>
       <p>
-        Proofys säkerhetsmodell bygger på principen <b>”minimera vad som kan lagras, läcka eller missbrukas”</b>.
-        Tjänsten är inte ett arkiv, inte ett dokumenthanteringssystem och inte ett analysverktyg för innehåll.
+        Denna integritetspolicy beskriver hur Proofy hanterar uppgifter i samband med användning av tjänsten.
+        Policyn gäller för professionella användare (B2B).
+      </p>
+      <p>
+        Proofy eftersträvar att behandla så lite information som möjligt
+        och endast i den utsträckning som krävs för att tillhandahålla tjänsten.
       </p>
     </div>
 
     <div class="card content">
-      <h2>1. Dokumentinnehåll lagras inte</h2>
+      <h2>2. Vad Proofy inte lagrar</h2>
       <p>
-        Dokumentet används lokalt i webbläsaren för att beräkna ett tekniskt verifieringsvärde.
-        Proofy lagrar inte dokumentinnehåll och har ingen möjlighet att visa, läsa eller återskapa filer.
-      </p>
-    </div>
-
-    <div class="card content">
-      <h2>2. Verifierings-ID är inte dokumentet</h2>
-      <p>
-        Verifierings-ID är ett tekniskt beräknat identifieringsvärde som används för att jämföra filversioner.
-        Det kan inte användas för att tolka, läsa eller rekonstruera dokumentets innehåll.
-      </p>
-    </div>
-
-    <div class="card content">
-      <h2>3. Avsiktligt begränsad funktionalitet</h2>
-      <p>
-        För att minska risk har Proofy valt bort funktioner som ofta ökar attackyta, exempelvis:
+        Proofy lagrar inte:
       </p>
       <ul>
-        <li>Filrendering (t.ex. PDF-visning)</li>
-        <li>OCR eller textutvinning</li>
-        <li>Metadataanalys eller innehållstolkning</li>
+        <li>dokument eller filinnehåll,</li>
+        <li>text, bilder eller metadata från dokument,</li>
+        <li>information om dokumentets innehåll eller betydelse.</li>
       </ul>
       <p class="small">
-        Detta är ett medvetet designval – inte en tillfällig begränsning.
+        Dokument används lokalt i webbläsaren för teknisk beräkning
+        och lämnar inte användarens dator.
       </p>
     </div>
 
     <div class="card content">
-      <h2>4. Skydd mot missbruk</h2>
+      <h2>3. Uppgifter som kan behandlas</h2>
       <p>
-        Proofy använder tekniska och organisatoriska åtgärder för att minska risken för missbruk, exempelvis:
+        I samband med användning av tjänsten kan Proofy behandla följande typer av uppgifter:
       </p>
       <ul>
-        <li>Begränsningar i användning (t.ex. volym i pilot)</li>
-        <li>Tekniska skydd mot överbelastning</li>
-        <li>Loggning för felsökning och driftuppföljning</li>
+        <li>Verifierings-ID (tekniskt identifieringsvärde för en filversion),</li>
+        <li>registreringstid kopplad till Verifierings-ID,</li>
+        <li>tekniska driftuppgifter (t.ex. tidsstämplar för förfrågningar).</li>
       </ul>
       <p class="small">
-        Skyddsnivåer kan variera mellan pilot och kommersiell drift.
+        Dessa uppgifter är tekniska till sin natur och används för verifiering,
+        drift och felsökning.
       </p>
     </div>
 
     <div class="card content">
-      <h2>5. Nycklar och driftmiljö</h2>
+      <h2>4. Verifieringsintyg</h2>
       <p>
-        Tekniska nycklar och hemligheter hanteras i driftmiljön via miljövariabler.
-        Sådana uppgifter lagras inte i klientkod, versionshantering eller användargränssnitt.
+        Ett Verifieringsintyg är en sammanställning som visar resultatet av en kontroll
+        av ett Verifierings-ID, inklusive om ID:t är registrerat och eventuell registreringstid.
+      </p>
+      <p>
+        Verifieringsintyg skapas dynamiskt vid kontrolltillfället.
+        Proofy lagrar inte dokument eller information om dokumentets innehåll
+        i samband med intyget.
       </p>
     </div>
 
     <div class="card content">
-      <h2>Ansvarsfull hantering</h2>
+      <h2>5. Kontaktuppgifter</h2>
+      <p>
+        Om du kontaktar Proofy (t.ex. via formulär eller e-post) behandlas de uppgifter
+        du lämnar för att kunna hantera din förfrågan.
+      </p>
+      <p class="small">
+        Kontaktuppgifter används inte för andra ändamål än kommunikation
+        kring demo, pilot eller tjänsten i övrigt.
+      </p>
+    </div>
+
+    <div class="card content">
+      <h2>6. Delning av uppgifter</h2>
+      <p>
+        Proofy delar inte uppgifter med tredje part
+        annat än vad som krävs för drift av tjänsten
+        eller följer av tillämplig lag.
+      </p>
+    </div>
+
+    <div class="card content">
+      <h2>7. Säkerhet</h2>
+      <p>
+        Proofy vidtar tekniska och organisatoriska åtgärder
+        för att skydda de uppgifter som behandlas.
+      </p>
+      <p class="small">
+        Mer information finns på sidan <a href="/security.html">Säkerhet &amp; integritet</a>.
+      </p>
+    </div>
+
+    <div class="card content">
+      <h2>8. Ansvar och professionell bedömning</h2>
       <p>
         Proofy är ett tekniskt verktyg för verifiering och spårbarhet.
-        Användning i byrå-, gransknings- eller revisionssammanhang kräver alltid professionell bedömning
-        och kompletterande kontrollåtgärder.
+        Hur information används i revisions-, gransknings- eller
+        redovisningssammanhang avgörs av användaren.
       </p>
     </div>
 
     <div class="card content">
-      <h2>Kontakt</h2>
+      <h2>9. Kontakt</h2>
       <p>
-        Frågor om säkerhet eller integritet:<br />
+        Frågor om integritet:<br />
         <b>kontakt@proofy.se</b>
       </p>
-
-      <div class="hr"></div>
-      <p class="small">
-        Om du upptäcker ett tekniskt problem eller en möjlig sårbarhet, uppskattar vi att du kontaktar oss
-        så att vi kan utreda och åtgärda vid behov.
-      </p>
     </div>
+
+    <p class="meta" style="margin:24px 0">
+      Senast uppdaterad: 2025-12-22
+    </p>
   </div>
 </main>
 
@@ -135,12 +157,8 @@
   <div class="wrap">
     <div class="foot">
       <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer.
-          Tjänsten utgör inte juridisk rådgivning och avgör inte filers rättsliga giltighet.
-        </div>
+        <div style="font-weight:800">Proofy</div>
+        <div class="small">© 2025 Proofy</div>
       </div>
       <div class="links">
         <a href="/security.html">Säkerhet</a>
@@ -151,7 +169,5 @@
     </div>
   </div>
 </footer>
-
-<script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
