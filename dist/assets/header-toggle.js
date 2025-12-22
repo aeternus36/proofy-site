@@ -3,39 +3,50 @@
   "use strict";
 
   const toggle = document.querySelector(".mnav-toggle");
-  const drawer = document.querySelector(".mnav-drawer");
+  const drawer = document.getElementById("mnav-menu");
   const overlay = document.querySelector(".mnav-overlay");
+  const closeBtns = document.querySelectorAll("[data-mnav-close]");
 
   if (!toggle || !drawer || !overlay) return;
 
-  const closeBtns = document.querySelectorAll("[data-mnav-close]");
-  const mqDesktop = window.matchMedia("(min-width: 921px)");
+  const html = document.documentElement;
 
-  function setOpen(isOpen) {
-    document.body.classList.toggle("mnav-open", isOpen);
-    toggle.setAttribute("aria-expanded", String(isOpen));
+  function openMenu() {
+    document.body.classList.add("mnav-open");
+    html.classList.add("mnav-lock");
+    toggle.setAttribute("aria-expanded", "true");
 
-    // Lås scroll när menyn är öppen
-    document.documentElement.classList.toggle("mnav-lock", isOpen);
+    // fokus på stäng-knappen om den finns
+    const closeBtn = drawer.querySelector(".mnav-close");
+    if (closeBtn) closeBtn.focus({ preventScroll: true });
   }
 
-  function openMenu() { setOpen(true); }
-  function closeMenu() { setOpen(false); }
-  function toggleMenu() { setOpen(!document.body.classList.contains("mnav-open")); }
+  function closeMenu() {
+    document.body.classList.remove("mnav-open");
+    html.classList.remove("mnav-lock");
+    toggle.setAttribute("aria-expanded", "false");
 
-  // Markera att JS är igång (CSS använder detta)
-  document.documentElement.setAttribute("data-mnav-ready", "1");
+    // tillbaka fokus till hamburgaren
+    toggle.focus({ preventScroll: true });
+  }
+
+  function isOpen() {
+    return document.body.classList.contains("mnav-open");
+  }
 
   toggle.addEventListener("click", (e) => {
     e.preventDefault();
-    toggleMenu();
+    e.stopPropagation();
+    isOpen() ? closeMenu() : openMenu();
   });
 
+  // Overlay click stänger
   overlay.addEventListener("click", (e) => {
     e.preventDefault();
     closeMenu();
   });
 
+  // Alla [data-mnav-close] stänger (overlay + X)
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -43,22 +54,21 @@
     });
   });
 
-  // Stäng på ESC
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMenu();
-  });
-
-  // Stäng när man klickar på en länk i menyn
+  // Klick på en länk i menyn stänger
   drawer.addEventListener("click", (e) => {
-    const a = e.target && e.target.closest ? e.target.closest("a") : null;
+    const a = e.target.closest("a");
     if (a) closeMenu();
   });
 
-  // Om man går till desktop-läge: stäng menyn
-  mqDesktop.addEventListener("change", () => {
-    if (mqDesktop.matches) closeMenu();
+  // ESC stänger
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isOpen()) closeMenu();
   });
 
-  // Startläge
-  setOpen(false);
+  // Om man roterar/skalar upp till desktop, stäng
+  window.addEventListener("resize", () => {
+    if (window.matchMedia("(min-width: 921px)").matches && isOpen()) {
+      closeMenu();
+    }
+  });
 })();
