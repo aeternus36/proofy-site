@@ -1,6 +1,6 @@
 /* /assets/header-toggle.js
    Stabil mobilmeny:
-   - pointerdown (pålitligt på mobil)
+   - pointerdown för pålitlig mobil
    - togglar body.mnav-open
    - stänger via overlay, close, Esc, och klick på meny-länk
    - blockerar touchmove utanför menyn när öppen
@@ -46,24 +46,26 @@
       else openMenu();
     }
 
-    // Pointerdown funkar bättre än click på mobiler
     document.addEventListener(
       "pointerdown",
       function (e) {
         const t = e.target;
 
+        // öppna/stäng
         if (t && t.closest && t.closest(".mnav-toggle")) {
           e.preventDefault();
           toggleMenu();
           return;
         }
 
+        // stäng: overlay + close-knappar
         if (t && t.closest && t.closest("[data-mnav-close]")) {
           e.preventDefault();
           closeMenu();
           return;
         }
 
+        // stäng vid klick på länk i menyn
         if (isOpen() && t && t.closest) {
           const a = t.closest("#mnav-menu a");
           if (a) {
@@ -84,7 +86,7 @@
       }
     });
 
-    // Blockera touchmove utanför menyn när öppen
+    // Blockera touchmove utanför menyn när öppen (hindrar swipe/scroll i bakgrunden)
     document.addEventListener(
       "touchmove",
       function (e) {
