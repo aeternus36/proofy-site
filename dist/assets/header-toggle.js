@@ -1,38 +1,31 @@
-/* /assets/header-toggle.js */
+// /assets/header-toggle.js
 (() => {
-  "use strict";
+  const html = document.documentElement;
+  const body = document.body;
 
-  const toggle = document.querySelector(".mnav-toggle");
-  const drawer = document.getElementById("mnav-menu");
-  const overlay = document.querySelector(".mnav-overlay");
+  const toggle = document.querySelector('.mnav-toggle');
+  const drawer = document.querySelector('.mnav-drawer');
+  const overlay = document.querySelector('.mnav-overlay');
+  const closers = document.querySelectorAll('[data-mnav-close]');
 
   if (!toggle || !drawer || !overlay) return;
 
-  const html = document.documentElement;
-  html.setAttribute("data-mnav-ready", "1");
+  // Markera att menyn är redo
+  html.setAttribute('data-mnav-ready', '1');
 
-  function openMenu() {
-    document.body.classList.add("mnav-open");
-    html.classList.add("mnav-lock");
-    toggle.setAttribute("aria-expanded", "true");
-  }
+  const open = () => {
+    body.classList.add('mnav-open');
+    html.classList.add('mnav-lock');
+    toggle.setAttribute('aria-expanded', 'true');
+  };
 
-  function closeMenu() {
-    document.body.classList.remove("mnav-open");
-    html.classList.remove("mnav-lock");
-    toggle.setAttribute("aria-expanded", "false");
-  }
+  const close = () => {
+    body.classList.remove('mnav-open');
+    html.classList.remove('mnav-lock');
+    toggle.setAttribute('aria-expanded', 'false');
+  };
 
-  toggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    document.body.classList.contains("mnav-open")
-      ? closeMenu()
-      : openMenu();
-  });
-
-  overlay.addEventListener("click", closeMenu);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMenu();
-  });
+  toggle.addEventListener('click', open);
+  overlay.addEventListener('click', close);
+  closers.forEach(el => el.addEventListener('click', close));
 })();
