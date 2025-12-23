@@ -16,7 +16,6 @@
     try {
       if (el && typeof el.focus === "function") el.focus({ preventScroll: true });
     } catch (_) {
-      // i vissa mobiler kan preventScroll orsaka exception – fallback:
       try {
         if (el && typeof el.focus === "function") el.focus();
       } catch (_) {}
@@ -30,7 +29,6 @@
     html.classList.add("mnav-lock");
     toggle.setAttribute("aria-expanded", "true");
 
-    // fokus på stäng-knappen om den finns
     const closeBtn = drawer.querySelector(".mnav-close");
     safeFocus(closeBtn || drawer);
   }
@@ -40,7 +38,6 @@
     html.classList.remove("mnav-lock");
     toggle.setAttribute("aria-expanded", "false");
 
-    // tillbaka fokus till det som var aktivt (fallback: hamburgaren)
     safeFocus(lastActive || toggle);
     lastActive = null;
   }
@@ -55,13 +52,11 @@
     isOpen() ? closeMenu() : openMenu();
   });
 
-  // Overlay click stänger
   overlay.addEventListener("click", (e) => {
     e.preventDefault();
     closeMenu();
   });
 
-  // Alla [data-mnav-close] stänger (overlay + X)
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -69,18 +64,15 @@
     });
   });
 
-  // Klick på en länk i menyn stänger
   drawer.addEventListener("click", (e) => {
     const a = e.target.closest("a");
     if (a) closeMenu();
   });
 
-  // ESC stänger
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && isOpen()) closeMenu();
   });
 
-  // Om man roterar/skalar upp till desktop, stäng
   window.addEventListener("resize", () => {
     if (window.matchMedia("(min-width: 921px)").matches && isOpen()) {
       closeMenu();
