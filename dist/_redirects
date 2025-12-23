@@ -1,0 +1,6 @@
+# Cloudflare Pages - säkra statiska assets
+/assets/*  /assets/:splat  200
+
+# Om du INTE kör SPA: ta bort raden nedan.
+# Om du kör SPA: behåll den.
+/*         /index.html     200
