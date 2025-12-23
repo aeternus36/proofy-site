@@ -10,15 +10,29 @@
   if (!toggle || !drawer || !overlay) return;
 
   const html = document.documentElement;
+  let lastActive = null;
+
+  function safeFocus(el) {
+    try {
+      if (el && typeof el.focus === "function") el.focus({ preventScroll: true });
+    } catch (_) {
+      // i vissa mobiler kan preventScroll orsaka exception – fallback:
+      try {
+        if (el && typeof el.focus === "function") el.focus();
+      } catch (_) {}
+    }
+  }
 
   function openMenu() {
+    lastActive = document.activeElement || toggle;
+
     document.body.classList.add("mnav-open");
     html.classList.add("mnav-lock");
     toggle.setAttribute("aria-expanded", "true");
 
     // fokus på stäng-knappen om den finns
     const closeBtn = drawer.querySelector(".mnav-close");
-    if (closeBtn) closeBtn.focus({ preventScroll: true });
+    safeFocus(closeBtn || drawer);
   }
 
   function closeMenu() {
@@ -26,8 +40,9 @@
     html.classList.remove("mnav-lock");
     toggle.setAttribute("aria-expanded", "false");
 
-    // tillbaka fokus till hamburgaren
-    toggle.focus({ preventScroll: true });
+    // tillbaka fokus till det som var aktivt (fallback: hamburgaren)
+    safeFocus(lastActive || toggle);
+    lastActive = null;
   }
 
   function isOpen() {
