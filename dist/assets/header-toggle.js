@@ -1,95 +1,54 @@
-/* /assets/header-toggle.js
-   Mobilmeny: togglar body.mnav-open + html.mnav-lock och sätter html[data-mnav-ready="1"]
-*/
-
+// /assets/header-toggle.js
 (() => {
-  const MOBILE_MAX = 920;
+  const docEl = document.documentElement;
 
-  function qs(sel, root = document) {
-    return root.querySelector(sel);
-  }
+  const toggle = document.querySelector(".mnav-toggle");
+  const drawer = document.getElementById("mnav-menu");
+  const overlay = document.querySelector(".mnav-overlay");
+  const closeEls = document.querySelectorAll("[data-mnav-close]");
 
-  function qsa(sel, root = document) {
-    return Array.from(root.querySelectorAll(sel));
-  }
+  if (!toggle || !drawer || !overlay) return;
 
-  function isMobile() {
-    return window.matchMedia(`(max-width: ${MOBILE_MAX}px)`).matches;
-  }
+  // Markera att JS är igång så CSS får visa overlay/drawer-lager
+  docEl.setAttribute("data-mnav-ready", "1");
 
-  function setExpanded(btn, expanded) {
-    if (!btn) return;
-    btn.setAttribute("aria-expanded", expanded ? "true" : "false");
-  }
+  const setExpanded = (open) => {
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  };
 
-  function openMenu({ btn, htmlEl, bodyEl }) {
-    bodyEl.classList.add("mnav-open");
-    htmlEl.classList.add("mnav-lock");
-    setExpanded(btn, true);
-  }
+  const openMenu = () => {
+    document.body.classList.add("mnav-open");
+    docEl.classList.add("mnav-lock");
+    setExpanded(true);
+  };
 
-  function closeMenu({ btn, htmlEl, bodyEl }) {
-    bodyEl.classList.remove("mnav-open");
-    htmlEl.classList.remove("mnav-lock");
-    setExpanded(btn, false);
-  }
+  const closeMenu = () => {
+    document.body.classList.remove("mnav-open");
+    docEl.classList.remove("mnav-lock");
+    setExpanded(false);
+  };
 
-  function toggleMenu(ctx) {
-    const { bodyEl } = ctx;
-    if (bodyEl.classList.contains("mnav-open")) closeMenu(ctx);
-    else openMenu(ctx);
-  }
+  const isOpen = () => document.body.classList.contains("mnav-open");
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const htmlEl = document.documentElement;
-    const bodyEl = document.body;
-
-    // Markera att CSS-komponenten får aktiveras
-    htmlEl.setAttribute("data-mnav-ready", "1");
-
-    const btn = qs(".mnav-toggle");
-    const overlay = qs(".mnav-overlay");
-    const drawer = qs(".mnav-drawer");
-
-    // Om markup saknas: gör inget (men krascha inte)
-    if (!btn || !overlay || !drawer) return;
-
-    const ctx = { btn, htmlEl, bodyEl, overlay, drawer };
-
-    // Toggle via hamburgare
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (!isMobile()) return; // på desktop: ignorera
-      toggleMenu(ctx);
-    });
-
-    // Stäng på overlay
-    overlay.addEventListener("click", (e) => {
-      e.preventDefault();
-      closeMenu(ctx);
-    });
-
-    // Stäng på alla element med data-mnav-close (ex close-knapp)
-    qsa("[data-mnav-close]").forEach((el) => {
-      el.addEventListener("click", (e) => {
-        e.preventDefault();
-        closeMenu(ctx);
-      });
-    });
-
-    // Stäng med ESC
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeMenu(ctx);
-    });
-
-    // Om man klickar på en länk i menyn: stäng (bra UX)
-    qsa(".mnav-drawer a").forEach((a) => {
-      a.addEventListener("click", () => closeMenu(ctx));
-    });
-
-    // Om man roterar / resize till desktop: stäng menyn
-    window.addEventListener("resize", () => {
-      if (!isMobile()) closeMenu(ctx);
-    });
+  toggle.addEventListener("click", () => {
+    isOpen() ? closeMenu() : openMenu();
   });
+
+  // Klick på overlay + alla [data-mnav-close]
+  overlay.addEventListener("click", closeMenu);
+  closeEls.forEach((el) => el.addEventListener("click", closeMenu));
+
+  // ESC stänger
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+
+  // Klick på länk i menyn stänger (för #kontakt och vanliga länkar)
+  drawer.addEventListener("click", (e) => {
+    const a = e.target.closest("a");
+    if (a) closeMenu();
+  });
+
+  // Säkerställ korrekt startläge
+  closeMenu();
 })();
