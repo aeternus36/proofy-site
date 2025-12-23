@@ -253,7 +253,7 @@
           <h1 class="certTitle">Verifieringsintyg</h1>
           <p class="certLead">
             Detta intyg är <b>automatiskt genererat</b> via proofy.se vid kontrolltillfället och sammanfattar resultatet av en kontroll av ett
-            <b>Verifierings-ID</b> (digitalt fingeravtryck för en filversion).
+            <b>Verifierings-ID</b> (ett kontrollvärde kopplat till en specifik filversion).
             Intyget visar om Verifierings-ID:t är registrerat och, i så fall, <b>registreringstid</b>.
             <b>Inget dokumentinnehåll lagras</b> i Proofy.
           </p>
@@ -285,10 +285,10 @@
         </div>
 
         <div class="certPanel">
-          <div class="certLabel">INTYG-ID (KONTROLL-ID)</div>
+          <div class="certLabel">REFERENS-ID FÖR INTYGET</div>
           <div id="certIdOut" class="certValue mono">—</div>
           <div class="meta" style="margin-top:8px;">
-            Unikt ID för denna intygsvy (genereras lokalt i webbläsaren). Kan användas som referens i ärendenotering.
+            Referens-ID för denna intygsvy (genereras lokalt i webbläsaren). Avsett för notering i ärende/dokumentation.
           </div>
         </div>
       </div>
@@ -297,7 +297,7 @@
 
       <div class="note">
         <b>Omfattning</b><br />
-        Intyget avser endast om en <b>filversion</b> (identiska bytes) kan knytas till en <b>registreringstid</b> via Verifierings-ID.
+        Intyget avser endast om en <b>filversion</b> kan knytas till en <b>registreringstid</b> via Verifierings-ID.
         Det är <b>inte</b> e-signering, inte arkivering och inte en bedömning av dokumentets innehåll eller riktighet.
       </div>
 
@@ -306,11 +306,11 @@
         <div class="note">
           <b>Öppna intyget</b><br />
           Klistra in Verifierings-ID eller öppna via länk:
-          <span class="mono">/certificate.html?hash=0x…</span>
-          <span class="meta"> (även <span class="mono">?id=0x…</span> fungerar för bakåtkompatibilitet)</span>
+          <span class="mono">/certificate.html?hash=…</span>
+          <span class="meta"> (även <span class="mono">?id=…</span> fungerar för bakåtkompatibilitet)</span>
         </div>
         <div class="openRow">
-          <input id="hashInput" type="text" placeholder="Verifierings-ID (0x…)" />
+          <input id="hashInput" type="text" placeholder="Klistra in Verifierings-ID" />
           <button id="btnOpen" class="btn primary" type="button">Öppna intyg</button>
           <button id="btnPaste" class="btn soft" type="button">Klistra in ID</button>
           <a class="btn" href="/verify.html">Gå till verifiering</a>
@@ -382,7 +382,7 @@
               </div>
               <div style="flex:1; min-width:240px;">
                 <div class="note" style="margin-top:12px;">
-                  <b>Tips för byrå:</b> Spara Verifierings-ID + Intyg-ID i ärendet. Dela intygslänken för dokumentation och verifieringslänken/QR för snabb kontroll.
+                  <b>Tips för byrå:</b> Spara Verifierings-ID + Referens-ID i ärendet. Dela intygslänken för dokumentation och verifieringslänken/QR för snabb kontroll.
                 </div>
               </div>
             </div>
@@ -445,14 +445,6 @@
             <b>7) Tillämplig lag</b><br/>
             Svensk lag ska tillämpas i den mån annat inte följer av tvingande regler. Tvist hanteras enligt Proofys villkor.
           </p>
-
-          <details style="margin-top:12px;">
-            <summary>Tekniska detaljer (valfritt)</summary>
-            <p>
-              Verifierings-ID är ett kryptografiskt fingeravtryck beräknat från filens bytes (SHA-256).
-              Minsta ändring i filen ger ett helt annat fingeravtryck. Fingeravtrycket kan inte användas för att återskapa filinnehåll.
-            </p>
-          </details>
 
           <p class="meta">
             Länkar: <a href="/terms.html">Villkor</a> · <a href="/privacy.html">Integritet</a>
@@ -772,8 +764,8 @@
     }
     if (state === "invalid") {
       return [
-        "Verifierings-ID:t har fel format och kunde inte kontrolleras.",
-        "Format: 0x följt av 64 hex-tecken."
+        "Verifierings-ID:t verkar ofullständigt eller felaktigt kopierat och kunde inte kontrolleras.",
+        "Kontrollera att du kopierat hela ID:t och försök igen."
       ].join("\n");
     }
     if (state === "technical") {
@@ -821,7 +813,7 @@
 
     if(!isBytes32Hex(hash)){
       setStatus("OGILTIGT VERIFIERINGS-ID", "err");
-      resultOut.textContent = "Ogiltigt format (kan inte kontrollera)";
+      resultOut.textContent = "Kan inte kontrollera (ogiltigt ID)";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
       interpretation.textContent = setInterpretation("invalid");
@@ -848,13 +840,13 @@
 
       const data = res.data || {};
       const exists = Boolean(data.exists);
-      const ts = data.timestamp ? Number(data.timestamp) : null;
+      const ts = (data.timestamp !== undefined && data.timestamp !== null) ? Number(data.timestamp) : NaN;
 
       if (exists){
         setStatus("REGISTRERAD", "ok");
         resultOut.textContent = "Registrerad (registrering hittades)";
-        tsSeOut.textContent = ts ? fmtSe(ts) : "—";
-        tsUtcOut.textContent = ts ? fmtUtc(ts) : "—";
+        tsSeOut.textContent = Number.isFinite(ts) ? fmtSe(ts) : "—";
+        tsUtcOut.textContent = Number.isFinite(ts) ? fmtUtc(ts) : "—";
         interpretation.textContent = setInterpretation("registered");
       } else {
         setStatus("EJ REGISTRERAD", "err");
