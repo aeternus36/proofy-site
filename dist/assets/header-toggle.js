@@ -1,94 +1,66 @@
-/* /assets/header-toggle.js */
-
-(function () {
-  const html = document.documentElement;
+(() => {
+  const docEl = document.documentElement;
   const body = document.body;
 
-  const toggle = document.querySelector(".mnav-toggle");
-  const drawer = document.getElementById("mnav-menu");
-  const closeTargets = document.querySelectorAll("[data-mnav-close]");
+  function qs(sel, root = document) { return root.querySelector(sel); }
+  function qsa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
 
-  if (!toggle || !drawer) {
-    // Om HTML saknar meny-delar: gör inget.
-    return;
-  }
-
-  const OPEN_CLASS = "mnav-open";
-  const LOCK_CLASS = "mnav-lock";
-
-  function isMobile() {
-    // matchar din CSS-breakpoint (920px)
-    return window.matchMedia("(max-width: 920px)").matches;
-  }
-
-  function setExpanded(expanded) {
-    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  function setExpanded(btn, expanded) {
+    if (!btn) return;
+    btn.setAttribute("aria-expanded", expanded ? "true" : "false");
   }
 
   function openMenu() {
-    if (!isMobile()) return;
-    body.classList.add(OPEN_CLASS);
-    html.classList.add(LOCK_CLASS);
-    setExpanded(true);
-
-    // Reflow/resize så att chat-widget (och andra fixed element) ritas korrekt i mobil-webviews
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"));
-      window.dispatchEvent(new Event("scroll"));
-    });
+    body.classList.add("mnav-open");
+    docEl.classList.add("mnav-lock");
+    setExpanded(toggleBtn, true);
   }
 
   function closeMenu() {
-    body.classList.remove(OPEN_CLASS);
-    html.classList.remove(LOCK_CLASS);
-    setExpanded(false);
-
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"));
-      window.dispatchEvent(new Event("scroll"));
-    });
+    body.classList.remove("mnav-open");
+    docEl.classList.remove("mnav-lock");
+    setExpanded(toggleBtn, false);
   }
 
-  function toggleMenu() {
-    if (body.classList.contains(OPEN_CLASS)) closeMenu();
-    else openMenu();
+  let toggleBtn;
+
+  function init() {
+    toggleBtn = qs(".mnav-toggle");
+    const drawer = qs(".mnav-drawer");
+    if (!toggleBtn || !drawer) return;
+
+    // Markera att mobilnav finns och ska renderas (CSS slår på overlay/drawer)
+    docEl.setAttribute("data-mnav-ready", "1");
+
+    // Klick: öppna/stäng
+    toggleBtn.addEventListener("click", () => {
+      const isOpen = body.classList.contains("mnav-open");
+      if (isOpen) closeMenu();
+      else openMenu();
+    });
+
+    // Stäng på overlay + close-knapp
+    qsa("[data-mnav-close]").forEach(el => {
+      el.addEventListener("click", closeMenu);
+    });
+
+    // Stäng på ESC
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeMenu();
+    });
+
+    // Stäng när man klickar på länkar i mobilen
+    qsa(".mnav-links a").forEach(a => {
+      a.addEventListener("click", closeMenu);
+    });
+
+    // Säkerställ stängt initialt (om någon cacheat klasser)
+    closeMenu();
   }
 
-  // Gör overlay/drawer aktiva först när JS laddat
-  html.setAttribute("data-mnav-ready", "1");
-
-  // Säkra default state
-  closeMenu();
-
-  // Click handlers
-  toggle.addEventListener("click", toggleMenu);
-  closeTargets.forEach((el) => el.addEventListener("click", closeMenu));
-
-  // Stäng på ESC
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMenu();
-  });
-
-  // Stäng om man klickar på länkar i menyn
-  drawer.addEventListener("click", (e) => {
-    const a = e.target.closest("a");
-    if (a) closeMenu();
-  });
-
-  // Om man roterar/byter storlek till desktop: stäng och lås upp
-  window.addEventListener("resize", () => {
-    if (!isMobile()) closeMenu();
-  });
-
-  // Viktigt: vissa mobil-webviews renderar fixed-element fel tills första interaction.
-  // Trigga en minimal “kick” efter load för chat-bubblan.
-  window.addEventListener("load", () => {
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"));
-      window.dispatchEvent(new Event("scroll"));
-    });
-  });
-
-  // Om hash-navigering (t.ex. #kontakt) sker: stäng menyn
-  window.addEventListener("hashchange", closeMenu);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
