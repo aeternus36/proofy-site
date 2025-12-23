@@ -6,6 +6,14 @@
    - Kräver HTML-strukturen du redan har i index.html
 --------------------------------------------------- */
 
+/* Viktigt: se till att header ligger "över" innehåll men "under" chat */
+header{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Toggle-knappen */
 .mnav-toggle{
   display:none; /* syns bara på mobil */
   align-items:center;
@@ -19,8 +27,12 @@
   cursor:pointer;
   flex: 0 0 auto;
   position: relative;
-  z-index: 2002; /* alltid klickbar över andra saker */
+  z-index: 1002; /* över header-innehåll */
   -webkit-tap-highlight-color: transparent;
+}
+
+.mnav-toggle:active{
+  transform: translateY(1px);
 }
 
 .mnav-toggle:hover{
@@ -62,8 +74,6 @@ html[data-mnav-ready="1"] .mnav-overlay{
   display:block;
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100dvh;
   background: rgba(0,0,0,.55);
   opacity: 0;
   visibility: hidden;
@@ -81,17 +91,15 @@ html[data-mnav-ready="1"] .mnav-drawer{
   width: min(86vw, 380px);
   background: rgba(11,18,32,.96);
   backdrop-filter: blur(10px) saturate(140%);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
   border-left: 1px solid rgba(255,255,255,.10);
   transform: translateX(100%);
   transition: transform .22s ease;
   z-index: 2001;
 
-  /* Viktigt: undvik att den hamnar "utanför" och kräver swipe */
   max-width: 100vw;
 
-  /* Snygg padding + safe area */
-  padding: max(16px, env(safe-area-inset-top)) 16px 18px 16px;
+  /* Safe area + padding */
+  padding: max(16px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)) 16px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -111,23 +119,6 @@ body.mnav-open .mnav-drawer{
 html.mnav-lock,
 html.mnav-lock body{
   overflow: hidden;
-  touch-action: none;
-}
-
-/* ---------------------------------------------------
-   VIKTIGT: göm chat-widget/bubbla när menyn är öppen
-   (så den inte ligger ovanpå drawer/close/knappar)
---------------------------------------------------- */
-body.mnav-open .chat-widget,
-body.mnav-open #chat-widget,
-body.mnav-open .chatWidget,
-body.mnav-open .chat-fab,
-body.mnav-open #chatBubble,
-body.mnav-open #chat-bubble,
-body.mnav-open .ask-us,
-body.mnav-open .support-bubble{
-  opacity: 0 !important;
-  pointer-events: none !important;
 }
 
 /* Innehåll i drawer */
@@ -160,6 +151,10 @@ body.mnav-open .support-bubble{
 .mnav-close:hover{
   background: rgba(255,255,255,.10);
   border-color: rgba(255,255,255,.18);
+}
+
+.mnav-close:active{
+  transform: translateY(1px);
 }
 
 .mnav-x{
@@ -250,16 +245,13 @@ body.mnav-open .support-bubble{
 }
 
 /* ---------------------------------------------------
-   Responsivt: visa hamburgare på mobil, göm desktop-actions
+   Responsivt
 --------------------------------------------------- */
 @media (max-width: 920px){
   .mnav-toggle{ display:inline-flex; }
-
-  /* Göm knappraden i header på mobil */
   #navActionsDesktop{ display:none !important; }
 }
 
-/* Desktop: drawer/overlay behövs ej */
 @media (min-width: 921px){
   html[data-mnav-ready="1"] .mnav-overlay,
   html[data-mnav-ready="1"] .mnav-drawer{
