@@ -1,4 +1,3 @@
-
 (() => {
   function init() {
     const chatHistory = [];
@@ -101,7 +100,8 @@
       const loading = addMessage("assistant", "…");
 
       try {
-        const res = await fetch("/.netlify/functions/chat", {
+        // Cloudflare Pages Function endpoint
+        const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: chatHistory }),
