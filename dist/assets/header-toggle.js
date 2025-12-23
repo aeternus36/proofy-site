@@ -1,4 +1,4 @@
-/* /dist/assets/header-toggle.js */
+/* /assets/header-toggle.js */
 (() => {
   "use strict";
 
@@ -10,24 +10,36 @@
   if (!toggle || !drawer || !overlay) return;
 
   const html = document.documentElement;
+  let lastActive = null;
 
-  // Viktigt: header.css kräver denna flagga för att aktivera overlay/drawer
-  html.setAttribute("data-mnav-ready", "1");
+  function safeFocus(el) {
+    try {
+      if (el && typeof el.focus === "function") el.focus({ preventScroll: true });
+    } catch (_) {
+      try {
+        if (el && typeof el.focus === "function") el.focus();
+      } catch (_) {}
+    }
+  }
 
   function openMenu() {
+    lastActive = document.activeElement || toggle;
+
     document.body.classList.add("mnav-open");
     html.classList.add("mnav-lock");
     toggle.setAttribute("aria-expanded", "true");
 
     const closeBtn = drawer.querySelector(".mnav-close");
-    if (closeBtn) closeBtn.focus({ preventScroll: true });
+    safeFocus(closeBtn || drawer);
   }
 
   function closeMenu() {
     document.body.classList.remove("mnav-open");
     html.classList.remove("mnav-lock");
     toggle.setAttribute("aria-expanded", "false");
-    toggle.focus({ preventScroll: true });
+
+    safeFocus(lastActive || toggle);
+    lastActive = null;
   }
 
   function isOpen() {
