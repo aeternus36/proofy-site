@@ -1,4 +1,4 @@
-/* /assets/header-toggle.js */
+/* /dist/assets/header-toggle.js */
 (() => {
   "use strict";
 
@@ -11,7 +11,7 @@
 
   const html = document.documentElement;
 
-  /* ✅ MARKERA CSS SOM READY */
+  // Viktigt: header.css kräver denna flagga för att aktivera overlay/drawer
   html.setAttribute("data-mnav-ready", "1");
 
   function openMenu() {
