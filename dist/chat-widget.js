@@ -1,267 +1,139 @@
-// /chat-widget.js
-// Proofy chat widget – shared across all pages
-// Safe to include on every page: prevents double init and DOM collisions.
-
+/* /chat-widget.js */
 (() => {
-  // Prevent double init (important for SPA-ish nav, caching, Cloudflare, etc.)
-  if (window.__proofyChatWidgetInitialized) return;
-  window.__proofyChatWidgetInitialized = true;
+  const doc = document;
 
-  function init() {
-    // If someone already embedded it inline on a page, don't create duplicates
-    if (document.querySelector(".proofy-chat-btn") || document.querySelector(".proofy-panel")) {
-      return;
-    }
+  const ensure = () => {
+    // Om den redan finns, gör inget
+    if (doc.getElementById("proofy-chat-fab")) return;
 
-    const chatHistory = [];
-    let isOpen = false;
-
-    const style = document.createElement("style");
-    style.setAttribute("data-proofy-chat-style", "1");
+    const style = doc.createElement("style");
     style.textContent = `
-      .proofy-chat-btn{
-        position:fixed;bottom:20px;right:20px;z-index:99999;
-        padding:12px 16px;border-radius:999px;border:none;cursor:pointer;
-        background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-        color:#0b1020;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.25);
+      #proofy-chat-fab{
+        position: fixed;
+        right: 18px;
+        bottom: calc(18px + env(safe-area-inset-bottom));
+        z-index: 2500;
+        border: 0;
+        border-radius: 999px;
+        padding: 14px 18px;
+        font-weight: 900;
+        font-size: 16px;
+        cursor: pointer;
+        color: #08101e;
+        background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
+        box-shadow: 0 12px 32px rgba(0,0,0,.35);
+        -webkit-tap-highlight-color: transparent;
       }
-      .proofy-panel{
-        position:fixed;bottom:86px;right:20px;z-index:99999;
-        width:min(380px, calc(100vw - 40px));
-        height:min(560px, calc(100vh - 140px));
-        background:rgba(10,16,32,.92);
-        border:1px solid rgba(255,255,255,.10);
-        border-radius:18px;overflow:hidden;
-        box-shadow:0 20px 60px rgba(0,0,0,.45);
-        backdrop-filter: blur(10px);
-        display:none;
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-        color:#eaf1ff;
+      #proofy-chat-fab:active{ transform: translateY(1px); }
+
+      #proofy-chat-panel{
+        position: fixed;
+        right: 18px;
+        bottom: calc(74px + env(safe-area-inset-bottom));
+        width: min(92vw, 360px);
+        z-index: 2500;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(11,18,32,.96);
+        backdrop-filter: blur(10px) saturate(140%);
+        box-shadow: 0 18px 45px rgba(0,0,0,.45);
+        color: rgba(234,240,255,.92);
+        padding: 14px;
+        display: none;
       }
-      .proofy-header{
-        display:flex;align-items:center;justify-content:space-between;
-        padding:12px 12px;border-bottom:1px solid rgba(255,255,255,.08);
-        background:rgba(255,255,255,.03);
+
+      #proofy-chat-panel[data-open="1"]{ display:block; }
+
+      #proofy-chat-panel h3{
+        margin: 0 0 6px 0;
+        font-size: 16px;
+        font-weight: 950;
       }
-      .proofy-title{
-        font-weight:800;letter-spacing:.2px;font-size:14px;
-        display:flex;gap:10px;align-items:center;
+      #proofy-chat-panel p{
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        color: rgba(169,183,211,.92);
+        line-height: 1.4;
       }
-      .proofy-dot{
-        width:10px;height:10px;border-radius:999px;background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-        box-shadow:0 0 0 3px rgba(110,231,183,.12);
+      #proofy-chat-actions{
+        display:flex;
+        gap:10px;
+        flex-wrap: wrap;
       }
-      .proofy-x{
-        width:34px;height:34px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
-        background:rgba(255,255,255,.04);color:#eaf1ff;cursor:pointer;
+      #proofy-chat-actions a, #proofy-chat-actions button{
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,.06);
+        color: rgba(234,240,255,.92);
+        padding: 12px 14px;
+        font-weight: 900;
+        cursor: pointer;
+        text-decoration: none;
       }
-      .proofy-body{
-        padding:12px;height:calc(100% - 56px - 64px);overflow:auto;
+      #proofy-chat-actions a.primary{
+        border: 0;
+        color: #08101e;
+        background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
       }
-      .proofy-quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
-      .proofy-qbtn{
-        padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
-        background:rgba(255,255,255,.04);color:#eaf1ff;cursor:pointer;font-weight:700;font-size:12px;
+
+      /* När mobilmenyn är öppen: låt chat ligga under overlay/drawer så det inte stör */
+      body.mnav-open #proofy-chat-fab,
+      body.mnav-open #proofy-chat-panel{
+        z-index: 1500;
       }
-      .proofy-msg{margin:10px 0;display:flex;flex-direction:column;gap:8px;}
-      .proofy-msg.user{align-items:flex-end;}
-      .proofy-msg.assistant{align-items:flex-start;}
-      .proofy-bubble{
-        max-width:85%;
-        padding:10px 12px;border-radius:14px;
-        border:1px solid rgba(255,255,255,.10);
-        background:rgba(255,255,255,.04);
-        line-height:1.35;font-size:13px;
-        white-space:pre-wrap;
-      }
-      .proofy-msg.user .proofy-bubble{
-        background:rgba(59,130,246,.20);
-        border-color:rgba(59,130,246,.25);
-      }
-      .proofy-bubble a{color:#93c5fd;text-decoration:underline;}
-      .proofy-footer{
-        display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.08);
-        background:rgba(255,255,255,.02);
-      }
-      .proofy-input{
-        flex:1;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);
-        background:rgba(0,0,0,.20);color:#eaf1ff;outline:none;
-      }
-      .proofy-send{
-        padding:10px 14px;border-radius:12px;border:none;cursor:pointer;
-        background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-        color:#0b1020;font-weight:900;
-      }
-      .proofy-hint{margin-top:8px;font-size:11px;opacity:.75;}
-      .proofy-ctas{display:flex;gap:8px;flex-wrap:wrap;max-width:85%;}
-      .proofy-cta{
-        display:inline-flex;align-items:center;
-        padding:9px 12px;border-radius:999px;
-        border:1px solid rgba(255,255,255,.14);
-        background:rgba(255,255,255,.06);
-        color:#eaf1ff;text-decoration:none;font-weight:800;font-size:12px;
-        cursor:pointer;
-      }
-      .proofy-cta:hover{background:rgba(255,255,255,.10);}
     `;
-    document.head.appendChild(style);
+    doc.head.appendChild(style);
 
-    const button = document.createElement("button");
-    button.className = "proofy-chat-btn";
-    button.type = "button";
-    button.innerText = "Fråga oss";
-    document.body.appendChild(button);
+    const fab = doc.createElement("button");
+    fab.id = "proofy-chat-fab";
+    fab.type = "button";
+    fab.textContent = "Fråga oss";
 
-    const panel = document.createElement("div");
-    panel.className = "proofy-panel";
+    const panel = doc.createElement("div");
+    panel.id = "proofy-chat-panel";
+    panel.setAttribute("aria-live", "polite");
     panel.innerHTML = `
-      <div class="proofy-header">
-        <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
-        <button class="proofy-x" type="button" aria-label="Stäng">✕</button>
-      </div>
-      <div class="proofy-body">
-        <div class="proofy-quick">
-          <button class="proofy-qbtn" type="button" data-q="Jag vill boka en demo. Hur går det till?">Boka demo</button>
-          <button class="proofy-qbtn" type="button" data-q="Jag vill starta en pilot. Vad är nästa steg?">Starta pilot</button>
-          <button class="proofy-qbtn" type="button" data-q="Hur jobbar ni med säkerhet och GDPR när ni inte lagrar filinnehåll?">Säkerhet</button>
-        </div>
-        <div id="proofy-messages"></div>
-        <div class="proofy-hint">Exempel: “Hur fungerar verifierings-ID?”, “Kan ny export ge ingen match?”</div>
-      </div>
-      <div class="proofy-footer">
-        <input class="proofy-input" placeholder="Skriv en fråga..." />
-        <button class="proofy-send" type="button">Skicka</button>
+      <h3>Fråga oss</h3>
+      <p>Snabb fråga? Mejla oss eller boka en demo så hör vi av oss inom 1 arbetsdag.</p>
+      <div id="proofy-chat-actions">
+        <a class="primary" href="#kontakt">Boka demo</a>
+        <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+        <button type="button" id="proofy-chat-close">Stäng</button>
       </div>
     `;
-    document.body.appendChild(panel);
 
-    const msgRoot = panel.querySelector("#proofy-messages");
-    const input = panel.querySelector(".proofy-input");
-    const sendBtn = panel.querySelector(".proofy-send");
-    const closeBtn = panel.querySelector(".proofy-x");
+    doc.body.appendChild(fab);
+    doc.body.appendChild(panel);
 
-    function toggle(open) {
-      isOpen = open ?? !isOpen;
-      panel.style.display = isOpen ? "block" : "none";
-      if (isOpen) input?.focus();
-    }
+    const setOpen = (open) => {
+      panel.setAttribute("data-open", open ? "1" : "0");
+    };
 
-    button.addEventListener("click", () => toggle(true));
-    closeBtn.addEventListener("click", () => toggle(false));
-
-    function escapeHtml(str) {
-      return String(str || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;");
-    }
-
-    function linkify(text) {
-      const escaped = escapeHtml(text);
-      return escaped.replace(
-        /(\bhttps?:\/\/[^\s]+|\B\/[^\s]+)/g,
-        (m) => `<a href="${m}" target="_blank" rel="noopener noreferrer">${m}</a>`
-      );
-    }
-
-    function scrollToBottom() {
-      const body = panel.querySelector(".proofy-body");
-      body.scrollTop = body.scrollHeight;
-    }
-
-    function addMessage(role, text) {
-      const wrapper = document.createElement("div");
-      wrapper.className = `proofy-msg ${role}`;
-
-      const bubble = document.createElement("div");
-      bubble.className = "proofy-bubble";
-      bubble.innerHTML = linkify(text);
-
-      wrapper.appendChild(bubble);
-      msgRoot.appendChild(wrapper);
-      scrollToBottom();
-      return wrapper;
-    }
-
-    function addCtas(parentWrapper, ctas) {
-      if (!Array.isArray(ctas) || ctas.length === 0) return;
-      const row = document.createElement("div");
-      row.className = "proofy-ctas";
-
-      ctas.slice(0, 3).forEach((c) => {
-        if (!c?.label || !c?.url) return;
-        const a = document.createElement("a");
-        a.className = "proofy-cta";
-        a.href = c.url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.textContent = c.label;
-        row.appendChild(a);
-      });
-
-      if (row.childElementCount > 0) {
-        parentWrapper.appendChild(row);
-        scrollToBottom();
-      }
-    }
-
-    async function send(text) {
-      const trimmed = (text || "").trim();
-      if (!trimmed) return;
-
-      addMessage("user", trimmed);
-      chatHistory.push({ role: "user", content: trimmed });
-
-      input.value = "";
-      input.focus();
-
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: chatHistory }),
-        });
-
-        const data = await res.json().catch(() => ({}));
-        const answer =
-          data?.answer ||
-          data?.reply ||
-          "Jag fick inget svar. Testa igen eller mejla kontakt@proofy.se.";
-        const ctas = data?.ctas || null;
-        const leadQ = data?.lead?.question || null;
-
-        chatHistory.push({ role: "assistant", content: answer });
-
-        const wrapper = addMessage("assistant", answer);
-        if (ctas) addCtas(wrapper, ctas);
-
-        if (leadQ) {
-          const follow = `\n\n${leadQ}`;
-          chatHistory.push({ role: "assistant", content: follow });
-          addMessage("assistant", follow);
-        }
-      } catch (e) {
-        addMessage("assistant", "Det blev ett tekniskt fel. Försök igen, eller mejla kontakt@proofy.se.");
-      }
-    }
-
-    sendBtn.addEventListener("click", () => send(input.value));
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") send(input.value);
+    fab.addEventListener("click", () => {
+      const open = panel.getAttribute("data-open") === "1";
+      setOpen(!open);
     });
 
-    panel.querySelectorAll(".proofy-qbtn").forEach((b) => {
-      b.addEventListener("click", () => send(b.getAttribute("data-q")));
+    panel.querySelector("#proofy-chat-close")?.addEventListener("click", () => setOpen(false));
+
+    // Stäng panel om man klickar utanför
+    doc.addEventListener("click", (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const open = panel.getAttribute("data-open") === "1";
+      if (!open) return;
+      if (t.closest("#proofy-chat-panel") || t.closest("#proofy-chat-fab")) return;
+      setOpen(false);
     });
+  };
 
-    const intro = "Hej. Skriv vad du vill verifiera, så föreslår jag ett bra upplägg.";
-    addMessage("assistant", intro);
-    chatHistory.push({ role: "assistant", content: intro });
-  }
-
+  // Kör tidigt + redundans (fixar “syns först efter interaktion”-symptom)
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", ensure);
   } else {
-    init();
+    ensure();
   }
+
+  // Backup ifall något stör initial rendering
+  setTimeout(ensure, 400);
 })();
