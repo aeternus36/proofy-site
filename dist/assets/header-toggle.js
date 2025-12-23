@@ -1,54 +1,81 @@
-// /assets/header-toggle.js
+/* /assets/header-toggle.js */
 (() => {
-  const docEl = document.documentElement;
+  const doc = document;
+  const root = doc.documentElement;
 
-  const toggle = document.querySelector(".mnav-toggle");
-  const drawer = document.getElementById("mnav-menu");
-  const overlay = document.querySelector(".mnav-overlay");
-  const closeEls = document.querySelectorAll("[data-mnav-close]");
+  const q = (sel) => doc.querySelector(sel);
 
-  if (!toggle || !drawer || !overlay) return;
+  const btn = q(".mnav-toggle");
+  const drawer = q("#mnav-menu");
+  const overlay = q(".mnav-overlay");
 
-  // Markera att JS är igång så CSS får visa overlay/drawer-lager
-  docEl.setAttribute("data-mnav-ready", "1");
+  // Markera ready ASAP (så CSS kan aktiveras utan att användaren klickar)
+  root.setAttribute("data-mnav-ready", "1");
 
-  const setExpanded = (open) => {
-    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  if (!btn || !drawer || !overlay) return;
+
+  const OPEN_CLASS = "mnav-open";
+  const LOCK_CLASS = "mnav-lock";
+
+  const isOpen = () => doc.body.classList.contains(OPEN_CLASS);
+
+  const setAria = (open) => {
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
   };
 
-  const openMenu = () => {
-    document.body.classList.add("mnav-open");
-    docEl.classList.add("mnav-lock");
-    setExpanded(true);
+  const open = () => {
+    if (isOpen()) return;
+    doc.body.classList.add(OPEN_CLASS);
+    root.classList.add(LOCK_CLASS);
+    setAria(true);
   };
 
-  const closeMenu = () => {
-    document.body.classList.remove("mnav-open");
-    docEl.classList.remove("mnav-lock");
-    setExpanded(false);
+  const close = () => {
+    if (!isOpen()) return;
+    doc.body.classList.remove(OPEN_CLASS);
+    root.classList.remove(LOCK_CLASS);
+    setAria(false);
   };
 
-  const isOpen = () => document.body.classList.contains("mnav-open");
+  const toggle = () => (isOpen() ? close() : open());
 
-  toggle.addEventListener("click", () => {
-    isOpen() ? closeMenu() : openMenu();
+  // Klick: toggle
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggle();
   });
 
-  // Klick på overlay + alla [data-mnav-close]
-  overlay.addEventListener("click", closeMenu);
-  closeEls.forEach((el) => el.addEventListener("click", closeMenu));
+  // Klick: stäng på overlay / stäng-knapp / [data-mnav-close]
+  doc.addEventListener("click", (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    if (t.matches("[data-mnav-close]")) close();
+  });
+
+  // Stäng när man klickar en länk i menyn (så chat-knappen inte "fastnar" i konstigt läge)
+  drawer.addEventListener("click", (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    if (t.closest("a")) close();
+  });
 
   // ESC stänger
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMenu();
+  doc.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
   });
 
-  // Klick på länk i menyn stänger (för #kontakt och vanliga länkar)
-  drawer.addEventListener("click", (e) => {
-    const a = e.target.closest("a");
-    if (a) closeMenu();
-  });
+  // Om man roterar / går till desktop-bredd: stäng och lås upp
+  const mq = window.matchMedia("(min-width: 921px)");
+  const handleMQ = () => {
+    if (mq.matches) close();
+  };
 
-  // Säkerställ korrekt startläge
-  closeMenu();
+  if (typeof mq.addEventListener === "function") {
+    mq.addEventListener("change", handleMQ);
+  } else {
+    mq.addListener(handleMQ);
+  }
+
+  // Säkerställ korrekt aria vid start
+  setAria(false);
 })();
