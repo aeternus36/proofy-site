@@ -2,13 +2,11 @@
 
 /* ---------------------------------------------------
    Mobilmeny för Proofy
-   - Isolerad till .mnav-* (ska inte påverka övrig UI)
-   - Överlay/drawer är HELT inaktiva tills JS sätter html[data-mnav-ready="1"]
+   - Bygger på body.mnav-open
 --------------------------------------------------- */
 
-/* Toggle-knapp */
 .mnav-toggle{
-  display:none; /* syns bara på mobil (via media query) */
+  display:none; /* syns bara på mobil */
   align-items:center;
   justify-content:center;
   width: 48px;
@@ -16,12 +14,11 @@
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
-  color: rgba(234,240,255,.92);
+  color: #eaf0ff;
   cursor:pointer;
   flex: 0 0 auto;
   position: relative;
-  z-index: 2002; /* alltid klickbar över headern */
-  -webkit-tap-highlight-color: transparent;
+  z-index: 2002; /* över drawer */
 }
 
 .mnav-toggle:hover{
@@ -29,7 +26,6 @@
   border-color: rgba(255,255,255,.18);
 }
 
-/* Hamburgar-ikon */
 .mnav-icon{
   width: 22px;
   height: 2px;
@@ -49,28 +45,24 @@
   background: rgba(234,240,255,.92);
   border-radius: 999px;
 }
+.mnav-icon::before{ top: -7px; }
+.mnav-icon::after{ top:  7px; }
 
-.mnav-icon::before{ top:-7px; }
-.mnav-icon::after{ top: 7px; }
-
-/* Overlay + drawer: default AV */
+/* Default: helt av tills JS markerar ready */
 .mnav-overlay,
 .mnav-drawer{
   display:none;
 }
 
-/* Aktivera komponenterna först när JS är ready */
+/* När JS är igång: skapa komponenter men håll dem osynliga */
 html[data-mnav-ready="1"] .mnav-overlay{
   display:block;
   position: fixed;
   inset: 0;
-
-  /* Viktigt: när stängd ska den vara HELT osynlig och inte ge “tint” */
+  background: rgba(0,0,0,.55);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-
-  background: rgba(0,0,0,.55);
   transition: opacity .18s ease, visibility .18s ease;
   z-index: 2000;
 }
@@ -82,22 +74,19 @@ html[data-mnav-ready="1"] .mnav-drawer{
   right: 0;
   height: 100dvh;
   width: min(86vw, 380px);
-
-  /* Drawer-look */
   background: rgba(11,18,32,.96);
   backdrop-filter: blur(10px) saturate(140%);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-
   border-left: 1px solid rgba(255,255,255,.10);
 
-  /* Stängd = helt utanför */
-  transform: translate3d(100%,0,0);
-  transition: transform .22s ease;
-  will-change: transform;
+  /* Viktig fix: när stängd ska den INTE påverka sidan */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 
+  transform: translateX(12px);
+  transition: transform .22s ease, opacity .18s ease, visibility .18s ease;
   z-index: 2001;
 
-  /* Viktigt för mobil */
   max-width: 100vw;
   padding: max(16px, env(safe-area-inset-top)) 16px 18px 16px;
   overflow-y: auto;
@@ -112,7 +101,10 @@ body.mnav-open .mnav-overlay{
 }
 
 body.mnav-open .mnav-drawer{
-  transform: translate3d(0,0,0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 /* Lås scroll när menyn är öppen */
@@ -131,7 +123,7 @@ html.mnav-lock body{
 }
 
 .mnav-title{
-  font-weight: 900;
+  font-weight: 950;
   font-size: 18px;
   color: rgba(234,240,255,.92);
 }
@@ -145,7 +137,6 @@ html.mnav-lock body{
   color: rgba(234,240,255,.92);
   cursor:pointer;
   position: relative;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .mnav-close:hover{
@@ -173,9 +164,8 @@ html.mnav-lock body{
   background: rgba(234,240,255,.92);
   border-radius: 999px;
 }
-
 .mnav-x::before{ transform: rotate(45deg); }
-.mnav-x::after{ transform: rotate(-45deg); }
+.mnav-x::after { transform: rotate(-45deg); }
 
 .mnav-links{
   display:flex;
@@ -193,7 +183,7 @@ html.mnav-lock body{
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.04);
   text-decoration:none;
-  font-weight: 800;
+  font-weight: 900;
   font-size: 18px;
   color: rgba(234,240,255,.92);
 }
@@ -236,36 +226,18 @@ html.mnav-lock body{
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
   text-decoration:none;
-  font-weight: 800;
+  font-weight: 900;
   color: rgba(234,240,255,.92);
 }
 
 /* ---------------------------------------------------
-   Chat-widget: håll alltid överst (z-index) och fast position
-   (många widgets använder något av dessa id/klasser)
---------------------------------------------------- */
-#chat-widget,
-.chat-widget,
-.chat-bubble,
-.chat-fab,
-#chat-bubble,
-#chatButton,
-#chat-button,
-#ask-us,
-.ask-us{
-  position: fixed !important;
-  z-index: 5000 !important;
-}
-
-/* ---------------------------------------------------
-   Responsivt: visa hamburgare på mobil, göm desktop-actions
+   Responsivt
 --------------------------------------------------- */
 @media (max-width: 920px){
   .mnav-toggle{ display:inline-flex; }
   #navActionsDesktop{ display:none !important; }
 }
 
-/* Desktop: drawer/overlay behövs ej */
 @media (min-width: 921px){
   html[data-mnav-ready="1"] .mnav-overlay,
   html[data-mnav-ready="1"] .mnav-drawer{
