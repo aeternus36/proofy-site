@@ -5,77 +5,34 @@
   const toggle = document.querySelector(".mnav-toggle");
   const drawer = document.getElementById("mnav-menu");
   const overlay = document.querySelector(".mnav-overlay");
-  const closeBtns = document.querySelectorAll("[data-mnav-close]");
 
   if (!toggle || !drawer || !overlay) return;
 
   const html = document.documentElement;
-  let lastActive = null;
-
-  function safeFocus(el) {
-    try {
-      if (el && typeof el.focus === "function") el.focus({ preventScroll: true });
-    } catch (_) {
-      try {
-        if (el && typeof el.focus === "function") el.focus();
-      } catch (_) {}
-    }
-  }
+  html.setAttribute("data-mnav-ready", "1");
 
   function openMenu() {
-    lastActive = document.activeElement || toggle;
-
     document.body.classList.add("mnav-open");
     html.classList.add("mnav-lock");
     toggle.setAttribute("aria-expanded", "true");
-
-    const closeBtn = drawer.querySelector(".mnav-close");
-    safeFocus(closeBtn || drawer);
   }
 
   function closeMenu() {
     document.body.classList.remove("mnav-open");
     html.classList.remove("mnav-lock");
     toggle.setAttribute("aria-expanded", "false");
-
-    safeFocus(lastActive || toggle);
-    lastActive = null;
-  }
-
-  function isOpen() {
-    return document.body.classList.contains("mnav-open");
   }
 
   toggle.addEventListener("click", (e) => {
     e.preventDefault();
-    e.stopPropagation();
-    isOpen() ? closeMenu() : openMenu();
+    document.body.classList.contains("mnav-open")
+      ? closeMenu()
+      : openMenu();
   });
 
-  overlay.addEventListener("click", (e) => {
-    e.preventDefault();
-    closeMenu();
-  });
-
-  closeBtns.forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      closeMenu();
-    });
-  });
-
-  drawer.addEventListener("click", (e) => {
-    const a = e.target.closest("a");
-    if (a) closeMenu();
-  });
+  overlay.addEventListener("click", closeMenu);
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && isOpen()) closeMenu();
-  });
-
-  window.addEventListener("resize", () => {
-    if (window.matchMedia("(min-width: 921px)").matches && isOpen()) {
-      closeMenu();
-    }
+    if (e.key === "Escape") closeMenu();
   });
 })();
