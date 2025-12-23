@@ -1,81 +1,95 @@
-/* /assets/header-toggle.js */
+/* /assets/header-toggle.js
+   Mobilmeny: togglar body.mnav-open + html.mnav-lock och sätter html[data-mnav-ready="1"]
+*/
+
 (() => {
-  "use strict";
+  const MOBILE_MAX = 920;
 
-  const toggle = document.querySelector(".mnav-toggle");
-  const drawer = document.getElementById("mnav-menu");
-  const overlay = document.querySelector(".mnav-overlay");
-  const closeBtns = document.querySelectorAll("[data-mnav-close]");
-
-  if (!toggle || !drawer || !overlay) return;
-
-  const html = document.documentElement;
-  let lastActive = null;
-
-  function safeFocus(el) {
-    try {
-      if (el && typeof el.focus === "function") el.focus({ preventScroll: true });
-    } catch (_) {
-      try {
-        if (el && typeof el.focus === "function") el.focus();
-      } catch (_) {}
-    }
+  function qs(sel, root = document) {
+    return root.querySelector(sel);
   }
 
-  function openMenu() {
-    lastActive = document.activeElement || toggle;
-
-    document.body.classList.add("mnav-open");
-    html.classList.add("mnav-lock");
-    toggle.setAttribute("aria-expanded", "true");
-
-    const closeBtn = drawer.querySelector(".mnav-close");
-    safeFocus(closeBtn || drawer);
+  function qsa(sel, root = document) {
+    return Array.from(root.querySelectorAll(sel));
   }
 
-  function closeMenu() {
-    document.body.classList.remove("mnav-open");
-    html.classList.remove("mnav-lock");
-    toggle.setAttribute("aria-expanded", "false");
-
-    safeFocus(lastActive || toggle);
-    lastActive = null;
+  function isMobile() {
+    return window.matchMedia(`(max-width: ${MOBILE_MAX}px)`).matches;
   }
 
-  function isOpen() {
-    return document.body.classList.contains("mnav-open");
+  function setExpanded(btn, expanded) {
+    if (!btn) return;
+    btn.setAttribute("aria-expanded", expanded ? "true" : "false");
   }
 
-  toggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    isOpen() ? closeMenu() : openMenu();
-  });
+  function openMenu({ btn, htmlEl, bodyEl }) {
+    bodyEl.classList.add("mnav-open");
+    htmlEl.classList.add("mnav-lock");
+    setExpanded(btn, true);
+  }
 
-  overlay.addEventListener("click", (e) => {
-    e.preventDefault();
-    closeMenu();
-  });
+  function closeMenu({ btn, htmlEl, bodyEl }) {
+    bodyEl.classList.remove("mnav-open");
+    htmlEl.classList.remove("mnav-lock");
+    setExpanded(btn, false);
+  }
 
-  closeBtns.forEach((btn) => {
+  function toggleMenu(ctx) {
+    const { bodyEl } = ctx;
+    if (bodyEl.classList.contains("mnav-open")) closeMenu(ctx);
+    else openMenu(ctx);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const htmlEl = document.documentElement;
+    const bodyEl = document.body;
+
+    // Markera att CSS-komponenten får aktiveras
+    htmlEl.setAttribute("data-mnav-ready", "1");
+
+    const btn = qs(".mnav-toggle");
+    const overlay = qs(".mnav-overlay");
+    const drawer = qs(".mnav-drawer");
+
+    // Om markup saknas: gör inget (men krascha inte)
+    if (!btn || !overlay || !drawer) return;
+
+    const ctx = { btn, htmlEl, bodyEl, overlay, drawer };
+
+    // Toggle via hamburgare
     btn.addEventListener("click", (e) => {
       e.preventDefault();
-      closeMenu();
+      if (!isMobile()) return; // på desktop: ignorera
+      toggleMenu(ctx);
     });
-  });
 
-  drawer.addEventListener("click", (e) => {
-    const a = e.target.closest("a");
-    if (a) closeMenu();
-  });
+    // Stäng på overlay
+    overlay.addEventListener("click", (e) => {
+      e.preventDefault();
+      closeMenu(ctx);
+    });
 
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && isOpen()) closeMenu();
-  });
+    // Stäng på alla element med data-mnav-close (ex close-knapp)
+    qsa("[data-mnav-close]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        closeMenu(ctx);
+      });
+    });
 
-  window.addEventListener("resize", () => {
-    if (window.matchMedia("(min-width: 921px)").matches && isOpen()) {
-      closeMenu();
-    }
+    // Stäng med ESC
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeMenu(ctx);
+    });
+
+    // Om man klickar på en länk i menyn: stäng (bra UX)
+    qsa(".mnav-drawer a").forEach((a) => {
+      a.addEventListener("click", () => closeMenu(ctx));
+    });
+
+    // Om man roterar / resize till desktop: stäng menyn
+    window.addEventListener("resize", () => {
+      if (!isMobile()) closeMenu(ctx);
+    });
   });
 })();
