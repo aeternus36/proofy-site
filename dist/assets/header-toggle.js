@@ -1,30 +1,30 @@
+/* /assets/header-toggle.js */
+
 (() => {
   const docEl = document.documentElement;
 
-  function qs(sel, root = document) { return root.querySelector(sel); }
-  function qsa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
-
-  function setExpanded(btn, expanded) {
-    if (!btn) return;
-    btn.setAttribute("aria-expanded", expanded ? "true" : "false");
-  }
+  const qs = (sel, root = document) => root.querySelector(sel);
+  const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   let toggleBtn;
   let overlayEl;
   let drawerEl;
 
   let hideTimer = null;
-  const TRANSITION_MS = 260; // matchar CSS transitions + marginal
 
-  function clearHideTimer(){
+  function setExpanded(expanded) {
+    if (!toggleBtn) return;
+    toggleBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+  }
+
+  function clearHideTimer() {
     if (hideTimer) {
       clearTimeout(hideTimer);
       hideTimer = null;
     }
   }
 
-  function setHiddenState(hidden){
-    // hidden=true => helt borta ur render-trädet (motverkar mobil-glitch/band)
+  function setHidden(hidden) {
     if (overlayEl) overlayEl.hidden = hidden;
     if (drawerEl) drawerEl.hidden = hidden;
   }
@@ -35,37 +35,31 @@
 
     clearHideTimer();
 
-    // Visa lagren igen
-    setHiddenState(false);
+    // Visa overlay + drawer i render-trädet igen
+    setHidden(false);
 
-    // Slå på klasser en frame senare för stabilare transition
+    // Nästa frame: slå på klasser (stabilare transitions)
     requestAnimationFrame(() => {
       body.classList.add("mnav-open");
       docEl.classList.add("mnav-lock");
-      setExpanded(toggleBtn, true);
+      setExpanded(true);
     });
   }
 
-  function closeMenu(immediate = false) {
+  function closeMenu() {
     const body = document.body;
     if (!body) return;
 
     body.classList.remove("mnav-open");
     docEl.classList.remove("mnav-lock");
-    setExpanded(toggleBtn, false);
+    setExpanded(false);
 
+    // Efter transition: göm helt (hindrar “band/slöja”/glitch)
     clearHideTimer();
-
-    if (immediate) {
-      setHiddenState(true);
-      return;
-    }
-
-    // Efter transition: göm helt (bombsäker mot “slöja/band”)
     hideTimer = setTimeout(() => {
       if (document.body && document.body.classList.contains("mnav-open")) return;
-      setHiddenState(true);
-    }, TRANSITION_MS);
+      setHidden(true);
+    }, 260);
   }
 
   function init() {
@@ -73,16 +67,18 @@
     overlayEl = qs(".mnav-overlay");
     drawerEl = qs(".mnav-drawer");
 
+    // Kräver toggle + drawer (overlay är nice-to-have)
     if (!toggleBtn || !drawerEl) return;
 
-    // Markera att mobilnav finns (CSS slår på overlay/drawer)
+    // Markera ready (CSS slår på layout för overlay/drawer)
     docEl.setAttribute("data-mnav-ready", "1");
 
-    // Starta alltid stängt + hidden (viktigt för att stoppa UI-glitch vid first paint)
-    setExpanded(toggleBtn, false);
-    setHiddenState(true);
-    closeMenu(true);
+    // Start: alltid stängt + helt gömt
+    setExpanded(false);
+    setHidden(true);
+    closeMenu();
 
+    // Toggle
     toggleBtn.addEventListener("click", () => {
       const isOpen = document.body?.classList.contains("mnav-open");
       if (isOpen) closeMenu();
@@ -90,24 +86,21 @@
     });
 
     // Stäng på overlay + close-knapp
-    qsa("[data-mnav-close]").forEach(el => {
-      el.addEventListener("click", () => closeMenu());
-    });
+    qsa("[data-mnav-close]").forEach((el) => el.addEventListener("click", closeMenu));
 
-    // Stäng på ESC
+    // ESC
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeMenu();
     });
 
     // Stäng när man klickar på länkar i mobilen
-    qsa(".mnav-links a").forEach(a => {
-      a.addEventListener("click", () => closeMenu());
-    });
+    qsa(".mnav-links a").forEach((a) => a.addEventListener("click", closeMenu));
 
-    // Säkerhetsnät: om man roterar/byter till desktop-bredd
+    // Om man går till desktop-bredd: säkerställ stängt och scroll upplåst
     window.addEventListener("resize", () => {
       if (window.innerWidth >= 921) {
-        closeMenu(true);
+        closeMenu();
+        setHidden(true);
       }
     });
   }
