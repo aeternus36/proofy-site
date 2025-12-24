@@ -21,10 +21,18 @@
   <meta name="twitter:title" content="Proofy – Dokumentverifiering för redovisningsbyråer" />
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
 
-  <!-- Global CSS (PLATT) -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
-  <!-- Header/menu CSS -->
-  <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
+  <!-- Global CSS -->
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01f" />
+  <!-- Header/menu override (PLATT) -->
+  <link rel="stylesheet" href="/assets/header.css?v=2025-flat2" />
+
+  <!-- ✅ Flat background safety net -->
+  <style>
+    html, body { background: #0b1220 !important; }
+    body { background-image: none !important; }
+    main::before{ content:none !important; }
+    main{ background: transparent !important; }
+  </style>
 
   <script type="application/ld+json">
   {
@@ -40,9 +48,9 @@
 <body>
 <a class="skip" href="#top">Hoppa till innehåll</a>
 
-<header>
+<header class="siteHeader">
   <div class="wrap">
-    <div class="nav">
+    <div class="navBar">
       <a class="brand" href="/" aria-label="Proofy">
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
@@ -56,7 +64,7 @@
         <a class="btn primary" href="#kontakt">Boka demo</a>
       </div>
 
-      <!-- Mobile menu -->
+      <!-- Mobile menu (native, no overlay/drawer) -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
@@ -200,7 +208,7 @@
   </div>
 </main>
 
-<footer>
+<footer class="siteFooter">
   <div class="wrap">
     <div class="foot">
       <div>
@@ -220,7 +228,7 @@
   </div>
 </footer>
 
-<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
-<script src="/chat-widget.js?v=2025-12-24a" defer></script>
+<script src="/assets/header-toggle.js?v=2025-flat2" defer></script>
+<script src="/chat-widget.js?v=2025-01f" defer></script>
 </body>
 </html>
