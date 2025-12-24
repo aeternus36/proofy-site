@@ -1,63 +1,253 @@
-/* =========================================================
-   Proofy – Mobilheader (BOMBSÄKER)
-   Princip:
-   - Overlay + drawer finns inte i layouten när stängda
-   - Inga transitions påverkar header / knappar
-   - Endast body.mnav-open styr synlighet
-   ========================================================= */
+/* /assets/header.css */
 
-/* 🔒 hidden vinner ALLTID */
+/* ---------------------------------------------------
+   Mobilmeny för Proofy (stabil)
+   - Bygger på body.mnav-open
+   - hidden används för att helt ta bort overlay/drawer när stängd
+--------------------------------------------------- */
+
+/* 🔒 hidden ska alltid vinna */
 .mnav-overlay[hidden],
 .mnav-drawer[hidden]{
-  display:none !important;
+  display: none !important;
 }
 
-/* ---------------------------------------------------------
-   Toggle-knapp
---------------------------------------------------------- */
 .mnav-toggle{
-  display:none;
+  display:none; /* syns bara på mobil */
   align-items:center;
   justify-content:center;
-  width:48px;
-  height:44px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:#eaf0ff;
+  width: 48px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: #eaf0ff;
   cursor:pointer;
-  position:relative;
-  z-index:3000;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 2002; /* över drawer */
+}
+
+.mnav-toggle:hover{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
 }
 
 .mnav-icon{
-  width:22px;
-  height:2px;
-  background:#eaf0ff;
-  border-radius:999px;
-  position:relative;
+  width: 22px;
+  height: 2px;
+  background: rgba(234,240,255,.92);
+  border-radius: 999px;
+  position: relative;
+  display:block;
 }
+
 .mnav-icon::before,
 .mnav-icon::after{
   content:"";
   position:absolute;
   left:0;
-  width:22px;
-  height:2px;
-  background:#eaf0ff;
-  border-radius:999px;
+  width: 22px;
+  height: 2px;
+  background: rgba(234,240,255,.92);
+  border-radius: 999px;
 }
-.mnav-icon::before{ top:-7px; }
-.mnav-icon::after { top: 7px; }
+.mnav-icon::before{ top: -7px; }
+.mnav-icon::after{ top:  7px; }
 
-/* ---------------------------------------------------------
-   Overlay (ALLTID fixed, aldrig i layout)
---------------------------------------------------------- */
-.mnav-overlay{
-  position:fixed;
+/* Default: av tills JS markerar ready */
+.mnav-overlay,
+.mnav-drawer{
+  display:none;
+}
+
+/* När JS är igång: komponenterna finns men är osynliga tills öppet */
+html[data-mnav-ready="1"] .mnav-overlay{
+  display:block;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .18s ease, visibility .18s ease;
+  z-index: 2000;
+}
+
+html[data-mnav-ready="1"] .mnav-drawer{
+  display:block;
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(86vw, 380px);
+  background: rgba(11,18,32,.96);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border-left: 1px solid rgba(255,255,255,.10);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transform: translateX(12px);
+  transition: transform .22s ease, opacity .18s ease, visibility .18s ease;
+  z-index: 2001;
+
+  max-width: 100vw;
+  padding: max(16px, env(safe-area-inset-top)) 16px 18px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Öppet läge */
+body.mnav-open .mnav-overlay{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+body.mnav-open .mnav-drawer{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+/* Lås scroll när menyn är öppen */
+html.mnav-lock,
+html.mnav-lock body{
+  overflow: hidden;
+}
+
+/* Innehåll i drawer */
+.mnav-drawerTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 6px 4px 12px 4px;
+}
+
+.mnav-title{
+  font-weight: 950;
+  font-size: 18px;
+  color: rgba(234,240,255,.92);
+}
+
+.mnav-close{
+  width: 48px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(234,240,255,.92);
+  cursor:pointer;
+  position: relative;
+}
+
+.mnav-close:hover{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
+}
+
+.mnav-x{
+  position:absolute;
   inset:0;
-  background:rgba(0,0,0,.55);
-  z-index:2000;
+  margin:auto;
+  width: 18px;
+  height: 18px;
+  display:block;
 }
 
-/* -------------------*
+.mnav-x::before,
+.mnav-x::after{
+  content:"";
+  position:absolute;
+  left: 0;
+  top: 8px;
+  width: 18px;
+  height: 2px;
+  background: rgba(234,240,255,.92);
+  border-radius: 999px;
+}
+.mnav-x::before{ transform: rotate(45deg); }
+.mnav-x::after { transform: rotate(-45deg); }
+
+.mnav-links{
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
+  padding: 10px 4px 16px 4px;
+}
+
+.mnav-links a{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  text-decoration:none;
+  font-weight: 900;
+  font-size: 18px;
+  color: rgba(234,240,255,.92);
+}
+
+.mnav-links a:hover{
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.14);
+}
+
+.mnav-links a:active{
+  transform: translateY(1px);
+}
+
+.mnav-links a:last-child{
+  border: none;
+  color: #08101e;
+  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
+}
+
+.mnav-meta{
+  margin-top: 14px;
+  padding: 14px 4px 6px 4px;
+  border-top: 1px solid rgba(255,255,255,.10);
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+.mnav-note{
+  color: rgba(169,183,211,.92);
+  font-size: 14px;
+}
+
+.mnav-mail{
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  text-decoration:none;
+  font-weight: 900;
+  color: rgba(234,240,255,.92);
+}
+
+/* ---------------------------------------------------
+   Responsivt
+--------------------------------------------------- */
+@media (max-width: 920px){
+  .mnav-toggle{ display:inline-flex; }
+  #navActionsDesktop{ display:none !important; }
+}
+
+@media (min-width: 921px){
+  html[data-mnav-ready="1"] .mnav-overlay,
+  html[data-mnav-ready="1"] .mnav-drawer{
+    display:none !important;
+  }
+}
