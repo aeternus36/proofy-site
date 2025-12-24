@@ -6,9 +6,11 @@
   <title>Proofy – Verifiera underlag</title>
   <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-21a" />
-  <!-- Mobile header/menu CSS MUST load after global -->
-  <link rel="stylesheet" href="/assets/header.css?v=2025-12-21a" />
+
+  <!-- PLATT global -->
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
+  <!-- Header/menu -->
+  <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
 </head>
 
 <body>
@@ -22,16 +24,6 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Mobile menu toggle -->
-      <button
-        class="mnav-toggle"
-        type="button"
-        aria-label="Öppna meny"
-        aria-controls="mnav-menu"
-        aria-expanded="false">
-        <span class="mnav-icon" aria-hidden="true"></span>
-      </button>
-
       <!-- Desktop actions -->
       <div class="navActions" id="navActionsDesktop">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
@@ -39,32 +31,26 @@
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
+
+      <!-- Mobile menu (details) -->
+      <details class="mnav" id="mnav">
+        <summary class="mnavSummary" aria-label="Öppna meny">
+          <span class="mnavIcon" aria-hidden="true"></span>
+        </summary>
+        <nav class="mnavMenu" aria-label="Meny">
+          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka demo</a>
+
+          <div class="mnavMeta">
+            <div class="mnavNote">Verifiering · revision · granskning</div>
+            <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+          </div>
+        </nav>
+      </details>
     </div>
   </div>
-
-  <!-- Mobile overlay + drawer -->
-  <div class="mnav-overlay" data-mnav-close></div>
-
-  <nav class="mnav-drawer" id="mnav-menu" aria-label="Meny">
-    <div class="mnav-drawerTop">
-      <div class="mnav-title">Meny</div>
-      <button class="mnav-close" type="button" aria-label="Stäng meny" data-mnav-close>
-        <span class="mnav-x" aria-hidden="true"></span>
-      </button>
-    </div>
-
-    <div class="mnav-links">
-      <a href="/pilot.html">Starta pilot</a>
-      <a href="/verify.html">Verifiera underlag</a>
-      <a href="/register.html">Skapa Verifierings-ID</a>
-      <a href="/#kontakt">Boka demo</a>
-    </div>
-
-    <div class="mnav-meta">
-      <div class="mnav-note">Verifiering · revision · granskning</div>
-      <a class="mnav-mail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
-    </div>
-  </nav>
 </header>
 
 <main id="main">
@@ -397,7 +383,7 @@
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2025-12-21a" defer></script>
-<script src="/chat-widget.js?v=2025-01" defer></script>
+<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
+<script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
 </html>
