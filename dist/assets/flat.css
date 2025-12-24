@@ -1,129 +1,52 @@
-/* /assets/flat.css */
-/* NÖD-LÄGE: En färg överallt + inga blur/gradients/shadows + stabil headerlayout */
+/* dist/assets/flat.css */
+/* Global “flat mode” – tvingar 1 färg, tar bort glow/gradients/blur på layoutnivå.
+   Laddas SIST (efter proofy.css + header.css).
+*/
 
 :root{
-  --flat-bg: #0b1220;
-  --flat-text: #eaf0ff;
-  --flat-muted: rgba(234,240,255,.78);
-  --flat-border: rgba(255,255,255,.10);
+  --proofy-flat-bg: #0b1220;
 }
 
-/* 1) Tvinga HELA sidan till 1 färg */
+/* 1) Bas: inga gradients eller bakgrundsbilder på sidnivå */
 html, body{
-  background: var(--flat-bg) !important;
-  color: var(--flat-text) !important;
+  background: var(--proofy-flat-bg) !important;
+  background-image: none !important;
+  background-attachment: initial !important;
 }
 
-/* Stäng av ALLA background-images/gradients som kan skapa “band” */
-body, header, main, footer, section, .wrap, .card, .tile{
+/* 2) Ta bort ev. glow/pseudo-element som ofta används för “radial blobs” */
+html::before, html::after,
+body::before, body::after{
+  content: none !important;
+  display: none !important;
+}
+
+/* 3) De vanligaste containers som annars kan bära gradient/overlay */
+main, header, footer,
+.wrap, .card, .content,
+.certWrap, .certTop, .certPanel,
+.note, details,
+.mnav-drawer, .mnav-overlay{
   background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 4) Om någon global regel lägger en “film/slöja” via filter */
+*{
+  /* Vi tar INTE bort backgrounds på knappar/badges etc här.
+     Vi tar bara bort filter/backdrop som kan skapa “band” på vissa mobiler. */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 5) Extra: om någon layoutsektion skulle ha fått transparent bakgrund och därmed “läcka”
+      igenom gradient från något annat lager */
+main{
   background: transparent !important;
 }
 
-/* Sätt en platt bakgrund på huvudytor */
-main, footer{
-  background: var(--flat-bg) !important;
-}
-
-/* 2) Stäng av blur / filter / skuggor (vanliga glitch-källor) */
-*{
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  filter: none !important;
-}
-
-.card, .tile, header, .nav, .proofy-panel{
-  box-shadow: none !important;
-}
-
-/* 3) Om något overlay/pseudo-element ligger och spökar */
-body::before, body::after,
-header::before, header::after,
-main::before, main::after,
-footer::before, footer::after{
-  content: none !important;
-}
-
-/* 4) Platt header med stabil layout (ingen wrap = ingen “knapp-omkastning”) */
-header{
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  background: var(--flat-bg) !important;
-  border-bottom: 1px solid var(--flat-border) !important;
-}
-
-.nav{
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 12px !important;
-  flex-wrap: nowrap !important;   /* ✅ superviktigt */
-}
-
-.brand{
-  flex: 0 0 auto !important;
-  text-decoration: none !important;
-}
-
-/* Desktop actions: alltid samma ordning, aldrig wrap */
-.navActions{
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-  gap: 10px !important;
-  flex-wrap: nowrap !important;   /* ✅ superviktigt */
-  white-space: nowrap !important; /* ✅ */
-}
-
-/* Om knappar blir för breda: låt dem scrolla horisontellt istället för att hoppa */
-.navActions{
-  overflow-x: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  scrollbar-width: none;
-}
-.navActions::-webkit-scrollbar{ display:none; }
-
-/* 5) Mobil: döljer desktop actions helt och visar bara hamburger */
-@media (max-width: 920px){
-  #navActionsDesktop{ display:none !important; }
-  .navActions{ display:none !important; }
-  .mnav-toggle{ display:inline-flex !important; }
-}
-
-/* 6) Gör formulär/text platta men läsbara */
-p, li, .small, .lead, .meta{
-  color: var(--flat-muted) !important;
-}
-
-/* 7) Gör cards “platta” men med kant så UI inte blir helt utan struktur */
-.card, .tile{
-  border: 1px solid var(--flat-border) !important;
-  background: rgba(255,255,255,.03) !important;
-  border-radius: 18px !important;
-}
-
-/* 8) Stäng av “fancy” knappbakgrunder så inget gradient-triggar */
-.btn, .btn.primary, .btn.soft, .btn.ghost{
-  background-image: none !important;
-  box-shadow: none !important;
-}
-
-.btn{
-  border: 1px solid var(--flat-border) !important;
-  background: rgba(255,255,255,.06) !important;
-  color: var(--flat-text) !important;
-}
-
-.btn.primary{
-  border: 1px solid rgba(110,168,255,.55) !important;
-  background: rgba(110,168,255,.22) !important;
-  color: var(--flat-text) !important;
-}
-
-/* 9) Säkerhetsbälte: om någon sektion har egen gradient */
-[class*="gradient"], [class*="blur"], [class*="glow"]{
-  background-image: none !important;
-  box-shadow: none !important;
-  filter: none !important;
+/* 6) Säkerhet: gör header/footer helt platta (om proofy.css försöker med gradient) */
+header, footer{
+  background: var(--proofy-flat-bg) !important;
 }
