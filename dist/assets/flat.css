@@ -1,52 +1,47 @@
 /* dist/assets/flat.css */
-/* Global “flat mode” – tvingar 1 färg, tar bort glow/gradients/blur på layoutnivå.
-   Laddas SIST (efter proofy.css + header.css).
+/* Global “flat mode” – stoppar överlappande färgskikt/gradient-banding på mobiler.
+   Laddas sist efter proofy.css + header.css.
 */
 
 :root{
   --proofy-flat-bg: #0b1220;
 }
 
-/* 1) Bas: inga gradients eller bakgrundsbilder på sidnivå */
+/* Bas */
 html, body{
   background: var(--proofy-flat-bg) !important;
   background-image: none !important;
   background-attachment: initial !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-/* 2) Ta bort ev. glow/pseudo-element som ofta används för “radial blobs” */
+/* Vanliga pseudo-element som används för “glow” */
 html::before, html::after,
 body::before, body::after{
   content: none !important;
   display: none !important;
 }
 
-/* 3) De vanligaste containers som annars kan bära gradient/overlay */
+/* Stoppa gradients/blur på större ytor */
 main, header, footer,
-.wrap, .card, .content,
+.wrap, section,
+.card, .content,
 .certWrap, .certTop, .certPanel,
-.note, details,
-.mnav-drawer, .mnav-overlay{
+.note, details{
   background-image: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-/* 4) Om någon global regel lägger en “film/slöja” via filter */
-*{
-  /* Vi tar INTE bort backgrounds på knappar/badges etc här.
-     Vi tar bara bort filter/backdrop som kan skapa “band” på vissa mobiler. */
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* 5) Extra: om någon layoutsektion skulle ha fått transparent bakgrund och därmed “läcka”
-      igenom gradient från något annat lager */
-main{
-  background: transparent !important;
-}
-
-/* 6) Säkerhet: gör header/footer helt platta (om proofy.css försöker med gradient) */
+/* Header/footer helt platt (om global CSS försöker lägga gradients) */
 header, footer{
   background: var(--proofy-flat-bg) !important;
+  background-image: none !important;
+}
+
+/* Säkerhetsnät: vissa mobiler “bandar” vid filter/transform */
+*{
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
