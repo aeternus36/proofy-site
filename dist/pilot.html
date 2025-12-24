@@ -13,6 +13,16 @@
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
   <!-- Mobile header/menu CSS MUST load after global -->
   <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
+
+  <!-- ✅ Flat background safety net (prevents any band/overlap on this page) -->
+  <style>
+    html, body { background: #0b1220 !important; }
+    body { background-image: none !important; }
+    main::before{ content:none !important; } /* if you used the fixed overlay version earlier */
+    main{
+      background: transparent !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -25,8 +35,6 @@
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
-
-      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
 
       <div class="navActions">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
