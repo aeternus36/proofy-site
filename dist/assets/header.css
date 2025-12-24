@@ -1,29 +1,75 @@
 /* /assets/header.css */
-/* PLATT HEADER (1 färg) + robust mobilmeny */
+/* PLATT + STABIL HEADER: inga gradients, inga blur, ingen overlay/drawer */
 
-/* Hidden ska alltid vinna */
-.mnav-overlay[hidden],
-.mnav-drawer[hidden]{
-  display:none !important;
+/* Bas: tvinga platt bakgrund på header/foot (för att stoppa “band”) */
+.siteHeader,
+.siteFooter{
+  background: #0b1220 !important;
+  border-color: rgba(255,255,255,.10) !important;
 }
 
-/* ====== HEADER: 1 färg, inga gradients/blur ====== */
-header{
+/* Header layout */
+.siteHeader{
   position: sticky;
   top: 0;
-  z-index: 50;
-  background: #0b1220;               /* ✅ en färg */
+  z-index: 999;
   border-bottom: 1px solid rgba(255,255,255,.10);
 }
 
-/* Om din global CSS har backdrop-filter/gradient på header/nav, slå av det här */
-header, header *{
-  backdrop-filter: none !important;
+.navBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 14px 0;
+  flex-wrap: nowrap; /* viktig: stoppar “hopp i oordning” */
 }
 
-/* ====== Toggle ====== */
-.mnav-toggle{
-  display:none;
+.brand{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  text-decoration:none;
+  font-weight: 900;
+  color: rgba(234,240,255,.92);
+  flex: 0 0 auto;
+}
+
+.logo{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(110,168,255,.35);
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+/* Desktop actions – alltid samma rad, aldrig wrap */
+.navActions{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+
+  /* om det blir trångt: scroll istället för att reflowa */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.navActions::-webkit-scrollbar{ display:none; }
+
+/* Mobile menu via details */
+.mnav{
+  display:none; /* bara mobil */
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.mnavSummary{
+  list-style: none;
+  display:inline-flex;
   align-items:center;
   justify-content:center;
   width: 48px;
@@ -31,14 +77,11 @@ header, header *{
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
-  color: #eaf0ff;
   cursor:pointer;
-  flex: 0 0 auto;
-  position: relative;
-  z-index: 2002;
 }
+.mnavSummary::-webkit-details-marker{ display:none; }
 
-.mnav-icon{
+.mnavIcon{
   width: 22px;
   height: 2px;
   background: rgba(234,240,255,.92);
@@ -46,8 +89,8 @@ header, header *{
   position: relative;
   display:block;
 }
-.mnav-icon::before,
-.mnav-icon::after{
+.mnavIcon::before,
+.mnavIcon::after{
   content:"";
   position:absolute;
   left:0;
@@ -56,148 +99,81 @@ header, header *{
   background: rgba(234,240,255,.92);
   border-radius: 999px;
 }
-.mnav-icon::before{ top: -7px; }
-.mnav-icon::after { top:  7px; }
+.mnavIcon::before{ top: -7px; }
+.mnavIcon::after{ top:  7px; }
 
-/* Default: av tills JS säger ready */
-.mnav-overlay,
-.mnav-drawer{
-  display:none;
-}
-
-/* Overlay: 1 färg */
-html[data-mnav-ready="1"] .mnav-overlay{
-  display:block;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.60);       /* ✅ en färg */
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity .18s ease, visibility .18s ease;
-  z-index: 2000;
-}
-
-/* Drawer: 1 färg */
-html[data-mnav-ready="1"] .mnav-drawer{
-  display:block;
-  position: fixed;
-  top: 0;
+/* Själva menyn (ingen overlay) */
+.mnavMenu{
+  position: absolute;
   right: 0;
-  height: 100dvh;
-  width: min(86vw, 380px);
-  background: #0b1220;               /* ✅ en färg */
-  border-left: 1px solid rgba(255,255,255,.10);
-  box-shadow: none !important;       /* ✅ inga shadows som kan ge band */
-
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-
-  transform: translateX(12px);
-  transition: transform .22s ease, opacity .18s ease, visibility .18s ease;
-  z-index: 2001;
-
-  max-width: 100vw;
-  padding: max(16px, env(safe-area-inset-top)) 16px 18px 16px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Öppet */
-body.mnav-open .mnav-overlay{
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-body.mnav-open .mnav-drawer{
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-/* Lås scroll */
-html.mnav-lock,
-html.mnav-lock body{
-  overflow: hidden;
-}
-
-/* Drawer content */
-.mnav-drawerTop{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-  padding: 6px 4px 12px 4px;
-}
-.mnav-title{
-  font-weight: 950;
-  font-size: 18px;
-  color: rgba(234,240,255,.92);
-}
-
-.mnav-close{
-  width: 48px;
-  height: 44px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(234,240,255,.92);
-  cursor:pointer;
-  position: relative;
-}
-.mnav-x{
-  position:absolute;
-  inset:0;
-  margin:auto;
-  width: 18px;
-  height: 18px;
-  display:block;
-}
-.mnav-x::before,
-.mnav-x::after{
-  content:"";
-  position:absolute;
-  left: 0;
-  top: 8px;
-  width: 18px;
-  height: 2px;
-  background: rgba(234,240,255,.92);
-  border-radius: 999px;
-}
-.mnav-x::before{ transform: rotate(45deg); }
-.mnav-x::after { transform: rotate(-45deg); }
-
-.mnav-links{
-  display:flex;
-  flex-direction:column;
-  gap: 12px;
-  padding: 10px 4px 16px 4px;
-}
-.mnav-links a{
-  display:flex;
-  align-items:center;
-  padding: 16px 18px;
+  top: calc(100% + 10px);
+  width: min(86vw, 360px);
+  background: #0b1220;
+  border: 1px solid rgba(255,255,255,.12);
   border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.38);
+}
+
+.mnavLink{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding: 14px 14px;
+  border-radius: 16px;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.04);
   text-decoration:none;
   font-weight: 900;
-  font-size: 18px;
+  color: rgba(234,240,255,.92);
+  margin-bottom: 10px;
+}
+.mnavLink:hover{ background: rgba(255,255,255,.07); }
+.mnavLinkPrimary{
+  border-color: rgba(110,168,255,.40);
+  background: rgba(110,168,255,.18);
+}
+
+.mnavMeta{
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.10);
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.mnavNote{
+  color: rgba(234,240,255,.72);
+  font-size: 14px;
+}
+.mnavMail{
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  text-decoration:none;
+  font-weight: 900;
   color: rgba(234,240,255,.92);
 }
 
-/* Mobil/desktop */
+/* Mobil: visa menyn och göm desktop-actions */
 @media (max-width: 920px){
-  .mnav-toggle{ display:inline-flex; }
-
-  /* ✅ Döljer ALLA header-knappar på mobil, oavsett sida */
+  #navActionsDesktop{ display:none !important; }
   .navActions{ display:none !important; }
+  .mnav{ display:block; }
 }
+
+/* Desktop: dölj mobilmenyn */
 @media (min-width: 921px){
-  html[data-mnav-ready="1"] .mnav-overlay,
-  html[data-mnav-ready="1"] .mnav-drawer{
-    display:none !important;
-  }
+  .mnav{ display:none !important; }
+}
+
+/* Extra safety: stäng av blur/filter/gradients som kan skapa “band” */
+.siteHeader, .siteFooter, .mnavMenu{
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-image: none !important;
 }
