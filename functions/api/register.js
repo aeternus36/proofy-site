@@ -3,7 +3,6 @@ import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
 const PROOFY_ABI = [
-  // Read: getProof(bytes32) -> (uint256 timestamp, address submitter)
   {
     type: "function",
     name: "getProof",
@@ -14,7 +13,6 @@ const PROOFY_ABI = [
       { name: "submitter", type: "address" },
     ],
   },
-  // Write: register(bytes32)
   {
     type: "function",
     name: "register",
@@ -24,15 +22,24 @@ const PROOFY_ABI = [
   },
 ];
 
-function json(status, obj) {
-  return new Response(JSON.stringify(obj, null, 2), {
-    status,
+function json(status, obj, origin) {
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+  };
+  if (origin) headers["Access-Control-Allow-Origin"] = origin;
+  return new Response(JSON.stringify(obj), { status, headers });
+}
+
+function corsPreflight(origin) {
+  return new Response(null, {
+    status: 204,
     headers: {
-      "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-      "Access-Control-Allow-Headers": "content-type",
+      "Access-Control-Allow-Origin": origin || "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400",
     },
   });
 }
@@ -63,33 +70,18 @@ async function readProof({ publicClient, contractAddress, hash }) {
     args: [hash],
   });
 
-  // viem tuple -> array
   const timestampBig = proof?.[0] ?? 0n;
-  const submitter = proof?.[1] ?? "0x0000000000000000000000000000000000000000";
-
   const exists = BigInt(timestampBig) !== 0n;
 
-  // Timestamp i sekunder: returnera Number om säkert, annars string
   const tsBig = BigInt(timestampBig);
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
 
   const timestamp =
     exists && tsBig <= maxSafe ? Number(tsBig) : exists ? tsBig.toString() : 0;
 
-  return {
-    exists,
-    timestamp,
-    submitter: exists
-      ? submitter
-      : "0x0000000000000000000000000000000000000000",
-  };
+  return { exists, timestamp };
 }
 
-/**
- * 🔒 Robust post-read:
- * Efter registrering kan vissa RPC:er returnera receipt
- * innan state är helt läsbart. Vi retry:ar försiktigt.
- */
 async function readProofWithRetry({
   publicClient,
   contractAddress,
@@ -99,121 +91,62 @@ async function readProofWithRetry({
 }) {
   for (let i = 0; i < retries; i++) {
     const proof = await readProof({ publicClient, contractAddress, hash });
-    if (proof.exists && proof.timestamp && proof.timestamp !== 0) {
-      return proof;
-    }
+    if (proof.exists && proof.timestamp && proof.timestamp !== 0) return proof;
     await new Promise((r) => setTimeout(r, delayMs));
   }
   return readProof({ publicClient, contractAddress, hash });
 }
 
 export async function onRequest({ request, env }) {
-  // CORS preflight
-  if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-        "Access-Control-Allow-Headers": "content-type",
-        "Cache-Control": "no-store",
-      },
-    });
-  }
+  const origin = request.headers.get("Origin") || "";
 
-  // Allow GET for quick browser test
-  if (request.method === "GET") {
-    return json(200, {
-      ok: true,
-      message: "Use POST /api/register with JSON body: { hash: \"0x...\" }",
-      env: {
-        hasKey: !!env.PROOFY_PRIVATE_KEY,
-        hasRpc: !!env.AMOY_RPC_URL,
-        hasAddress: !!env.PROOFY_CONTRACT_ADDRESS,
-      },
-      chain: { name: "polygonAmoy", chainId: polygonAmoy.id },
-    });
+  if (request.method === "OPTIONS") {
+    return corsPreflight(origin || "*");
   }
 
   if (request.method !== "POST") {
-    return json(405, { ok: false, error: "Use POST" });
+    return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
 
-  // 1) Read body
   let body;
   try {
     body = await request.json();
   } catch {
-    return json(400, { ok: false, error: "Invalid JSON body" });
+    return json(400, { ok: false, error: "Invalid JSON body" }, origin);
   }
 
-  const hash = (body?.hash || "").trim();
+  const hash = String(body?.hash || "").trim();
 
-  // 2) Validate hash (bytes32)
   if (!isValidBytes32Hex(hash)) {
-    return json(400, {
-      ok: false,
-      error: "hash must be bytes32 (0x + 64 hex chars)",
-      received: body,
-    });
+    return json(400, { ok: false, error: "Invalid hash format" }, origin);
   }
 
-  // 3) Env
   const rpcUrl = env.AMOY_RPC_URL;
   const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
   const privateKey = env.PROOFY_PRIVATE_KEY;
 
   if (!rpcUrl || !contractAddress || !privateKey) {
-    return json(500, {
-      ok: false,
-      error: "Missing environment variables",
-      required: ["AMOY_RPC_URL", "PROOFY_CONTRACT_ADDRESS", "PROOFY_PRIVATE_KEY"],
-    });
+    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
 
   if (!isValidAddressHex(contractAddress)) {
-    return json(500, {
-      ok: false,
-      error: "Invalid contract address format",
-      expected: "0x + 40 hex chars",
-    });
+    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
 
   try {
-    // 4) Clients
     const publicClient = createPublicClient({
       chain: polygonAmoy,
       transport: http(rpcUrl),
     });
 
-    const chainId = polygonAmoy.id;
-
-    // 5) Pre-check: if already registered
+    // If already registered, return exists+timestamp
     const pre = await readProof({ publicClient, contractAddress, hash });
-
-    if (pre.exists) {
-      if (!pre.timestamp || pre.timestamp === 0) {
-        return json(500, {
-          ok: false,
-          error: "Inconsistent state: proof exists but timestamp is missing",
-          chainId,
-          hash,
-        });
-      }
-
-      return json(200, {
-        ok: true,
-        chainId,
-        hash,
-        alreadyExists: true,
-        timestamp: pre.timestamp,
-        submitter: pre.submitter,
-      });
+    if (pre.exists && pre.timestamp && pre.timestamp !== 0) {
+      return json(200, { ok: true, exists: true, timestamp: pre.timestamp }, origin);
     }
 
-    // 6) Not registered -> send tx
+    // Not registered -> write
     const account = privateKeyToAccount(privateKey);
-
     const walletClient = createWalletClient({
       account,
       chain: polygonAmoy,
@@ -227,13 +160,11 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
-    // 7) Wait for confirmation
     await publicClient.waitForTransactionReceipt({
       hash: txHash,
       confirmations: 1,
     });
 
-    // 8) Read proof again (with retry)
     const post = await readProofWithRetry({
       publicClient,
       contractAddress,
@@ -243,29 +174,12 @@ export async function onRequest({ request, env }) {
     });
 
     if (!post.exists || !post.timestamp || post.timestamp === 0) {
-      return json(500, {
-        ok: false,
-        error:
-          "Registration confirmation succeeded, but proof was not readable afterwards",
-        chainId,
-        hash,
-        txHash,
-      });
+      return json(500, { ok: false, error: "Registration completed but not readable" }, origin);
     }
 
-    return json(200, {
-      ok: true,
-      chainId,
-      hash,
-      alreadyExists: false,
-      txHash,
-      timestamp: post.timestamp,
-      submitter: post.submitter,
-    });
+    // Keep response minimal for frontend
+    return json(200, { ok: true, exists: true, timestamp: post.timestamp }, origin);
   } catch (e) {
-    return json(500, {
-      ok: false,
-      error: e?.message || String(e),
-    });
+    return json(500, { ok: false, error: "Register failed" }, origin);
   }
 }
