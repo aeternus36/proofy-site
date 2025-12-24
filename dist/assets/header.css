@@ -1,21 +1,29 @@
 /* /assets/header.css */
+/* PLATT HEADER (1 färg) + robust mobilmeny */
 
-/* ---------------------------------------------------
-   Mobilmeny för Proofy
-   - Bygger på body.mnav-open
-   - Robust: använder [hidden] för att helt ta bort overlay/drawer när stängd
-   - Viktigt: döljer ALLA .navActions på mobil (inte bara ett visst id)
---------------------------------------------------- */
-
-/* 🔒 hidden ska alltid vinna */
+/* Hidden ska alltid vinna */
 .mnav-overlay[hidden],
 .mnav-drawer[hidden]{
-  display: none !important;
+  display:none !important;
 }
 
-/* Toggle-knappen (hamburger) */
+/* ====== HEADER: 1 färg, inga gradients/blur ====== */
+header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #0b1220;               /* ✅ en färg */
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+/* Om din global CSS har backdrop-filter/gradient på header/nav, slå av det här */
+header, header *{
+  backdrop-filter: none !important;
+}
+
+/* ====== Toggle ====== */
 .mnav-toggle{
-  display:none; /* syns bara på mobil */
+  display:none;
   align-items:center;
   justify-content:center;
   width: 48px;
@@ -27,12 +35,7 @@
   cursor:pointer;
   flex: 0 0 auto;
   position: relative;
-  z-index: 2002; /* över drawer */
-}
-
-.mnav-toggle:hover{
-  background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.18);
+  z-index: 2002;
 }
 
 .mnav-icon{
@@ -43,7 +46,6 @@
   position: relative;
   display:block;
 }
-
 .mnav-icon::before,
 .mnav-icon::after{
   content:"";
@@ -57,18 +59,18 @@
 .mnav-icon::before{ top: -7px; }
 .mnav-icon::after { top:  7px; }
 
-/* Default: helt av tills JS markerar ready */
+/* Default: av tills JS säger ready */
 .mnav-overlay,
 .mnav-drawer{
   display:none;
 }
 
-/* När JS är igång: skapa komponenter men håll dem osynliga */
+/* Overlay: 1 färg */
 html[data-mnav-ready="1"] .mnav-overlay{
   display:block;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.55);
+  background: rgba(0,0,0,.60);       /* ✅ en färg */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -76,6 +78,7 @@ html[data-mnav-ready="1"] .mnav-overlay{
   z-index: 2000;
 }
 
+/* Drawer: 1 färg */
 html[data-mnav-ready="1"] .mnav-drawer{
   display:block;
   position: fixed;
@@ -83,11 +86,10 @@ html[data-mnav-ready="1"] .mnav-drawer{
   right: 0;
   height: 100dvh;
   width: min(86vw, 380px);
-  background: rgba(11,18,32,.96);
-  backdrop-filter: blur(10px) saturate(140%);
+  background: #0b1220;               /* ✅ en färg */
   border-left: 1px solid rgba(255,255,255,.10);
+  box-shadow: none !important;       /* ✅ inga shadows som kan ge band */
 
-  /* När stängd: ska inte påverka sidan */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -102,13 +104,12 @@ html[data-mnav-ready="1"] .mnav-drawer{
   -webkit-overflow-scrolling: touch;
 }
 
-/* Öppet läge */
+/* Öppet */
 body.mnav-open .mnav-overlay{
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
-
 body.mnav-open .mnav-drawer{
   opacity: 1;
   visibility: visible;
@@ -116,13 +117,13 @@ body.mnav-open .mnav-drawer{
   transform: translateX(0);
 }
 
-/* Lås scroll när menyn är öppen */
+/* Lås scroll */
 html.mnav-lock,
 html.mnav-lock body{
   overflow: hidden;
 }
 
-/* Innehåll i drawer */
+/* Drawer content */
 .mnav-drawerTop{
   display:flex;
   align-items:center;
@@ -130,7 +131,6 @@ html.mnav-lock body{
   gap: 12px;
   padding: 6px 4px 12px 4px;
 }
-
 .mnav-title{
   font-weight: 950;
   font-size: 18px;
@@ -147,12 +147,6 @@ html.mnav-lock body{
   cursor:pointer;
   position: relative;
 }
-
-.mnav-close:hover{
-  background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.18);
-}
-
 .mnav-x{
   position:absolute;
   inset:0;
@@ -161,7 +155,6 @@ html.mnav-lock body{
   height: 18px;
   display:block;
 }
-
 .mnav-x::before,
 .mnav-x::after{
   content:"";
@@ -182,11 +175,9 @@ html.mnav-lock body{
   gap: 12px;
   padding: 10px 4px 16px 4px;
 }
-
 .mnav-links a{
   display:flex;
   align-items:center;
-  justify-content:flex-start;
   padding: 16px 18px;
   border-radius: 18px;
   border: 1px solid rgba(255,255,255,.10);
@@ -197,59 +188,13 @@ html.mnav-lock body{
   color: rgba(234,240,255,.92);
 }
 
-.mnav-links a:hover{
-  background: rgba(255,255,255,.07);
-  border-color: rgba(255,255,255,.14);
-}
-
-.mnav-links a:active{
-  transform: translateY(1px);
-}
-
-.mnav-links a:last-child{
-  border: none;
-  color: #08101e;
-  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-}
-
-.mnav-meta{
-  margin-top: 14px;
-  padding: 14px 4px 6px 4px;
-  border-top: 1px solid rgba(255,255,255,.10);
-  display:flex;
-  flex-direction:column;
-  gap: 10px;
-}
-
-.mnav-note{
-  color: rgba(169,183,211,.92);
-  font-size: 14px;
-}
-
-.mnav-mail{
-  display:inline-flex;
-  align-items:center;
-  justify-content:flex-start;
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  text-decoration:none;
-  font-weight: 900;
-  color: rgba(234,240,255,.92);
-}
-
-/* ---------------------------------------------------
-   Responsivt
---------------------------------------------------- */
+/* Mobil/desktop */
 @media (max-width: 920px){
   .mnav-toggle{ display:inline-flex; }
 
-  /* ✅ Detta är fixen som gör att knapparna inte “hoppar runt” på mobil
-     även på sidor där du glömt id="navActionsDesktop" */
+  /* ✅ Döljer ALLA header-knappar på mobil, oavsett sida */
   .navActions{ display:none !important; }
 }
-
 @media (min-width: 921px){
   html[data-mnav-ready="1"] .mnav-overlay,
   html[data-mnav-ready="1"] .mnav-drawer{
