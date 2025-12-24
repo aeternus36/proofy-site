@@ -22,9 +22,9 @@
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
 
   <!-- Global CSS -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
-  <!-- Mobile header/menu CSS MUST load after global -->
-  <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01f" />
+  <!-- Header/menu override (PLATT) -->
+  <link rel="stylesheet" href="/assets/header.css?v=2025-flat2" />
 
   <script type="application/ld+json">
   {
@@ -40,23 +40,13 @@
 <body>
 <a class="skip" href="#top">Hoppa till innehåll</a>
 
-<header>
+<header class="siteHeader">
   <div class="wrap">
-    <div class="nav">
+    <div class="navBar">
       <a class="brand" href="/" aria-label="Proofy">
         <span class="logo" aria-hidden="true"></span>
         <span>Proofy</span>
       </a>
-
-      <!-- Mobile menu toggle -->
-      <button
-        class="mnav-toggle"
-        type="button"
-        aria-label="Öppna meny"
-        aria-controls="mnav-menu"
-        aria-expanded="false">
-        <span class="mnav-icon" aria-hidden="true"></span>
-      </button>
 
       <!-- Desktop actions -->
       <div class="navActions" id="navActionsDesktop">
@@ -65,33 +55,26 @@
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="#kontakt">Boka demo</a>
       </div>
+
+      <!-- Mobile menu (native, no overlay/drawer) -->
+      <details class="mnav" id="mnav">
+        <summary class="mnavSummary" aria-label="Öppna meny">
+          <span class="mnavIcon" aria-hidden="true"></span>
+        </summary>
+        <nav class="mnavMenu" aria-label="Meny">
+          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink mnavLinkPrimary" href="#kontakt">Boka demo</a>
+
+          <div class="mnavMeta">
+            <div class="mnavNote">För byråer · revision · granskning</div>
+            <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+          </div>
+        </nav>
+      </details>
     </div>
   </div>
-
-  <!-- Mobile overlay + drawer
-       VIKTIGT: hidden från start (annars kan mobilen “glitcha” och ge band/slöja) -->
-  <div class="mnav-overlay" data-mnav-close hidden></div>
-
-  <nav class="mnav-drawer" id="mnav-menu" aria-label="Meny" hidden>
-    <div class="mnav-drawerTop">
-      <div class="mnav-title">Meny</div>
-      <button class="mnav-close" type="button" aria-label="Stäng meny" data-mnav-close>
-        <span class="mnav-x" aria-hidden="true"></span>
-      </button>
-    </div>
-
-    <div class="mnav-links">
-      <a href="/pilot.html">Starta pilot</a>
-      <a href="/verify.html">Verifiera underlag</a>
-      <a href="/register.html">Skapa Verifierings-ID</a>
-      <a href="#kontakt">Boka demo</a>
-    </div>
-
-    <div class="mnav-meta">
-      <div class="mnav-note">För byråer · revision · granskning</div>
-      <a class="mnav-mail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
-    </div>
-  </nav>
 </header>
 
 <main id="top">
@@ -217,7 +200,7 @@
   </div>
 </main>
 
-<footer>
+<footer class="siteFooter">
   <div class="wrap">
     <div class="foot">
       <div>
@@ -237,7 +220,7 @@
   </div>
 </footer>
 
-<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
-<script src="/chat-widget.js?v=2025-12-24a" defer></script>
+<script src="/assets/header-toggle.js?v=2025-flat2" defer></script>
+<script src="/chat-widget.js?v=2025-01f" defer></script>
 </body>
 </html>
