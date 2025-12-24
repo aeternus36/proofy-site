@@ -14,15 +14,27 @@ const PROOFY_ABI = [
   },
 ];
 
-function json(status, obj) {
-  return new Response(JSON.stringify(obj, null, 2), {
-    status,
+function json(status, obj, origin) {
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+  };
+
+  // Conservative default: allow same-origin. If no Origin header (Postman/server), allow.
+  if (origin) headers["Access-Control-Allow-Origin"] = origin;
+
+  return new Response(JSON.stringify(obj), { status, headers });
+}
+
+function corsPreflight(origin) {
+  return new Response(null, {
+    status: 204,
     headers: {
-      "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-      "Access-Control-Allow-Headers": "content-type",
+      "Access-Control-Allow-Origin": origin || "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400",
     },
   });
 }
@@ -36,21 +48,7 @@ function isValidBytes32Hex(hash) {
   );
 }
 
-function isValidAddressHex(addr) {
-  return (
-    typeof addr === "string" &&
-    addr.startsWith("0x") &&
-    addr.length === 42 &&
-    isHex(addr)
-  );
-}
-
-async function verifyHash({ hash, rpcUrl, contractAddress }) {
-  const publicClient = createPublicClient({
-    chain: polygonAmoy,
-    transport: http(rpcUrl),
-  });
-
+async function readProof({ publicClient, contractAddress, hash }) {
   const proof = await publicClient.readContract({
     address: contractAddress,
     abi: PROOFY_ABI,
@@ -58,132 +56,67 @@ async function verifyHash({ hash, rpcUrl, contractAddress }) {
     args: [hash],
   });
 
-  // viem returns tuple outputs as array
   const timestampBig = proof?.[0] ?? 0n;
-  const submitter = proof?.[1] ?? "0x0000000000000000000000000000000000000000";
-
   const exists = BigInt(timestampBig) !== 0n;
 
-  // Timestamp i sekunder bör vara säkert som Number, men vi är defensiva:
+  // return timestamp as Number when safe, else string (but frontend expects number -> we only emit when safe)
   const tsBig = BigInt(timestampBig);
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
 
   const timestamp =
     exists && tsBig <= maxSafe ? Number(tsBig) : exists ? tsBig.toString() : 0;
 
-  return {
-    ok: true,
-    chainId: polygonAmoy.id,
-    hash,
-    exists,
-    timestamp,
-    submitter: exists
-      ? submitter
-      : "0x0000000000000000000000000000000000000000",
-  };
+  return { exists, timestamp };
 }
 
 export async function onRequest({ request, env }) {
-  // CORS preflight
+  const origin = request.headers.get("Origin") || "";
+
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-        "Access-Control-Allow-Headers": "content-type",
-        "Cache-Control": "no-store",
-      },
-    });
+    return corsPreflight(origin || "*");
+  }
+
+  if (request.method !== "GET" && request.method !== "POST") {
+    return json(405, { error: "Method Not Allowed" }, origin);
+  }
+
+  // Accept hash from GET query or POST body
+  let hash = "";
+  if (request.method === "GET") {
+    const url = new URL(request.url);
+    hash = (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
+  } else {
+    const body = await request.json().catch(() => ({}));
+    hash = String(body?.hash || "").trim();
+  }
+
+  if (!isValidBytes32Hex(hash)) {
+    // Keep error messages UI-safe (no blockchain jargon in frontend; but this is API)
+    return json(400, { error: "Invalid hash format", exists: false }, origin);
   }
 
   const rpcUrl = env.AMOY_RPC_URL;
   const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
 
   if (!rpcUrl || !contractAddress) {
-    return json(500, {
-      ok: false,
-      error: "Missing environment variables",
-      required: ["AMOY_RPC_URL", "PROOFY_CONTRACT_ADDRESS"],
-    });
-  }
-
-  if (!isValidAddressHex(contractAddress)) {
-    return json(500, {
-      ok: false,
-      error: "Invalid contract address format",
-      expected: "0x + 40 hex chars",
-    });
-  }
-
-  // ✅ GET: stöd för /api/verify?hash=0x... (och legacy ?id=)
-  if (request.method === "GET") {
-    const url = new URL(request.url);
-    const q = (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
-
-    // Om ingen hash/id anges: returnera enkel info (inte ett verifieringssvar)
-    if (!q) {
-      return json(200, {
-        ok: true,
-        message: "Use POST /api/verify with JSON body: { hash: \"0x...\" } or GET /api/verify?hash=0x...",
-        chain: { name: "polygonAmoy", chainId: polygonAmoy.id },
-      });
-    }
-
-    if (!isValidBytes32Hex(q)) {
-      return json(400, {
-        ok: false,
-        error: "hash must be bytes32 (0x + 64 hex chars)",
-      });
-    }
-
-    try {
-      const payload = await verifyHash({
-        hash: q,
-        rpcUrl,
-        contractAddress,
-      });
-      return json(200, payload);
-    } catch (e) {
-      return json(500, {
-        ok: false,
-        error: e?.message || String(e),
-      });
-    }
-  }
-
-  if (request.method !== "POST") {
-    return json(405, { ok: false, error: "Use POST" });
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json(400, { ok: false, error: "Invalid JSON body" });
-  }
-
-  const hash = (body?.hash || "").trim();
-
-  if (!isValidBytes32Hex(hash)) {
-    return json(400, {
-      ok: false,
-      error: "hash must be bytes32 (0x + 64 hex chars)",
-      received: body,
-    });
+    return json(500, { error: "Server misconfiguration" }, origin);
   }
 
   try {
-    const payload = await verifyHash({
-      hash,
-      rpcUrl,
-      contractAddress,
+    const publicClient = createPublicClient({
+      chain: polygonAmoy,
+      transport: http(rpcUrl),
     });
-    return json(200, payload);
+
+    const proof = await readProof({ publicClient, contractAddress, hash });
+
+    // Frontend expects boolean + (optional) numeric timestamp.
+    // If timestamp comes back as string (unlikely), still return it; certificate/verify pages treat it carefully.
+    if (proof.exists) {
+      return json(200, { exists: true, timestamp: proof.timestamp }, origin);
+    }
+    return json(200, { exists: false }, origin);
   } catch (e) {
-    return json(500, {
-      ok: false,
-      error: e?.message || String(e),
-    });
+    return json(500, { error: "Verify failed" }, origin);
   }
 }
