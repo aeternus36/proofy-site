@@ -1,9 +1,10 @@
 /* /assets/header.css */
 
 /* ---------------------------------------------------
-   Mobilmeny för Proofy (stabil)
+   Mobilmeny för Proofy
    - Bygger på body.mnav-open
-   - hidden används för att helt ta bort overlay/drawer när stängd
+   - Robust: använder [hidden] för att helt ta bort overlay/drawer när stängd
+   - Viktigt: döljer ALLA .navActions på mobil (inte bara ett visst id)
 --------------------------------------------------- */
 
 /* 🔒 hidden ska alltid vinna */
@@ -12,6 +13,7 @@
   display: none !important;
 }
 
+/* Toggle-knappen (hamburger) */
 .mnav-toggle{
   display:none; /* syns bara på mobil */
   align-items:center;
@@ -53,15 +55,15 @@
   border-radius: 999px;
 }
 .mnav-icon::before{ top: -7px; }
-.mnav-icon::after{ top:  7px; }
+.mnav-icon::after { top:  7px; }
 
-/* Default: av tills JS markerar ready */
+/* Default: helt av tills JS markerar ready */
 .mnav-overlay,
 .mnav-drawer{
   display:none;
 }
 
-/* När JS är igång: komponenterna finns men är osynliga tills öppet */
+/* När JS är igång: skapa komponenter men håll dem osynliga */
 html[data-mnav-ready="1"] .mnav-overlay{
   display:block;
   position: fixed;
@@ -83,9 +85,9 @@ html[data-mnav-ready="1"] .mnav-drawer{
   width: min(86vw, 380px);
   background: rgba(11,18,32,.96);
   backdrop-filter: blur(10px) saturate(140%);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
   border-left: 1px solid rgba(255,255,255,.10);
 
+  /* När stängd: ska inte påverka sidan */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -242,7 +244,10 @@ html.mnav-lock body{
 --------------------------------------------------- */
 @media (max-width: 920px){
   .mnav-toggle{ display:inline-flex; }
-  #navActionsDesktop{ display:none !important; }
+
+  /* ✅ Detta är fixen som gör att knapparna inte “hoppar runt” på mobil
+     även på sidor där du glömt id="navActionsDesktop" */
+  .navActions{ display:none !important; }
 }
 
 @media (min-width: 921px){
