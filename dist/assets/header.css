@@ -1,74 +1,13 @@
 /* /assets/header.css */
-/* PLATT + STABIL HEADER: inga gradients, inga blur, ingen overlay/drawer */
 
-/* Bas: tvinga platt bakgrund på header/foot (för att stoppa “band”) */
-.siteHeader,
-.siteFooter{
-  background: #0b1220 !important;
-  border-color: rgba(255,255,255,.10) !important;
-}
+/* --- Mobilmeny via <details> (enkelt & stabilt) --- */
 
-/* Header layout */
-.siteHeader{
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  border-bottom: 1px solid rgba(255,255,255,.10);
-}
-
-.navBar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-  padding: 14px 0;
-  flex-wrap: nowrap; /* viktig: stoppar “hopp i oordning” */
-}
-
-.brand{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  text-decoration:none;
-  font-weight: 900;
-  color: rgba(234,240,255,.92);
-  flex: 0 0 auto;
-}
-
-.logo{
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: rgba(110,168,255,.35);
-  border: 1px solid rgba(255,255,255,.12);
-}
-
-/* Desktop actions – alltid samma rad, aldrig wrap */
-.navActions{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  flex: 1 1 auto;
-  justify-content: flex-end;
-
-  /* om det blir trångt: scroll istället för att reflowa */
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.navActions::-webkit-scrollbar{ display:none; }
-
-/* Mobile menu via details */
 .mnav{
-  display:none; /* bara mobil */
+  display:none; /* desktop: av */
   position: relative;
-  flex: 0 0 auto;
 }
 
 .mnavSummary{
-  list-style: none;
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -77,9 +16,19 @@
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
+  color: rgba(234,240,255,.92);
   cursor:pointer;
+  user-select:none;
 }
+
+.mnavSummary:hover{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
+}
+
+/* ta bort default marker */
 .mnavSummary::-webkit-details-marker{ display:none; }
+.mnavSummary::marker{ content:""; }
 
 .mnavIcon{
   width: 22px;
@@ -99,20 +48,20 @@
   background: rgba(234,240,255,.92);
   border-radius: 999px;
 }
-.mnavIcon::before{ top: -7px; }
-.mnavIcon::after{ top:  7px; }
+.mnavIcon::before{ top:-7px; }
+.mnavIcon::after{ top: 7px; }
 
-/* Själva menyn (ingen overlay) */
 .mnavMenu{
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
   width: min(86vw, 360px);
-  background: #0b1220;
-  border: 1px solid rgba(255,255,255,.12);
   border-radius: 18px;
-  padding: 12px;
-  box-shadow: 0 18px 60px rgba(0,0,0,.38);
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(11,18,32,.96);
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  padding: 10px;
+  z-index: 1000;
 }
 
 .mnavLink{
@@ -126,12 +75,17 @@
   text-decoration:none;
   font-weight: 900;
   color: rgba(234,240,255,.92);
-  margin-bottom: 10px;
+  margin: 8px 0;
 }
-.mnavLink:hover{ background: rgba(255,255,255,.07); }
+.mnavLink:hover{
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.14);
+}
+
 .mnavLinkPrimary{
-  border-color: rgba(110,168,255,.40);
-  background: rgba(110,168,255,.18);
+  border: none;
+  color: #08101e;
+  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
 }
 
 .mnavMeta{
@@ -143,14 +97,13 @@
   gap: 10px;
 }
 .mnavNote{
-  color: rgba(234,240,255,.72);
+  color: rgba(169,183,211,.92);
   font-size: 14px;
 }
 .mnavMail{
   display:inline-flex;
   align-items:center;
-  justify-content:flex-start;
-  padding: 12px 14px;
+  padding: 12px 12px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
@@ -159,21 +112,13 @@
   color: rgba(234,240,255,.92);
 }
 
-/* Mobil: visa menyn och göm desktop-actions */
+/* --- Responsive: visa details-meny på mobil, göm desktop-actions --- */
 @media (max-width: 920px){
   #navActionsDesktop{ display:none !important; }
-  .navActions{ display:none !important; }
   .mnav{ display:block; }
 }
 
-/* Desktop: dölj mobilmenyn */
+/* Desktop: se till att mobilen inte syns */
 @media (min-width: 921px){
   .mnav{ display:none !important; }
-}
-
-/* Extra safety: stäng av blur/filter/gradients som kan skapa “band” */
-.siteHeader, .siteFooter, .mnavMenu{
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-image: none !important;
 }
