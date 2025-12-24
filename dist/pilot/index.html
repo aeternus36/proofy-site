@@ -1,1 +1,155 @@
 
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pilotupplägg – Proofy</title>
+  <meta name="description" content="Starta en pilot med Proofy. Fast månadspris, faktura och support. Testa dokumentverifiering i er byrårutin." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://proofy.se/pilot.html" />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-20" />
+</head>
+
+<body>
+<a class="skip" href="#main">Hoppa till innehåll</a>
+
+<header>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/" aria-label="Proofy">
+        <span class="logo" aria-hidden="true"></span>
+        <span>Proofy</span>
+      </a>
+
+      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
+
+      <div class="navActions">
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn primary" href="/#kontakt">Boka demo</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap">
+    <div class="badge">Pilot för redovisningsbyråer</div>
+
+    <h1 class="pageTitle">Starta en pilot på 30 dagar</h1>
+
+    <p class="lead">
+      Pilot är snabbaste sättet att se om Proofy passar er rutin.
+      Ni testar i verkliga ärenden, med låg friktion och tydliga ramar.
+    </p>
+
+    <div class="grid3">
+      <div class="tile">
+        <b>Ingår</b>
+        <span class="small">
+          Registrering + verifiering, verifierings-ID samt support under piloten.
+        </span>
+      </div>
+      <div class="tile">
+        <b>Upplägg</b>
+        <span class="small">
+          Vi sätter en enkel rutin: när ni registrerar, var ni sparar ID,
+          och hur ni verifierar.
+        </span>
+      </div>
+      <div class="tile">
+        <b>Tryggt</b>
+        <span class="small">
+          Fast månadspris, faktura, ingen bindning efter pilot om ni inte vill fortsätta.
+        </span>
+      </div>
+    </div>
+
+    <div class="card content" style="margin-top:14px;">
+      <h2>Rekommenderad rutin (exempel)</h2>
+      <ol class="cleanList">
+        <li>Registrera underlag som är särskilt viktiga (bokslut, rapporter, avtal).</li>
+        <li>Spara verifierings-ID i ärendet/noteringar.</li>
+        <li>Vid granskning: verifiera filen och visa match/ingen match.</li>
+      </ol>
+
+      <div class="hr"></div>
+
+      <h2>Starta pilot</h2>
+
+      <form name="pilot" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <input type="hidden" name="form-name" value="pilot" />
+        <input type="hidden" name="redirect" value="/thanks.html" />
+
+        <p style="display:none;">
+          <label>Don’t fill this out: <input name="bot-field" /></label>
+        </p>
+
+        <div class="formGrid">
+          <div>
+            <label class="label" for="p-name">Namn <span class="req">*</span></label>
+            <input id="p-name" name="name" type="text" required />
+          </div>
+          <div>
+            <label class="label" for="p-email">E-post <span class="req">*</span></label>
+            <input id="p-email" name="email" type="email" required />
+          </div>
+          <div>
+            <label class="label" for="p-company">Byrå/Företag <span class="req">*</span></label>
+            <input id="p-company" name="company" type="text" required />
+          </div>
+          <div>
+            <label class="label" for="p-role">Roll</label>
+            <input id="p-role" name="role" type="text" />
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label class="label" for="p-message">Kort om ert case (valfritt)</label>
+          <textarea id="p-message" name="message"
+            placeholder="T.ex. vilken typ av dokument ni vill kunna verifiera och i vilken process."></textarea>
+        </div>
+
+        <div class="formActions">
+          <button class="btn primary" type="submit">Begär pilot</button>
+          <span class="small">Vi återkommer normalt inom 1–2 arbetsdagar.</span>
+        </div>
+      </form>
+
+      <div class="hr"></div>
+
+      <p class="fineprint">
+        <b>Juridisk avgränsning:</b> Proofy tillhandahåller teknisk verifiering.
+        Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
+      </p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
+        <div class="small" style="margin-top:8px; max-width:92ch;">
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+        </div>
+      </div>
+      <div class="links">
+        <a href="/security.html">Säkerhet</a>
+        <a href="/privacy.html">Integritet</a>
+        <a href="/terms.html">Villkor</a>
+        <a href="/#kontakt">Kontakt</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="/chat-widget.js?v=2025-01" defer></script>
+</body>
+</html>
+
