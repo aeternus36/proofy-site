@@ -3,7 +3,14 @@
 /* ---------------------------------------------------
    Mobilmeny för Proofy
    - Bygger på body.mnav-open
+   - Robust: använder [hidden] för att helt ta bort overlay/drawer när stängd
 --------------------------------------------------- */
+
+/* 🔒 Bomsäker: hidden ska alltid vinna */
+.mnav-overlay[hidden],
+.mnav-drawer[hidden]{
+  display: none !important;
+}
 
 .mnav-toggle{
   display:none; /* syns bara på mobil */
