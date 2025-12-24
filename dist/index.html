@@ -22,9 +22,9 @@
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
 
   <!-- Global CSS -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01f" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
   <!-- Mobile header/menu CSS MUST load after global -->
-  <link rel="stylesheet" href="/assets/header.css?v=2025-01f" />
+  <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
 
   <script type="application/ld+json">
   {
@@ -68,10 +68,11 @@
     </div>
   </div>
 
-  <!-- Mobile overlay + drawer -->
-  <div class="mnav-overlay" data-mnav-close></div>
+  <!-- Mobile overlay + drawer
+       VIKTIGT: hidden från start (annars kan mobilen “glitcha” och ge band/slöja) -->
+  <div class="mnav-overlay" data-mnav-close hidden></div>
 
-  <nav class="mnav-drawer" id="mnav-menu" aria-label="Meny">
+  <nav class="mnav-drawer" id="mnav-menu" aria-label="Meny" hidden>
     <div class="mnav-drawerTop">
       <div class="mnav-title">Meny</div>
       <button class="mnav-close" type="button" aria-label="Stäng meny" data-mnav-close>
@@ -236,7 +237,7 @@
   </div>
 </footer>
 
-<script src="/assets/header-toggle.js?v=2025-01f" defer></script>
-<script src="/chat-widget.js?v=2025-01f" defer></script>
+<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
+<script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
 </html>
