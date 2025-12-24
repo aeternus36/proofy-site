@@ -3,14 +3,8 @@
 /* ---------------------------------------------------
    Mobilmeny för Proofy
    - Bygger på body.mnav-open
-   - Robust: använder [hidden] för att helt ta bort overlay/drawer när stängd
+   - ENDA systemet: opacity/visibility/pointer-events + transform
 --------------------------------------------------- */
-
-/* 🔒 Bomsäker: hidden ska alltid vinna */
-.mnav-overlay[hidden],
-.mnav-drawer[hidden]{
-  display: none !important;
-}
 
 .mnav-toggle{
   display:none; /* syns bara på mobil */
@@ -67,9 +61,11 @@ html[data-mnav-ready="1"] .mnav-overlay{
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.55);
+
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+
   transition: opacity .18s ease, visibility .18s ease;
   z-index: 2000;
 }
@@ -85,7 +81,7 @@ html[data-mnav-ready="1"] .mnav-drawer{
   backdrop-filter: blur(10px) saturate(140%);
   border-left: 1px solid rgba(255,255,255,.10);
 
-  /* Viktig fix: när stängd ska den INTE påverka sidan */
+  /* När stängd: påverkar inte interaktion */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
