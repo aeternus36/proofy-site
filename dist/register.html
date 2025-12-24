@@ -6,7 +6,9 @@
   <title>Proofy – Skapa Verifierings-ID</title>
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
+
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
 </head>
 
 <body>
@@ -20,14 +22,31 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
-
-      <div class="navActions">
+      <!-- Desktop actions -->
+      <div class="navActions" id="navActionsDesktop">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka demo</a>
       </div>
+
+      <!-- Mobile menu (details) -->
+      <details class="mnav" id="mnav">
+        <summary class="mnavSummary" aria-label="Öppna meny">
+          <span class="mnavIcon" aria-hidden="true"></span>
+        </summary>
+        <nav class="mnavMenu" aria-label="Meny">
+          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka demo</a>
+
+          <div class="mnavMeta">
+            <div class="mnavNote">För byråer · revision · granskning</div>
+            <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+          </div>
+        </nav>
+      </details>
     </div>
   </div>
 </header>
@@ -211,7 +230,7 @@
 
 <!-- QR lib -->
 <script
-  src="/qr.min.js?v=2025-12-20"
+  src="/qr.min.js?v=2025-12-24a"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"
 ></script>
@@ -455,7 +474,6 @@
       if (data.timestamp) {
         timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
       } else {
-        // Efter API-ändringen ska detta inte inträffa vid ok:true.
         timeOut.textContent = "—";
       }
 
@@ -541,6 +559,6 @@
 })();
 </script>
 
-<script src="/chat-widget.js?v=2025-01" defer></script>
+<script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
 </html>
