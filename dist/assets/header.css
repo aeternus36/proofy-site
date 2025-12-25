@@ -1,81 +1,41 @@
 /* /assets/header.css
-   Unifierad header + mobilmeny (details/summary)
-   - Hamburgare alltid till höger
-   - Återställer hamburger-stil
-   - Rör INTE .logo (kommer från proofy.css)
-   - Tvingar "1 färg" bakgrund för att stoppa band/överlappningar
+   Mobilmeny (native <details>) – stabil och enkel
 */
 
-/* --- 1 färg (stoppa gradient/banding) --- */
-html, body{
-  background: var(--bg, #0b1220) !important;
-}
-
-/* Header: stabil, utan “band” */
-header{
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(11,18,32,.92) !important;
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  backdrop-filter: none !important; /* viktiga: sluta med band/glitch */
-}
-
-/* Nav-rad: lås layout så den inte hoppar */
-.nav{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  padding: 14px 0;
-  flex-wrap: nowrap;          /* !!! hindrar att hamburger flyttar ner/byter sida */
-}
-
-/* Desktop actions (som i proofy.css) */
-#navActionsDesktop,
-.navActions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-  margin-left:auto;           /* desktopknappar till höger */
-}
-
-/* -------- Mobilmeny (details) -------- */
 .mnav{
-  margin-left:auto;           /* !!! hamburger alltid längst till höger */
+  display:none; /* visas på mobil */
   position: relative;
-  display:none;               /* visas bara på mobil */
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .mnavSummary{
-  list-style:none;
+  list-style: none;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:48px;
-  height:44px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
+  width: 48px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
+  color: rgba(234,240,255,.92);
   cursor:pointer;
   user-select:none;
 }
+
+.mnavSummary::-webkit-details-marker{ display:none; }
 
 .mnavSummary:hover{
   background: rgba(255,255,255,.10);
   border-color: rgba(255,255,255,.18);
 }
 
-/* Dölj default-triangeln */
-.mnavSummary::-webkit-details-marker{ display:none; }
-.mnavSummary::marker{ content:""; }
-
-/* Hamburger-ikon (3 streck) */
 .mnavIcon{
-  width:22px;
-  height:2px;
+  width: 22px;
+  height: 2px;
   background: rgba(234,240,255,.92);
-  border-radius:999px;
+  border-radius: 999px;
   position: relative;
   display:block;
 }
@@ -84,29 +44,31 @@ header{
   content:"";
   position:absolute;
   left:0;
-  width:22px;
-  height:2px;
+  width: 22px;
+  height: 2px;
   background: rgba(234,240,255,.92);
-  border-radius:999px;
+  border-radius: 999px;
 }
-.mnavIcon::before{ top:-7px; }
-.mnavIcon::after { top: 7px; }
+.mnavIcon::before{ top: -7px; }
+.mnavIcon::after{ top:  7px; }
 
-/* Dropdown-panel */
 .mnavMenu{
-  position:absolute;
-  right:0;
+  position: absolute;
+  right: 0;
   top: calc(100% + 10px);
-  width: min(88vw, 360px);
-  background: rgba(11,18,32,.98);
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 18px;
-  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+  width: min(86vw, 360px);
   padding: 12px;
-  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(11,18,32,.96);
+  backdrop-filter: blur(10px) saturate(140%);
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 2000;
 }
 
-/* Länkar i mobilen */
 .mnavLink{
   display:flex;
   align-items:center;
@@ -119,16 +81,14 @@ header{
   font-weight: 900;
   font-size: 16px;
   color: rgba(234,240,255,.92);
-  margin-bottom: 10px;
 }
 .mnavLink:hover{
   background: rgba(255,255,255,.07);
   border-color: rgba(255,255,255,.14);
-  text-decoration:none;
 }
 .mnavLinkPrimary{
-  border:none;
-  color:#08101e;
+  border: none;
+  color: #08101e;
   background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
 }
 
@@ -143,33 +103,34 @@ header{
 .mnavNote{
   color: rgba(169,183,211,.92);
   font-size: 13px;
-  font-weight: 800;
 }
 .mnavMail{
   display:inline-flex;
   align-items:center;
+  justify-content:flex-start;
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
-  color: rgba(234,240,255,.92);
-  font-weight: 900;
   text-decoration:none;
-}
-.mnavMail:hover{ text-decoration:none; background: rgba(255,255,255,.06); }
-
-/* Öppet läge: liten visuell feedback på knappen */
-.mnav[open] .mnavSummary{
-  background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.18);
+  font-weight: 900;
+  color: rgba(234,240,255,.92);
 }
 
-/* -------- Responsivt -------- */
+/* ------- Responsive rules ------- */
 @media (max-width: 920px){
-  #navActionsDesktop{ display:none !important; } /* dölj desktopknappar */
-  .mnav{ display:block; }                        /* visa hamburger */
+  /* Stäng av desktop actions på mobil */
+  #navActionsDesktop{ display:none !important; }
+
+  /* Visa hamburger på mobil */
+  .mnav{ display:block; }
+
+  /* Se till att header layout alltid är flex på alla sidor */
+  .navBar{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
+  .nav{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
 }
 
 @media (min-width: 921px){
-  .mnav{ display:none !important; }              /* ingen hamburger på desktop */
+  /* Dölj mobilmeny på desktop */
+  .mnav{ display:none !important; }
 }
