@@ -1,124 +1,172 @@
-/* /assets/header.css */
+/* =========================
+   HEADER – FINAL, STABIL
+   ========================= */
 
-/* --- Mobilmeny via <details> (enkelt & stabilt) --- */
-
-.mnav{
-  display:none; /* desktop: av */
-  position: relative;
+header {
+  background: #0b1220;
+  border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
-.mnavSummary{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width: 48px;
-  height: 44px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(234,240,255,.92);
-  cursor:pointer;
-  user-select:none;
+header .wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 16px;
 }
 
-.mnavSummary:hover{
-  background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.18);
+/* === NAV BAR === */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-/* ta bort default marker */
-.mnavSummary::-webkit-details-marker{ display:none; }
-.mnavSummary::marker{ content:""; }
+/* === BRAND / LOGO === */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: #eaf0ff;
+  text-decoration: none;
+  white-space: nowrap;
+}
 
-.mnavIcon{
+.logo {
   width: 22px;
-  height: 2px;
-  background: rgba(234,240,255,.92);
-  border-radius: 999px;
-  position: relative;
-  display:block;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #5b8cff, #8fb0ff);
 }
+
+/* === DESKTOP ACTIONS === */
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  /* 🔑 DETTA TILL HÖGER */
+  margin-left: auto;
+}
+
+/* === MOBILE MENU (DETAILS) === */
+.mnav {
+  margin-left: auto;     /* 🔑 Tvinga längst till höger */
+  position: relative;
+}
+
+/* Dölj hamburger på desktop */
+@media (min-width: 900px) {
+  .mnav {
+    display: none;
+  }
+}
+
+/* Dölj desktop-knappar på mobile */
+@media (max-width: 899px) {
+  .navActions {
+    display: none;
+  }
+}
+
+/* === HAMBURGER BUTTON === */
+.mnavSummary {
+  list-style: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.mnavSummary::-webkit-details-marker {
+  display: none;
+}
+
+.mnavIcon {
+  width: 22px;
+  height: 16px;
+  position: relative;
+  display: block;
+}
+
 .mnavIcon::before,
-.mnavIcon::after{
-  content:"";
-  position:absolute;
-  left:0;
-  width: 22px;
+.mnavIcon::after,
+.mnavIcon span {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
   height: 2px;
-  background: rgba(234,240,255,.92);
-  border-radius: 999px;
+  background: #eaf0ff;
+  border-radius: 2px;
 }
-.mnavIcon::before{ top:-7px; }
-.mnavIcon::after{ top: 7px; }
 
-.mnavMenu{
+.mnavIcon::before {
+  top: 0;
+}
+
+.mnavIcon span {
+  top: 7px;
+}
+
+.mnavIcon::after {
+  bottom: 0;
+}
+
+/* === MOBILE MENU PANEL === */
+.mnavMenu {
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
-  width: min(86vw, 360px);
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(11,18,32,.96);
-  box-shadow: 0 20px 60px rgba(0,0,0,.45);
-  padding: 10px;
+  width: 260px;
+
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  padding: 12px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
   z-index: 1000;
 }
 
-.mnavLink{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  padding: 14px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-  text-decoration:none;
-  font-weight: 900;
-  color: rgba(234,240,255,.92);
-  margin: 8px 0;
-}
-.mnavLink:hover{
-  background: rgba(255,255,255,.07);
-  border-color: rgba(255,255,255,.14);
+.mnavLink {
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #eaf0ff;
+  font-weight: 600;
 }
 
-.mnavLinkPrimary{
-  border: none;
-  color: #08101e;
-  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
+.mnavLink:hover {
+  background: rgba(255,255,255,.06);
 }
 
-.mnavMeta{
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,.10);
-  display:flex;
-  flex-direction:column;
-  gap: 10px;
-}
-.mnavNote{
-  color: rgba(169,183,211,.92);
-  font-size: 14px;
-}
-.mnavMail{
-  display:inline-flex;
-  align-items:center;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  text-decoration:none;
-  font-weight: 900;
-  color: rgba(234,240,255,.92);
+.mnavLinkPrimary {
+  background: #2563eb;
+  color: white;
 }
 
-/* --- Responsive: visa details-meny på mobil, göm desktop-actions --- */
-@media (max-width: 920px){
-  #navActionsDesktop{ display:none !important; }
-  .mnav{ display:block; }
+.mnavLinkPrimary:hover {
+  background: #1d4ed8;
 }
 
-/* Desktop: se till att mobilen inte syns */
-@media (min-width: 921px){
-  .mnav{ display:none !important; }
+.mnavMeta {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mnavNote {
+  font-size: 12px;
+  opacity: .7;
+}
+
+.mnavMail {
+  font-size: 13px;
+  color: #8fb0ff;
+  text-decoration: none;
 }
