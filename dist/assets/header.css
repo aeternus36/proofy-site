@@ -1,172 +1,175 @@
-/* =========================
-   HEADER – FINAL, STABIL
-   ========================= */
+/* /assets/header.css
+   Unifierad header + mobilmeny (details/summary)
+   - Hamburgare alltid till höger
+   - Återställer hamburger-stil
+   - Rör INTE .logo (kommer från proofy.css)
+   - Tvingar "1 färg" bakgrund för att stoppa band/överlappningar
+*/
 
-header {
-  background: #0b1220;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+/* --- 1 färg (stoppa gradient/banding) --- */
+html, body{
+  background: var(--bg, #0b1220) !important;
 }
 
-header .wrap {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 12px 16px;
-}
-
-/* === NAV BAR === */
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-/* === BRAND / LOGO === */
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 900;
-  color: #eaf0ff;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #5b8cff, #8fb0ff);
-}
-
-/* === DESKTOP ACTIONS === */
-.navActions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  /* 🔑 DETTA TILL HÖGER */
-  margin-left: auto;
-}
-
-/* === MOBILE MENU (DETAILS) === */
-.mnav {
-  margin-left: auto;     /* 🔑 Tvinga längst till höger */
-  position: relative;
-}
-
-/* Dölj hamburger på desktop */
-@media (min-width: 900px) {
-  .mnav {
-    display: none;
-  }
-}
-
-/* Dölj desktop-knappar på mobile */
-@media (max-width: 899px) {
-  .navActions {
-    display: none;
-  }
-}
-
-/* === HAMBURGER BUTTON === */
-.mnavSummary {
-  list-style: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 10px;
-}
-
-.mnavSummary::-webkit-details-marker {
-  display: none;
-}
-
-.mnavIcon {
-  width: 22px;
-  height: 16px;
-  position: relative;
-  display: block;
-}
-
-.mnavIcon::before,
-.mnavIcon::after,
-.mnavIcon span {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #eaf0ff;
-  border-radius: 2px;
-}
-
-.mnavIcon::before {
+/* Header: stabil, utan “band” */
+header{
+  position: sticky;
   top: 0;
+  z-index: 50;
+  background: rgba(11,18,32,.92) !important;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  backdrop-filter: none !important; /* viktiga: sluta med band/glitch */
 }
 
-.mnavIcon span {
-  top: 7px;
+/* Nav-rad: lås layout så den inte hoppar */
+.nav{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding: 14px 0;
+  flex-wrap: nowrap;          /* !!! hindrar att hamburger flyttar ner/byter sida */
 }
 
-.mnavIcon::after {
-  bottom: 0;
+/* Desktop actions (som i proofy.css) */
+#navActionsDesktop,
+.navActions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-left:auto;           /* desktopknappar till höger */
 }
 
-/* === MOBILE MENU PANEL === */
-.mnavMenu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 10px);
-  width: 260px;
-
-  background: #0f172a;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 14px;
-  padding: 12px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  z-index: 1000;
+/* -------- Mobilmeny (details) -------- */
+.mnav{
+  margin-left:auto;           /* !!! hamburger alltid längst till höger */
+  position: relative;
+  display:none;               /* visas bara på mobil */
 }
 
-.mnavLink {
-  padding: 10px 12px;
-  border-radius: 10px;
-  text-decoration: none;
-  color: #eaf0ff;
-  font-weight: 600;
-}
-
-.mnavLink:hover {
+.mnavSummary{
+  list-style:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:48px;
+  height:44px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
+  cursor:pointer;
+  user-select:none;
 }
 
-.mnavLinkPrimary {
-  background: #2563eb;
-  color: white;
+.mnavSummary:hover{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
 }
 
-.mnavLinkPrimary:hover {
-  background: #1d4ed8;
+/* Dölj default-triangeln */
+.mnavSummary::-webkit-details-marker{ display:none; }
+.mnavSummary::marker{ content:""; }
+
+/* Hamburger-ikon (3 streck) */
+.mnavIcon{
+  width:22px;
+  height:2px;
+  background: rgba(234,240,255,.92);
+  border-radius:999px;
+  position: relative;
+  display:block;
+}
+.mnavIcon::before,
+.mnavIcon::after{
+  content:"";
+  position:absolute;
+  left:0;
+  width:22px;
+  height:2px;
+  background: rgba(234,240,255,.92);
+  border-radius:999px;
+}
+.mnavIcon::before{ top:-7px; }
+.mnavIcon::after { top: 7px; }
+
+/* Dropdown-panel */
+.mnavMenu{
+  position:absolute;
+  right:0;
+  top: calc(100% + 10px);
+  width: min(88vw, 360px);
+  background: rgba(11,18,32,.98);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 18px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+  padding: 12px;
+  overflow: hidden;
 }
 
-.mnavMeta {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255,255,255,.08);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* Länkar i mobilen */
+.mnavLink{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  text-decoration:none;
+  font-weight: 900;
+  font-size: 16px;
+  color: rgba(234,240,255,.92);
+  margin-bottom: 10px;
+}
+.mnavLink:hover{
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.14);
+  text-decoration:none;
+}
+.mnavLinkPrimary{
+  border:none;
+  color:#08101e;
+  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
 }
 
-.mnavNote {
-  font-size: 12px;
-  opacity: .7;
+.mnavMeta{
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.10);
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
 }
-
-.mnavMail {
+.mnavNote{
+  color: rgba(169,183,211,.92);
   font-size: 13px;
-  color: #8fb0ff;
-  text-decoration: none;
+  font-weight: 800;
+}
+.mnavMail{
+  display:inline-flex;
+  align-items:center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: rgba(234,240,255,.92);
+  font-weight: 900;
+  text-decoration:none;
+}
+.mnavMail:hover{ text-decoration:none; background: rgba(255,255,255,.06); }
+
+/* Öppet läge: liten visuell feedback på knappen */
+.mnav[open] .mnavSummary{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
+}
+
+/* -------- Responsivt -------- */
+@media (max-width: 920px){
+  #navActionsDesktop{ display:none !important; } /* dölj desktopknappar */
+  .mnav{ display:block; }                        /* visa hamburger */
+}
+
+@media (min-width: 921px){
+  .mnav{ display:none !important; }              /* ingen hamburger på desktop */
 }
