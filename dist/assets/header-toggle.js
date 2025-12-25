@@ -1,32 +1,40 @@
-// /assets/header-toggle.js
+/* /assets/header-toggle.js
+   Stänger <details class="mnav" id="mnav"> på:
+   - klick på länk i menyn
+   - ESC
+   - klick utanför menyn
+*/
+
 (() => {
+  function qs(sel, root = document){ return root.querySelector(sel); }
+  function qsa(sel, root = document){ return Array.from(root.querySelectorAll(sel)); }
+
   function init(){
-    const mnav = document.getElementById("mnav");
+    const mnav = qs('details#mnav.mnav') || qs('details.mnav');
     if (!mnav) return;
 
-    function close(){
-      mnav.removeAttribute("open");
-    }
-
-    // Stäng när man klickar på en länk i menyn
-    mnav.querySelectorAll("a").forEach(a => {
-      a.addEventListener("click", close);
+    // Stäng på länk-klick
+    qsa('.mnavMenu a', mnav).forEach(a => {
+      a.addEventListener('click', () => { mnav.open = false; });
     });
 
     // Stäng på ESC
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") close();
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') mnav.open = false;
     });
 
-    // Stäng om man klickar utanför
-    document.addEventListener("click", (e) => {
-      if (!mnav.hasAttribute("open")) return;
-      if (!mnav.contains(e.target)) close();
+    // Stäng när man klickar utanför
+    document.addEventListener('click', (e) => {
+      if (!mnav.open) return;
+      const target = e.target;
+      if (target instanceof Node && !mnav.contains(target)) {
+        mnav.open = false;
+      }
     });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
