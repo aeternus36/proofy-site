@@ -88,9 +88,13 @@
             <span id="statusPill" class="pill">Väntar</span>
           </div>
 
-          <!-- NY: tydligare påminnelse/varning (syns när det behövs) -->
-          <div id="hintBox" class="small" style="display:none; margin-top:10px;">
-            <span class="err" id="hintText"></span>
+          <!-- NY: tydligare varning/uppmaning (syns bättre än pill) -->
+          <div id="inputAlert"
+               role="status"
+               aria-live="polite"
+               style="display:none; margin-top:10px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+            <div id="inputAlertText" style="font-weight:800;"></div>
+            <div id="inputAlertHelp" class="small" style="margin-top:6px; opacity:.95;"></div>
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
@@ -104,9 +108,6 @@
 
           <div id="resultBox" style="display:none;">
             <div id="resultHeadline" style="font-size:20px; font-weight:900;"></div>
-
-            <!-- NY: tydligare förklaring vid ingen match -->
-            <div id="resultNote" class="small" style="display:none; margin-top:10px;"></div>
 
             <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
             <pre class="mono" id="outHash">—</pre>
@@ -125,10 +126,11 @@
             <div class="meta" style="margin-top:10px;">Registreringstid (UTC)</div>
             <pre class="mono" id="outRegUtc">—</pre>
 
-            <div class="small" style="margin-top:10px">
-              <b>Match</b> betyder att underlaget är <b>exakt samma version</b> (samma bytes) som den som ID:t avser.
-              <br />
-              Proofy avgör inte vem som skapat underlaget eller om innehållet är korrekt – endast om filversionen är identisk.
+            <!-- NY: mer tydlig förklaring vid match/ingen match (jurist/revisor-ton) -->
+            <div id="outExplain"
+                 style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+              <div id="outExplainTitle" style="font-weight:900;"></div>
+              <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
             </div>
 
             <div class="actions" style="margin-top:12px">
@@ -181,18 +183,21 @@
   const verifyBtn = $("verifyBtn");
   const statusPill = $("statusPill");
 
-  const hintBox = $("hintBox");
-  const hintText = $("hintText");
+  const inputAlert = $("inputAlert");
+  const inputAlertText = $("inputAlertText");
+  const inputAlertHelp = $("inputAlertHelp");
 
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
-  const resultNote = $("resultNote");
   const outHash = $("outHash");
   const outFileHash = $("outFileHash");
   const outRegStatus = $("outRegStatus");
   const outRegSe = $("outRegSe");
   const outRegUtc = $("outRegUtc");
   const openCertBtn = $("openCertBtn");
+
+  const outExplainTitle = $("outExplainTitle");
+  const outExplainBody = $("outExplainBody");
 
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
@@ -209,9 +214,31 @@
     statusPill.textContent = text;
   }
 
-  function showHint(msg){
-    hintText.textContent = msg || "";
-    hintBox.style.display = msg ? "block" : "none";
+  function showAlert(title, help, tone){
+    inputAlert.style.display = "block";
+    inputAlertText.textContent = title || "";
+    inputAlertHelp.textContent = help || "";
+
+    // tydligare färgtoner utan att kräva CSS-ändring
+    if (tone === "err") {
+      inputAlert.style.borderColor = "rgba(255,80,80,.35)";
+      inputAlert.style.background = "rgba(255,80,80,.10)";
+      inputAlertText.style.color = "rgba(255,220,220,.95)";
+    } else if (tone === "ok") {
+      inputAlert.style.borderColor = "rgba(80,255,180,.28)";
+      inputAlert.style.background = "rgba(80,255,180,.08)";
+      inputAlertText.style.color = "rgba(220,255,245,.95)";
+    } else {
+      inputAlert.style.borderColor = "rgba(255,255,255,.14)";
+      inputAlert.style.background = "rgba(255,255,255,.06)";
+      inputAlertText.style.color = "";
+    }
+  }
+
+  function hideAlert(){
+    inputAlert.style.display = "none";
+    inputAlertText.textContent = "";
+    inputAlertHelp.textContent = "";
   }
 
   function setBusy(v){
@@ -233,8 +260,6 @@
     resultBox.style.display = "none";
     errorBox.style.display = "none";
     errorMsg.textContent = "";
-    showHint("");
-
     if (openCertBtn) openCertBtn.style.display = "none";
 
     outHash.textContent = "—";
@@ -243,11 +268,8 @@
     outRegSe.textContent = "—";
     outRegUtc.textContent = "—";
     resultHeadline.textContent = "";
-
-    if (resultNote) {
-      resultNote.style.display = "none";
-      resultNote.textContent = "";
-    }
+    outExplainTitle.textContent = "";
+    outExplainBody.textContent = "";
   }
 
   function getIdFromUrl(){
@@ -308,28 +330,42 @@
     return { ok:true, data:j2 };
   }
 
-  function updateGuidance(){
-    if (busy) return;
+  function updateValidationUI(){
+    const id = (hashInput.value || "").trim();
 
-    const idOk = isValidId(hashInput.value);
-    const hasFile = Boolean(currentFile);
-
-    // Om användaren valt fil men saknar/har ogiltigt ID: visa tydlig påminnelse.
-    if (hasFile && !idOk){
-      const v = (hashInput.value || "").trim();
-      if (!v) {
-        showHint("Verifierings-ID saknas. Klistra in ID (format: 0x + 64 hex-tecken) eller öppna verifieringslänken.");
-        setStatus("Ange Verifierings-ID");
-      } else {
-        showHint("Ogiltigt Verifierings-ID. Kontrollera att det börjar med 0x och innehåller 64 hex-tecken.");
-        setStatus("Ogiltigt ID");
-      }
-    } else {
-      showHint("");
-      if (!hasFile) setStatus("Väntar");
-      else setStatus("Redo");
+    // inga aggressiva meddelanden när allt är tomt
+    if (!id && !currentFile){
+      hideAlert();
+      setStatus("Väntar");
+      setBusy(false);
+      return;
     }
 
+    if (!id){
+      showAlert(
+        "⚠️ Ange Verifierings-ID för att kunna verifiera",
+        "Klistra in ID (format: 0x + 64 hex-tecken) eller öppna verifieringslänken du fått.",
+        "err"
+      );
+      setStatus("Ange Verifierings-ID");
+      setBusy(false);
+      return;
+    }
+
+    if (!isValidId(id)){
+      showAlert(
+        "⚠️ Ogiltigt Verifierings-ID",
+        "Kontrollera att ID börjar med 0x och innehåller exakt 64 hex-tecken (0–9, a–f).",
+        "err"
+      );
+      setStatus("Ogiltigt ID");
+      setBusy(false);
+      return;
+    }
+
+    // giltigt ID
+    hideAlert();
+    setStatus(currentFile ? "Redo" : "Välj underlag");
     setBusy(false);
   }
 
@@ -342,8 +378,7 @@
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
     if (isValidId(v)) setIdInUrl(v);
-    resetUI();
-    updateGuidance();
+    updateValidationUI();
   });
 
   fileInput.addEventListener("change", () => {
@@ -351,24 +386,42 @@
     fileInfo.textContent = currentFile
       ? `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
       : "Inget underlag valt.";
-    resetUI();
-    updateGuidance();
+    updateValidationUI();
   });
 
   verifyBtn.addEventListener("click", async () => {
     if (busy) return;
 
     resetUI();
+
+    const refHash = hashInput.value.trim();
+    if (!isValidId(refHash)) {
+      showAlert(
+        "⚠️ Verifiera kan inte starta – ogiltigt Verifierings-ID",
+        "Kontrollera ID (0x + 64 hex-tecken).",
+        "err"
+      );
+      setStatus("Ogiltigt ID");
+      hashInput.focus();
+      return;
+    }
+    if (!currentFile) {
+      showAlert(
+        "⚠️ Välj ett underlag att verifiera",
+        "Välj filen du vill kontrollera. Underlaget lämnar aldrig din dator.",
+        "err"
+      );
+      setStatus("Välj underlag");
+      fileInput.focus();
+      return;
+    }
+
     setStatus("Verifierar…");
     setBusy(true);
 
     const myOp = ++opId;
 
     try{
-      const refHash = hashInput.value.trim();
-      if (!isValidId(refHash)) throw new Error("Ogiltigt Verifierings-ID (måste vara 0x + 64 hex-tecken).");
-      if (!currentFile) throw new Error("Välj ett underlag att verifiera.");
-
       const fileHash = await sha256Hex(currentFile);
       if (myOp !== opId) return;
 
@@ -381,21 +434,19 @@
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
 
-      if (match){
-        resultHeadline.innerHTML = `<span class="ok">✅ Match</span>`;
-        if (resultNote) {
-          resultNote.style.display = "none";
-          resultNote.textContent = "";
-        }
+      resultHeadline.innerHTML = match
+        ? `<span class="ok">✅ Match</span>`
+        : `<span class="err">❌ Ingen match</span>`;
+
+      // NY: mer “revisions”-förklaring
+      if (match) {
+        outExplainTitle.textContent = "Filen är oförändrad (identisk filversion).";
+        outExplainBody.textContent =
+          "Match betyder att underlaget är exakt samma bytes som referensen. Detta säger inget om innehållets riktighet – endast att filversionen inte har ändrats.";
       } else {
-        resultHeadline.innerHTML = `<span class="err">❌ Ingen match – filversionen är inte identisk</span>`;
-        if (resultNote) {
-          resultNote.style.display = "block";
-          resultNote.innerHTML =
-            "Underlaget du valt är <b>inte samma filversion (bytes)</b> som den som Verifierings-ID:t avser.<br/>" +
-            "Vanliga orsaker: ny export, omskanning, konvertering eller att fel fil valts.<br/>" +
-            "<b>Åtgärd:</b> be om originalfilen som registrerades, eller skapa nytt Verifierings-ID för aktuell version och dokumentera tidpunkt.";
-        }
+        outExplainTitle.textContent = "Filen skiljer sig från referensen (annan filversion).";
+        outExplainBody.textContent =
+          "Ingen match betyder att underlaget inte är identiskt med den registrerade referensen. Vanliga orsaker: ny export, omskanning, konvertering eller att fel fil valts.";
       }
 
       if (!verifyRes.ok) {
@@ -417,22 +468,22 @@
         openCertBtn.style.display = "inline-flex";
       }
 
+      // om allt gick bra – ta bort ev. varningsruta
+      hideAlert();
+
       setStatus("Klar");
       setBusy(false);
-      showHint("");
     } catch (e){
       if (myOp !== opId) return;
       errorBox.style.display = "block";
       errorMsg.textContent = e?.message || "Tekniskt fel.";
       setStatus("Fel");
       setBusy(false);
-      updateGuidance();
     }
   });
 
-  setStatus("Väntar");
-  setBusy(false);
-  updateGuidance();
+  // init
+  updateValidationUI();
 })();
 </script>
 
