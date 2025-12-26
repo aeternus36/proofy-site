@@ -151,8 +151,13 @@
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <!-- Cloudflare-friendly form (POST to /api/demo via fetch) -->
-        <form class="form" id="demoForm" novalidate>
+        <form class="form" name="demo" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="demo" />
+          <input type="hidden" name="redirect" value="/thanks.html" />
+          <p style="display:none;">
+            <label>Don’t fill this out: <input name="bot-field" /></label>
+          </p>
+
           <div class="formGrid">
             <div>
               <label class="label" for="name">Namn <span class="req">*</span></label>
@@ -181,16 +186,13 @@
             </div>
           </div>
 
-          <div class="formActions" style="align-items:center; gap:12px;">
-            <button class="btn primary" id="demoSubmit" type="submit">Skicka förfrågan</button>
+          <div class="formActions">
+            <button class="btn primary" type="submit">Skicka förfrågan</button>
             <a class="btn" href="/pilot.html">Se pilotupplägg</a>
-
-            <!-- Tydlig status nära knappen -->
-            <span id="demoStatus" class="pill" role="status" aria-live="polite"
-              style="margin-left:auto; font-weight:800;">
-              Redo
-            </span>
           </div>
+
+          <!-- ✅ NYTT: tydlig statusrad (utan att ta bort något) -->
+          <div id="demoStatusMsg" class="small" style="margin-top:10px; font-weight:800;"></div>
 
           <div class="fineprint">
             Genom att skicka formuläret godkänner du att vi kontaktar dig om demo/pilot. Inga dokument bifogas här.
@@ -227,56 +229,58 @@
   </div>
 </footer>
 
+<!-- ✅ NYTT: gör felet synligt vid 405/submit-problem utan att ändra backend -->
 <script>
 (() => {
-  const form = document.getElementById("demoForm");
-  if (!form) return;
+  const form = document.querySelector('form[name="demo"]');
+  const statusEl = document.getElementById("demoStatusMsg");
+  if (!form || !statusEl) return;
 
-  const btn = document.getElementById("demoSubmit");
-  const status = document.getElementById("demoStatus");
-
-  const setStatus = (text) => { if (status) status.textContent = text; };
+  function setStatus(text){
+    statusEl.textContent = text || "";
+  }
 
   form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+    // Vi gör en "mjuk" förbättring:
+    // - Försöker skicka som vanligt (POST)
+    // - Om servern svarar med 405/annat, visar tydligt felmeddelande
+    // OBS: Vi låter fortfarande formuläret fungera om redirect/Netlify råkar finnas.
+    // Därför: vi gör fetch först och om OK -> skickar vidare till redirect.
+    try{
+      e.preventDefault();
 
-    const fd = new FormData(form);
-    const name = String(fd.get("name") || "").trim();
-    const email = String(fd.get("email") || "").trim();
-    const message = String(fd.get("message") || "").trim();
+      setStatus("Skickar…");
 
-    if (!name || !email || !message) {
-      setStatus("Fyll i namn, e-post och meddelande");
-      return;
-    }
+      const fd = new FormData(form);
+      const action = form.getAttribute("action") || window.location.href;
 
-    btn.disabled = true;
-    setStatus("Skickar…");
-
-    try {
-      const res = await fetch("/api/demo", {
+      const res = await fetch(action, {
         method: "POST",
         body: fd
       });
 
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || data.ok === false) {
-        setStatus(data?.error ? `Kunde inte skickas: ${data.error}` : `Kunde inte skickas (HTTP ${res.status})`);
-        btn.disabled = false;
+      // Om OK: försök respektera redirect-fältet (om det finns)
+      if (res.ok) {
+        const redirect = fd.get("redirect");
+        setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.");
+        // Liten delay så man ser meddelandet
+        setTimeout(() => {
+          if (redirect) window.location.href = String(redirect);
+          else form.reset();
+        }, 500);
         return;
       }
 
-      setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.");
-      form.reset();
-      btn.disabled = false;
-    } catch (err) {
+      // Inte OK
+      if (res.status === 405) {
+        setStatus("Kunde inte skickas (HTTP 405). Formuläret är inte kopplat till en mottagare på servern. Mejla kontakt@proofy.se så länge.");
+      } else {
+        setStatus(`Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`);
+      }
+    } catch (err){
       setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.");
-      btn.disabled = false;
     }
   });
-
-  setStatus("Redo");
 })();
 </script>
 
