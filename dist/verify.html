@@ -72,6 +72,9 @@
           <label class="meta" for="hashInput" style="margin-top:8px;">Verifierings-ID</label>
           <input id="hashInput" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:6px" />
 
+          <!-- NYTT: tydlig påminnelse/validering (visas bara när det behövs) -->
+          <div id="idHint" class="small" style="margin-top:8px; display:none;" aria-live="polite"></div>
+
           <div class="small" style="margin-top:8px">
             ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
@@ -168,6 +171,7 @@
   const $ = (id) => document.getElementById(id);
 
   const hashInput = $("hashInput");
+  const idHint = $("idHint");
   const fileInput = $("fileInput");
   const fileInfo = $("fileInfo");
   const verifyBtn = $("verifyBtn");
@@ -197,9 +201,40 @@
     statusPill.textContent = text;
   }
 
+  function updateIdHint(){
+    const v = (hashInput.value || "").trim();
+
+    if (!v) {
+      hashInput.setAttribute("aria-invalid", "true");
+      idHint.style.display = "block";
+      idHint.innerHTML = `<span class="err">Klistra in Verifierings-ID för att kunna verifiera.</span> <span class="meta">(Format: 0x + 64 hex-tecken)</span>`;
+      return;
+    }
+
+    if (!isValidId(v)) {
+      hashInput.setAttribute("aria-invalid", "true");
+      idHint.style.display = "block";
+      idHint.innerHTML = `<span class="err">Ogiltigt Verifierings-ID.</span> <span class="meta">Kontrollera att det börjar med 0x och innehåller 64 hex-tecken.</span>`;
+      return;
+    }
+
+    hashInput.setAttribute("aria-invalid", "false");
+    idHint.style.display = "none";
+    idHint.textContent = "";
+  }
+
   function setBusy(v){
     busy = v;
-    verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
+    const okId = isValidId(hashInput.value);
+    verifyBtn.disabled = v || !(currentFile && okId);
+
+    // Tydlig status (bra UX för revisorer/jurister)
+    if (busy) return;
+
+    if (!currentFile && !okId) setStatus("Ange ID + välj underlag");
+    else if (!okId) setStatus("Ange Verifierings-ID");
+    else if (!currentFile) setStatus("Välj underlag");
+    else setStatus("Redo");
   }
 
   function bytesToHex(bytes){
@@ -290,10 +325,18 @@
     setIdInUrl(urlId);
   }
 
+  // Init: visa direkt om fältet är tomt (så man förstår varför knappen är disabled)
+  updateIdHint();
+
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
     if (isValidId(v)) setIdInUrl(v);
+    updateIdHint();
     setBusy(false);
+  });
+
+  hashInput.addEventListener("blur", () => {
+    updateIdHint();
   });
 
   fileInput.addEventListener("change", () => {
@@ -301,6 +344,7 @@
     fileInfo.textContent = currentFile
       ? `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
       : "Inget underlag valt.";
+    updateIdHint();
     setBusy(false);
   });
 
@@ -364,7 +408,6 @@
     }
   });
 
-  setStatus("Väntar");
   setBusy(false);
 })();
 </script>
