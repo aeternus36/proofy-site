@@ -235,7 +235,7 @@
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
-        <a class="btn primary" href="/#kontakt">Boka demo</a>
+        <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
     </div>
   </div>
@@ -253,7 +253,7 @@
           <h1 class="certTitle">Verifieringsintyg</h1>
           <p class="certLead">
             Detta intyg är <b>automatiskt genererat</b> via proofy.se vid kontrolltillfället och sammanfattar resultatet av en kontroll av ett
-            <b>Verifierings-ID</b> (ett kontrollvärde kopplat till en specifik filversion).
+            <b>Verifierings-ID</b> (ett kontrollvärde kopplat till en specifik underlagsversion).
             Intyget visar om Verifierings-ID:t är registrerat och, i så fall, <b>registreringstid</b>.
             <b>Inget dokumentinnehåll lagras</b> i Proofy.
           </p>
@@ -297,8 +297,8 @@
 
       <div class="note">
         <b>Omfattning</b><br />
-        Intyget avser endast om en <b>filversion</b> kan knytas till en <b>registreringstid</b> via Verifierings-ID.
-        Det är <b>inte</b> e-signering, inte arkivering och inte en bedömning av dokumentets innehåll eller riktighet.
+        Intyget avser endast om en <b>underlagsversion</b> kan knytas till en <b>registreringstid</b> via Verifierings-ID.
+        Det är <b>inte</b> e-signering, inte arkivering och inte en bedömning av underlagets innehåll eller riktighet.
       </div>
 
       <div id="openBox" class="openBox">
@@ -328,7 +328,7 @@
             <button class="btn soft copyBtn" id="btnCopyId" type="button" disabled>Kopiera</button>
           </div>
           <div class="meta" style="margin-top:8px;">
-            ID:t avser en <b>filversion</b>. Ny export/omskanning/omkomprimering kan ge nytt ID även om dokumentet ser likadant ut.
+            ID:t avser en <b>underlagsversion</b>. Ny export/omskanning/omkomprimering kan ge nytt ID även om underlaget ser likadant ut.
           </div>
         </div>
 
@@ -409,19 +409,19 @@
           <p>
             <b>1) Vad intyget avser</b><br/>
             Intyget avser resultatet av en kontroll av ett Verifierings-ID vid angivet kontrolltillfälle.
-            Om ID:t är registrerat visas registreringstid. Intyget innehåller ingen dokumentfil och ingen dokumenttext.
+            Om ID:t är registrerat visas registreringstid. Intyget innehåller inget underlag och ingen dokumenttext.
           </p>
 
           <p>
             <b>2) Vad registreringstid betyder</b><br/>
             Registreringstid är den tidpunkt då Verifierings-ID:t registrerades i Proofys register.
-            Den säger inte när dokumentet skapades, signerades, godkändes eller kommunicerades.
+            Den säger inte när underlaget skapades, signerades, godkändes eller kommunicerades.
           </p>
 
           <p>
             <b>3) Vad intyget inte visar</b><br/>
-            Intyget visar inte vem som skapat dokumentet, vem som haft tillgång till det, om behörig person godkänt det,
-            eller om filen hanterats/ändrats efter registrering. Intyget är inte e-signering, inte arkivering och inte ett avtal i sig.
+            Intyget visar inte vem som skapat underlaget, vem som haft tillgång till det, om behörig person godkänt det,
+            eller om underlaget hanterats/ändrats efter registrering. Intyget är inte e-signering, inte arkivering och inte ett avtal i sig.
           </p>
 
           <p>
@@ -460,7 +460,7 @@
     </section>
 
     <p class="small" style="margin-top:14px;">
-      Behöver ni ett upplägg för rutin/arbetsflöde i byrån? <a href="/#kontakt">Boka demo</a>.
+      Behöver ni ett upplägg för rutin/arbetsflöde i byrån? <a href="/#kontakt">Boka kort demo</a>.
     </p>
 
   </div>
@@ -752,14 +752,14 @@
       return [
         "Kontrollen visar att Verifierings-ID:t är registrerat i Proofys register.",
         "Registreringstid anger när ID:t registrerades i Proofy.",
-        "Detta säger inte när dokumentet skapades eller av vem, och säger inget om dokumentets innehåll eller riktighet."
+        "Detta säger inte när underlaget skapades eller av vem, och säger inget om underlagets innehåll eller riktighet."
       ].join("\n");
     }
     if (state === "not_registered") {
       return [
         "Kontrollen visar att ingen registrering hittades för Verifierings-ID:t vid kontrolltillfället.",
-        "Kontrollera att du kopierat hela ID:t och att rätt filversion/ID används.",
-        "Vid behov: skapa Verifierings-ID igen från den avsedda referensfilen."
+        "Kontrollera att du kopierat hela ID:t och att rätt underlagsversion/ID används.",
+        "Vid behov: skapa Verifierings-ID igen från det avsedda referensunderlaget."
       ].join("\n");
     }
     if (state === "invalid") {
