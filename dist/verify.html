@@ -7,7 +7,6 @@
   <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- Global + Header CSS -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
   <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
 </head>
@@ -23,7 +22,6 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Desktop actions -->
       <div class="navActions" id="navActionsDesktop">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
@@ -31,7 +29,6 @@
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
-      <!-- Mobile menu (details) -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
@@ -66,21 +63,11 @@
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <!-- LEFT -->
         <section aria-label="Verifieringsuppgifter">
           <div style="font-weight:950; font-size:16px;">1. Ange Verifierings-ID</div>
 
-          <label class="meta" for="hashInput" style="margin-top:8px;">
-            Verifierings-ID
-          </label>
-          <input
-            id="hashInput"
-            type="text"
-            placeholder="0x…"
-            autocomplete="off"
-            spellcheck="false"
-            style="margin-top:6px"
-          />
+          <label class="meta" for="hashInput" style="margin-top:8px;">Verifierings-ID</label>
+          <input id="hashInput" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:6px" />
 
           <div class="small" style="margin-top:8px">
             ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
@@ -103,7 +90,6 @@
           </p>
         </section>
 
-        <!-- RIGHT -->
         <section aria-label="Resultat">
           <div style="font-weight:950; font-size:16px;">Resultat</div>
           <div class="hr"></div>
@@ -341,11 +327,9 @@
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
 
-      if (match) {
-        resultHeadline.innerHTML = `<span class="ok">✅ Match</span>`;
-      } else {
-        resultHeadline.innerHTML = `<span class="err">❌ Ingen match</span>`;
-      }
+      resultHeadline.innerHTML = match
+        ? `<span class="ok">✅ Match</span>`
+        : `<span class="err">❌ Ingen match</span>`;
 
       if (!verifyRes.ok) {
         outRegStatus.textContent = "Kunde inte kontrollera registreringsstatus (tillfälligt tekniskt problem).";
@@ -382,7 +366,6 @@
 })();
 </script>
 
-<!-- ✅ Viktigt: samma meny-script som på övriga sidor -->
 <script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
 <script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
