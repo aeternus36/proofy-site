@@ -151,12 +151,16 @@
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <!-- ÄNDRING: action="/thanks.html" så POST aldrig går till /#kontakt (fixar HTTP 405) -->
-        <form class="form" name="demo" method="POST" action="/thanks.html" data-netlify="true" netlify-honeypot="bot-field">
-          <input type="hidden" name="form-name" value="demo" />
-          <p style="display:none;">
-            <label>Don’t fill this out: <input name="bot-field" /></label>
-          </p>
+        <!-- ÄNDRING: Netlify bort, Cloudflare-safe via FormSubmit -->
+        <form class="form" id="demoForm" name="demo" method="POST" action="https://formsubmit.co/kontakt@proofy.se">
+          <!-- FormSubmit-inställningar -->
+          <input type="hidden" name="_subject" value="Proofy: Demo-/pilotförfrågan" />
+          <input type="hidden" name="_captcha" value="false" />
+          <input type="hidden" name="_template" value="table" />
+          <!-- Valfri redirect (FormSubmit). Om du INTE vill lämna sidan kan du ta bort _next. -->
+          <input type="hidden" name="_next" value="https://proofy.se/thanks.html" />
+          <!-- Honeypot -->
+          <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off" />
 
           <div class="formGrid">
             <div>
@@ -187,8 +191,9 @@
           </div>
 
           <div class="formActions">
-            <button class="btn primary" type="submit">Skicka förfrågan</button>
+            <button class="btn primary" id="demoSubmitBtn" type="submit">Skicka förfrågan</button>
             <a class="btn" href="/pilot.html">Se pilotupplägg</a>
+            <span class="small" id="demoStatus" style="margin-left:10px; opacity:.9;"></span>
           </div>
 
           <div class="fineprint">
@@ -225,6 +230,23 @@
     </div>
   </div>
 </footer>
+
+<script>
+(() => {
+  // Liten UX-förbättring: tydlig status vid submit (utan att ändra sidans innehåll i övrigt).
+  const form = document.getElementById("demoForm");
+  const status = document.getElementById("demoStatus");
+  const btn = document.getElementById("demoSubmitBtn");
+  if (!form || !status || !btn) return;
+
+  form.addEventListener("submit", () => {
+    status.textContent = "Skickar…";
+    btn.disabled = true;
+    // Låt submission gå iväg normalt till FormSubmit (redirect sker via _next).
+    // Om du vill stanna på sidan istället, säg till så gör jag en AJAX-variant.
+  });
+})();
+</script>
 
 <script src="/assets/header-toggle.js?v=2025-flat2" defer></script>
 <script src="/chat-widget.js?v=2025-01f" defer></script>
