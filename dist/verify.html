@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
-  <meta name="description" content="Verifiera om ett underlag är oförändrat jämfört med ett registrerat Verifierings-ID." />
+  <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
 
   <!-- Global + Header CSS -->
@@ -99,7 +99,7 @@
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            <b>Tips:</b> Ny export/omskanning kan ge annan underlagsversion även om underlaget “ser likadant ut”.
+            <b>Tips:</b> Ny export/omskanning kan ge annan filversion även om dokumentet “ser likadant ut”.
           </p>
         </section>
 
@@ -131,7 +131,7 @@
             <div class="small" style="margin-top:10px">
               <b>Match</b> betyder att underlaget är <b>exakt samma version</b> (samma bytes) som den som ID:t avser.
               <br />
-              Proofy avgör inte vem som skapat underlaget eller om innehållet är korrekt – endast om underlagsversionen är identisk.
+              Proofy avgör inte vem som skapat underlaget eller om innehållet är korrekt – endast om filversionen är identisk.
             </div>
 
             <div class="actions" style="margin-top:12px">
@@ -161,7 +161,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av underlag. Tjänsten utgör inte juridisk rådgivning och avgör inte underlagets rättsliga giltighet.
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -382,6 +382,8 @@
 })();
 </script>
 
+<!-- ✅ Viktigt: samma meny-script som på övriga sidor -->
+<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
 <script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
 </html>
