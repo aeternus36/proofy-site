@@ -151,9 +151,9 @@
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <form class="form" name="demo" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <!-- ÄNDRING: action="/thanks.html" så POST aldrig går till /#kontakt (fixar HTTP 405) -->
+        <form class="form" name="demo" method="POST" action="/thanks.html" data-netlify="true" netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="demo" />
-          <input type="hidden" name="redirect" value="/thanks.html" />
           <p style="display:none;">
             <label>Don’t fill this out: <input name="bot-field" /></label>
           </p>
