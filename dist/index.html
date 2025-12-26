@@ -152,10 +152,10 @@
         </p>
 
         <!-- Cloudflare: posta till en egen endpoint (Pages Function / Worker) -->
-        <form class="form" action="/api/contact" method="POST">
+        <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
           <!-- Honeypot -->
           <p style="display:none;">
-            <label>Don’t fill this out: <input name="bot-field" /></label>
+            <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
           </p>
 
           <div class="formGrid">
@@ -187,8 +187,9 @@
           </div>
 
           <div class="formActions">
-            <button class="btn primary" type="submit">Skicka förfrågan</button>
+            <button class="btn primary" id="demoSubmitBtn" type="submit">Skicka förfrågan</button>
             <a class="btn" href="/pilot.html">Se pilotupplägg</a>
+            <span id="demoStatus" class="pill" style="margin-left:12px;" aria-live="polite">Redo</span>
           </div>
 
           <div class="fineprint">
@@ -225,6 +226,111 @@
     </div>
   </div>
 </footer>
+
+<script>
+(() => {
+  const form = document.getElementById("demoForm");
+  if (!form) return;
+
+  const statusEl = document.getElementById("demoStatus");
+  const submitBtn = document.getElementById("demoSubmitBtn");
+
+  function setStatus(text, tone){
+    if (!statusEl) return;
+
+    statusEl.textContent = text;
+    statusEl.style.fontWeight = "800";
+    statusEl.style.border = "1px solid rgba(255,255,255,.14)";
+    statusEl.style.background = "rgba(255,255,255,.06)";
+    statusEl.style.color = "rgba(234,240,255,.92)";
+
+    if (tone === "ok"){
+      statusEl.style.background = "rgba(50, 205, 50, .10)";
+      statusEl.style.border = "1px solid rgba(50, 205, 50, .25)";
+    } else if (tone === "err"){
+      statusEl.style.background = "rgba(255, 80, 80, .10)";
+      statusEl.style.border = "1px solid rgba(255, 80, 80, .25)";
+    } else if (tone === "wait"){
+      statusEl.style.background = "rgba(120, 180, 255, .10)";
+      statusEl.style.border = "1px solid rgba(120, 180, 255, .25)";
+    }
+  }
+
+  function disableForm(disabled){
+    if (submitBtn) submitBtn.disabled = disabled;
+    const fields = form.querySelectorAll("input, textarea, select, button");
+    fields.forEach(el => {
+      if (el === submitBtn) return;
+      el.disabled = disabled;
+    });
+  }
+
+  function firstMissingRequired(){
+    const required = form.querySelectorAll("[required]");
+    for (const el of required) {
+      if (!String(el.value || "").trim()) return el;
+    }
+    return null;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const missing = firstMissingRequired();
+    if (missing){
+      missing.focus();
+      setStatus("Fyll i obligatoriska fält (*)", "err");
+      return;
+    }
+
+    // Honeypot: om ifylld -> låtsas OK (skicka inget)
+    const hp = form.querySelector('input[name="bot-field"]');
+    if (hp && String(hp.value || "").trim()){
+      setStatus("Skickat ✅", "ok");
+      form.reset();
+      setTimeout(() => { window.location.href = "/thanks.html"; }, 700);
+      return;
+    }
+
+    try{
+      disableForm(true);
+      setStatus("Skickar…", "wait");
+
+      const fd = new FormData(form);
+
+      // Skicka stabilt som x-www-form-urlencoded (undviker många “POST -> 405/502”-edge-cases)
+      const body = new URLSearchParams();
+      for (const [k, v] of fd.entries()) body.append(k, String(v));
+
+      const res = await fetch(form.action, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString()
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.ok !== true){
+        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
+        setStatus(msg, "err");
+        disableForm(false);
+        return;
+      }
+
+      setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.", "ok");
+      form.reset();
+
+      setTimeout(() => { window.location.href = "/thanks.html"; }, 700);
+
+    } catch (err){
+      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
+      disableForm(false);
+    }
+  });
+
+  setStatus("Redo", "wait");
+})();
+</script>
 
 <script src="/assets/header-toggle.js?v=2025-flat2" defer></script>
 <script src="/chat-widget.js?v=2025-01f" defer></script>
