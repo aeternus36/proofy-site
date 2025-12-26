@@ -1,29 +1,148 @@
-// /assets/header-toggle.js
-(() => {
-  const mnav = document.getElementById("mnav");
-  if (!mnav) return;
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Säkerhet – Proofy</title>
+  <meta name="description" content="Hur Proofy minskar risk: inga dokument lagras, dataminimering, skydd mot missbruk och tydliga avgränsningar." />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="canonical" href="https://proofy.se/security.html" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
+  <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
+</head>
 
-  const close = () => { mnav.open = false; };
+<body>
+<a class="skip" href="#main">Hoppa till innehåll</a>
 
-  // Stäng när man klickar på en länk i menyn
-  mnav.addEventListener("click", (e) => {
-    const a = e.target && e.target.closest ? e.target.closest("a") : null;
-    if (a) close();
-  });
+<header>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/" aria-label="Proofy">
+        <span class="logo" aria-hidden="true"></span>
+        <span>Proofy</span>
+      </a>
 
-  // Stäng på ESC
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") close();
-  });
+      <!-- Desktop actions -->
+      <div class="navActions" id="navActionsDesktop">
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn primary" href="/#kontakt">Boka kort demo</a>
+      </div>
 
-  // Stäng när man klickar utanför
-  document.addEventListener("click", (e) => {
-    if (!mnav.open) return;
-    if (!mnav.contains(e.target)) close();
-  });
+      <!-- Mobile menu (details) -->
+      <details class="mnav" id="mnav">
+        <summary class="mnavSummary" aria-label="Öppna meny">
+          <span class="mnavIcon" aria-hidden="true"></span>
+        </summary>
+        <nav class="mnavMenu" aria-label="Meny">
+          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
-  // Säkerhetsnät: om man byter till desktop-bredd, stäng
-  window.addEventListener("resize", () => {
-    if (window.innerWidth >= 921) close();
-  });
-})();
+          <div class="mnavMeta">
+            <div class="mnavNote">Säkerhet · integritet · villkor</div>
+            <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+          </div>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap" style="max-width:920px">
+    <div class="badge">Säkerhet · dataminimering · B2B</div>
+
+    <h1 class="pageTitle">Säkerhet</h1>
+
+    <p class="lead">
+      Proofy är utformat för professionell användning där underlag kan vara känsliga.
+      Vi bygger därför med fokus på <b>minimerad exponering</b>, <b>tydliga avgränsningar</b> och <b>förutsägbar drift</b>.
+    </p>
+
+    <div class="card content">
+      <div class="badge">Princip: minimera vad som behöver hanteras</div>
+
+      <h2>1. Dokumentinnehåll hanteras lokalt</h2>
+      <p>
+        Proofy lagrar inte dokument eller dokumentinnehåll. Kontroll av underlag sker genom att webbläsaren tar fram ett
+        kontrollvärde för den valda filen, och endast ett Verifierings-ID (och tid för registrering) används i Proofys register.
+      </p>
+
+      <h2>2. Verifierings-ID är inte dokumentet</h2>
+      <p>
+        Verifierings-ID är ett kontrollvärde kopplat till en specifik filversion. Proofy lagrar inte sådana uppgifter som möjliggör att dokumentet
+        kan återställas eller läsas utifrån Verifierings-ID.
+      </p>
+      <p class="small">
+        I vissa sammanhang kan ett Verifierings-ID, tillsammans med annan information hos Kunden, kunna kopplas till ett ärende eller en person.
+        Kunden ansvarar för hur Verifierings-ID och länkar hanteras internt.
+      </p>
+
+      <h2>3. Begränsad funktionalitet för att minska risk</h2>
+      <p>
+        Proofy är avgränsat till registrering och kontroll. Tjänsten är inte ett filarkiv och är inte utformad för att läsa, tolka eller återge dokument.
+      </p>
+
+      <h2>4. Skydd mot missbruk och störningar</h2>
+      <p>
+        För att skydda tjänsten och Kundens användning kan Proofy använda skyddsåtgärder såsom begränsningar av användning, övervakning av
+        onormala mönster och tekniska loggar för felsökning och incidenthantering.
+      </p>
+      <p class="small">
+        Vid pilot- eller avtalsupplägg kan skyddsnivåer och begränsningar anpassas efter Kundens behov.
+      </p>
+
+      <h2>5. Skydd av behörigheter och känsliga uppgifter</h2>
+      <p>
+        Uppgifter som används för drift och administration skyddas och hanteras så att de inte exponeras i webbplatsens klientkod.
+        Proofy eftersträvar att begränsa åtkomst till det som behövs för drift och support.
+      </p>
+
+      <h2>6. Ansvarsfull rapportering</h2>
+      <p>
+        Om du upptäcker en möjlig sårbarhet eller ett säkerhetsproblem, kontakta oss gärna så att vi kan undersöka och vidta lämpliga åtgärder.
+      </p>
+      <p>
+        Säkerhetskontakt: <b>kontakt@proofy.se</b>
+      </p>
+
+      <div class="hr"></div>
+      <p class="small">
+        Denna sida beskriver övergripande arbetssätt. För juridiska villkor och integritet, se
+        <a href="/terms.html">Villkor</a> och <a href="/privacy.html">Integritet</a>.
+      </p>
+    </div>
+
+    <p class="meta" style="margin:24px 0">
+      Senast uppdaterad: 2025-12-22
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
+        <div class="small" style="margin-top:8px; max-width:92ch;">
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+        </div>
+      </div>
+      <div class="links">
+        <a href="/security.html">Säkerhet</a>
+        <a href="/privacy.html">Integritet</a>
+        <a href="/terms.html">Villkor</a>
+        <a href="/#kontakt">Kontakt</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
+<script src="/chat-widget.js?v=2025-01" defer></script>
+</body>
+</html>
