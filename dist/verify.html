@@ -72,9 +72,6 @@
           <label class="meta" for="hashInput" style="margin-top:8px;">Verifierings-ID</label>
           <input id="hashInput" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:6px" />
 
-          <!-- NYTT: tydlig påminnelse/validering (visas bara när det behövs) -->
-          <div id="idHint" class="small" style="margin-top:8px; display:none;" aria-live="polite"></div>
-
           <div class="small" style="margin-top:8px">
             ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
@@ -91,6 +88,11 @@
             <span id="statusPill" class="pill">Väntar</span>
           </div>
 
+          <!-- NY: tydligare påminnelse/varning (syns när det behövs) -->
+          <div id="hintBox" class="small" style="display:none; margin-top:10px;">
+            <span class="err" id="hintText"></span>
+          </div>
+
           <p class="small" style="margin-top:12px; margin-bottom:0;">
             <b>Tips:</b> Ny export/omskanning kan ge annan filversion även om dokumentet “ser likadant ut”.
           </p>
@@ -102,6 +104,9 @@
 
           <div id="resultBox" style="display:none;">
             <div id="resultHeadline" style="font-size:20px; font-weight:900;"></div>
+
+            <!-- NY: tydligare förklaring vid ingen match -->
+            <div id="resultNote" class="small" style="display:none; margin-top:10px;"></div>
 
             <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
             <pre class="mono" id="outHash">—</pre>
@@ -171,14 +176,17 @@
   const $ = (id) => document.getElementById(id);
 
   const hashInput = $("hashInput");
-  const idHint = $("idHint");
   const fileInput = $("fileInput");
   const fileInfo = $("fileInfo");
   const verifyBtn = $("verifyBtn");
   const statusPill = $("statusPill");
 
+  const hintBox = $("hintBox");
+  const hintText = $("hintText");
+
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
+  const resultNote = $("resultNote");
   const outHash = $("outHash");
   const outFileHash = $("outFileHash");
   const outRegStatus = $("outRegStatus");
@@ -201,40 +209,14 @@
     statusPill.textContent = text;
   }
 
-  function updateIdHint(){
-    const v = (hashInput.value || "").trim();
-
-    if (!v) {
-      hashInput.setAttribute("aria-invalid", "true");
-      idHint.style.display = "block";
-      idHint.innerHTML = `<span class="err">Klistra in Verifierings-ID för att kunna verifiera.</span> <span class="meta">(Format: 0x + 64 hex-tecken)</span>`;
-      return;
-    }
-
-    if (!isValidId(v)) {
-      hashInput.setAttribute("aria-invalid", "true");
-      idHint.style.display = "block";
-      idHint.innerHTML = `<span class="err">Ogiltigt Verifierings-ID.</span> <span class="meta">Kontrollera att det börjar med 0x och innehåller 64 hex-tecken.</span>`;
-      return;
-    }
-
-    hashInput.setAttribute("aria-invalid", "false");
-    idHint.style.display = "none";
-    idHint.textContent = "";
+  function showHint(msg){
+    hintText.textContent = msg || "";
+    hintBox.style.display = msg ? "block" : "none";
   }
 
   function setBusy(v){
     busy = v;
-    const okId = isValidId(hashInput.value);
-    verifyBtn.disabled = v || !(currentFile && okId);
-
-    // Tydlig status (bra UX för revisorer/jurister)
-    if (busy) return;
-
-    if (!currentFile && !okId) setStatus("Ange ID + välj underlag");
-    else if (!okId) setStatus("Ange Verifierings-ID");
-    else if (!currentFile) setStatus("Välj underlag");
-    else setStatus("Redo");
+    verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
   }
 
   function bytesToHex(bytes){
@@ -251,6 +233,8 @@
     resultBox.style.display = "none";
     errorBox.style.display = "none";
     errorMsg.textContent = "";
+    showHint("");
+
     if (openCertBtn) openCertBtn.style.display = "none";
 
     outHash.textContent = "—";
@@ -259,6 +243,11 @@
     outRegSe.textContent = "—";
     outRegUtc.textContent = "—";
     resultHeadline.textContent = "";
+
+    if (resultNote) {
+      resultNote.style.display = "none";
+      resultNote.textContent = "";
+    }
   }
 
   function getIdFromUrl(){
@@ -319,24 +308,42 @@
     return { ok:true, data:j2 };
   }
 
+  function updateGuidance(){
+    if (busy) return;
+
+    const idOk = isValidId(hashInput.value);
+    const hasFile = Boolean(currentFile);
+
+    // Om användaren valt fil men saknar/har ogiltigt ID: visa tydlig påminnelse.
+    if (hasFile && !idOk){
+      const v = (hashInput.value || "").trim();
+      if (!v) {
+        showHint("Verifierings-ID saknas. Klistra in ID (format: 0x + 64 hex-tecken) eller öppna verifieringslänken.");
+        setStatus("Ange Verifierings-ID");
+      } else {
+        showHint("Ogiltigt Verifierings-ID. Kontrollera att det börjar med 0x och innehåller 64 hex-tecken.");
+        setStatus("Ogiltigt ID");
+      }
+    } else {
+      showHint("");
+      if (!hasFile) setStatus("Väntar");
+      else setStatus("Redo");
+    }
+
+    setBusy(false);
+  }
+
   const urlId = getIdFromUrl();
   if (isValidId(urlId)) {
     hashInput.value = urlId;
     setIdInUrl(urlId);
   }
 
-  // Init: visa direkt om fältet är tomt (så man förstår varför knappen är disabled)
-  updateIdHint();
-
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
     if (isValidId(v)) setIdInUrl(v);
-    updateIdHint();
-    setBusy(false);
-  });
-
-  hashInput.addEventListener("blur", () => {
-    updateIdHint();
+    resetUI();
+    updateGuidance();
   });
 
   fileInput.addEventListener("change", () => {
@@ -344,8 +351,8 @@
     fileInfo.textContent = currentFile
       ? `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
       : "Inget underlag valt.";
-    updateIdHint();
-    setBusy(false);
+    resetUI();
+    updateGuidance();
   });
 
   verifyBtn.addEventListener("click", async () => {
@@ -374,9 +381,22 @@
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
 
-      resultHeadline.innerHTML = match
-        ? `<span class="ok">✅ Match</span>`
-        : `<span class="err">❌ Ingen match</span>`;
+      if (match){
+        resultHeadline.innerHTML = `<span class="ok">✅ Match</span>`;
+        if (resultNote) {
+          resultNote.style.display = "none";
+          resultNote.textContent = "";
+        }
+      } else {
+        resultHeadline.innerHTML = `<span class="err">❌ Ingen match – filversionen är inte identisk</span>`;
+        if (resultNote) {
+          resultNote.style.display = "block";
+          resultNote.innerHTML =
+            "Underlaget du valt är <b>inte samma filversion (bytes)</b> som den som Verifierings-ID:t avser.<br/>" +
+            "Vanliga orsaker: ny export, omskanning, konvertering eller att fel fil valts.<br/>" +
+            "<b>Åtgärd:</b> be om originalfilen som registrerades, eller skapa nytt Verifierings-ID för aktuell version och dokumentera tidpunkt.";
+        }
+      }
 
       if (!verifyRes.ok) {
         outRegStatus.textContent = "Kunde inte kontrollera registreringsstatus (tillfälligt tekniskt problem).";
@@ -399,16 +419,20 @@
 
       setStatus("Klar");
       setBusy(false);
+      showHint("");
     } catch (e){
       if (myOp !== opId) return;
       errorBox.style.display = "block";
       errorMsg.textContent = e?.message || "Tekniskt fel.";
       setStatus("Fel");
       setBusy(false);
+      updateGuidance();
     }
   });
 
+  setStatus("Väntar");
   setBusy(false);
+  updateGuidance();
 })();
 </script>
 
