@@ -59,8 +59,8 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om en fil är samma version som den som tidigare fastställdes.
-      Filen lämnar aldrig din dator.
+      Kontrollera om ett underlag är samma version som det som tidigare fastställdes.
+      Underlaget lämnar aldrig din dator.
     </p>
 
     <div class="card content" style="margin-top:14px;">
@@ -88,13 +88,13 @@
 
           <div class="hr"></div>
 
-          <div style="font-weight:950; font-size:16px;">2. Välj fil att kontrollera</div>
+          <div style="font-weight:950; font-size:16px;">2. Välj underlag att kontrollera</div>
 
           <input id="fileInput" type="file" style="margin-top:8px" />
-          <div id="fileInfo" class="meta" style="margin-top:8px">Ingen fil vald.</div>
+          <div id="fileInfo" class="meta" style="margin-top:8px">Inget underlag valt.</div>
 
           <div class="actions" style="margin-top:14px">
-            <button class="btn primary" id="verifyBtn" disabled>Verifiera fil</button>
+            <button class="btn primary" id="verifyBtn" disabled>Verifiera underlag</button>
             <span id="statusPill" class="pill">Väntar</span>
           </div>
 
@@ -114,7 +114,7 @@
             <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
             <pre class="mono" id="outHash">—</pre>
 
-            <div class="meta" style="margin-top:10px;">Filens fingeravtryck</div>
+            <div class="meta" style="margin-top:10px;">Underlagets fingeravtryck</div>
             <pre class="mono" id="outFileHash">—</pre>
 
             <div class="hr"></div>
@@ -129,9 +129,9 @@
             <pre class="mono" id="outRegUtc">—</pre>
 
             <div class="small" style="margin-top:10px">
-              <b>Match</b> betyder att filen är <b>exakt samma version</b> (samma bytes) som den som ID:t avser.
+              <b>Match</b> betyder att underlaget är <b>exakt samma version</b> (samma bytes) som den som ID:t avser.
               <br />
-              Proofy avgör inte vem som skapat filen eller om innehållet är korrekt – endast om filversionen är identisk.
+              Proofy avgör inte vem som skapat underlaget eller om innehållet är korrekt – endast om filversionen är identisk.
             </div>
 
             <div class="actions" style="margin-top:12px">
@@ -149,7 +149,7 @@
     </div>
 
     <p class="meta" style="margin-top:14px">
-      Proofy avgör inte om innehållet är korrekt – endast om filen är oförändrad jämfört med referensen.
+      Proofy avgör inte om innehållet är korrekt – endast om underlaget är oförändrat jämfört med referensen.
     </p>
   </div>
 </main>
@@ -310,8 +310,8 @@
   fileInput.addEventListener("change", () => {
     currentFile = fileInput.files?.[0] || null;
     fileInfo.textContent = currentFile
-      ? `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
-      : "Ingen fil vald.";
+      ? `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
+      : "Inget underlag valt.";
     setBusy(false);
   });
 
@@ -327,7 +327,7 @@
     try{
       const refHash = hashInput.value.trim();
       if (!isValidId(refHash)) throw new Error("Ogiltigt Verifierings-ID (måste vara 0x + 64 hex-tecken).");
-      if (!currentFile) throw new Error("Välj en fil att verifiera.");
+      if (!currentFile) throw new Error("Välj ett underlag att verifiera.");
 
       const fileHash = await sha256Hex(currentFile);
       if (myOp !== opId) return;
