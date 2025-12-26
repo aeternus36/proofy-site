@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Skapa Verifierings-ID</title>
-  <meta name="description" content="Skapa ett Verifierings-ID för en underlagsversion lokalt i webbläsaren. Underlaget lämnar aldrig din dator." />
+  <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
@@ -22,7 +22,6 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Desktop actions -->
       <div class="navActions" id="navActionsDesktop">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
@@ -30,7 +29,6 @@
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
-      <!-- Mobile menu (details) -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
@@ -58,18 +56,17 @@
     <h1 class="pageTitle">Skapa Verifierings-ID</h1>
 
     <p class="lead">
-      Skapa ett Verifierings-ID för den underlagsversion som ska vara <b>referens</b> i ärendet.
+      Skapa ett Verifierings-ID för den filversion som ska vara <b>referens</b> i ärendet.
       Underlaget lämnar aldrig din dator. Proofy lagrar inte dokument.
     </p>
 
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <!-- LEFT -->
-        <section aria-label="Skapa via underlag">
+        <section aria-label="Skapa via fil">
           <div style="font-weight:950; font-size:16px;">Välj referensunderlag</div>
           <p class="meta" style="margin-top:8px">
-            Välj den underlagsversion som ska gälla som referens. Du får Verifierings-ID, delbar länk och QR-kod.
+            Välj den filversion som ska gälla som referens. Du får Verifierings-ID, delbar länk och QR-kod.
           </p>
 
           <input id="fileInput" type="file" />
@@ -91,13 +88,12 @@
           </div>
 
           <div class="small" style="margin-top:10px">
-            Alla underlagstyper stöds (t.ex. PDF, Excel, bilder, ZIP).
+            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).
             <br />
-            <b>Obs:</b> En ny export/omskanning kan räknas som en ny underlagsversion även om underlaget “ser likadant ut”.
+            <b>Obs:</b> En ny export/omskanning kan räknas som en ny filversion även om dokumentet “ser likadant ut”.
           </div>
         </section>
 
-        <!-- RIGHT -->
         <section aria-label="Resultat">
           <div style="font-weight:950; font-size:16px;">Resultat</div>
           <div class="hr"></div>
@@ -157,7 +153,6 @@
       </div>
     </div>
 
-    <!-- Manual -->
     <section style="margin-top:14px;">
       <div class="card content">
         <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
@@ -197,13 +192,13 @@
 
         <div class="hr"></div>
         <p class="small" style="margin:0;">
-          Proofy lagrar inte dokument. Verifiering bygger på att jämföra underlagsversioner mot en registrerad referens.
+          Proofy lagrar inte dokument. Verifiering bygger på att jämföra filversioner mot en registrerad referens.
         </p>
       </div>
     </section>
 
     <p class="meta" style="margin-top:14px">
-      Proofy lagrar inte dokument. Verifiering bygger på att jämföra underlagsversioner mot en registrerad referens.
+      Proofy lagrar inte dokument. Verifiering bygger på att jämföra filversioner mot en registrerad referens.
     </p>
   </div>
 </main>
@@ -215,7 +210,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av underlag. Tjänsten utgör inte juridisk rådgivning och avgör inte underlagets rättsliga giltighet.
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -228,12 +223,9 @@
   </div>
 </footer>
 
-<!-- QR lib -->
-<script
-  src="/qr.min.js?v=2025-12-24a"
+<script src="/qr.min.js?v=2025-12-24a"
   onload="window.__proofyQrLibLoaded = true"
-  onerror="window.__proofyQrLibError = true"
-></script>
+  onerror="window.__proofyQrLibError = true"></script>
 
 <script>
 (() => {
@@ -264,7 +256,6 @@
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
-  // Manual section
   const manualId = $("manualId");
   const manualBuildBtn = $("manualBuildBtn");
   const manualCopyLinkBtn = $("manualCopyLinkBtn");
@@ -443,7 +434,6 @@
 
       renderQr(qrBox, currentLink);
 
-      // Visa preliminärt innan API-svar
       resultBox.style.display = "block";
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
@@ -477,7 +467,6 @@
         timeOut.textContent = "—";
       }
 
-      // Tekniska detaljer (valfritt)
       submitterOut.textContent = data.submitter || "—";
       txOut.textContent = data.txHash || "—";
 
@@ -496,22 +485,14 @@
 
   copyIdBtn.addEventListener("click", async () => {
     if(!currentId) return;
-    try{
-      await navigator.clipboard.writeText(currentId);
-      setPill("ID kopierat ✅");
-    } catch {
-      setPill("Kunde inte kopiera");
-    }
+    try{ await navigator.clipboard.writeText(currentId); setPill("ID kopierat ✅"); }
+    catch { setPill("Kunde inte kopiera"); }
   });
 
   copyLinkBtn.addEventListener("click", async () => {
     if(!currentLink) return;
-    try{
-      await navigator.clipboard.writeText(currentLink);
-      setPill("Länk kopierad ✅");
-    } catch {
-      setPill("Kunde inte kopiera");
-    }
+    try{ await navigator.clipboard.writeText(currentLink); setPill("Länk kopierad ✅"); }
+    catch { setPill("Kunde inte kopiera"); }
   });
 
   function setManualState(id){
@@ -545,12 +526,8 @@
   manualCopyLinkBtn.addEventListener("click", async () => {
     const link = setManualState(manualId.value);
     if (!link) return;
-    try{
-      await navigator.clipboard.writeText(link);
-      setManualPill("Länk kopierad ✅");
-    } catch {
-      setManualPill("Kunde inte kopiera");
-    }
+    try{ await navigator.clipboard.writeText(link); setManualPill("Länk kopierad ✅"); }
+    catch { setManualPill("Kunde inte kopiera"); }
   });
 
   resetRight();
@@ -559,6 +536,7 @@
 })();
 </script>
 
+<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
 <script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
 </html>
