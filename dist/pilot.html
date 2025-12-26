@@ -95,10 +95,9 @@
 
       <h2>Starta pilot</h2>
 
-      <form name="pilot" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-        <input type="hidden" name="form-name" value="pilot" />
-        <input type="hidden" name="redirect" value="/thanks.html" />
-
+      <!-- Cloudflare: posta till en egen endpoint -->
+      <form name="pilot" action="/api/pilot" method="POST">
+        <!-- Honeypot -->
         <p style="display:none;">
           <label>Don’t fill this out: <input name="bot-field" /></label>
         </p>
