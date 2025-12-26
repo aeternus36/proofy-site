@@ -151,8 +151,8 @@
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <!-- B: AJAX-submit till Cloudflare endpoint (ingen redirect, ingen 405-sida) -->
-        <form class="form" id="demoForm" action="/api/demo" method="POST" novalidate>
+        <!-- Cloudflare-friendly form (POST to /api/demo via fetch) -->
+        <form class="form" id="demoForm" novalidate>
           <div class="formGrid">
             <div>
               <label class="label" for="name">Namn <span class="req">*</span></label>
@@ -181,10 +181,15 @@
             </div>
           </div>
 
-          <div class="formActions">
-            <button class="btn primary" id="demoSubmitBtn" type="submit">Skicka förfrågan</button>
+          <div class="formActions" style="align-items:center; gap:12px;">
+            <button class="btn primary" id="demoSubmit" type="submit">Skicka förfrågan</button>
             <a class="btn" href="/pilot.html">Se pilotupplägg</a>
-            <span id="demoStatus" class="pill" aria-live="polite" style="margin-left:auto;">Redo</span>
+
+            <!-- Tydlig status nära knappen -->
+            <span id="demoStatus" class="pill" role="status" aria-live="polite"
+              style="margin-left:auto; font-weight:800;">
+              Redo
+            </span>
           </div>
 
           <div class="fineprint">
@@ -227,74 +232,47 @@
   const form = document.getElementById("demoForm");
   if (!form) return;
 
-  const submitBtn = document.getElementById("demoSubmitBtn");
+  const btn = document.getElementById("demoSubmit");
   const status = document.getElementById("demoStatus");
 
-  const setStatus = (text, tone) => {
-    status.textContent = text;
-
-    // Håll det kompatibelt med din befintliga UI: använd ok/err-klasser om de finns i CSS
-    status.classList.remove("ok", "err");
-    if (tone === "ok") status.classList.add("ok");
-    if (tone === "err") status.classList.add("err");
-  };
-
-  const setBusy = (busy) => {
-    if (submitBtn) submitBtn.disabled = !!busy;
-  };
-
-  // Lätt, saklig validering (bra för revisorer: tydlig åtgärd)
-  const requiredIds = ["name", "email", "message"];
-
-  function validate(){
-    for (const id of requiredIds){
-      const el = document.getElementById(id);
-      const v = (el?.value || "").trim();
-      if (!v){
-        el?.focus?.();
-        setStatus("Fyll i obligatoriska fält (markerade med *).", "err");
-        return false;
-      }
-    }
-    // enkel e-post-check (browsern gör också, men detta ger tydlig status)
-    const email = (document.getElementById("email")?.value || "").trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-      document.getElementById("email")?.focus?.();
-      setStatus("Ange en giltig e-postadress.", "err");
-      return false;
-    }
-    return true;
-  }
+  const setStatus = (text) => { if (status) status.textContent = text; };
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    if (!validate()) return;
+    const fd = new FormData(form);
+    const name = String(fd.get("name") || "").trim();
+    const email = String(fd.get("email") || "").trim();
+    const message = String(fd.get("message") || "").trim();
 
-    setBusy(true);
+    if (!name || !email || !message) {
+      setStatus("Fyll i namn, e-post och meddelande");
+      return;
+    }
+
+    btn.disabled = true;
     setStatus("Skickar…");
 
     try {
-      const fd = new FormData(form);
-
-      const res = await fetch(form.action || "/api/demo", {
+      const res = await fetch("/api/demo", {
         method: "POST",
         body: fd
       });
 
-      // Förväntat beteende: din /api/demo svarar t.ex. 200 med JSON { ok:true }
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || data.ok === false) {
-        throw new Error(data?.error || `Kunde inte skickas (HTTP ${res.status}).`);
+        setStatus(data?.error ? `Kunde inte skickas: ${data.error}` : `Kunde inte skickas (HTTP ${res.status})`);
+        btn.disabled = false;
+        return;
       }
 
-      setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.", "ok");
+      setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.");
       form.reset();
-      setBusy(false);
+      btn.disabled = false;
     } catch (err) {
-      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
-      setBusy(false);
+      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.");
+      btn.disabled = false;
     }
   });
 
