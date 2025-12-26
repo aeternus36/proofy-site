@@ -59,7 +59,7 @@
 
     <p class="lead">
       Skapa ett Verifierings-ID för den filversion som ska vara <b>referens</b> i ärendet.
-      Filen lämnar aldrig din dator. Proofy lagrar inte dokument.
+      Underlaget lämnar aldrig din dator. Proofy lagrar inte dokument.
     </p>
 
     <div class="card content" style="margin-top:14px;">
@@ -67,22 +67,22 @@
 
         <!-- LEFT -->
         <section aria-label="Skapa via fil">
-          <div style="font-weight:950; font-size:16px;">Välj referensfil</div>
+          <div style="font-weight:950; font-size:16px;">Välj referensunderlag</div>
           <p class="meta" style="margin-top:8px">
             Välj den filversion som ska gälla som referens. Du får Verifierings-ID, delbar länk och QR-kod.
           </p>
 
           <input id="fileInput" type="file" />
-          <div id="dropZone" class="drop" style="margin-top:10px">Dra &amp; släpp fil här</div>
+          <div id="dropZone" class="drop" style="margin-top:10px">Dra &amp; släpp underlag här</div>
 
-          <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
+          <div id="fileInfo" class="meta" style="margin-top:10px">Inget underlag valt.</div>
 
           <div class="actions" style="margin-top:12px">
             <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
             <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
-            <span id="statusPill" class="pill">Välj en fil</span>
+            <span id="statusPill" class="pill">Välj ett underlag</span>
           </div>
 
           <div id="localIdBox" style="display:none;margin-top:12px">
@@ -392,13 +392,13 @@
     fileInput.value = "";
 
     if(!currentFile){
-      fileInfo.textContent = "Ingen fil vald.";
-      setPill("Välj en fil");
+      fileInfo.textContent = "Inget underlag valt.";
+      setPill("Välj ett underlag");
       setBusy(false);
       return;
     }
 
-    fileInfo.textContent = `Vald fil: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
+    fileInfo.textContent = `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
     setPill("Redo att skapa");
     setBusy(false);
   }
