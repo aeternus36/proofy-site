@@ -151,17 +151,8 @@
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <!-- ÄNDRING: Netlify bort, Cloudflare-safe via FormSubmit -->
-        <form class="form" id="demoForm" name="demo" method="POST" action="https://formsubmit.co/kontakt@proofy.se">
-          <!-- FormSubmit-inställningar -->
-          <input type="hidden" name="_subject" value="Proofy: Demo-/pilotförfrågan" />
-          <input type="hidden" name="_captcha" value="false" />
-          <input type="hidden" name="_template" value="table" />
-          <!-- Valfri redirect (FormSubmit). Om du INTE vill lämna sidan kan du ta bort _next. -->
-          <input type="hidden" name="_next" value="https://proofy.se/thanks.html" />
-          <!-- Honeypot -->
-          <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off" />
-
+        <!-- B: AJAX-submit till Cloudflare endpoint (ingen redirect, ingen 405-sida) -->
+        <form class="form" id="demoForm" action="/api/demo" method="POST" novalidate>
           <div class="formGrid">
             <div>
               <label class="label" for="name">Namn <span class="req">*</span></label>
@@ -193,7 +184,7 @@
           <div class="formActions">
             <button class="btn primary" id="demoSubmitBtn" type="submit">Skicka förfrågan</button>
             <a class="btn" href="/pilot.html">Se pilotupplägg</a>
-            <span class="small" id="demoStatus" style="margin-left:10px; opacity:.9;"></span>
+            <span id="demoStatus" class="pill" aria-live="polite" style="margin-left:auto;">Redo</span>
           </div>
 
           <div class="fineprint">
@@ -233,18 +224,81 @@
 
 <script>
 (() => {
-  // Liten UX-förbättring: tydlig status vid submit (utan att ändra sidans innehåll i övrigt).
   const form = document.getElementById("demoForm");
-  const status = document.getElementById("demoStatus");
-  const btn = document.getElementById("demoSubmitBtn");
-  if (!form || !status || !btn) return;
+  if (!form) return;
 
-  form.addEventListener("submit", () => {
-    status.textContent = "Skickar…";
-    btn.disabled = true;
-    // Låt submission gå iväg normalt till FormSubmit (redirect sker via _next).
-    // Om du vill stanna på sidan istället, säg till så gör jag en AJAX-variant.
+  const submitBtn = document.getElementById("demoSubmitBtn");
+  const status = document.getElementById("demoStatus");
+
+  const setStatus = (text, tone) => {
+    status.textContent = text;
+
+    // Håll det kompatibelt med din befintliga UI: använd ok/err-klasser om de finns i CSS
+    status.classList.remove("ok", "err");
+    if (tone === "ok") status.classList.add("ok");
+    if (tone === "err") status.classList.add("err");
+  };
+
+  const setBusy = (busy) => {
+    if (submitBtn) submitBtn.disabled = !!busy;
+  };
+
+  // Lätt, saklig validering (bra för revisorer: tydlig åtgärd)
+  const requiredIds = ["name", "email", "message"];
+
+  function validate(){
+    for (const id of requiredIds){
+      const el = document.getElementById(id);
+      const v = (el?.value || "").trim();
+      if (!v){
+        el?.focus?.();
+        setStatus("Fyll i obligatoriska fält (markerade med *).", "err");
+        return false;
+      }
+    }
+    // enkel e-post-check (browsern gör också, men detta ger tydlig status)
+    const email = (document.getElementById("email")?.value || "").trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      document.getElementById("email")?.focus?.();
+      setStatus("Ange en giltig e-postadress.", "err");
+      return false;
+    }
+    return true;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (!validate()) return;
+
+    setBusy(true);
+    setStatus("Skickar…");
+
+    try {
+      const fd = new FormData(form);
+
+      const res = await fetch(form.action || "/api/demo", {
+        method: "POST",
+        body: fd
+      });
+
+      // Förväntat beteende: din /api/demo svarar t.ex. 200 med JSON { ok:true }
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data?.error || `Kunde inte skickas (HTTP ${res.status}).`);
+      }
+
+      setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.", "ok");
+      form.reset();
+      setBusy(false);
+    } catch (err) {
+      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
+      setBusy(false);
+    }
   });
+
+  setStatus("Redo");
 })();
 </script>
 
