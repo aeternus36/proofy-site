@@ -22,23 +22,21 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Desktop actions (visa ej aktuell sida) -->
       <div class="navActions" id="navActionsDesktop">
-        <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
-      <!-- Mobile menu -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
         </summary>
         <nav class="mnavMenu" aria-label="Meny">
-          <!-- Aktuell sida överst på mobil -->
-          <a class="mnavLink" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
-          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
@@ -75,6 +73,9 @@
           <div id="dropZone" class="drop" style="margin-top:10px">Dra &amp; släpp underlag här</div>
 
           <div id="fileInfo" class="meta" style="margin-top:10px">Inget underlag valt.</div>
+
+          <!-- NYTT: tydlig påminnelse (visas bara när det behövs) -->
+          <div id="fileHint" class="small" style="margin-top:8px; display:none;" aria-live="polite"></div>
 
           <div class="actions" style="margin-top:12px">
             <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
@@ -237,6 +238,7 @@
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
 
+  const fileHint = $("fileHint"); // NYTT
   const createBtn = $("createBtn");
   const copyIdBtn = $("copyIdBtn");
   const copyLinkBtn = $("copyLinkBtn");
@@ -273,15 +275,36 @@
   let busy = false;
   let opId = 0;
 
+  function setPill(text){ statusPill.textContent = text; }
+  function setManualPill(text){ manualPill.textContent = text; }
+
+  function showFileHint(msgHtml){
+    if (!fileHint) return;
+    if (!msgHtml){
+      fileHint.style.display = "none";
+      fileHint.textContent = "";
+      return;
+    }
+    fileHint.style.display = "block";
+    fileHint.innerHTML = msgHtml;
+  }
+
   function setBusy(v){
     busy = v;
     createBtn.disabled = !currentFile || busy;
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
-  }
 
-  function setPill(text){ statusPill.textContent = text; }
-  function setManualPill(text){ manualPill.textContent = text; }
+    if (busy) return;
+
+    if (!currentFile) {
+      setPill("Välj underlag");
+      showFileHint(`<span class="err">Välj ett referensunderlag för att skapa Verifierings-ID.</span> <span class="meta">Filen behandlas lokalt och lämnar inte din dator.</span>`);
+    } else {
+      showFileHint("");
+      setPill("Redo");
+    }
+  }
 
   function resetRight(){
     resultBox.style.display = "none";
@@ -386,13 +409,11 @@
 
     if(!currentFile){
       fileInfo.textContent = "Inget underlag valt.";
-      setPill("Välj ett underlag");
       setBusy(false);
       return;
     }
 
     fileInfo.textContent = `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
-    setPill("Redo att skapa");
     setBusy(false);
   }
 
@@ -407,8 +428,15 @@
     if(f) setFile(f);
   });
 
+  // NYTT: om man klickar på disabled-knappen via keyboard/assistive, eller om ni senare gör den enabled,
+  // så får man ändå en tydlig påminnelse.
   createBtn.addEventListener("click", async () => {
-    if(!currentFile || busy) return;
+    if(!currentFile){
+      showFileHint(`<span class="err">Du har inte valt något referensunderlag.</span> <span class="meta">Välj en fil (eller dra &amp; släpp) för att skapa Verifierings-ID.</span>`);
+      setPill("Välj underlag");
+      return;
+    }
+    if(busy) return;
 
     const myOp = ++opId;
     setBusy(true);
@@ -452,7 +480,8 @@
       if(myOp !== opId) return;
 
       if(!res.ok || data.ok === false){
-        throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
+        // För revisor/jurist: mer konkret åtgärd i feltexten
+        throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}). Försök igen och dokumentera tidpunkten om det är ett granskningsärende.`);
       }
 
       if (data.alreadyExists) {
