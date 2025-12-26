@@ -265,21 +265,17 @@
     });
   }
 
-  function firstMissingRequired(){
-    const required = form.querySelectorAll("[required]");
-    for (const el of required) {
-      if (!String(el.value || "").trim()) return el;
-    }
-    return null;
-  }
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const missing = firstMissingRequired();
-    if (missing){
-      missing.focus();
-      setStatus("Fyll i obligatoriska fält (*)", "err");
+    // Trimma obligatoriska fält (mobiler kan ibland lägga till osynliga whitespace-tecken)
+    const requiredEls = form.querySelectorAll("[required]");
+    requiredEls.forEach(el => { el.value = (el.value || "").trim(); });
+
+    // Låt webbläsaren avgöra om formatet är rätt (t.ex. e-post)
+    if (!form.checkValidity()){
+      form.reportValidity(); // visar native bubblor på mobilen
+      setStatus("Fyll i namn, e-post och meddelande.", "err");
       return;
     }
 
