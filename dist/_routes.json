@@ -1,6 +1,9 @@
 {
   "version": 1,
-  "include": ["/*"],
+  "include": [
+    "/api/*",
+    "/*"
+  ],
   "exclude": [
     "/assets/*",
     "/*.css",
@@ -14,7 +17,6 @@
     "/*.ico",
     "/*.txt",
     "/*.xml",
-    "/*.json",
     "/*.woff",
     "/*.woff2",
     "/*.ttf",
