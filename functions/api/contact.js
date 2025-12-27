@@ -1,8 +1,8 @@
 // functions/api/contact.js
 // Cloudflare Pages Function: /api/contact
 // - Stöd: JSON + formData + x-www-form-urlencoded
-// - Skickar mail via Resend (fetch)
-// - Returnerar ALLTID JSON (ingen 502 pga crash)
+// - Skickar mail via Resend (fetch) med timeout
+// - Returnerar ALLTID JSON (aldrig HTML) och undviker 5xx för att slippa Cloudflare HTML-502
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
@@ -27,7 +27,6 @@ function safeTrim(v) {
 }
 
 function isLikelyEmail(email) {
-  // enkel men stabil kontroll
   const e = safeTrim(email).toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
@@ -42,17 +41,14 @@ function escapeHtml(str) {
 }
 
 async function readBody(request) {
-  // Returnerar: { ok:true, data } eller { ok:false, error, detail, status }
   const ct = (request.headers.get("content-type") || "").toLowerCase();
 
   try {
     if (ct.includes("application/json")) {
-      // OBS: om body inte är JSON -> kastar exception -> fångas här och returneras snyggt
       const data = await request.json();
       return { ok: true, data: data && typeof data === "object" ? data : {} };
     }
 
-    // Form posts (multipart/form-data eller x-www-form-urlencoded)
     if (
       ct.includes("multipart/form-data") ||
       ct.includes("application/x-www-form-urlencoded")
@@ -61,7 +57,6 @@ async function readBody(request) {
       return { ok: true, data: Object.fromEntries(fd.entries()) };
     }
 
-    // Fallback: försök läsa text och tolka som JSON om möjligt
     const text = await request.text();
     const t = safeTrim(text);
     if (!t) return { ok: true, data: {} };
@@ -93,21 +88,23 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   if (!apiKey) {
     return {
       ok: false,
-      status: 500,
       error: "RESEND_API_KEY saknas.",
       hint:
         "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
     };
   }
 
-  // Resend endpoint
   const url = "https://api.resend.com/emails";
-
   const payload = { from, to, subject, html };
   if (replyTo) payload.reply_to = replyTo;
 
+  // Timeout-säkring så vi alltid hinner svara JSON
+  const controller = new AbortController();
+  const timeoutMs = 8000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   let res;
-  let text;
+  let text = "";
   try {
     res = await fetch(url, {
       method: "POST",
@@ -116,18 +113,29 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
         "content-type": "application/json",
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
     text = await res.text();
   } catch (err) {
+    const msg = String(err?.message || err);
+    const aborted =
+      msg.toLowerCase().includes("aborted") ||
+      msg.toLowerCase().includes("abort") ||
+      msg.toLowerCase().includes("timeout");
+
     return {
       ok: false,
-      status: 502,
-      error: "Kunde inte nå Resend (network/fetch).",
-      detail: String(err?.message || err),
+      error: aborted
+        ? "Timeout när vi försökte kontakta Resend."
+        : "Kunde inte nå Resend (network/fetch).",
+      detail: msg,
+      hint:
+        "Kontrollera RESEND_API_KEY och att FROM-adress/domän är korrekt. Testa CONTACT_FROM=onboarding@resend.dev.",
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 
-  // Resend svarar ofta JSON, men vi tar text säkert
   let parsed = null;
   try {
     parsed = text ? JSON.parse(text) : null;
@@ -136,30 +144,26 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   }
 
   if (!res.ok) {
-    // Vanligaste orsaken: FROM-domänen är inte verifierad i Resend.
     return {
       ok: false,
-      status: 502,
       error: "Resend avvisade utskicket.",
       resend_status: res.status,
       resend_response: parsed,
       hint:
-        "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend. Testa tillfälligt from='onboarding@resend.dev' eller verifiera proofy.se i Resend → Domains.",
+        "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend. Testa CONTACT_FROM=onboarding@resend.dev eller verifiera proofy.se i Resend → Domains.",
     };
   }
 
-  return { ok: true, status: 200, resend_response: parsed };
+  return { ok: true, resend_response: parsed };
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
 
-  // OPTIONS (CORS preflight)
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: { ...CORS_HEADERS } });
   }
 
-  // GET: health/info (så du ser att endpointen lever)
   if (request.method === "GET") {
     return json(
       {
@@ -172,13 +176,12 @@ export async function onRequest(context) {
     );
   }
 
-  // Endast POST för att skicka
   if (request.method !== "POST") {
+    // Undvik 405 om du vill vara extra “snäll” mot clients, men behåller din logik:
     return json({ ok: false, error: "Use POST" }, 405);
   }
 
   try {
-    // 1) Läs body robust
     const parsed = await readBody(request);
     if (!parsed.ok) {
       return json(
@@ -188,27 +191,23 @@ export async function onRequest(context) {
           detail: parsed.detail,
           received: parsed.received,
         },
-        parsed.status || 400
+        400
       );
     }
 
     const data = parsed.data || {};
 
-    // 2) Honeypot (om du har bot-field i formuläret)
     const botField = safeTrim(data["bot-field"]);
     if (botField) {
-      // Låtsas OK (skicka inget)
       return json({ ok: true, ignored: true }, 200);
     }
 
-    // 3) Normalisera fält
     const name = safeTrim(data.name);
     const email = safeTrim(data.email).toLowerCase();
     const company = safeTrim(data.company);
     const volume = safeTrim(data.volume);
     const message = safeTrim(data.message);
 
-    // 4) Validering
     if (!name || !email || !message) {
       return json({ ok: false, error: "Fyll i namn, e-post och meddelande." }, 400);
     }
@@ -216,7 +215,6 @@ export async function onRequest(context) {
       return json({ ok: false, error: "E-postadressen verkar inte vara giltig." }, 400);
     }
 
-    // 5) Bygg mail
     const createdAt = new Date().toISOString();
     const ip =
       request.headers.get("cf-connecting-ip") ||
@@ -226,9 +224,6 @@ export async function onRequest(context) {
 
     const CONTACT_TO = env?.CONTACT_TO || "kontakt@proofy.se";
     const FROM_NAME = env?.CONTACT_FROM_NAME || "Proofy";
-
-    // OBS: Om proofy.se inte är verifierad i Resend kommer detta ofta faila.
-    // Du kan testa med: onboarding@resend.dev tills domänen är verifierad.
     const FROM_ADDR = env?.CONTACT_FROM || "onboarding@resend.dev";
 
     const from = `${FROM_NAME} <${FROM_ADDR}>`;
@@ -273,7 +268,6 @@ export async function onRequest(context) {
       </div>
     `;
 
-    // 6) Skicka via Resend
     const sendResult = await sendViaResend({
       env,
       from,
@@ -284,7 +278,7 @@ export async function onRequest(context) {
     });
 
     if (!sendResult.ok) {
-      // Viktigt: returnera JSON istället för att låta något krascha → inga 502
+      // Viktigt för “lättaste sättet”: undvik 5xx så Cloudflare inte byter till HTML-sida
       return json(
         {
           ok: false,
@@ -294,17 +288,16 @@ export async function onRequest(context) {
           resend_response: sendResult.resend_response,
           detail: sendResult.detail,
         },
-        sendResult.status || 502
+        200
       );
     }
 
-    // 7) OK
     return json({ ok: true, resend: sendResult.resend_response }, 200);
   } catch (err) {
-    // SISTA skyddsnätet: aldrig 502
+    // Även här: undvik 5xx för att aldrig trigga HTML-ersättning
     return json(
       { ok: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
-      500
+      200
     );
   }
 }
