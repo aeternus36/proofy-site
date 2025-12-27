@@ -93,7 +93,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   if (!apiKey) {
     return {
       ok: false,
-      status: 200, // IMPORTANT: returnera inte 5xx från contact-endpoint
+      status: 200, // Viktigt: undvik 5xx för att slippa Cloudflare HTML-502
       error: "RESEND_API_KEY saknas.",
       hint:
         "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
@@ -112,6 +112,11 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
 
   if (replyTo) payload.reply_to = replyTo;
 
+  // Timeout-säkring: så vi alltid hinner svara JSON
+  const controller = new AbortController();
+  const timeoutMs = 8000; // kort & stabilt i edge
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   let res;
   let text;
   try {
@@ -122,15 +127,30 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
         "content-type": "application/json",
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
     text = await res.text();
   } catch (err) {
+    clearTimeout(timeoutId);
+
+    const msg = String(err?.message || err);
+    const aborted =
+      msg.toLowerCase().includes("aborted") ||
+      msg.toLowerCase().includes("abort") ||
+      msg.toLowerCase().includes("timeout");
+
     return {
       ok: false,
-      status: 200, // IMPORTANT: returnera inte 5xx från contact-endpoint
-      error: "Kunde inte nå Resend (network/fetch).",
-      detail: String(err?.message || err),
+      status: 200, // Viktigt: undvik 5xx för att slippa Cloudflare HTML-502
+      error: aborted
+        ? "Timeout när vi försökte kontakta Resend."
+        : "Kunde inte nå Resend (network/fetch).",
+      detail: msg,
+      hint:
+        "Om detta händer ofta: kontrollera att RESEND_API_KEY finns, att Resend API är uppe, och att Cloudflare Pages får göra utgående fetch till api.resend.com.",
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   // Resend svarar ofta JSON, men vi tar text säkert
@@ -145,7 +165,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
     // Vanligaste orsaken: FROM-domänen är inte verifierad i Resend.
     return {
       ok: false,
-      status: 200, // IMPORTANT: returnera inte 5xx från contact-endpoint
+      status: 200, // Viktigt: undvik 5xx för att slippa Cloudflare HTML-502
       error: "Resend avvisade utskicket.",
       resend_status: res.status,
       resend_response: parsed,
@@ -275,7 +295,8 @@ export async function onRequest(context) {
     });
 
     if (!sendResult.ok) {
-      // IMPORTANT: svara med 200 för att undvika Cloudflare HTML-502
+      // Viktigt: returnera JSON istället för att låta något krascha → inga 502 HTML
+      // Svarar med 200 för att Cloudflare inte ska ersätta med HTML.
       return json(
         {
           ok: false,
@@ -292,7 +313,7 @@ export async function onRequest(context) {
     // 7) OK
     return json({ ok: true, resend: sendResult.resend_response }, 200);
   } catch (err) {
-    // SISTA skyddsnätet: aldrig HTML-502
+    // SISTA skyddsnätet: aldrig 502 HTML
     return json(
       { ok: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
       200
