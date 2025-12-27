@@ -161,11 +161,11 @@
           <div class="formGrid">
             <div>
               <label class="label" for="name">Namn <span class="req">*</span></label>
-              <input id="name" name="name" type="text" autocomplete="name" required placeholder="För- och efternamn" />
+              <input id="name" name="name" type="text" autocomplete="name" required data-required="true" placeholder="För- och efternamn" />
             </div>
             <div>
               <label class="label" for="email">E-post <span class="req">*</span></label>
-              <input id="email" name="email" type="email" autocomplete="email" required placeholder="namn@byra.se" />
+              <input id="email" name="email" type="email" autocomplete="email" required data-required="true" placeholder="namn@byra.se" />
             </div>
             <div>
               <label class="label" for="company">Byrå / företag</label>
@@ -179,7 +179,7 @@
 
           <div style="margin-top:12px;">
             <label class="label" for="message">Vad vill ni kunna visa/verifiera? <span class="req">*</span></label>
-            <textarea id="message" name="message" rows="6" required
+            <textarea id="message" name="message" rows="6" required data-required="true"
               placeholder="Ex: kundunderlag som ifrågasätts i efterhand, underlag i granskning, beslut/avtal… Skriv också gärna när ni vill ses."></textarea>
             <div class="help">
               Vi återkommer normalt inom 1 arbetsdag. Du kan också mejla <b>kontakt@proofy.se</b>.
@@ -265,35 +265,39 @@
     });
   }
 
+  function clearFieldHints(){
+    const hinted = form.querySelectorAll("[data-proofy-hint='1']");
+    hinted.forEach(el => {
+      el.style.outline = "";
+      el.style.outlineOffset = "";
+      el.setAttribute("data-proofy-hint", "0");
+    });
+  }
+
+  function hintField(el){
+    if (!el) return;
+    el.style.outline = "2px solid rgba(255,80,80,.6)";
+    el.style.outlineOffset = "2px";
+    el.setAttribute("data-proofy-hint", "1");
+  }
+
   function firstMissingRequired(){
-    const required = form.querySelectorAll("[required]");
+    const required = form.querySelectorAll("[data-required='true']");
     for (const el of required) {
       if (!String(el.value || "").trim()) return el;
     }
     return null;
   }
 
-  // Viktigt för mobiler: säkerställ att sista tecknet “committas” innan vi läser .value
-  async function flushPendingInput(){
-    const ae = document.activeElement;
-    if (ae && form.contains(ae) && typeof ae.blur === "function") {
-      ae.blur();
-    }
-    // Låt browsern/tangentbordet uppdatera värden (Android kan annars ge tom sträng trots att text syns)
-    await new Promise(r => requestAnimationFrame(() => r()));
-    await new Promise(r => setTimeout(r, 0));
-  }
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-
-    await flushPendingInput();
+    clearFieldHints();
 
     const missing = firstMissingRequired();
     if (missing){
-      // Om det saknas: fokusera och visa tydlig status
+      hintField(missing);
       missing.focus();
-      setStatus("Fyll i namn, e-post och meddelande (*)", "err");
+      setStatus("Kontrollera att namn, e-post och beskrivning är ifyllda.", "err");
       return;
     }
 
@@ -312,7 +316,7 @@
 
       const fd = new FormData(form);
 
-      // Skicka stabilt som x-www-form-urlencoded (undviker många “POST -> 405/502”-edge-cases)
+      // Skicka stabilt som x-www-form-urlencoded
       const body = new URLSearchParams();
       for (const [k, v] of fd.entries()) body.append(k, String(v));
 
