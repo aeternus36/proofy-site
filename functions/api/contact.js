@@ -49,7 +49,7 @@ async function readBody(request) {
     if (ct.includes("application/json")) {
       // OBS: om body inte är JSON -> kastar exception -> fångas här och returneras snyggt
       const data = await request.json();
-      return { ok: true, data: (data && typeof data === "object") ? data : {} };
+      return { ok: true, data: data && typeof data === "object" ? data : {} };
     }
 
     // Form posts (multipart/form-data eller x-www-form-urlencoded)
@@ -68,7 +68,7 @@ async function readBody(request) {
 
     try {
       const parsed = JSON.parse(t);
-      return { ok: true, data: (parsed && typeof parsed === "object") ? parsed : {} };
+      return { ok: true, data: parsed && typeof parsed === "object" ? parsed : {} };
     } catch {
       return {
         ok: false,
@@ -93,9 +93,10 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   if (!apiKey) {
     return {
       ok: false,
-      status: 500,
+      status: 200, // IMPORTANT: returnera inte 5xx från contact-endpoint
       error: "RESEND_API_KEY saknas.",
-      hint: "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
+      hint:
+        "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
     };
   }
 
@@ -126,7 +127,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   } catch (err) {
     return {
       ok: false,
-      status: 502,
+      status: 200, // IMPORTANT: returnera inte 5xx från contact-endpoint
       error: "Kunde inte nå Resend (network/fetch).",
       detail: String(err?.message || err),
     };
@@ -144,7 +145,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
     // Vanligaste orsaken: FROM-domänen är inte verifierad i Resend.
     return {
       ok: false,
-      status: 502,
+      status: 200, // IMPORTANT: returnera inte 5xx från contact-endpoint
       error: "Resend avvisade utskicket.",
       resend_status: res.status,
       resend_response: parsed,
@@ -274,7 +275,7 @@ export async function onRequest(context) {
     });
 
     if (!sendResult.ok) {
-      // Viktigt: returnera JSON istället för att låta något krascha → inga 502
+      // IMPORTANT: svara med 200 för att undvika Cloudflare HTML-502
       return json(
         {
           ok: false,
@@ -284,17 +285,17 @@ export async function onRequest(context) {
           resend_response: sendResult.resend_response,
           detail: sendResult.detail,
         },
-        sendResult.status || 502
+        200
       );
     }
 
     // 7) OK
     return json({ ok: true, resend: sendResult.resend_response }, 200);
   } catch (err) {
-    // SISTA skyddsnätet: aldrig 502
+    // SISTA skyddsnätet: aldrig HTML-502
     return json(
       { ok: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
-      500
+      200
     );
   }
 }
