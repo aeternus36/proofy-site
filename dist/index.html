@@ -265,17 +265,35 @@
     });
   }
 
+  function firstMissingRequired(){
+    const required = form.querySelectorAll("[required]");
+    for (const el of required) {
+      if (!String(el.value || "").trim()) return el;
+    }
+    return null;
+  }
+
+  // Viktigt för mobiler: säkerställ att sista tecknet “committas” innan vi läser .value
+  async function flushPendingInput(){
+    const ae = document.activeElement;
+    if (ae && form.contains(ae) && typeof ae.blur === "function") {
+      ae.blur();
+    }
+    // Låt browsern/tangentbordet uppdatera värden (Android kan annars ge tom sträng trots att text syns)
+    await new Promise(r => requestAnimationFrame(() => r()));
+    await new Promise(r => setTimeout(r, 0));
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Trimma obligatoriska fält (mobiler kan ibland lägga till osynliga whitespace-tecken)
-    const requiredEls = form.querySelectorAll("[required]");
-    requiredEls.forEach(el => { el.value = (el.value || "").trim(); });
+    await flushPendingInput();
 
-    // Låt webbläsaren avgöra om formatet är rätt (t.ex. e-post)
-    if (!form.checkValidity()){
-      form.reportValidity(); // visar native bubblor på mobilen
-      setStatus("Fyll i namn, e-post och meddelande.", "err");
+    const missing = firstMissingRequired();
+    if (missing){
+      // Om det saknas: fokusera och visa tydlig status
+      missing.focus();
+      setStatus("Fyll i namn, e-post och meddelande (*)", "err");
       return;
     }
 
