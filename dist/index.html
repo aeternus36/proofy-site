@@ -281,10 +281,15 @@
     el.setAttribute("data-proofy-hint", "1");
   }
 
-  function firstMissingRequired(){
+  // ✅ FIX: validera via FormData (mobil/autofill-säkert)
+  function firstMissingRequiredFromFormData(fd){
     const required = form.querySelectorAll("[data-required='true']");
     for (const el of required) {
-      if (!String(el.value || "").trim()) return el;
+      const name = el.getAttribute("name");
+      if (!name) continue;
+
+      const v = fd.get(name);
+      if (!String(v || "").trim()) return el;
     }
     return null;
   }
@@ -293,7 +298,10 @@
     e.preventDefault();
     clearFieldHints();
 
-    const missing = firstMissingRequired();
+    // Bygg FormData direkt så vi fångar autofill/keyboard-state korrekt
+    const fd = new FormData(form);
+
+    const missing = firstMissingRequiredFromFormData(fd);
     if (missing){
       hintField(missing);
       missing.focus();
@@ -302,8 +310,8 @@
     }
 
     // Honeypot: om ifylld -> låtsas OK (skicka inget)
-    const hp = form.querySelector('input[name="bot-field"]');
-    if (hp && String(hp.value || "").trim()){
+    const hp = fd.get("bot-field");
+    if (String(hp || "").trim()){
       setStatus("Skickat ✅", "ok");
       form.reset();
       setTimeout(() => { window.location.href = "/thanks.html"; }, 700);
@@ -313,8 +321,6 @@
     try{
       disableForm(true);
       setStatus("Skickar…", "wait");
-
-      const fd = new FormData(form);
 
       // Skicka stabilt som x-www-form-urlencoded
       const body = new URLSearchParams();
