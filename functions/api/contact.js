@@ -1,9 +1,4 @@
 // functions/api/contact.js
-// Cloudflare Pages Function: /api/contact
-// - Stöd: JSON + formData + x-www-form-urlencoded
-// - Skickar mail via Resend (fetch) med timeout
-// - Returnerar ALLTID JSON (aldrig HTML) och undviker 5xx för att slippa Cloudflare HTML-502
-
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "POST, OPTIONS, GET",
@@ -98,7 +93,6 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   const payload = { from, to, subject, html };
   if (replyTo) payload.reply_to = replyTo;
 
-  // Timeout-säkring så vi alltid hinner svara JSON
   const controller = new AbortController();
   const timeoutMs = 8000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -168,7 +162,6 @@ export async function onRequest(context) {
     return json(
       {
         ok: true,
-        sent: false,
         endpoint: "/api/contact",
         methods: ["POST"],
         expects: "application/json OR form-data OR x-www-form-urlencoded",
@@ -178,8 +171,7 @@ export async function onRequest(context) {
   }
 
   if (request.method !== "POST") {
-    // Undvik 405 om du vill vara extra “snäll” mot clients, men behåller din logik:
-    return json({ ok: false, sent: false, error: "Use POST" }, 405);
+    return json({ ok: false, error: "Use POST" }, 405);
   }
 
   try {
@@ -188,7 +180,6 @@ export async function onRequest(context) {
       return json(
         {
           ok: false,
-          sent: false,
           error: parsed.error,
           detail: parsed.detail,
           received: parsed.received,
@@ -199,11 +190,9 @@ export async function onRequest(context) {
 
     const data = parsed.data || {};
 
-    // Honeypot: stöd både gamla "bot-field" och nytt "company_website"
-    // Viktigt: om honeypot triggas ska vi INTE låtsas "sent".
-    const botField = safeTrim(data["bot-field"] ?? data["company_website"]);
+    const botField = safeTrim(data["bot-field"]);
     if (botField) {
-      return json({ ok: true, sent: false, ignored: true, reason: "honeypot" }, 200);
+      return json({ ok: true, ignored: true }, 200);
     }
 
     const name = safeTrim(data.name);
@@ -213,10 +202,10 @@ export async function onRequest(context) {
     const message = safeTrim(data.message);
 
     if (!name || !email || !message) {
-      return json({ ok: false, sent: false, error: "Fyll i namn, e-post och meddelande." }, 400);
+      return json({ ok: false, error: "Fyll i namn, e-post och meddelande." }, 400);
     }
     if (!isLikelyEmail(email)) {
-      return json({ ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." }, 400);
+      return json({ ok: false, error: "E-postadressen verkar inte vara giltig." }, 400);
     }
 
     const createdAt = new Date().toISOString();
@@ -237,32 +226,14 @@ export async function onRequest(context) {
       <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;">
         <h2 style="margin:0 0 12px;">Ny kontaktförfrågan via proofy.se</h2>
         <table style="border-collapse:collapse; width:100%; max-width:760px;">
-          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Namn</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
-            name
-          )}</td></tr>
-          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>E-post</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
-            email
-          )}</td></tr>
-          ${
-            company
-              ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå/företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
-                  company
-                )}</td></tr>`
-              : ""
-          }
-          ${
-            volume
-              ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Volym</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
-                  volume
-                )}</td></tr>`
-              : ""
-          }
+          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Namn</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(name)}</td></tr>
+          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>E-post</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(email)}</td></tr>
+          ${company ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå/företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(company)}</td></tr>` : ""}
+          ${volume ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Volym</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(volume)}</td></tr>` : ""}
         </table>
 
         <h3 style="margin:16px 0 8px;">Meddelande</h3>
-        <pre style="white-space:pre-wrap; background:#f7f7f8; padding:12px; border-radius:10px; border:1px solid #eee; max-width:760px;">${escapeHtml(
-          message
-        )}</pre>
+        <pre style="white-space:pre-wrap; background:#f7f7f8; padding:12px; border-radius:10px; border:1px solid #eee; max-width:760px;">${escapeHtml(message)}</pre>
 
         <div style="margin-top:12px; color:#666; font-size:12px;">
           Tid: ${escapeHtml(createdAt)}<br/>
@@ -275,34 +246,31 @@ export async function onRequest(context) {
     const sendResult = await sendViaResend({
       env,
       from,
-      to: CONTACT_TO,
+      // ✅ extra-stabilt:
+      to: [CONTACT_TO],
       replyTo: email,
       subject,
       html,
     });
 
     if (!sendResult.ok) {
-      // Viktigt: INTE 5xx (undvik Cloudflare HTML-ersättning)
-      // Men returnera 4xx så frontend inte tolkar "res.ok" som "skickat".
       return json(
         {
           ok: false,
-          sent: false,
           error: sendResult.error,
           hint: sendResult.hint,
           resend_status: sendResult.resend_status,
           resend_response: sendResult.resend_response,
           detail: sendResult.detail,
         },
-        400
+        200
       );
     }
 
-    return json({ ok: true, sent: true, resend: sendResult.resend_response }, 200);
+    return json({ ok: true, resend: sendResult.resend_response }, 200);
   } catch (err) {
-    // Även här: undvik 5xx för att aldrig trigga HTML-ersättning
     return json(
-      { ok: false, sent: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
+      { ok: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
       200
     );
   }
