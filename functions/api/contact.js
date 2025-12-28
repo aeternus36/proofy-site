@@ -2,7 +2,7 @@
 // Cloudflare Pages Function: /api/contact
 // - Stöd: JSON + formData + x-www-form-urlencoded
 // - Skickar mail via Resend (fetch) med timeout
-// - Returnerar ALLTID JSON (aldrig HTML) och undviker 5xx för att slippa Cloudflare HTML-502
+// - Returnerar ALLTID JSON (aldrig HTML). Undviker 5xx.
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
@@ -98,7 +98,6 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   const payload = { from, to, subject, html };
   if (replyTo) payload.reply_to = replyTo;
 
-  // Timeout-säkring så vi alltid hinner svara JSON
   const controller = new AbortController();
   const timeoutMs = 8000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -168,6 +167,7 @@ export async function onRequest(context) {
     return json(
       {
         ok: true,
+        sent: false,
         endpoint: "/api/contact",
         methods: ["POST"],
         expects: "application/json OR form-data OR x-www-form-urlencoded",
@@ -177,8 +177,7 @@ export async function onRequest(context) {
   }
 
   if (request.method !== "POST") {
-    // Undvik 405 om du vill vara extra “snäll” mot clients, men behåller din logik:
-    return json({ ok: false, error: "Use POST" }, 405);
+    return json({ ok: false, sent: false, error: "Use POST" }, 405);
   }
 
   try {
@@ -187,6 +186,7 @@ export async function onRequest(context) {
       return json(
         {
           ok: false,
+          sent: false,
           error: parsed.error,
           detail: parsed.detail,
           received: parsed.received,
@@ -197,9 +197,18 @@ export async function onRequest(context) {
 
     const data = parsed.data || {};
 
-    const botField = safeTrim(data["bot-field"]);
+    // Honeypot: stöd både "bot-field" (gamla) och "company_website" (bättre namn)
+    const botField = safeTrim(data["bot-field"] ?? data["company_website"]);
     if (botField) {
-      return json({ ok: true, ignored: true }, 200);
+      return json(
+        {
+          ok: true,
+          sent: false,
+          ignored: true,
+          reason: "honeypot",
+        },
+        200
+      );
     }
 
     const name = safeTrim(data.name);
@@ -209,10 +218,16 @@ export async function onRequest(context) {
     const message = safeTrim(data.message);
 
     if (!name || !email || !message) {
-      return json({ ok: false, error: "Fyll i namn, e-post och meddelande." }, 400);
+      return json(
+        { ok: false, sent: false, error: "Fyll i namn, e-post och meddelande." },
+        400
+      );
     }
     if (!isLikelyEmail(email)) {
-      return json({ ok: false, error: "E-postadressen verkar inte vara giltig." }, 400);
+      return json(
+        { ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." },
+        400
+      );
     }
 
     const createdAt = new Date().toISOString();
@@ -278,25 +293,26 @@ export async function onRequest(context) {
     });
 
     if (!sendResult.ok) {
-      // Viktigt för “lättaste sättet”: undvik 5xx så Cloudflare inte byter till HTML-sida
+      // 400 = "klient-synligt fel" men inte 5xx, så Cloudflare byter inte till HTML-502
       return json(
         {
           ok: false,
+          sent: false,
           error: sendResult.error,
           hint: sendResult.hint,
           resend_status: sendResult.resend_status,
           resend_response: sendResult.resend_response,
           detail: sendResult.detail,
         },
-        200
+        400
       );
     }
 
-    return json({ ok: true, resend: sendResult.resend_response }, 200);
+    return json({ ok: true, sent: true, resend: sendResult.resend_response }, 200);
   } catch (err) {
-    // Även här: undvik 5xx för att aldrig trigga HTML-ersättning
+    // Undvik 5xx
     return json(
-      { ok: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
+      { ok: false, sent: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
       200
     );
   }
