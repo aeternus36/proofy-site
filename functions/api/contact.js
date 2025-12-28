@@ -2,7 +2,7 @@
 // Cloudflare Pages Function: /api/contact
 // - Stöd: JSON + formData + x-www-form-urlencoded
 // - Skickar mail via Resend (fetch) med timeout
-// - Returnerar ALLTID JSON (aldrig HTML). Undviker 5xx.
+// - Returnerar ALLTID JSON (aldrig HTML) och undviker 5xx för att slippa Cloudflare HTML-502
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
@@ -98,6 +98,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   const payload = { from, to, subject, html };
   if (replyTo) payload.reply_to = replyTo;
 
+  // Timeout-säkring så vi alltid hinner svara JSON
   const controller = new AbortController();
   const timeoutMs = 8000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -177,6 +178,7 @@ export async function onRequest(context) {
   }
 
   if (request.method !== "POST") {
+    // Undvik 405 om du vill vara extra “snäll” mot clients, men behåller din logik:
     return json({ ok: false, sent: false, error: "Use POST" }, 405);
   }
 
@@ -197,18 +199,11 @@ export async function onRequest(context) {
 
     const data = parsed.data || {};
 
-    // Honeypot: stöd både "bot-field" (gamla) och "company_website" (bättre namn)
+    // Honeypot: stöd både gamla "bot-field" och nytt "company_website"
+    // Viktigt: om honeypot triggas ska vi INTE låtsas "sent".
     const botField = safeTrim(data["bot-field"] ?? data["company_website"]);
     if (botField) {
-      return json(
-        {
-          ok: true,
-          sent: false,
-          ignored: true,
-          reason: "honeypot",
-        },
-        200
-      );
+      return json({ ok: true, sent: false, ignored: true, reason: "honeypot" }, 200);
     }
 
     const name = safeTrim(data.name);
@@ -218,16 +213,10 @@ export async function onRequest(context) {
     const message = safeTrim(data.message);
 
     if (!name || !email || !message) {
-      return json(
-        { ok: false, sent: false, error: "Fyll i namn, e-post och meddelande." },
-        400
-      );
+      return json({ ok: false, sent: false, error: "Fyll i namn, e-post och meddelande." }, 400);
     }
     if (!isLikelyEmail(email)) {
-      return json(
-        { ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." },
-        400
-      );
+      return json({ ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." }, 400);
     }
 
     const createdAt = new Date().toISOString();
@@ -293,7 +282,8 @@ export async function onRequest(context) {
     });
 
     if (!sendResult.ok) {
-      // 400 = "klient-synligt fel" men inte 5xx, så Cloudflare byter inte till HTML-502
+      // Viktigt: INTE 5xx (undvik Cloudflare HTML-ersättning)
+      // Men returnera 4xx så frontend inte tolkar "res.ok" som "skickat".
       return json(
         {
           ok: false,
@@ -310,7 +300,7 @@ export async function onRequest(context) {
 
     return json({ ok: true, sent: true, resend: sendResult.resend_response }, 200);
   } catch (err) {
-    // Undvik 5xx
+    // Även här: undvik 5xx för att aldrig trigga HTML-ersättning
     return json(
       { ok: false, sent: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
       200
