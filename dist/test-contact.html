@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy – Test Contact API</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: #0b1220;
+      color: rgba(234,240,255,.92);
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 18px; }
+    .card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+    label { display:block; font-weight: 800; margin-top: 10px; }
+    input, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      color: rgba(234,240,255,.92);
+      outline: none;
+    }
+    textarea { min-height: 120px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+    .btns { display:flex; flex-wrap:wrap; gap:10px; margin-top: 12px; }
+    button {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      color: rgba(234,240,255,.92);
+      font-weight: 800;
+    }
+    button.primary {
+      background: rgba(120, 180, 255, .18);
+      border-color: rgba(120, 180, 255, .35);
+    }
+    .hint { color: rgba(234,240,255,.72); font-size: 13px; margin-top: 8px; }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.12);
+      padding: 12px;
+      border-radius: 12px;
+      overflow: auto;
+      max-height: 46vh;
+    }
+    .ok { color: rgba(120,255,180,.95); font-weight: 900; }
+    .err { color: rgba(255,120,120,.95); font-weight: 900; }
+    .small { font-size: 12px; color: rgba(234,240,255,.68); }
+    .topline { display:flex; justify-content:space-between; gap: 10px; align-items: baseline; }
+    a { color: rgba(160, 210, 255, .95); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topline">
+      <h1 style="margin:0;">Test: /api/contact</h1>
+      <div class="small">Mobilvänlig testpanel</div>
+    </div>
+
+    <div class="card">
+      <div class="hint">
+        Den här sidan gör POST mot <b>/api/contact</b> och visar exakt JSON-svar + HTTP-status.
+        <br/>Tips: testa först med <b>email = aeternus36@gmail.com</b> så Resend test-läge inte blockerar.
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="name">Namn</label>
+          <input id="name" name="name" value="Test" autocomplete="name" />
+        </div>
+        <div>
+          <label for="email">E-post</label>
+          <input id="email" name="email" value="aeternus36@gmail.com" autocomplete="email" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="company">Byrå / företag (valfritt)</label>
+          <input id="company" name="company" value="" autocomplete="organization" />
+        </div>
+        <div>
+          <label for="volume">Volym (valfritt)</label>
+          <input id="volume" name="volume" value="" />
+        </div>
+      </div>
+
+      <label for="message">Meddelande</label>
+      <textarea id="message" name="message">Hej! Testar kontaktflödet.</textarea>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="small"><b>Honeypot-fält</b> (ska vara tomt). Låt denna vara tom.</div>
+        <div class="row">
+          <div>
+            <label for="botField">bot-field (gammal)</label>
+            <input id="botField" name="bot-field" value="" autocomplete="off" />
+          </div>
+          <div>
+            <label for="companyWebsite">company_website (ny)</label>
+            <input id="companyWebsite" name="company_website" value="" autocomplete="off" />
+          </div>
+        </div>
+        <div class="hint">
+          Om du fyller i någon av dessa kommer API:t ofta svara <code>{"ok":true,"ignored":true}</code> eller <code>sent:false</code>.
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="btnJson">Skicka som JSON</button>
+        <button id="btnUrlencoded">Skicka som x-www-form-urlencoded</button>
+        <button id="btnFormData">Skicka som multipart/form-data</button>
+        <button id="btnGet">GET /api/contact</button>
+      </div>
+
+      <div class="hint" id="statusLine" aria-live="polite"></div>
+      <pre id="out">{}</pre>
+
+      <div class="hint">
+        Om du får <b>403</b> med “You can only send testing emails…” → Resend test-läge (förväntat) när mottagaren inte är din egen.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="small">
+        <b>Snabb-länkar</b><br/>
+        • <a href="/api/contact">/api/contact</a> (GET health)<br/>
+        • <a href="/thanks.html">/thanks.html</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function payload() {
+      return {
+        name: $("name").value,
+        email: $("email").value,
+        company: $("company").value,
+        volume: $("volume").value,
+        message: $("message").value,
+        "bot-field": $("botField").value,
+        company_website: $("companyWebsite").value,
+      };
+    }
+
+    function setStatus(text, ok) {
+      $("statusLine").innerHTML = ok ? `<span class="ok">${text}</span>` : `<span class="err">${text}</span>`;
+    }
+
+    function print(obj) {
+      try {
+        $("out").textContent = JSON.stringify(obj, null, 2);
+      } catch {
+        $("out").textContent = String(obj);
+      }
+    }
+
+    async function doGet() {
+      setStatus("Hämtar GET…", true);
+      const res = await fetch("/api/contact", { method: "GET" });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      setStatus(`GET /api/contact → HTTP ${res.status}`, res.ok);
+      print(data);
+    }
+
+    async function doJson() {
+      setStatus("Skickar JSON…", true);
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload()),
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      setStatus(`POST JSON → HTTP ${res.status}`, res.ok && data && data.ok === true && data.sent !== false);
+      print(data);
+    }
+
+    async function doUrlencoded() {
+      setStatus("Skickar x-www-form-urlencoded…", true);
+      const p = payload();
+      const body = new URLSearchParams();
+      for (const k of Object.keys(p)) body.append(k, String(p[k] ?? ""));
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString(),
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      setStatus(`POST urlencoded → HTTP ${res.status}`, res.ok && data && data.ok === true && data.sent !== false);
+      print(data);
+    }
+
+    async function doFormData() {
+      setStatus("Skickar multipart/form-data…", true);
+      const p = payload();
+      const fd = new FormData();
+      for (const k of Object.keys(p)) fd.append(k, String(p[k] ?? ""));
+      const res = await fetch("/api/contact", { method: "POST", body: fd });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      setStatus(`POST form-data → HTTP ${res.status}`, res.ok && data && data.ok === true && data.sent !== false);
+      print(data);
+    }
+
+    $("btnGet").addEventListener("click", (e) => { e.preventDefault(); doGet(); });
+    $("btnJson").addEventListener("click", (e) => { e.preventDefault(); doJson(); });
+    $("btnUrlencoded").addEventListener("click", (e) => { e.preventDefault(); doUrlencoded(); });
+    $("btnFormData").addEventListener("click", (e) => { e.preventDefault(); doFormData(); });
+
+    // Autostart: gör GET så du direkt ser att endpoint svarar JSON
+    doGet();
+  </script>
+</body>
+</html>
