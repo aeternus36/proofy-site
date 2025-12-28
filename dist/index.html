@@ -153,10 +153,21 @@
 
         <!-- Cloudflare: posta till en egen endpoint (Pages Function / Worker) -->
         <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
-          <!-- Honeypot -->
+          <!-- Honeypot (gamla) -->
           <p style="display:none;">
             <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
           </p>
+
+          <!-- Honeypot (nya, mindre risk för mobil-autofill). Backend stödjer båda. -->
+          <input
+            type="text"
+            name="company_website"
+            tabindex="-1"
+            autocomplete="off"
+            inputmode="none"
+            aria-hidden="true"
+            style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
+          />
 
           <div class="formGrid">
             <div>
@@ -309,12 +320,12 @@
       return;
     }
 
-    // Honeypot: om ifylld -> låtsas OK (skicka inget)
-    const hp = fd.get("bot-field");
-    if (String(hp || "").trim()){
-      setStatus("Skickat ✅", "ok");
-      form.reset();
-      setTimeout(() => { window.location.href = "/thanks.html"; }, 700);
+    // Honeypot: om ifylld -> INTE redirecta till thanks (det här var orsaken till "Tack!" utan mail)
+    const hpOld = fd.get("bot-field");
+    const hpNew = fd.get("company_website");
+    if (String(hpOld || "").trim() || String(hpNew || "").trim()){
+      setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+      disableForm(false);
       return;
     }
 
@@ -334,7 +345,14 @@
 
       const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || data.ok !== true){
+      // ✅ ENDA gången vi visar "Skickat" + redirectar: när server säger ok=true OCH sent=true
+      if (!res.ok || data.ok !== true || data.sent !== true){
+        if (data.ignored === true){
+          setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+          disableForm(false);
+          return;
+        }
+
         const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
         setStatus(msg, "err");
         disableForm(false);
