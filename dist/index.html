@@ -151,7 +151,6 @@
           Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <!-- Cloudflare: posta till en egen endpoint (Pages Function / Worker) -->
         <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
           <!-- Honeypot (gamla) -->
           <p style="display:none;">
@@ -292,24 +291,36 @@
     el.setAttribute("data-proofy-hint", "1");
   }
 
-  // ✅ FIX: validera via FormData (mobil/autofill-säkert)
   function firstMissingRequiredFromFormData(fd){
     const required = form.querySelectorAll("[data-required='true']");
     for (const el of required) {
       const name = el.getAttribute("name");
       if (!name) continue;
-
       const v = fd.get(name);
       if (!String(v || "").trim()) return el;
     }
     return null;
   }
 
+  function buildNiceError(data, res){
+    // Visa alltid backendens fel om det finns
+    if (data && typeof data === "object") {
+      if (data.ignored === true) {
+        return "Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).";
+      }
+      const parts = [];
+      if (data.error) parts.push(String(data.error));
+      if (data.hint) parts.push(String(data.hint));
+      if (parts.length) return parts.join(" ");
+    }
+    // fallback
+    return `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearFieldHints();
 
-    // Bygg FormData direkt så vi fångar autofill/keyboard-state korrekt
     const fd = new FormData(form);
 
     const missing = firstMissingRequiredFromFormData(fd);
@@ -320,12 +331,10 @@
       return;
     }
 
-    // Honeypot: om ifylld -> INTE redirecta till thanks (det här var orsaken till "Tack!" utan mail)
     const hpOld = fd.get("bot-field");
     const hpNew = fd.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
       setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
-      disableForm(false);
       return;
     }
 
@@ -333,7 +342,6 @@
       disableForm(true);
       setStatus("Skickar…", "wait");
 
-      // Skicka stabilt som x-www-form-urlencoded
       const body = new URLSearchParams();
       for (const [k, v] of fd.entries()) body.append(k, String(v));
 
@@ -343,25 +351,19 @@
         body: body.toString()
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => null);
 
-      // ✅ ENDA gången vi visar "Skickat" + redirectar: när server säger ok=true OCH sent=true
-      if (!res.ok || data.ok !== true || data.sent !== true){
-        if (data.ignored === true){
-          setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
-          disableForm(false);
-          return;
-        }
+      // ✅ Endast “success” när ok:true och sent:true
+      const success = !!(res.ok && data && data.ok === true && data.sent === true);
 
-        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
-        setStatus(msg, "err");
+      if (!success){
+        setStatus(buildNiceError(data, res), "err");
         disableForm(false);
         return;
       }
 
       setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.", "ok");
       form.reset();
-
       setTimeout(() => { window.location.href = "/thanks.html"; }, 700);
 
     } catch (err){
