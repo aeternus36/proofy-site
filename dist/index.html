@@ -148,12 +148,12 @@
         </p>
 
         <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
-          <!-- Honeypot (gammal) -->
+          <!-- Honeypot (gamla) -->
           <p style="display:none;">
             <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
           </p>
 
-          <!-- Honeypot (ny) -->
+          <!-- Honeypot (nya) -->
           <input
             type="text"
             name="company_website"
@@ -209,6 +209,7 @@
         </p>
       </div>
     </section>
+
   </div>
 </main>
 
@@ -311,11 +312,11 @@
       return;
     }
 
-    // Honeypots: om triggas => visa fel (ALDRIG tack/redirect)
     const hpOld = fd.get("bot-field");
     const hpNew = fd.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
-      setStatus("Kunde inte skickas. Testa igen (tips: inkognito/privat läge).", "err");
+      setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+      disableForm(false);
       return;
     }
 
@@ -328,24 +329,19 @@
 
       const res = await fetch(form.action, {
         method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "accept": "application/json" },
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
         body: body.toString()
       });
 
       const data = await res.json().catch(() => ({}));
 
-      // Backend kan svara 200 även vid fel, så vi går på data
-      if (data && data.ignored === true){
-        setStatus("Kunde inte skickas. Testa igen (tips: inkognito/privat läge).", "err");
-        disableForm(false);
-        return;
-      }
-
-      if (!(data && data.ok === true && data.sent === true)){
-        const msg =
-          (data && data.error) ||
-          (data && data.detail) ||
-          `Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.`;
+      if (!res.ok || data.ok !== true || data.sent !== true){
+        if (data.ignored === true){
+          setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+          disableForm(false);
+          return;
+        }
+        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
         setStatus(msg, "err");
         disableForm(false);
         return;
