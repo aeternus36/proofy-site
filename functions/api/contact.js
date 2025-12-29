@@ -3,12 +3,12 @@
 // - Stöd: JSON + formData + x-www-form-urlencoded
 // - Skickar mail via Resend (fetch) med timeout
 // - Returnerar ALLTID JSON (aldrig HTML)
-// - Viktigt: frontenden ska bara redirecta när { ok:true, sent:true }
+// - Viktigt: skickar alltid "sent: true/false" så frontend kan avgöra redirect korrekt
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "POST, OPTIONS, GET",
-  "access-control-allow-headers": "content-type, accept",
+  "access-control-allow-headers": "content-type",
 };
 
 function json(data, status = 200, extraHeaders = {}) {
@@ -50,7 +50,10 @@ async function readBody(request) {
       return { ok: true, data: data && typeof data === "object" ? data : {} };
     }
 
-    if (ct.includes("multipart/form-data") || ct.includes("application/x-www-form-urlencoded")) {
+    if (
+      ct.includes("multipart/form-data") ||
+      ct.includes("application/x-www-form-urlencoded")
+    ) {
       const fd = await request.formData();
       return { ok: true, data: Object.fromEntries(fd.entries()) };
     }
@@ -61,7 +64,10 @@ async function readBody(request) {
 
     try {
       const parsed = JSON.parse(t);
-      return { ok: true, data: parsed && typeof parsed === "object" ? parsed : {} };
+      return {
+        ok: true,
+        data: parsed && typeof parsed === "object" ? parsed : {},
+      };
     } catch {
       return {
         ok: false,
@@ -86,8 +92,10 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   if (!apiKey) {
     return {
       ok: false,
+      sent: false,
       error: "RESEND_API_KEY saknas.",
-      hint: "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
+      hint:
+        "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
     };
   }
 
@@ -107,7 +115,6 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
       headers: {
         authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
-        accept: "application/json",
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
@@ -122,9 +129,13 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
 
     return {
       ok: false,
-      error: aborted ? "Timeout när vi försökte kontakta Resend." : "Kunde inte nå Resend (network/fetch).",
+      sent: false,
+      error: aborted
+        ? "Timeout när vi försökte kontakta Resend."
+        : "Kunde inte nå Resend (network/fetch).",
       detail: msg,
-      hint: "Kontrollera RESEND_API_KEY och att CONTACT_FROM är en verifierad avsändare i Resend.",
+      hint:
+        "Kontrollera RESEND_API_KEY och att FROM-adress/domän är korrekt/verifierad i Resend.",
     };
   } finally {
     clearTimeout(timeoutId);
@@ -140,15 +151,16 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   if (!res.ok) {
     return {
       ok: false,
+      sent: false,
       error: "Resend avvisade utskicket.",
       resend_status: res.status,
       resend_response: parsed,
       hint:
-        "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend, eller så saknar du rättigheter på API-nyckeln.",
+        "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend, eller 'Enable Sending' är av. Kontrollera Resend → Domains.",
     };
   }
 
-  return { ok: true, resend_response: parsed };
+  return { ok: true, sent: true, resend_response: parsed };
 }
 
 export async function onRequest(context) {
@@ -158,6 +170,7 @@ export async function onRequest(context) {
     return new Response(null, { status: 204, headers: { ...CORS_HEADERS } });
   }
 
+  // Snabb “health check”
   if (request.method === "GET") {
     return json(
       {
@@ -178,19 +191,25 @@ export async function onRequest(context) {
     const parsed = await readBody(request);
     if (!parsed.ok) {
       return json(
-        { ok: false, sent: false, error: parsed.error, detail: parsed.detail, received: parsed.received },
+        {
+          ok: false,
+          sent: false,
+          error: parsed.error,
+          detail: parsed.detail,
+          received: parsed.received,
+        },
         400
       );
     }
 
     const data = parsed.data || {};
 
-    // Honeypots (stödjer båda)
-    const hpOld = safeTrim(data["bot-field"]);
-    const hpNew = safeTrim(data["company_website"]);
-    if (hpOld || hpNew) {
-      // Viktigt: frontenden ska INTE redirecta här
-      return json({ ok: true, sent: false, ignored: true }, 200);
+    // Honeypots: stödjer både gamla och nya fältet
+    const botFieldOld = safeTrim(data["bot-field"]);
+    const botFieldNew = safeTrim(data["company_website"]);
+    if (botFieldOld || botFieldNew) {
+      // Viktigt: vi säger INTE "sent:true" här
+      return json({ ok: true, ignored: true, sent: false }, 200);
     }
 
     const name = safeTrim(data.name);
@@ -200,19 +219,32 @@ export async function onRequest(context) {
     const message = safeTrim(data.message);
 
     if (!name || !email || !message) {
-      return json({ ok: false, sent: false, error: "Fyll i namn, e-post och meddelande." }, 200);
+      return json(
+        { ok: false, sent: false, error: "Fyll i namn, e-post och meddelande." },
+        400
+      );
     }
     if (!isLikelyEmail(email)) {
-      return json({ ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." }, 200);
+      return json(
+        { ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." },
+        400
+      );
     }
 
     const createdAt = new Date().toISOString();
-    const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "";
+    const ip =
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for") ||
+      "";
     const ua = request.headers.get("user-agent") || "";
 
+    // ✅ Dina envs:
+    // CONTACT_TO: vart mailet ska skickas (t.ex. aeternus36@gmail.com)
+    // CONTACT_FROM: avsändaradress (måste vara verifierad domän i Resend)
+    // CONTACT_FROM_NAME: avsändarnamn
     const CONTACT_TO = env?.CONTACT_TO || "kontakt@proofy.se";
     const FROM_NAME = env?.CONTACT_FROM_NAME || "Proofy";
-    const FROM_ADDR = env?.CONTACT_FROM || "onboarding@resend.dev"; // måste vara verifierad i Resend
+    const FROM_ADDR = env?.CONTACT_FROM || "onboarding@resend.dev";
 
     const from = `${FROM_NAME} <${FROM_ADDR}>`;
     const subject = `Ny demo/pilot-förfrågan – ${name}`;
@@ -266,7 +298,8 @@ export async function onRequest(context) {
     });
 
     if (!sendResult.ok) {
-      // status 200 avsiktligt (så Cloudflare inte ersätter med HTML 5xx)
+      // Vi behåller 200 här för att undvika Cloudflare “egna” HTML-sidor,
+      // men vi skickar alltid error + sent:false så frontend kan visa rätt.
       return json(
         {
           ok: false,
@@ -281,11 +314,18 @@ export async function onRequest(context) {
       );
     }
 
-    // ✅ Nyckeln: frontenden ska använda sent:true
-    return json({ ok: true, sent: true, resend: sendResult.resend_response }, 200);
+    return json(
+      { ok: true, sent: true, resend: sendResult.resend_response },
+      200
+    );
   } catch (err) {
     return json(
-      { ok: false, sent: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
+      {
+        ok: false,
+        sent: false,
+        error: "Serverfel i /api/contact",
+        detail: String(err?.message || err),
+      },
       200
     );
   }
