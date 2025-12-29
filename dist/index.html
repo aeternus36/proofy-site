@@ -213,10 +213,17 @@
           </div>
 
           <div style="margin-top:12px;">
-            <label class="label" for="message">Vad vill ni kunna visa/verifiera? <span class="req">*</span></label>
-            <textarea id="message" name="message" rows="6" required data-required="true"
-              placeholder="Ex: kundunderlag som ifrågasätts i efterhand, underlag i granskning, beslut/avtal… Skriv också gärna när ni vill ses."></textarea>
-            <div class="help">
+            <label class="label" for="message">Vilka underlag eller handlingar behöver kunna styrkas eller verifieras? <span class="req">*</span></label>
+            <textarea
+              id="message"
+              name="message"
+              rows="6"
+              required
+              data-required="true"
+              aria-describedby="messageHelp"
+              placeholder="Exempel: kund- och transaktionsunderlag som behöver kunna styrkas i efterhand, handlingar som omfattas av intern eller extern granskning, samt beslut eller avtal där verifierbar dokumentation krävs."
+            ></textarea>
+            <div class="help" id="messageHelp">
               Vi återkommer normalt inom 1 arbetsdag. Du kan också mejla <b>kontakt@proofy.se</b>.
             </div>
           </div>
