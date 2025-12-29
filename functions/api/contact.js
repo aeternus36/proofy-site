@@ -1,4 +1,10 @@
 // functions/api/contact.js
+// Cloudflare Pages Function: /api/contact
+// - Stöd: JSON + formData + x-www-form-urlencoded
+// - Skickar mail via Resend (fetch) med timeout
+// - Returnerar ALLTID JSON (aldrig HTML)
+// - Returnerar sent:true ENBART när Resend accepterat utskicket
+
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "POST, OPTIONS, GET",
@@ -94,7 +100,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   if (replyTo) payload.reply_to = replyTo;
 
   const controller = new AbortController();
-  const timeoutMs = 8000;
+  const timeoutMs = 10000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   let res;
@@ -124,7 +130,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
         : "Kunde inte nå Resend (network/fetch).",
       detail: msg,
       hint:
-        "Kontrollera RESEND_API_KEY och att FROM-adress/domän är korrekt. Testa CONTACT_FROM=onboarding@resend.dev.",
+        "Kontrollera RESEND_API_KEY och att FROM-adress/domän är korrekt. Testa temporärt CONTACT_FROM=onboarding@resend.dev.",
     };
   } finally {
     clearTimeout(timeoutId);
@@ -144,7 +150,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
       resend_status: res.status,
       resend_response: parsed,
       hint:
-        "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend. Testa CONTACT_FROM=onboarding@resend.dev eller verifiera proofy.se i Resend → Domains.",
+        "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend eller att sändning inte är aktiverad. Kontrollera Resend → Domains (Verified + Enable Sending).",
     };
   }
 
@@ -171,7 +177,7 @@ export async function onRequest(context) {
   }
 
   if (request.method !== "POST") {
-    return json({ ok: false, error: "Use POST" }, 405);
+    return json({ ok: false, sent: false, error: "Use POST" }, 405);
   }
 
   try {
@@ -180,6 +186,7 @@ export async function onRequest(context) {
       return json(
         {
           ok: false,
+          sent: false,
           error: parsed.error,
           detail: parsed.detail,
           received: parsed.received,
@@ -190,9 +197,12 @@ export async function onRequest(context) {
 
     const data = parsed.data || {};
 
-    const botField = safeTrim(data["bot-field"]);
-    if (botField) {
-      return json({ ok: true, ignored: true }, 200);
+    // Honeypot: stöd för båda fälten (gamla + nya)
+    const hpOld = safeTrim(data["bot-field"]);
+    const hpNew = safeTrim(data["company_website"]);
+    if (hpOld || hpNew) {
+      // Viktigt: svara tydligt så frontend INTE redirectar till /thanks
+      return json({ ok: false, sent: false, ignored: true, error: "Spam-skydd triggades." }, 200);
     }
 
     const name = safeTrim(data.name);
@@ -202,10 +212,10 @@ export async function onRequest(context) {
     const message = safeTrim(data.message);
 
     if (!name || !email || !message) {
-      return json({ ok: false, error: "Fyll i namn, e-post och meddelande." }, 400);
+      return json({ ok: false, sent: false, error: "Fyll i namn, e-post och meddelande." }, 400);
     }
     if (!isLikelyEmail(email)) {
-      return json({ ok: false, error: "E-postadressen verkar inte vara giltig." }, 400);
+      return json({ ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." }, 400);
     }
 
     const createdAt = new Date().toISOString();
@@ -228,8 +238,16 @@ export async function onRequest(context) {
         <table style="border-collapse:collapse; width:100%; max-width:760px;">
           <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Namn</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(name)}</td></tr>
           <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>E-post</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(email)}</td></tr>
-          ${company ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå/företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(company)}</td></tr>` : ""}
-          ${volume ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Volym</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(volume)}</td></tr>` : ""}
+          ${
+            company
+              ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå/företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(company)}</td></tr>`
+              : ""
+          }
+          ${
+            volume
+              ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Volym</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(volume)}</td></tr>`
+              : ""
+          }
         </table>
 
         <h3 style="margin:16px 0 8px;">Meddelande</h3>
@@ -246,8 +264,7 @@ export async function onRequest(context) {
     const sendResult = await sendViaResend({
       env,
       from,
-      // ✅ extra-stabilt:
-      to: [CONTACT_TO],
+      to: CONTACT_TO,
       replyTo: email,
       subject,
       html,
@@ -257,7 +274,8 @@ export async function onRequest(context) {
       return json(
         {
           ok: false,
-          error: sendResult.error,
+          sent: false,
+          error: sendResult.error || "Kunde inte skicka via Resend.",
           hint: sendResult.hint,
           resend_status: sendResult.resend_status,
           resend_response: sendResult.resend_response,
@@ -267,10 +285,11 @@ export async function onRequest(context) {
       );
     }
 
-    return json({ ok: true, resend: sendResult.resend_response }, 200);
+    // ✅ Viktigt: sent:true endast när Resend accepterat
+    return json({ ok: true, sent: true, resend: sendResult.resend_response }, 200);
   } catch (err) {
     return json(
-      { ok: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
+      { ok: false, sent: false, error: "Serverfel i /api/contact", detail: String(err?.message || err) },
       200
     );
   }
