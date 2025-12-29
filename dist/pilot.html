@@ -96,7 +96,7 @@
       <h2>Starta pilot</h2>
 
       <!-- Cloudflare: posta till en egen endpoint -->
-      <form name="pilot" action="/api/pilot" method="POST">
+      <form name="pilot" action="/api/pilot" method="POST" id="pilotForm">
         <!-- Honeypot -->
         <p style="display:none;">
           <label>Don’t fill this out: <input name="bot-field" /></label>
@@ -128,9 +128,11 @@
         </div>
 
         <div class="formActions">
-          <button class="btn primary" type="submit">Begär pilot</button>
+          <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
           <span class="small">Vi återkommer normalt inom 1–2 arbetsdagar.</span>
         </div>
+
+        <div id="pilotStatus" class="small" style="margin-top:10px;" aria-live="polite"></div>
       </form>
 
       <div class="hr"></div>
@@ -165,5 +167,66 @@
 
 <script src="/assets/header-toggle.js?v=2025-12-25a" defer></script>
 <script src="/chat-widget.js?v=2025-12-24a" defer></script>
+
+<script>
+  (function () {
+    const form = document.getElementById("pilotForm");
+    if (!form) return;
+
+    const statusEl = document.getElementById("pilotStatus");
+    const btn = document.getElementById("pilotSubmitBtn");
+
+    function setStatus(text) {
+      if (statusEl) statusEl.textContent = text || "";
+    }
+
+    function setBusy(isBusy) {
+      if (btn) btn.disabled = !!isBusy;
+    }
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      setStatus("");
+      setBusy(true);
+
+      try {
+        const fd = new FormData(form);
+        const params = new URLSearchParams();
+        for (const [k, v] of fd.entries()) params.append(k, String(v));
+
+        const res = await fetch(form.action, {
+          method: "POST",
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+          },
+          body: params.toString(),
+        });
+
+        let data = null;
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+
+        if (data && data.ok === true && data.sent === true) {
+          setStatus("Skickat. Tack! Vi hör av oss inom 1–2 arbetsdagar.");
+          form.reset();
+          setBusy(false);
+          return;
+        }
+
+        const msg =
+          (data && (data.error || data.message)) ||
+          "Kunde inte skicka just nu. Försök igen eller mejla kontakt@proofy.se.";
+        setStatus(msg);
+        setBusy(false);
+      } catch (err) {
+        setStatus("Tekniskt fel. Försök igen eller mejla kontakt@proofy.se.");
+        setBusy(false);
+      }
+    });
+  })();
+</script>
 </body>
 </html>
