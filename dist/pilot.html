@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pilotupplägg – Proofy</title>
-  <meta name="description" content="Starta en pilot med Proofy. Fast månadspris, faktura och support. Testa dokumentverifiering i er byrårutin." />
+  <meta name="description" content="Starta en pilot med Proofy. Fast månadspris, faktura och support." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/pilot.html" />
   <meta name="theme-color" content="#0b1220" />
@@ -24,209 +24,159 @@
         <span>Proofy</span>
       </a>
 
-      <div class="navActions" id="navActionsDesktop">
+      <div class="navActions">
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
-
-      <details class="mnav" id="mnav">
-        <summary class="mnavSummary" aria-label="Öppna meny">
-          <span class="mnavIcon" aria-hidden="true"></span>
-        </summary>
-        <nav class="mnavMenu" aria-label="Meny">
-          <a class="mnavLink" href="/pilot.html" aria-current="page">Starta pilot</a>
-          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
-          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
-          <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
-
-          <div class="mnavMeta">
-            <div class="mnavNote">Pilot · revision · granskning</div>
-            <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
-          </div>
-        </nav>
-      </details>
     </div>
   </div>
 </header>
 
 <main id="main">
   <div class="wrap">
-    <div class="badge">Pilot för redovisningsbyråer</div>
+    <h1 class="pageTitle">Starta pilot</h1>
 
-    <h1 class="pageTitle">Starta en pilot på 30 dagar</h1>
-
-    <p class="lead">
-      Pilot är snabbaste sättet att se om Proofy passar er rutin.
-      Ni testar i verkliga ärenden, med låg friktion och tydliga ramar.
-    </p>
-
-    <div class="grid3" style="margin-top:14px;">
-      <div class="tile">
-        <b>Ingår</b>
-        <span class="small">
-          Registrering + verifiering, verifierings-ID samt support under piloten.
-        </span>
-      </div>
-      <div class="tile">
-        <b>Upplägg</b>
-        <span class="small">
-          Vi sätter en enkel rutin: när ni registrerar, var ni sparar ID,
-          och hur ni verifierar.
-        </span>
-      </div>
-      <div class="tile">
-        <b>Tryggt</b>
-        <span class="small">
-          Fast månadspris, faktura, ingen bindning efter pilot om ni inte vill fortsätta.
-        </span>
-      </div>
-    </div>
-
-    <div class="card content" style="margin-top:14px;">
-      <h2>Rekommenderad rutin</h2>
-      <ol style="margin:10px 0 0; padding-left:18px;">
-        <li>Registrera underlag som är särskilt viktiga (bokslut, rapporter, avtal).</li>
-        <li>Spara verifierings-ID i ärendet/noteringar.</li>
-        <li>Vid granskning: verifiera underlaget och visa match/ingen match.</li>
-      </ol>
-
-      <div class="hr"></div>
-
-      <h2>Starta pilot</h2>
-
-      <!-- Cloudflare: posta till en egen endpoint -->
-      <form name="pilot" action="/api/pilot" method="POST" id="pilotForm">
-        <!-- Honeypot -->
+    <div class="card content">
+      <form id="pilotForm" action="/api/pilot" method="POST" novalidate>
+        <!-- Honeypots -->
         <p style="display:none;">
           <label>Don’t fill this out: <input name="bot-field" /></label>
         </p>
+        <input
+          type="text"
+          name="company_website"
+          tabindex="-1"
+          autocomplete="off"
+          style="position:absolute;left:-10000px;width:1px;height:1px;"
+        />
 
         <div class="formGrid">
           <div>
-            <label class="label" for="p-name">Namn <span class="req">*</span></label>
-            <input id="p-name" name="name" type="text" required />
+            <label class="label">Namn *</label>
+            <input name="name" required data-required="true" />
           </div>
           <div>
-            <label class="label" for="p-email">E-post <span class="req">*</span></label>
-            <input id="p-email" name="email" type="email" required />
+            <label class="label">E-post *</label>
+            <input name="email" type="email" required data-required="true" />
           </div>
           <div>
-            <label class="label" for="p-company">Byrå/Företag <span class="req">*</span></label>
-            <input id="p-company" name="company" type="text" required />
+            <label class="label">Byrå / företag *</label>
+            <input name="company" required data-required="true" />
           </div>
           <div>
-            <label class="label" for="p-role">Roll</label>
-            <input id="p-role" name="role" type="text" />
+            <label class="label">Roll</label>
+            <input name="role" />
           </div>
         </div>
 
         <div style="margin-top:12px;">
-          <label class="label" for="p-message">Kort om ert case (valfritt)</label>
-          <textarea id="p-message" name="message" rows="5"
-            placeholder="Beskriv kort vilka underlag ni vill kunna verifiera (t.ex. bokslut, kundunderlag, avtal) och var i er process behovet uppstår. Ange gärna önskat startdatum eller tider för en kort genomgång."></textarea>
+          <label class="label">Kort om ert case</label>
+          <textarea name="message" rows="5"></textarea>
         </div>
 
         <div class="formActions">
-          <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
-          <span class="small">Vi återkommer normalt inom 1–2 arbetsdagar.</span>
+          <button class="btn primary" id="pilotSubmitBtn" type="submit">Begär pilot</button>
+          <span id="pilotStatus" class="pill" style="margin-left:12px;" aria-live="polite">Redo</span>
         </div>
-
-        <div id="pilotStatus" class="small" style="margin-top:10px;" aria-live="polite"></div>
       </form>
-
-      <div class="hr"></div>
-
-      <p class="fineprint">
-        <b>Juridisk avgränsning:</b> Proofy tillhandahåller teknisk verifiering.
-        Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
-      </p>
     </div>
   </div>
 </main>
 
 <footer>
   <div class="wrap">
-    <div class="foot">
-      <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
-        </div>
-      </div>
-      <div class="links">
-        <a href="/security.html">Säkerhet</a>
-        <a href="/privacy.html">Integritet</a>
-        <a href="/terms.html">Villkor</a>
-        <a href="/#kontakt">Kontakt</a>
-      </div>
-    </div>
+    <div class="small">© Proofy</div>
   </div>
 </footer>
 
-<script src="/assets/header-toggle.js?v=2025-12-25a" defer></script>
-<script src="/chat-widget.js?v=2025-12-24a" defer></script>
-
 <script>
-  (function () {
-    const form = document.getElementById("pilotForm");
-    if (!form) return;
+(() => {
+  const form = document.getElementById("pilotForm");
+  if (!form) return;
 
-    const statusEl = document.getElementById("pilotStatus");
-    const btn = document.getElementById("pilotSubmitBtn");
+  const statusEl = document.getElementById("pilotStatus");
+  const submitBtn = document.getElementById("pilotSubmitBtn");
 
-    function setStatus(text) {
-      if (statusEl) statusEl.textContent = text || "";
+  function setStatus(text, tone){
+    statusEl.textContent = text;
+    statusEl.style.fontWeight = "800";
+    statusEl.style.border = "1px solid rgba(255,255,255,.14)";
+    statusEl.style.background = "rgba(255,255,255,.06)";
+    statusEl.style.color = "rgba(234,240,255,.92)";
+
+    if (tone === "ok"){
+      statusEl.style.background = "rgba(50,205,50,.12)";
+      statusEl.style.border = "1px solid rgba(50,205,50,.3)";
     }
-
-    function setBusy(isBusy) {
-      if (btn) btn.disabled = !!isBusy;
+    if (tone === "err"){
+      statusEl.style.background = "rgba(255,80,80,.12)";
+      statusEl.style.border = "1px solid rgba(255,80,80,.3)";
     }
+    if (tone === "wait"){
+      statusEl.style.background = "rgba(120,180,255,.12)";
+      statusEl.style.border = "1px solid rgba(120,180,255,.3)";
+    }
+  }
 
-    form.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      setStatus("");
-      setBusy(true);
+  function disableForm(disabled){
+    submitBtn.disabled = disabled;
+    form.querySelectorAll("input, textarea").forEach(el => el.disabled = disabled);
+  }
 
-      try {
-        const fd = new FormData(form);
-        const params = new URLSearchParams();
-        for (const [k, v] of fd.entries()) params.append(k, String(v));
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-        const res = await fetch(form.action, {
-          method: "POST",
-          headers: {
-            "content-type": "application/x-www-form-urlencoded",
-          },
-          body: params.toString(),
-        });
-
-        let data = null;
-        try {
-          data = await res.json();
-        } catch {
-          data = null;
-        }
-
-        if (data && data.ok === true && data.sent === true) {
-          setStatus("Skickat. Tack! Vi hör av oss inom 1–2 arbetsdagar.");
-          form.reset();
-          setBusy(false);
-          return;
-        }
-
-        const msg =
-          (data && (data.error || data.message)) ||
-          "Kunde inte skicka just nu. Försök igen eller mejla kontakt@proofy.se.";
-        setStatus(msg);
-        setBusy(false);
-      } catch (err) {
-        setStatus("Tekniskt fel. Försök igen eller mejla kontakt@proofy.se.");
-        setBusy(false);
+    const fd = new FormData(form);
+    for (const el of form.querySelectorAll("[data-required='true']")){
+      if (!String(fd.get(el.name) || "").trim()){
+        el.focus();
+        setStatus("Fyll i alla obligatoriska fält.", "err");
+        return;
       }
-    });
-  })();
+    }
+
+    if (fd.get("bot-field") || fd.get("company_website")){
+      setStatus("Kunde inte skickas. Försök igen.", "err");
+      return;
+    }
+
+    try {
+      disableForm(true);
+      setStatus("Skickar…", "wait");
+
+      const body = new URLSearchParams();
+      for (const [k,v] of fd.entries()) body.append(k, String(v));
+
+      const res = await fetch(form.action, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString()
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.ok !== true || data.sent !== true){
+        setStatus(data.error || "Kunde inte skickas. Försök igen.", "err");
+        disableForm(false);
+        return;
+      }
+
+      setStatus("Skickat ✅ Vi återkommer inom 1–2 arbetsdagar.", "ok");
+      form.reset();
+      setTimeout(() => location.href = "/thanks.html?sent=1", 700);
+
+    } catch {
+      setStatus("Tekniskt fel. Försök igen.", "err");
+      disableForm(false);
+    }
+  });
+
+  setStatus("Redo", "wait");
+})();
 </script>
+
+<script src="/assets/header-toggle.js" defer></script>
+<script src="/chat-widget.js" defer></script>
 </body>
 </html>
