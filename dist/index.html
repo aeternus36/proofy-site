@@ -9,14 +9,12 @@
   <link rel="canonical" href="https://proofy.se/" />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Proofy" />
   <meta property="og:title" content="Proofy – Dokumentverifiering för redovisningsbyråer" />
   <meta property="og:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
   <meta property="og:url" content="https://proofy.se/" />
 
-  <!-- Twitter -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Proofy – Dokumentverifiering för redovisningsbyråer" />
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat sedan registrering – utan att lagra filinnehåll." />
@@ -53,7 +51,6 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Desktop actions -->
       <div class="navActions" id="navActionsDesktop">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
@@ -61,7 +58,6 @@
         <a class="btn primary" href="#kontakt">Boka kort demo</a>
       </div>
 
-      <!-- Mobile menu -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
@@ -152,12 +148,12 @@
         </p>
 
         <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
-          <!-- Honeypot (gamla) -->
+          <!-- Honeypot (gammal) -->
           <p style="display:none;">
             <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
           </p>
 
-          <!-- Honeypot (nya, mindre risk för mobil-autofill). Backend stödjer båda. -->
+          <!-- Honeypot (ny) -->
           <input
             type="text"
             name="company_website"
@@ -213,7 +209,6 @@
         </p>
       </div>
     </section>
-
   </div>
 </main>
 
@@ -302,21 +297,6 @@
     return null;
   }
 
-  function buildNiceError(data, res){
-    // Visa alltid backendens fel om det finns
-    if (data && typeof data === "object") {
-      if (data.ignored === true) {
-        return "Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).";
-      }
-      const parts = [];
-      if (data.error) parts.push(String(data.error));
-      if (data.hint) parts.push(String(data.hint));
-      if (parts.length) return parts.join(" ");
-    }
-    // fallback
-    return `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
-  }
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearFieldHints();
@@ -331,10 +311,11 @@
       return;
     }
 
+    // Honeypots: om triggas => visa fel (ALDRIG tack/redirect)
     const hpOld = fd.get("bot-field");
     const hpNew = fd.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
-      setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+      setStatus("Kunde inte skickas. Testa igen (tips: inkognito/privat läge).", "err");
       return;
     }
 
@@ -347,17 +328,25 @@
 
       const res = await fetch(form.action, {
         method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "accept": "application/json" },
         body: body.toString()
       });
 
-      const data = await res.json().catch(() => null);
+      const data = await res.json().catch(() => ({}));
 
-      // ✅ Endast “success” när ok:true och sent:true
-      const success = !!(res.ok && data && data.ok === true && data.sent === true);
+      // Backend kan svara 200 även vid fel, så vi går på data
+      if (data && data.ignored === true){
+        setStatus("Kunde inte skickas. Testa igen (tips: inkognito/privat läge).", "err");
+        disableForm(false);
+        return;
+      }
 
-      if (!success){
-        setStatus(buildNiceError(data, res), "err");
+      if (!(data && data.ok === true && data.sent === true)){
+        const msg =
+          (data && data.error) ||
+          (data && data.detail) ||
+          `Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.`;
+        setStatus(msg, "err");
         disableForm(false);
         return;
       }
