@@ -1,74 +1,317 @@
-export async function onRequestPost(context) {
+export async function onRequest(context) {
+  const { request, env } = context;
+
+  const CORS_HEADERS = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "POST, OPTIONS, GET",
+    "access-control-allow-headers": "content-type",
+  };
+
+  function json(data, status = 200, extraHeaders = {}) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        ...CORS_HEADERS,
+        ...extraHeaders,
+      },
+    });
+  }
+
+  function safeTrim(v) {
+    return String(v ?? "").trim();
+  }
+
+  function isLikelyEmail(email) {
+    const e = safeTrim(email).toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  async function readBody(req) {
+    const ct = (req.headers.get("content-type") || "").toLowerCase();
+
+    try {
+      if (ct.includes("application/json")) {
+        const data = await req.json();
+        return { ok: true, data: data && typeof data === "object" ? data : {} };
+      }
+
+      if (
+        ct.includes("multipart/form-data") ||
+        ct.includes("application/x-www-form-urlencoded")
+      ) {
+        const fd = await req.formData();
+        return { ok: true, data: Object.fromEntries(fd.entries()) };
+      }
+
+      const text = await req.text();
+      const t = safeTrim(text);
+      if (!t) return { ok: true, data: {} };
+
+      try {
+        const parsed = JSON.parse(t);
+        return {
+          ok: true,
+          data: parsed && typeof parsed === "object" ? parsed : {},
+        };
+      } catch {
+        return {
+          ok: false,
+          status: 400,
+          error: "Body måste vara JSON eller formulärdata.",
+          detail: "Kunde inte tolka request body som JSON.",
+          received: t.slice(0, 200),
+        };
+      }
+    } catch (err) {
+      return {
+        ok: false,
+        status: 400,
+        error: "Ogiltig JSON i request body.",
+        detail: String(err?.message || err),
+      };
+    }
+  }
+
+  async function sendViaResend({ from, to, replyTo, subject, html }) {
+    const apiKey = env?.RESEND_API_KEY;
+    if (!apiKey) {
+      return {
+        ok: false,
+        sent: false,
+        error: "RESEND_API_KEY saknas.",
+        hint:
+          "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
+      };
+    }
+
+    const url = "https://api.resend.com/emails";
+    const payload = { from, to, subject, html };
+    if (replyTo) payload.reply_to = replyTo;
+
+    const controller = new AbortController();
+    const timeoutMs = 8000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    let res;
+    let text = "";
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      text = await res.text();
+    } catch (err) {
+      const msg = String(err?.message || err);
+      const aborted =
+        msg.toLowerCase().includes("aborted") ||
+        msg.toLowerCase().includes("abort") ||
+        msg.toLowerCase().includes("timeout");
+
+      return {
+        ok: false,
+        sent: false,
+        error: aborted
+          ? "Timeout när vi försökte kontakta Resend."
+          : "Kunde inte nå Resend (network/fetch).",
+        detail: msg,
+        hint:
+          "Kontrollera RESEND_API_KEY och att FROM-adress/domän är korrekt/verifierad i Resend.",
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    let parsed = null;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      parsed = { raw: text };
+    }
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        sent: false,
+        error: "Resend avvisade utskicket.",
+        resend_status: res.status,
+        resend_response: parsed,
+        hint:
+          "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend, eller 'Enable Sending' är av. Kontrollera Resend → Domains.",
+      };
+    }
+
+    return { ok: true, sent: true, resend_response: parsed };
+  }
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: { ...CORS_HEADERS } });
+  }
+
+  if (request.method === "GET") {
+    return json(
+      {
+        ok: true,
+        endpoint: "/api/pilot",
+        methods: ["POST"],
+        expects: "application/json OR form-data OR x-www-form-urlencoded",
+      },
+      200
+    );
+  }
+
+  if (request.method !== "POST") {
+    return json({ ok: false, sent: false, error: "Use POST" }, 405);
+  }
+
   try {
-    const req = context.request;
-    const form = await req.formData();
+    const parsed = await readBody(request);
+    if (!parsed.ok) {
+      return json(
+        {
+          ok: false,
+          sent: false,
+          error: parsed.error,
+          detail: parsed.detail,
+          received: parsed.received,
+        },
+        400
+      );
+    }
 
-    // Honeypot
-    const bot = (form.get("bot-field") || "").toString().trim();
-    if (bot) return new Response("OK", { status: 200 });
+    const data = parsed.data || {};
 
-    const name = (form.get("name") || "").toString().trim();
-    const email = (form.get("email") || "").toString().trim();
-    const company = (form.get("company") || "").toString().trim();
-    const role = (form.get("role") || "").toString().trim();
-    const message = (form.get("message") || "").toString().trim();
+    // Honeypot: stödjer både gamla och nya fält
+    const botField = safeTrim(data["bot-field"]);
+    const botFieldAlt = safeTrim(data["company_website"]);
+    if (botField || botFieldAlt) {
+      return json({ ok: true, ignored: true, sent: false }, 200);
+    }
+
+    const name = safeTrim(data.name);
+    const email = safeTrim(data.email).toLowerCase();
+    const company = safeTrim(data.company);
+    const role = safeTrim(data.role);
+    const message = safeTrim(data.message);
 
     if (!name || !email || !company) {
-      return new Response("Saknar obligatoriska fält.", { status: 400 });
+      return json(
+        { ok: false, sent: false, error: "Fyll i namn, e-post och byrå/företag." },
+        400
+      );
     }
-    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!emailOk) {
-      return new Response("Ogiltig e-postadress.", { status: 400 });
+    if (!isLikelyEmail(email)) {
+      return json(
+        { ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." },
+        400
+      );
     }
 
-    // Miljövariabler i Cloudflare Pages:
-    // CONTACT_TO = "kontakt@proofy.se"
-    // CONTACT_FROM = "no-reply@proofy.se"
-    // CONTACT_FROM_NAME = "Proofy"
-    const TO = context.env.CONTACT_TO || "kontakt@proofy.se";
-    const FROM = context.env.CONTACT_FROM || "no-reply@proofy.se";
-    const FROM_NAME = context.env.CONTACT_FROM_NAME || "Proofy";
+    const createdAt = new Date().toISOString();
+    const ip =
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for") ||
+      "";
+    const ua = request.headers.get("user-agent") || "";
 
+    // ✅ Delade envs (samma som /api/contact):
+    // CONTACT_TO: vart mailet ska skickas
+    // CONTACT_FROM: avsändaradress (måste vara verifierad domän i Resend)
+    // CONTACT_FROM_NAME: avsändarnamn
+    const CONTACT_TO = env?.CONTACT_TO || "kontakt@proofy.se";
+    const FROM_NAME = env?.CONTACT_FROM_NAME || "Proofy";
+    const FROM_ADDR = env?.CONTACT_FROM || "onboarding@resend.dev";
+
+    const from = `${FROM_NAME} <${FROM_ADDR}>`;
     const subject = `Pilotförfrågan – ${company}`;
 
-    const lines = [
-      "Ny PILOT-förfrågan från proofy.se/pilot",
-      "",
-      `Namn: ${name}`,
-      `E-post: ${email}`,
-      `Byrå / företag: ${company}`,
-      `Roll: ${role || "—"}`,
-      "",
-      "Case (valfritt):",
-      message || "—"
-    ];
-    const textBody = lines.join("\n");
+    const html = `
+      <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;">
+        <h2 style="margin:0 0 12px;">Ny PILOT-förfrågan via proofy.se/pilot</h2>
+        <table style="border-collapse:collapse; width:100%; max-width:760px;">
+          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Namn</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
+            name
+          )}</td></tr>
+          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>E-post</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
+            email
+          )}</td></tr>
+          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå / företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
+            company
+          )}</td></tr>
+          ${
+            role
+              ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Roll</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
+                  role
+                )}</td></tr>`
+              : ""
+          }
+        </table>
 
-    // MailChannels via Cloudflare
-    const payload = {
-      personalizations: [{ to: [{ email: TO }] }],
-      from: { email: FROM, name: FROM_NAME },
-      reply_to: { email, name },
+        <h3 style="margin:16px 0 8px;">Case (valfritt)</h3>
+        <pre style="white-space:pre-wrap; background:#f7f7f8; padding:12px; border-radius:10px; border:1px solid #eee; max-width:760px;">${escapeHtml(
+          message || "—"
+        )}</pre>
+
+        <div style="margin-top:12px; color:#666; font-size:12px;">
+          Tid: ${escapeHtml(createdAt)}<br/>
+          ${ip ? `IP: ${escapeHtml(ip)}<br/>` : ""}
+          ${ua ? `User-Agent: ${escapeHtml(ua)}<br/>` : ""}
+        </div>
+      </div>
+    `;
+
+    const sendResult = await sendViaResend({
+      from,
+      to: CONTACT_TO,
+      replyTo: email,
       subject,
-      content: [{ type: "text/plain", value: textBody }]
-    };
-
-    const r = await fetch("https://api.mailchannels.net/tx/v1/send", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload)
+      html,
     });
 
-    if (!r.ok) {
-      const errText = await r.text().catch(() => "");
-      console.log("MailChannels error:", r.status, errText);
-      return new Response("Kunde inte skicka just nu. Försök igen eller mejla kontakt@proofy.se.", { status: 502 });
+    if (!sendResult.ok) {
+      // Vi använder 200 här för att garantera JSON även vid upstream-problem.
+      return json(
+        {
+          ok: false,
+          sent: false,
+          error: sendResult.error,
+          hint: sendResult.hint,
+          resend_status: sendResult.resend_status,
+          resend_response: sendResult.resend_response,
+          detail: sendResult.detail,
+        },
+        200
+      );
     }
 
-    return Response.redirect(`${new URL(req.url).origin}/thanks.html`, 302);
-
-  } catch (e) {
-    console.log("Pilot form exception:", e);
-    return new Response("Tekniskt fel. Försök igen eller mejla kontakt@proofy.se.", { status: 500 });
+    return json(
+      { ok: true, sent: true, resend: sendResult.resend_response },
+      200
+    );
+  } catch (err) {
+    return json(
+      {
+        ok: false,
+        sent: false,
+        error: "Serverfel i /api/pilot",
+        detail: String(err?.message || err),
+      },
+      200
+    );
   }
 }
