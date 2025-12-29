@@ -11,6 +11,11 @@
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-25a" />
   <link rel="stylesheet" href="/assets/header.css?v=2025-12-25a" />
+
+  <style>
+    /* Dölj status-pill tills vi faktiskt har något att säga (skickar/fel/skickat) */
+    #pilotStatus { display:none; }
+  </style>
 </head>
 
 <body>
@@ -95,9 +100,8 @@
 
       <h2>Starta pilot</h2>
 
-      <!-- Cloudflare: posta till en egen endpoint -->
       <form name="pilot" id="pilotForm" action="/api/pilot" method="POST" novalidate>
-        <!-- Honeypot -->
+        <!-- Honeypot (gamla) -->
         <p style="display:none;">
           <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
         </p>
@@ -141,7 +145,7 @@
         <div class="formActions">
           <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
           <span class="small">Vi återkommer normalt inom 1–2 arbetsdagar.</span>
-          <span id="pilotStatus" class="pill" style="margin-left:12px;" aria-live="polite">Redo</span>
+          <span id="pilotStatus" class="pill" style="margin-left:12px;" aria-live="polite"></span>
         </div>
       </form>
 
@@ -186,7 +190,10 @@
   function setStatus(text, tone){
     if (!statusEl) return;
 
+    // Visa först när vi har status
+    statusEl.style.display = "inline-block";
     statusEl.textContent = text;
+
     statusEl.style.fontWeight = "800";
     statusEl.style.border = "1px solid rgba(255,255,255,.14)";
     statusEl.style.background = "rgba(255,255,255,.06)";
@@ -240,6 +247,15 @@
     return null;
   }
 
+  function looksLikeThanks(url){
+    try{
+      const u = new URL(url, window.location.origin);
+      return u.pathname.endsWith("/thanks.html") || u.pathname.endsWith("/thanks");
+    }catch{
+      return false;
+    }
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearFieldHints();
@@ -272,34 +288,60 @@
       const res = await fetch(form.action, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString()
+        body: body.toString(),
+        redirect: "follow"
       });
 
-      const data = await res.json().catch(() => ({}));
+      // 1) Om backend gjorde redirect till thanks (302->follow), hamnar vi ofta på HTML-svar men res.url blir /thanks.html
+      if (looksLikeThanks(res.url)) {
+        window.location.href = res.url;
+        return;
+      }
 
-      if (!res.ok || data.ok !== true || data.sent !== true){
-        if (data.ignored === true){
-          setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
-          disableForm(false);
-          return;
-        }
-        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
-        setStatus(msg, "err");
+      // 2) Försök JSON om det är JSON
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      let data = null;
+
+      if (ct.includes("application/json")) {
+        data = await res.json().catch(() => null);
+      } else {
+        // Ibland skickas JSON ändå utan korrekt header – prova snällt
+        const txt = await res.text().catch(() => "");
+        try { data = txt ? JSON.parse(txt) : null; } catch { data = null; }
+      }
+
+      // 3) Om vi fick JSON och den säger "sent:true" -> redirect
+      if (data && data.ok === true && data.sent === true) {
+        setStatus("Skickat ✅ Vi återkommer inom 1–2 arbetsdagar.", "ok");
+        form.reset();
+        setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
+        return;
+      }
+
+      // 4) Om vi INTE fick JSON men status är OK, kan vi ändå välja att gå till thanks (för att matcha din äldre /api/pilot)
+      if (!data && res.ok) {
+        window.location.href = "/thanks.html?sent=1";
+        return;
+      }
+
+      // 5) Annars fel
+      if (data && data.ignored === true){
+        setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
         disableForm(false);
         return;
       }
 
-      setStatus("Skickat ✅ Vi återkommer inom 1–2 arbetsdagar.", "ok");
-      form.reset();
-      setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
+      const msg =
+        (data && (data.error || data.message)) ||
+        `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
+      setStatus(msg, "err");
+      disableForm(false);
 
     } catch (err){
       setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
       disableForm(false);
     }
   });
-
-  setStatus("Redo", "wait");
 })();
 </script>
 
