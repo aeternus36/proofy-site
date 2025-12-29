@@ -349,7 +349,7 @@
 
       setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.", "ok");
       form.reset();
-      setTimeout(() => { window.location.href = "/thanks.html"; }, 700);
+      setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
 
     } catch (err){
       setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
