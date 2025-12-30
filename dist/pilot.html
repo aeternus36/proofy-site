@@ -13,8 +13,8 @@
   <link rel="stylesheet" href="/assets/header.css?v=2025-12-25a" />
 
   <style>
-    /* Dölj status-pill tills vi faktiskt har något att säga (skickar/fel/skickat) */
-    #pilotStatus { display: none; }
+    /* Dölj status-pill tills vi faktiskt behöver visa något */
+    #pilotStatus { display:none; }
   </style>
 </head>
 
@@ -100,9 +100,8 @@
 
       <h2>Starta pilot</h2>
 
-      <!-- Cloudflare: posta till en egen endpoint -->
       <form name="pilot" id="pilotForm" action="/api/pilot" method="POST" novalidate>
-        <!-- Honeypot -->
+        <!-- Honeypot (gamla) -->
         <p style="display:none;">
           <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
         </p>
@@ -117,6 +116,9 @@
           aria-hidden="true"
           style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
         />
+
+        <!-- Anti-spam token från /api/form-token -->
+        <input type="hidden" name="form_token" id="formToken" value="" />
 
         <div class="formGrid">
           <div>
@@ -146,7 +148,6 @@
         <div class="formActions">
           <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
           <span class="small">Vi återkommer normalt inom 1–2 arbetsdagar.</span>
-          <!-- Tom + dold tills vi behöver den -->
           <span id="pilotStatus" class="pill" style="margin-left:12px;" aria-live="polite"></span>
         </div>
       </form>
@@ -188,13 +189,13 @@
 
   const statusEl = document.getElementById("pilotStatus");
   const submitBtn = document.getElementById("pilotSubmitBtn");
+  const tokenEl = document.getElementById("formToken");
 
   function setStatus(text, tone){
     if (!statusEl) return;
 
     statusEl.style.display = "inline-block";
     statusEl.textContent = text;
-
     statusEl.style.fontWeight = "800";
     statusEl.style.border = "1px solid rgba(255,255,255,.14)";
     statusEl.style.background = "rgba(255,255,255,.06)";
@@ -248,6 +249,21 @@
     return null;
   }
 
+  async function refreshToken(){
+    try{
+      const res = await fetch("/api/form-token", { method: "GET" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok === true && typeof data.token === "string"){
+        if (tokenEl) tokenEl.value = data.token;
+        return true;
+      }
+    }catch{}
+    return false;
+  }
+
+  // Hämta token direkt när sidan laddas (tyst)
+  refreshToken();
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearFieldHints();
@@ -270,12 +286,21 @@
       return;
     }
 
+    // Om token saknas: försök hämta igen innan vi skickar
+    if (!String(fd.get("form_token") || "").trim()){
+      const ok = await refreshToken();
+      if (!ok){
+        setStatus("Kunde inte verifiera formuläret just nu. Ladda om sidan och försök igen.", "err");
+        return;
+      }
+    }
+
     try{
       disableForm(true);
       setStatus("Skickar…", "wait");
 
       const body = new URLSearchParams();
-      for (const [k, v] of fd.entries()) body.append(k, String(v));
+      for (const [k, v] of new FormData(form).entries()) body.append(k, String(v));
 
       const res = await fetch(form.action, {
         method: "POST",
@@ -294,16 +319,21 @@
         const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
         setStatus(msg, "err");
         disableForm(false);
+
+        // uppdatera token efter fel (kan vara “token utgången”)
+        refreshToken();
         return;
       }
 
       setStatus("Skickat ✅ Vi återkommer inom 1–2 arbetsdagar.", "ok");
       form.reset();
+      await refreshToken();
       setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
 
     } catch (err){
       setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
       disableForm(false);
+      refreshToken();
     }
   });
 })();
