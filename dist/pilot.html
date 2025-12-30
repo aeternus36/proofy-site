@@ -1,4 +1,3 @@
-<!-- /pilot.html  (ERSÄTT HELA FILEN) -->
 <!doctype html>
 <html lang="sv">
 <head>
@@ -14,7 +13,8 @@
   <link rel="stylesheet" href="/assets/header.css?v=2025-12-25a" />
 
   <style>
-    #pilotStatus { display:none; }
+    /* Dölj status-pill tills vi faktiskt har något att säga (skickar/fel/skickat) */
+    #pilotStatus { display: none; }
   </style>
 </head>
 
@@ -100,8 +100,9 @@
 
       <h2>Starta pilot</h2>
 
+      <!-- Cloudflare: posta till en egen endpoint -->
       <form name="pilot" id="pilotForm" action="/api/pilot" method="POST" novalidate>
-        <!-- Honeypot (gamla) -->
+        <!-- Honeypot -->
         <p style="display:none;">
           <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
         </p>
@@ -116,10 +117,6 @@
           aria-hidden="true"
           style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
         />
-
-        <!-- Anti-spam token + timestamp (steg 3) -->
-        <input type="hidden" id="proofy_token" name="proofy_token" value="" />
-        <input type="hidden" id="proofy_ts" name="proofy_ts" value="" />
 
         <div class="formGrid">
           <div>
@@ -136,7 +133,7 @@
           </div>
           <div>
             <label class="label" for="p-role">Roll</label>
-            <input id="p-role" name="role" type="text" placeholder="t.ex. Auktoriserad revisor, redovisningskonsult" />
+            <input id="p-role" name="role" type="text" />
           </div>
         </div>
 
@@ -149,12 +146,8 @@
         <div class="formActions">
           <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
           <span class="small">Vi återkommer normalt inom 1–2 arbetsdagar.</span>
+          <!-- Tom + dold tills vi behöver den -->
           <span id="pilotStatus" class="pill" style="margin-left:12px;" aria-live="polite"></span>
-        </div>
-
-        <div class="fineprint" style="margin-top:10px;">
-          Genom att skicka formuläret behandlar vi dina kontaktuppgifter för att hantera din pilotförfrågan.
-          Läs mer i <a href="/privacy.html">Integritetspolicyn</a>. Inga dokument bifogas via formuläret.
         </div>
       </form>
 
@@ -255,27 +248,9 @@
     return null;
   }
 
-  async function initAntiSpamToken(){
-    try {
-      const res = await fetch("/api/form-token", { credentials: "same-origin" });
-      const data = await res.json().catch(() => ({}));
-      const t = document.getElementById("proofy_token");
-      const ts = document.getElementById("proofy_ts");
-      if (t) t.value = data.token || "";
-      if (ts) ts.value = String(Date.now());
-    } catch {
-      // fail closed: backend stoppar utan token
-    }
-  }
-  initAntiSpamToken();
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearFieldHints();
-
-    // Uppdatera timestamp precis innan submit
-    const ts = document.getElementById("proofy_ts");
-    if (ts) ts.value = String(Date.now());
 
     const fd = new FormData(form);
 
@@ -290,7 +265,7 @@
     const hpOld = fd.get("bot-field");
     const hpNew = fd.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
-      setStatus("Förfrågan kunde inte skickas. Ladda om sidan och försök igen.", "err");
+      setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
       disableForm(false);
       return;
     }
@@ -312,11 +287,11 @@
 
       if (!res.ok || data.ok !== true || data.sent !== true){
         if (data.ignored === true){
-          setStatus("Förfrågan kunde inte skickas. Ladda om sidan och försök igen.", "err");
+          setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
           disableForm(false);
           return;
         }
-        const msg = data.error || `Förfrågan kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
+        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
         setStatus(msg, "err");
         disableForm(false);
         return;
@@ -326,8 +301,8 @@
       form.reset();
       setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
 
-    } catch {
-      setStatus("Förfrågan kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
+    } catch (err){
+      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
       disableForm(false);
     }
   });
