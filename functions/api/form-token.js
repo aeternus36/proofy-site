@@ -1,19 +1,18 @@
 // functions/api/form-token.js
 // Cloudflare Pages Function: /api/form-token
-// Returnerar alltid JSON med tydliga felorsaker.
+// Returnerar { ok:true, token:"<issued>.<sha256(issued.secret)>" }
 //
 // Kräver env (Production):
-// - FORM_TOKEN_SECRET (minst 32 tecken, slumpad sträng)
+// - FORM_TOKEN_SECRET
 // Valfritt:
-// - ALLOWED_ORIGINS = "https://proofy.se,https://www.proofy.se"
+// - ALLOWED_ORIGINS="https://proofy.se,https://www.proofy.se"
 
-function json(data, status = 200, extraHeaders = {}) {
+function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
-      ...extraHeaders,
     },
   });
 }
@@ -25,7 +24,25 @@ function safeTrim(v) {
 function getAllowedOrigins(env) {
   const raw = safeTrim(env?.ALLOWED_ORIGINS);
   if (!raw) return ["https://proofy.se", "https://www.proofy.se"];
-  return raw.split(",").map(s => s.trim()).filter(Boolean);
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function isAllowedRequest(request, env) {
+  const origin = safeTrim(request.headers.get("origin"));
+  const referer = safeTrim(request.headers.get("referer"));
+  const host = safeTrim(request.headers.get("host")).toLowerCase();
+  const allowed = getAllowedOrigins(env);
+
+  // 1) Tillåt om Origin matchar
+  if (origin && allowed.some((d) => origin.startsWith(d))) return true;
+
+  // 2) Tillåt om Referer matchar
+  if (referer && allowed.some((d) => referer.startsWith(d))) return true;
+
+  // 3) Tillåt om host är din egna domän (viktigt när man öppnar direkt i adressfältet)
+  if (host === "proofy.se" || host === "www.proofy.se") return true;
+
+  return false;
 }
 
 async function sha256Hex(str) {
@@ -43,43 +60,13 @@ export async function onRequest(context) {
     return json({ ok: false, error: "Use GET" }, 405);
   }
 
-  const secret = safeTrim(env?.FORM_TOKEN_SECRET);
-  if (!secret) {
-    return json(
-      {
-        ok: false,
-        error: "FORM_TOKEN_SECRET saknas i Pages (Production).",
-        fix: [
-          "Cloudflare Dashboard → Workers & Pages → proofy-site",
-          "Settings → Variables & Secrets",
-          "Lägg till FORM_TOKEN_SECRET (Production) och deploya om",
-        ],
-      },
-      500
-    );
+  if (!isAllowedRequest(request, env)) {
+    return json({ ok: false, error: "Origin not allowed" }, 403);
   }
 
-  // (Valfritt) origin/referer-check. Vi loggar info i svaret om den failar.
-  const allowed = getAllowedOrigins(env);
-  const origin = safeTrim(request.headers.get("origin"));
-  const referer = safeTrim(request.headers.get("referer"));
-  const host = safeTrim(request.headers.get("host")).toLowerCase();
-
-  const allowedByHeader =
-    allowed.some((d) => origin.startsWith(d)) ||
-    allowed.some((d) => referer.startsWith(d)) ||
-    host === "proofy.se" ||
-    host === "www.proofy.se";
-
-  if (!allowedByHeader) {
-    return json(
-      {
-        ok: false,
-        error: "Not allowed (origin/referer/host).",
-        debug: { origin, referer, host, allowed },
-      },
-      403
-    );
+  const secret = safeTrim(env?.FORM_TOKEN_SECRET);
+  if (!secret) {
+    return json({ ok: false, error: "FORM_TOKEN_SECRET saknas" }, 500);
   }
 
   const issued = Date.now();
