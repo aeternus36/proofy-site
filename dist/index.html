@@ -193,7 +193,7 @@
             style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
           />
 
-          <!-- Anti-spam token + timestamp (steg 3) -->
+          <!-- Anti-spam token + timestamp -->
           <input type="hidden" id="proofy_token" name="proofy_token" value="" />
           <input type="hidden" id="proofy_ts" name="proofy_ts" value="" />
 
@@ -238,7 +238,6 @@
             <span id="demoStatus" class="pill" style="margin-left:12px;" aria-live="polite"></span>
           </div>
 
-          <!-- Juridiskt tydligare, revisor-ton -->
           <div class="fineprint">
             Genom att skicka formuläret behandlar vi dina kontaktuppgifter för att hantera din förfrågan (demo/pilot).
             Vi sparar uppgifterna endast så länge det behövs för uppföljning och dokumentation. Läs mer i <a href="/privacy.html">Integritetspolicyn</a>.
@@ -343,28 +342,47 @@
     return null;
   }
 
-  // Anti-spam token init (steg 3)
   async function initAntiSpamToken(){
+    const t = document.getElementById("proofy_token");
+    const ts = document.getElementById("proofy_ts");
     try {
-      const res = await fetch("/api/form-token", { credentials: "same-origin" });
+      const res = await fetch("/api/form-token", { credentials: "same-origin", cache: "no-store" });
       const data = await res.json();
-      const t = document.getElementById("proofy_token");
-      const ts = document.getElementById("proofy_ts");
-      if (t) t.value = data.token || "";
-      if (ts) ts.value = String(Date.now());
-    } catch (e) {
-      // Fail closed: servern ska stoppa submit utan token
+      if (data && data.ok === true && data.token) {
+        if (t) t.value = data.token;
+        if (ts) ts.value = String(Date.now());
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
   }
-  initAntiSpamToken();
+
+  // Init token direkt
+  initAntiSpamToken().then(ok => {
+    if (!ok) {
+      setStatus("Kunde inte initiera formulärsäkerhet. Ladda om sidan och försök igen.", "err");
+    }
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearFieldHints();
 
-    // Uppdatera timestamp precis innan submit (steg 3)
-    const ts = document.getElementById("proofy_ts");
-    if (ts) ts.value = String(Date.now());
+    // Uppdatera timestamp precis innan submit
+    const tsEl = document.getElementById("proofy_ts");
+    if (tsEl) tsEl.value = String(Date.now());
+
+    // Säkerställ token finns, annars hämta igen
+    const tokenEl = document.getElementById("proofy_token");
+    if (!tokenEl || !String(tokenEl.value || "").trim()) {
+      const ok = await initAntiSpamToken();
+      if (!ok || !tokenEl || !String(tokenEl.value || "").trim()) {
+        setStatus("Kunde inte initiera formulärsäkerhet. Ladda om sidan och försök igen.", "err");
+        return;
+      }
+    }
 
     const fd = new FormData(form);
 
@@ -379,7 +397,7 @@
     const hpOld = fd.get("bot-field");
     const hpNew = fd.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
-      setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+      setStatus("Kunde inte skickas. Försök igen.", "err");
       disableForm(false);
       return;
     }
@@ -394,14 +412,15 @@
       const res = await fetch(form.action, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString()
+        body: body.toString(),
+        credentials: "same-origin"
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || data.ok !== true || data.sent !== true){
         if (data.ignored === true){
-          setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+          setStatus("Förfrågan kunde inte skickas. Ladda om sidan och försök igen, eller mejla kontakt@proofy.se.", "err");
           disableForm(false);
           return;
         }
