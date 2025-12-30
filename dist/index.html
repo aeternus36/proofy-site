@@ -27,8 +27,6 @@
     body { background-image: none !important; }
     main::before{ content:none !important; }
     main{ background: transparent !important; }
-
-    /* Dölj status-pill tills vi faktiskt har något att säga (skickar/fel/skickat) */
     #demoStatus { display:none; }
   </style>
 
@@ -182,18 +180,19 @@
             <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
           </p>
 
-          <!-- Honeypot (nya) -->
+          <!-- Honeypot (nya) - extra anti-autofill -->
           <input
             type="text"
             name="company_website"
             tabindex="-1"
-            autocomplete="off"
+            autocomplete="new-password"
             inputmode="none"
             aria-hidden="true"
+            value=""
             style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
           />
 
-          <!-- Anti-spam token + timestamp -->
+          <!-- Anti-spam token + timestamp (sätts vid tokenhämtning) -->
           <input type="hidden" id="proofy_token" name="proofy_token" value="" />
           <input type="hidden" id="proofy_ts" name="proofy_ts" value="" />
 
@@ -350,7 +349,7 @@
       const data = await res.json();
       if (data && data.ok === true && data.token) {
         if (t) t.value = data.token;
-        if (ts) ts.value = String(Date.now());
+        if (ts) ts.value = String(Date.now()); // <-- sätts HÄR (sidans token-start)
         return true;
       }
       return false;
@@ -361,18 +360,18 @@
 
   // Init token direkt
   initAntiSpamToken().then(ok => {
-    if (!ok) {
-      setStatus("Kunde inte initiera formulärsäkerhet. Ladda om sidan och försök igen.", "err");
-    }
+    if (!ok) setStatus("Kunde inte initiera formulärsäkerhet. Ladda om sidan och försök igen.", "err");
   });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearFieldHints();
 
-    // Uppdatera timestamp precis innan submit
-    const tsEl = document.getElementById("proofy_ts");
-    if (tsEl) tsEl.value = String(Date.now());
+    // NOLLSTÄLL honeypots precis innan vi läser FormData (hindrar autofill-spöken)
+    const hpNewEl = form.querySelector("input[name='company_website']");
+    const hpOldEl = form.querySelector("input[name='bot-field']");
+    if (hpNewEl) hpNewEl.value = "";
+    if (hpOldEl) hpOldEl.value = "";
 
     // Säkerställ token finns, annars hämta igen
     const tokenEl = document.getElementById("proofy_token");
@@ -391,14 +390,6 @@
       hintField(missing);
       missing.focus();
       setStatus("Kontrollera att namn, e-post och beskrivning är ifyllda.", "err");
-      return;
-    }
-
-    const hpOld = fd.get("bot-field");
-    const hpNew = fd.get("company_website");
-    if (String(hpOld || "").trim() || String(hpNew || "").trim()){
-      setStatus("Kunde inte skickas. Försök igen.", "err");
-      disableForm(false);
       return;
     }
 
