@@ -17,6 +17,18 @@ function safeTrim(v) {
   return String(v ?? "").trim();
 }
 
+function isAllowedOrigin(request) {
+  const origin = safeTrim(request.headers.get("origin"));
+  const referer = safeTrim(request.headers.get("referer"));
+
+  const allowed = [
+    "https://proofy.se",
+    "https://www.proofy.se",
+  ];
+
+  return allowed.some((d) => origin.startsWith(d) || referer.startsWith(d));
+}
+
 async function hmacHex(secret, msg) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -27,19 +39,9 @@ async function hmacHex(secret, msg) {
     ["sign"]
   );
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
-  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-function isAllowedOrigin(request) {
-  const origin = safeTrim(request.headers.get("origin"));
-  const referer = safeTrim(request.headers.get("referer"));
-
-  const allowed = [
-    "https://proofy.se",
-    "https://www.proofy.se",
-  ];
-
-  return allowed.some(d => origin.startsWith(d) || referer.startsWith(d));
+  return [...new Uint8Array(sig)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export async function onRequest(context) {
