@@ -1,3 +1,4 @@
+<!-- /pilot.html -->
 <!doctype html>
 <html lang="sv">
 <head>
@@ -117,6 +118,10 @@
           style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
         />
 
+        <!-- Anti-spam token + timestamp (steg 3) -->
+        <input type="hidden" id="proofy_token" name="proofy_token" value="" />
+        <input type="hidden" id="proofy_ts" name="proofy_ts" value="" />
+
         <div class="formGrid">
           <div>
             <label class="label" for="p-name">Namn <span class="req">*</span></label>
@@ -166,7 +171,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -190,7 +195,6 @@
   function setStatus(text, tone){
     if (!statusEl) return;
 
-    // Visa först när vi har status
     statusEl.style.display = "inline-block";
     statusEl.textContent = text;
 
@@ -256,6 +260,25 @@
     }
   }
 
+  // Anti-spam token init (steg 3)
+  async function initAntiSpamToken(){
+    try {
+      const res = await fetch("/api/form-token", { credentials: "same-origin" });
+      const data = await res.json().catch(() => ({}));
+      const t = document.getElementById("proofy_token");
+      const ts = document.getElementById("proofy_ts");
+
+      if (data && data.ok === true && data.token) {
+        if (t) t.value = data.token;
+        // Viktigt: timestamp sätts VID tokenhämtning (inte vid submit)
+        if (ts) ts.value = String(Date.now());
+      }
+    } catch (e) {
+      // Låt servern stoppa submit om token saknas
+    }
+  }
+  initAntiSpamToken();
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearFieldHints();
@@ -270,6 +293,7 @@
       return;
     }
 
+    // Honeypot check
     const hpOld = fd.get("bot-field");
     const hpNew = fd.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
@@ -292,25 +316,21 @@
         redirect: "follow"
       });
 
-      // 1) Om backend gjorde redirect till thanks (302->follow), hamnar vi ofta på HTML-svar men res.url blir /thanks.html
       if (looksLikeThanks(res.url)) {
         window.location.href = res.url;
         return;
       }
 
-      // 2) Försök JSON om det är JSON
       const ct = (res.headers.get("content-type") || "").toLowerCase();
       let data = null;
 
       if (ct.includes("application/json")) {
         data = await res.json().catch(() => null);
       } else {
-        // Ibland skickas JSON ändå utan korrekt header – prova snällt
         const txt = await res.text().catch(() => "");
         try { data = txt ? JSON.parse(txt) : null; } catch { data = null; }
       }
 
-      // 3) Om vi fick JSON och den säger "sent:true" -> redirect
       if (data && data.ok === true && data.sent === true) {
         setStatus("Skickat ✅ Vi återkommer inom 1–2 arbetsdagar.", "ok");
         form.reset();
@@ -318,15 +338,8 @@
         return;
       }
 
-      // 4) Om vi INTE fick JSON men status är OK, kan vi ändå välja att gå till thanks (för att matcha din äldre /api/pilot)
-      if (!data && res.ok) {
-        window.location.href = "/thanks.html?sent=1";
-        return;
-      }
-
-      // 5) Annars fel
       if (data && data.ignored === true){
-        setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+        setStatus("Förfrågan kunde inte skickas. Ladda om sidan och försök igen, eller mejla kontakt@proofy.se.", "err");
         disableForm(false);
         return;
       }
