@@ -1,9 +1,9 @@
 // functions/api/pilot.js
 // Cloudflare Pages Function: /api/pilot
 // - JSON + formData + x-www-form-urlencoded
-// - Anti-spam: honeypot + form_token (samma format som /api/form-token)
-// - Returnerar ALLTID JSON
-// - Mail via Resend (fetch) med timeout
+// - Anti-spam: honeypot + token från /api/form-token (FORM_TOKEN_SECRET)
+// - Returnerar ALLTID JSON (så frontend kan visa pill + redirect)
+// - Mail via Resend (timeout)
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
@@ -89,29 +89,40 @@ async function sha256Hex(str) {
     .join("");
 }
 
-async function verifyFormToken({ env, token }) {
+// Verifierar token från /api/form-token:
+// token = "<issued>.<sha256(`${issued}.${FORM_TOKEN_SECRET}`)>"
+async function verifyFormToken({ env, token, clientTs }) {
   const secret = safeTrim(env?.FORM_TOKEN_SECRET);
-  if (!secret) return { ok: false, reason: "FORM_TOKEN_SECRET saknas i env." };
+  if (!secret) return { ok: false, reason: "FORM_TOKEN_SECRET saknas" };
 
   const t = safeTrim(token);
-  if (!t) return { ok: false, reason: "Token saknas." };
+  const ts = Number(safeTrim(clientTs));
+  if (!t || !Number.isFinite(ts)) return { ok: false, reason: "Token eller timestamp saknas." };
 
+  const now = Date.now();
+
+  // 1) Timestamp rimlig (±10 min)
+  if (Math.abs(now - ts) > 10 * 60 * 1000) {
+    return { ok: false, reason: "Ogiltig tid (timestamp utanför tillåtet fönster)." };
+  }
+
+  // 2) tokenformat
   const parts = t.split(".");
   if (parts.length !== 2) return { ok: false, reason: "Ogiltigt tokenformat." };
 
   const issued = Number(parts[0]);
-  const hash = safeTrim(parts[1]);
+  const hash = parts[1];
 
   if (!Number.isFinite(issued) || issued < 1_600_000_000_000) {
     return { ok: false, reason: "Ogiltig token-tid." };
   }
 
-  // Token ska vara relativt färsk (10 min)
-  const now = Date.now();
+  // 3) token får inte vara för gammal
   if (now - issued > 10 * 60 * 1000) {
     return { ok: false, reason: "Token har gått ut. Ladda om sidan och försök igen." };
   }
 
+  // 4) matcha hash exakt som /api/form-token gör
   const expected = await sha256Hex(`${issued}.${secret}`);
   if (expected !== hash) {
     return { ok: false, reason: "Token matchar inte. Ladda om sidan och försök igen." };
@@ -127,8 +138,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
       ok: false,
       sent: false,
       error: "RESEND_API_KEY saknas.",
-      hint:
-        "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
+      hint: "Lägg till RESEND_API_KEY i Cloudflare Pages → Settings → Variables and Secrets (Production) och deploya om.",
     };
   }
 
@@ -163,12 +173,9 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
     return {
       ok: false,
       sent: false,
-      error: aborted
-        ? "Timeout när vi försökte kontakta Resend."
-        : "Kunde inte nå Resend (network/fetch).",
+      error: aborted ? "Timeout när vi försökte kontakta Resend." : "Kunde inte nå Resend (network/fetch).",
       detail: msg,
-      hint:
-        "Kontrollera RESEND_API_KEY och att FROM-adress/domän är korrekt/verifierad i Resend.",
+      hint: "Kontrollera RESEND_API_KEY och att FROM-adress/domän är korrekt/verifierad i Resend.",
     };
   } finally {
     clearTimeout(timeoutId);
@@ -188,8 +195,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
       error: "Resend avvisade utskicket.",
       resend_status: res.status,
       resend_response: parsed,
-      hint:
-        "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend, eller 'Enable Sending' är av. Kontrollera Resend → Domains.",
+      hint: "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend, eller 'Enable Sending' är av. Kontrollera Resend → Domains.",
     };
   }
 
@@ -203,7 +209,6 @@ export async function onRequest(context) {
     return new Response(null, { status: 204, headers: { ...CORS_HEADERS } });
   }
 
-  // Health check
   if (request.method === "GET") {
     return json(
       {
@@ -224,13 +229,7 @@ export async function onRequest(context) {
     const parsed = await readBody(request);
     if (!parsed.ok) {
       return json(
-        {
-          ok: false,
-          sent: false,
-          error: parsed.error,
-          detail: parsed.detail,
-          received: parsed.received,
-        },
+        { ok: false, sent: false, error: parsed.error, detail: parsed.detail, received: parsed.received },
         400
       );
     }
@@ -238,15 +237,16 @@ export async function onRequest(context) {
     const data = parsed.data || {};
 
     // Honeypots
-    const botOld = safeTrim(data["bot-field"]);
-    const botNew = safeTrim(data["company_website"]);
-    if (botOld || botNew) {
+    const botFieldOld = safeTrim(data["bot-field"]);
+    const botFieldNew = safeTrim(data["company_website"]);
+    if (botFieldOld || botFieldNew) {
       return json({ ok: true, ignored: true, sent: false }, 200);
     }
 
     // Token (från /api/form-token)
-    const token = safeTrim(data.form_token);
-    const v = await verifyFormToken({ env, token });
+    const token = safeTrim(data.proofy_token);
+    const clientTs = safeTrim(data.proofy_ts);
+    const v = await verifyFormToken({ env, token, clientTs });
     if (!v.ok) {
       return json({ ok: false, sent: false, error: v.reason }, 200);
     }
@@ -258,16 +258,10 @@ export async function onRequest(context) {
     const message = safeTrim(data.message);
 
     if (!name || !email || !company) {
-      return json(
-        { ok: false, sent: false, error: "Fyll i namn, e-post och byrå/företag." },
-        400
-      );
+      return json({ ok: false, sent: false, error: "Fyll i namn, e-post och byrå/företag." }, 400);
     }
     if (!isLikelyEmail(email)) {
-      return json(
-        { ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." },
-        400
-      );
+      return json({ ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." }, 400);
     }
 
     const createdAt = new Date().toISOString();
@@ -277,10 +271,6 @@ export async function onRequest(context) {
       "";
     const ua = request.headers.get("user-agent") || "";
 
-    // Env:
-    // PILOT_TO (valfritt) annars CONTACT_TO annars kontakt@proofy.se
-    // CONTACT_FROM (måste vara verifierad domän i Resend)
-    // CONTACT_FROM_NAME
     const TO = env?.PILOT_TO || env?.CONTACT_TO || "kontakt@proofy.se";
     const FROM_NAME = env?.CONTACT_FROM_NAME || "Proofy";
     const FROM_ADDR = env?.CONTACT_FROM || "onboarding@resend.dev";
@@ -290,7 +280,7 @@ export async function onRequest(context) {
 
     const html = `
       <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;">
-        <h2 style="margin:0 0 12px;">Ny PILOT-förfrågan via proofy.se/pilot</h2>
+        <h2 style="margin:0 0 12px;">Ny pilotförfrågan via proofy.se/pilot</h2>
         <table style="border-collapse:collapse; width:100%; max-width:760px;">
           <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Namn</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(name)}</td></tr>
           <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>E-post</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(email)}</td></tr>
@@ -319,7 +309,6 @@ export async function onRequest(context) {
     });
 
     if (!sendResult.ok) {
-      // Returnera 200 för att undvika Cloudflare HTML-sidor – frontend läser sent:false
       return json(
         {
           ok: false,
@@ -337,12 +326,7 @@ export async function onRequest(context) {
     return json({ ok: true, sent: true, resend: sendResult.resend_response }, 200);
   } catch (err) {
     return json(
-      {
-        ok: false,
-        sent: false,
-        error: "Serverfel i /api/pilot",
-        detail: String(err?.message || err),
-      },
+      { ok: false, sent: false, error: "Serverfel i /api/pilot", detail: String(err?.message || err) },
       200
     );
   }
