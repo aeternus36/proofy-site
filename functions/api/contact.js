@@ -1,10 +1,12 @@
 // functions/api/contact.js
 // Cloudflare Pages Function: /api/contact
-// Mål:
-// - Stoppa direkt-POST spam (Origin/Referer + signed token + tidsfälla)
-// - Minska dataläckage i svar
-// - Behålla kompatibilitet med JSON + formData + x-www-form-urlencoded
-// - Juridiskt: dataminimering (inte skicka onödigt i svar; undvik onödig loggning)
+// - Kräver proofy_token + proofy_ts (anti-bot)
+// - Origin-skydd (bara proofy.se)
+// - Honeypots
+// - Tidsfälla (minst 2.5s innan submit)
+// - Token-giltighet (max 30 min)
+// - Skickar mail via Resend
+// - Returnerar alltid JSON
 
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -36,15 +38,13 @@ function escapeHtml(str) {
 }
 
 function isAllowedOrigin(request) {
+  // OBS: browsern skickar Origin på fetch, men inte alltid på form-post.
+  // Därför kollar vi både Origin och Referer.
   const origin = safeTrim(request.headers.get("origin"));
   const referer = safeTrim(request.headers.get("referer"));
 
-  const allowed = [
-    "https://proofy.se",
-    "https://www.proofy.se",
-  ];
-
-  return allowed.some(d => origin.startsWith(d) || referer.startsWith(d));
+  const allowed = ["https://proofy.se", "https://www.proofy.se"];
+  return allowed.some((d) => origin.startsWith(d) || referer.startsWith(d));
 }
 
 function countLinks(text) {
@@ -62,39 +62,35 @@ async function readBody(request) {
       return { ok: true, data: data && typeof data === "object" ? data : {} };
     }
 
-    if (ct.includes("multipart/form-data") || ct.includes("application/x-www-form-urlencoded")) {
+    if (
+      ct.includes("multipart/form-data") ||
+      ct.includes("application/x-www-form-urlencoded")
+    ) {
       const fd = await request.formData();
       return { ok: true, data: Object.fromEntries(fd.entries()) };
     }
 
+    // fallback
     const text = await request.text();
     const t = safeTrim(text);
     if (!t) return { ok: true, data: {} };
 
-    // sista försök: JSON
     const parsed = JSON.parse(t);
     return { ok: true, data: parsed && typeof parsed === "object" ? parsed : {} };
   } catch {
-    // Fail closed, men svara “snällt” (bots ska inte få detaljer)
     return { ok: false };
   }
 }
 
-async function hmacHex(secret, msg) {
+async function sha256Hex(str) {
   const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
-  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
+  const buf = await crypto.subtle.digest("SHA-256", enc.encode(str));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function timingSafeEqualHex(a, b) {
-  // Enkel konstant-tid jämförelse för hex-strängar
   a = String(a || "");
   b = String(b || "");
   if (a.length !== b.length) return false;
@@ -105,9 +101,7 @@ function timingSafeEqualHex(a, b) {
 
 async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   const apiKey = env?.RESEND_API_KEY;
-  if (!apiKey) {
-    return { ok: false, sent: false };
-  }
+  if (!apiKey) return { ok: false, sent: false };
 
   const url = "https://api.resend.com/emails";
   const payload = { from, to, subject, html };
@@ -128,8 +122,8 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
       signal: controller.signal,
     });
 
-    // Läs text men läck inte tillbaka i API-svar
-    const _text = await res.text();
+    // Läs men exponera inte till klienten (dataminimering)
+    await res.text().catch(() => "");
 
     if (!res.ok) return { ok: false, sent: false };
     return { ok: true, sent: true };
@@ -143,9 +137,8 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
 export async function onRequest(context) {
   const { request, env } = context;
 
-  // Endast POST. Ta bort GET health-check (minskar “scan surface”).
   if (request.method === "OPTIONS") {
-    // CORS behövs egentligen inte för same-origin-form, men vi svarar ändå korrekt.
+    // Same-origin behöver inte CORS, men detta skadar inte.
     return new Response(null, {
       status: 204,
       headers: {
@@ -160,9 +153,9 @@ export async function onRequest(context) {
     return json({ ok: false, sent: false }, 405);
   }
 
-  // Blockera cross-site POST
+  // Stoppa cross-site posts tidigt
   if (!isAllowedOrigin(request)) {
-    // Soft-fail för att inte ge bots signal
+    // Soft-fail: ge inte bots signal
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
@@ -180,7 +173,7 @@ export async function onRequest(context) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
-  // Signed token + tidsfälla
+  // Token + timestamp (måste finnas)
   const secret = env?.FORM_TOKEN_SECRET;
   const token = safeTrim(data.proofy_token);
   const clientTs = Number(data.proofy_ts || 0);
@@ -189,25 +182,26 @@ export async function onRequest(context) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
-  const [issuedStr, sig] = token.split(".", 2);
+  const [issuedStr, hash] = token.split(".", 2);
   const issued = Number(issuedStr);
-  if (!issued || !sig) {
+  if (!issued || !hash) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
-  const expected = await hmacHex(secret, issuedStr);
-  if (!timingSafeEqualHex(expected, sig)) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
-  }
-
+  // Token-giltighet: max 30 min
   const now = Date.now();
-  // token giltig i 30 min
   if (now - issued > 30 * 60 * 1000) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
-  // tidsfälla: måste ha tagit minst 2.5 sek att skicka
+  // Tidsfälla: måste ha tagit minst 2.5 sek innan submit
   if (now - clientTs < 2500) {
+    return json({ ok: true, sent: false, ignored: true }, 200);
+  }
+
+  // Verifiera token hash = SHA256(issued + "." + secret)
+  const expected = await sha256Hex(`${issuedStr}.${secret}`);
+  if (!timingSafeEqualHex(expected, hash)) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
@@ -218,7 +212,6 @@ export async function onRequest(context) {
   const volume = safeTrim(data.volume);
   const message = safeTrim(data.message);
 
-  // Validering
   if (!name || !email || !message) {
     return json({ ok: false, sent: false, error: "Fyll i namn, e-post och beskrivning." }, 400);
   }
@@ -226,20 +219,19 @@ export async function onRequest(context) {
     return json({ ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." }, 400);
   }
 
-  // Spamfilter: länkar i message är nästan alltid spam
+  // Enkelt spamfilter: länkar i meddelande är nästan alltid spam
   if (countLinks(message) >= 1) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
-  // Dataminimering: ta inte med IP/UA i mailet som standard.
-  // (Om du verkligen vill: lägg bakom env-fkn t.ex. INCLUDE_TECH_META=true)
   const createdAt = new Date().toISOString();
 
+  // Resend inställningar
   const CONTACT_TO = env?.CONTACT_TO || "kontakt@proofy.se";
   const FROM_NAME = env?.CONTACT_FROM_NAME || "Proofy";
   const FROM_ADDR = env?.CONTACT_FROM || "onboarding@resend.dev";
-
   const from = `${FROM_NAME} <${FROM_ADDR}>`;
+
   const subject = `Ny förfrågan (demo/pilot) – ${name}`;
 
   const html = `
@@ -271,7 +263,6 @@ export async function onRequest(context) {
   });
 
   if (!sendResult.ok) {
-    // Ingen teknisk detalj tillbaka till klienten
     return json(
       { ok: false, sent: false, error: "Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se." },
       200
