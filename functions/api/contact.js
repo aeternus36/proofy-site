@@ -1,12 +1,13 @@
 // functions/api/contact.js
 // Cloudflare Pages Function: /api/contact
 // - Kräver proofy_token + proofy_ts (anti-bot)
-// - Origin-skydd (bara proofy.se)
+// - Origin/Referer-skydd (same-site)
 // - Honeypots
-// - Tidsfälla (minst 2.5s innan submit)
+// - Tidsfälla (minst 300ms innan submit; revisor-vänligt)
 // - Token-giltighet (max 30 min)
+// - Gratis rate limiting via Cloudflare KV (5/10 min per IP)
 // - Skickar mail via Resend
-// - Returnerar alltid JSON
+// - Returnerar alltid JSON (soft-fail vid misstänkt trafik)
 
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -37,13 +38,21 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-function isAllowedOrigin(request) {
-  // OBS: browsern skickar Origin på fetch, men inte alltid på form-post.
-  // Därför kollar vi både Origin och Referer.
+function getAllowedOrigins(env) {
+  const raw = safeTrim(env?.ALLOWED_ORIGINS);
+  if (raw) {
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return ["https://proofy.se", "https://www.proofy.se"];
+}
+
+function isAllowedOrigin(request, env) {
   const origin = safeTrim(request.headers.get("origin"));
   const referer = safeTrim(request.headers.get("referer"));
-
-  const allowed = ["https://proofy.se", "https://www.proofy.se"];
+  const allowed = getAllowedOrigins(env);
   return allowed.some((d) => origin.startsWith(d) || referer.startsWith(d));
 }
 
@@ -76,7 +85,10 @@ async function readBody(request) {
     if (!t) return { ok: true, data: {} };
 
     const parsed = JSON.parse(t);
-    return { ok: true, data: parsed && typeof parsed === "object" ? parsed : {} };
+    return {
+      ok: true,
+      data: parsed && typeof parsed === "object" ? parsed : {},
+    };
   } catch {
     return { ok: false };
   }
@@ -97,6 +109,23 @@ function timingSafeEqualHex(a, b) {
   let out = 0;
   for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return out === 0;
+}
+
+// Gratis rate limiting via KV: 5 försök per 10 min per IP.
+// Kräver KV binding: RL_KV -> namespace PROOFY_RL
+async function rateLimit({ env, key, limit, windowSec }) {
+  const kv = env?.RL_KV;
+  if (!kv) return { ok: true }; // om KV saknas: fail-open (övriga skydd finns)
+
+  const now = Date.now();
+  const bucket = Math.floor(now / (windowSec * 1000));
+  const k = `rl:${key}:${bucket}`;
+
+  const cur = Number(await kv.get(k)) || 0;
+  if (cur >= limit) return { ok: false };
+
+  await kv.put(k, String(cur + 1), { expirationTtl: windowSec + 15 });
+  return { ok: true };
 }
 
 async function sendViaResend({ env, from, to, replyTo, subject, html }) {
@@ -122,7 +151,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
       signal: controller.signal,
     });
 
-    // Läs men exponera inte till klienten (dataminimering)
+    // läs men exponera inte detaljer (dataminimering)
     await res.text().catch(() => "");
 
     if (!res.ok) return { ok: false, sent: false };
@@ -138,7 +167,6 @@ export async function onRequest(context) {
   const { request, env } = context;
 
   if (request.method === "OPTIONS") {
-    // Same-origin behöver inte CORS, men detta skadar inte.
     return new Response(null, {
       status: 204,
       headers: {
@@ -153,9 +181,8 @@ export async function onRequest(context) {
     return json({ ok: false, sent: false }, 405);
   }
 
-  // Stoppa cross-site posts tidigt
-  if (!isAllowedOrigin(request)) {
-    // Soft-fail: ge inte bots signal
+  // Stoppa cross-site posts tidigt (soft-fail)
+  if (!isAllowedOrigin(request, env)) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
@@ -170,6 +197,18 @@ export async function onRequest(context) {
   const botFieldOld = safeTrim(data["bot-field"]);
   const botFieldNew = safeTrim(data["company_website"]);
   if (botFieldOld || botFieldNew) {
+    return json({ ok: true, sent: false, ignored: true }, 200);
+  }
+
+  // IP (för rate limit)
+  const ip =
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-forwarded-for") ||
+    "unknown";
+
+  // Rate limit (soft-fail)
+  const rl = await rateLimit({ env, key: ip, limit: 5, windowSec: 600 });
+  if (!rl.ok) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
@@ -188,14 +227,17 @@ export async function onRequest(context) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
-  // Token-giltighet: max 30 min
   const now = Date.now();
+
+  // Token-giltighet: max 30 min
   if (now - issued > 30 * 60 * 1000) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
-  // Tidsfälla: måste ha tagit minst 2.5 sek innan submit
-  if (now - clientTs < 2500) {
+  // Tidsfälla: minst 300ms innan submit (revisor-vänligt)
+  // Extra villkor: korta meddelanden + supersnabbt = typiskt bot-mönster
+  const messagePreview = safeTrim(data.message);
+  if (now - clientTs < 300 && messagePreview.length < 20) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
 
@@ -213,13 +255,19 @@ export async function onRequest(context) {
   const message = safeTrim(data.message);
 
   if (!name || !email || !message) {
-    return json({ ok: false, sent: false, error: "Fyll i namn, e-post och beskrivning." }, 400);
+    return json(
+      { ok: false, sent: false, error: "Fyll i namn, e-post och beskrivning." },
+      400
+    );
   }
   if (!isLikelyEmail(email)) {
-    return json({ ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." }, 400);
+    return json(
+      { ok: false, sent: false, error: "E-postadressen verkar inte vara giltig." },
+      400
+    );
   }
 
-  // Enkelt spamfilter: länkar i meddelande är nästan alltid spam
+  // Spamfilter: länkar i meddelande är ofta spam (tillåt 0 länkar)
   if (countLinks(message) >= 1) {
     return json({ ok: true, sent: false, ignored: true }, 200);
   }
@@ -238,17 +286,36 @@ export async function onRequest(context) {
     <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;">
       <h2 style="margin:0 0 12px;">Ny förfrågan via proofy.se</h2>
       <table style="border-collapse:collapse; width:100%; max-width:760px;">
-        <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Namn</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(name)}</td></tr>
-        <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>E-post</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(email)}</td></tr>
-        ${company ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå/företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(company)}</td></tr>` : ""}
-        ${volume ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Volym</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(volume)}</td></tr>` : ""}
+        <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Namn</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
+          name
+        )}</td></tr>
+        <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>E-post</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
+          email
+        )}</td></tr>
+        ${
+          company
+            ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå/företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
+                company
+              )}</td></tr>`
+            : ""
+        }
+        ${
+          volume
+            ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Volym</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(
+                volume
+              )}</td></tr>`
+            : ""
+        }
       </table>
 
       <h3 style="margin:16px 0 8px;">Beskrivning</h3>
-      <pre style="white-space:pre-wrap; background:#f7f7f8; padding:12px; border-radius:10px; border:1px solid #eee; max-width:760px;">${escapeHtml(message)}</pre>
+      <pre style="white-space:pre-wrap; background:#f7f7f8; padding:12px; border-radius:10px; border:1px solid #eee; max-width:760px;">${escapeHtml(
+        message
+      )}</pre>
 
       <div style="margin-top:12px; color:#666; font-size:12px;">
-        Tid: ${escapeHtml(createdAt)}
+        Tid: ${escapeHtml(createdAt)}<br/>
+        IP: ${escapeHtml(ip)}
       </div>
     </div>
   `;
@@ -264,7 +331,11 @@ export async function onRequest(context) {
 
   if (!sendResult.ok) {
     return json(
-      { ok: false, sent: false, error: "Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se." },
+      {
+        ok: false,
+        sent: false,
+        error: "Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.",
+      },
       200
     );
   }
