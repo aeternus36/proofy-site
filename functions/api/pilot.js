@@ -1,12 +1,14 @@
-// /functions/api/pilot.js
+// /functions/api/pilot.js  (NY/ERSÄTT HELA FILEN)
+//
 // Cloudflare Pages Function: /api/pilot
-// - Stöd: JSON + formData + x-www-form-urlencoded
-// - Anti-spam: honeypots + proofy_token + proofy_ts (steg 3)
-// - Skickar mail via Resend (fetch) med timeout
-// - Returnerar ALLTID JSON (aldrig HTML)
+// - JSON + formData + x-www-form-urlencoded
+// - Anti-spam: honeypot + proofy_token/proofy_ts (steg 3)
+// - Returnerar ALLTID JSON
+// - Mail via Resend
+// - (Valfritt) Rate limit via KV-binding: PROOFY_RL
 
 const CORS_HEADERS = {
-  "access-control-allow-origin": "https://proofy.se",
+  "access-control-allow-origin": "*",
   "access-control-allow-methods": "POST, OPTIONS, GET",
   "access-control-allow-headers": "content-type",
 };
@@ -81,63 +83,6 @@ async function readBody(request) {
   }
 }
 
-// Steg 3: verifiera proofy_token + proofy_ts
-function parseToken(tokenStr) {
-  // tokenformat: "<issuedMs>.<hexsig>"
-  const t = safeTrim(tokenStr);
-  const parts = t.split(".");
-  if (parts.length !== 2) return null;
-
-  const issuedMs = Number(parts[0]);
-  const sig = parts[1];
-
-  if (!Number.isFinite(issuedMs) || issuedMs <= 0) return null;
-  if (!/^[a-f0-9]{32,128}$/i.test(sig)) return null;
-
-  return { issuedMs, sig, raw: t };
-}
-
-async function sha256Hex(str) {
-  const enc = new TextEncoder();
-  const buf = enc.encode(str);
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function verifyProofyToken({ env, tokenStr, tsStr }) {
-  const SECRET = env?.PROOFY_FORM_SECRET;
-  if (!SECRET) {
-    // Fail closed: om hemlighet saknas vill vi hellre stoppa än släppa igenom spam
-    return { ok: false, reason: "missing_secret" };
-  }
-
-  const parsed = parseToken(tokenStr);
-  if (!parsed) return { ok: false, reason: "bad_token_format" };
-
-  const now = Date.now();
-
-  // token får vara max 30 min gammal (justera om du vill)
-  const maxAgeMs = 30 * 60 * 1000;
-  if (now - parsed.issuedMs > maxAgeMs) return { ok: false, reason: "token_expired" };
-
-  // proofy_ts måste vara rimlig och äldre än t.ex. 3 sek (mänsklig interaktion)
-  const ts = Number(safeTrim(tsStr));
-  if (!Number.isFinite(ts) || ts <= 0) return { ok: false, reason: "bad_ts" };
-
-  const minHumanMs = 3000;
-  if (now - ts < minHumanMs) return { ok: false, reason: "too_fast" };
-
-  // proofy_ts får inte vara “för gammal” (t.ex. tab öppen i timmar)
-  const maxSessionMs = 2 * 60 * 60 * 1000;
-  if (now - ts > maxSessionMs) return { ok: false, reason: "too_old" };
-
-  // signatur: sha256(`${issuedMs}.${SECRET}`)
-  const expected = await sha256Hex(`${parsed.issuedMs}.${SECRET}`);
-  if (expected !== parsed.sig.toLowerCase()) return { ok: false, reason: "bad_sig" };
-
-  return { ok: true };
-}
-
 async function sendViaResend({ env, from, to, replyTo, subject, html }) {
   const apiKey = env?.RESEND_API_KEY;
   if (!apiKey) {
@@ -172,11 +117,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
     text = await res.text();
   } catch (err) {
     const msg = String(err?.message || err);
-    const aborted =
-      msg.toLowerCase().includes("aborted") ||
-      msg.toLowerCase().includes("abort") ||
-      msg.toLowerCase().includes("timeout");
-
+    const aborted = msg.toLowerCase().includes("aborted") || msg.toLowerCase().includes("timeout");
     return {
       ok: false,
       sent: false,
@@ -202,11 +143,101 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
       error: "Resend avvisade utskicket.",
       resend_status: res.status,
       resend_response: parsed,
-      hint: "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend, eller 'Enable Sending' är av.",
+      hint: "Vanlig orsak: FROM-adressen/domänen är inte verifierad i Resend. Kontrollera Resend → Domains.",
     };
   }
 
   return { ok: true, sent: true, resend_response: parsed };
+}
+
+function hexToBytes(hex) {
+  const clean = String(hex || "").trim();
+  if (!/^[0-9a-f]+$/i.test(clean) || clean.length % 2 !== 0) return null;
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+async function hmacSha256Hex(secret, message) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  const bytes = new Uint8Array(sig);
+  let hex = "";
+  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+async function verifyProofyToken({ env, token, clientTs }) {
+  const secret = env?.PROOFY_FORM_SECRET;
+  if (!secret) {
+    return { ok: false, reason: "PROOFY_FORM_SECRET saknas i env." };
+  }
+
+  const t = safeTrim(token);
+  const ts = Number(safeTrim(clientTs));
+  if (!t || !Number.isFinite(ts)) {
+    return { ok: false, reason: "Token eller timestamp saknas." };
+  }
+
+  // 1) kontrollera att submit-tiden är rimlig (skydd mot bots)
+  const now = Date.now();
+  const skewMs = Math.abs(now - ts);
+  if (skewMs > 10 * 60 * 1000) {
+    return { ok: false, reason: "Ogiltig tid (timestamp utanför tillåtet fönster)." };
+  }
+
+  // 2) tokenformat: "<issuedAt>.<hexsig>"
+  const parts = t.split(".");
+  if (parts.length !== 2) {
+    return { ok: false, reason: "Ogiltigt tokenformat." };
+  }
+
+  const issuedAt = Number(parts[0]);
+  const sigHex = parts[1];
+  if (!Number.isFinite(issuedAt) || issuedAt < 1_600_000_000_000) {
+    return { ok: false, reason: "Ogiltig token-tid." };
+  }
+  if (!hexToBytes(sigHex) || sigHex.length < 32) {
+    return { ok: false, reason: "Ogiltig token-signatur." };
+  }
+
+  // 3) token får inte vara för gammal
+  if (now - issuedAt > 10 * 60 * 1000) {
+    return { ok: false, reason: "Token har gått ut. Ladda om sidan och försök igen." };
+  }
+
+  // 4) verifiera signaturen (matchar /api/form-token)
+  const expected = await hmacSha256Hex(secret, String(issuedAt));
+  if (expected !== sigHex) {
+    return { ok: false, reason: "Token matchar inte. Ladda om sidan och försök igen." };
+  }
+
+  return { ok: true };
+}
+
+async function rateLimit({ env, request, key, limit = 8, windowSec = 60 }) {
+  // Kräver KV-binding: env.PROOFY_RL
+  const kv = env?.PROOFY_RL;
+  if (!kv) return { ok: true, skipped: true };
+
+  const now = Math.floor(Date.now() / 1000);
+  const bucket = Math.floor(now / windowSec);
+  const k = `${key}:${bucket}`;
+
+  const currentRaw = await kv.get(k);
+  const current = Number(currentRaw || "0");
+  if (current >= limit) return { ok: false };
+
+  const next = current + 1;
+  await kv.put(k, String(next), { expirationTtl: windowSec * 2 });
+  return { ok: true };
 }
 
 export async function onRequest(context) {
@@ -216,10 +247,14 @@ export async function onRequest(context) {
     return new Response(null, { status: 204, headers: { ...CORS_HEADERS } });
   }
 
-  // Health check
   if (request.method === "GET") {
     return json(
-      { ok: true, endpoint: "/api/pilot", methods: ["POST"], expects: "application/json OR form-data OR x-www-form-urlencoded" },
+      {
+        ok: true,
+        endpoint: "/api/pilot",
+        methods: ["POST"],
+        expects: "application/json OR form-data OR x-www-form-urlencoded",
+      },
       200
     );
   }
@@ -243,14 +278,23 @@ export async function onRequest(context) {
       return json({ ok: true, ignored: true, sent: false }, 200);
     }
 
-    // Steg 3: token + ts
-    const proofy_token = safeTrim(data["proofy_token"]);
-    const proofy_ts = safeTrim(data["proofy_ts"]);
-    const tokenOk = await verifyProofyToken({ env, tokenStr: proofy_token, tsStr: proofy_ts });
+    // Rate limit (per IP)
+    const ip =
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for") ||
+      "";
+    const rl = await rateLimit({ env, request, key: `pilot:${ip || "noip"}`, limit: 6, windowSec: 60 });
+    if (!rl.ok) {
+      return json({ ok: false, sent: false, error: "För många försök. Vänta en minut och prova igen." }, 200);
+    }
 
-    // Om token saknas/är fel: soft-block (returnera ignored:true)
-    if (!tokenOk.ok) {
-      return json({ ok: true, ignored: true, sent: false }, 200);
+    // Anti-spam token (steg 3)
+    const token = safeTrim(data.proofy_token);
+    const clientTs = safeTrim(data.proofy_ts);
+    const v = await verifyProofyToken({ env, token, clientTs });
+    if (!v.ok) {
+      // Returnera INTE ignored här – det ska vara ett tydligt fel så du kan debugga.
+      return json({ ok: false, sent: false, error: v.reason }, 200);
     }
 
     const name = safeTrim(data.name);
@@ -267,37 +311,36 @@ export async function onRequest(context) {
     }
 
     const createdAt = new Date().toISOString();
-    const ip =
-      request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-forwarded-for") ||
-      "";
     const ua = request.headers.get("user-agent") || "";
 
     // Env:
-    // PILOT_TO: vart mailet ska skickas (t.ex. kontakt@proofy.se)
-    // PILOT_FROM: avsändaradress (måste vara verifierad i Resend)
-    // PILOT_FROM_NAME: avsändarnamn
-    const PILOT_TO = env?.PILOT_TO || env?.CONTACT_TO || "kontakt@proofy.se";
-    const FROM_NAME = env?.PILOT_FROM_NAME || env?.CONTACT_FROM_NAME || "Proofy";
-    const FROM_ADDR = env?.PILOT_FROM || env?.CONTACT_FROM || "onboarding@resend.dev";
+    // PILOT_TO (valfritt, annars fallback till CONTACT_TO eller kontakt@proofy.se)
+    // CONTACT_FROM (måste vara verifierad i Resend)
+    // CONTACT_FROM_NAME
+    const TO =
+      env?.PILOT_TO ||
+      env?.CONTACT_TO ||
+      "kontakt@proofy.se";
+
+    const FROM_NAME = env?.CONTACT_FROM_NAME || "Proofy";
+    const FROM_ADDR = env?.CONTACT_FROM || "onboarding@resend.dev";
 
     const from = `${FROM_NAME} <${FROM_ADDR}>`;
-    const subject = `Pilotförfrågan – ${company} – ${name}`;
+    const subject = `Ny pilotförfrågan – ${name}`;
 
     const html = `
       <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;">
         <h2 style="margin:0 0 12px;">Ny pilotförfrågan via proofy.se</h2>
+
         <table style="border-collapse:collapse; width:100%; max-width:760px;">
-          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå/Företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(company)}</td></tr>
           <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Namn</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(name)}</td></tr>
           <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>E-post</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(email)}</td></tr>
+          <tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Byrå/Företag</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(company)}</td></tr>
           ${role ? `<tr><td style="padding:6px 10px; border:1px solid #eee;"><b>Roll</b></td><td style="padding:6px 10px; border:1px solid #eee;">${escapeHtml(role)}</td></tr>` : ""}
         </table>
 
-        ${message ? `
-          <h3 style="margin:16px 0 8px;">Meddelande</h3>
-          <pre style="white-space:pre-wrap; background:#f7f7f8; padding:12px; border-radius:10px; border:1px solid #eee; max-width:760px;">${escapeHtml(message)}</pre>
-        ` : ""}
+        ${message ? `<h3 style="margin:16px 0 8px;">Meddelande</h3>
+        <pre style="white-space:pre-wrap; background:#f7f7f8; padding:12px; border-radius:10px; border:1px solid #eee; max-width:760px;">${escapeHtml(message)}</pre>` : ""}
 
         <div style="margin-top:12px; color:#666; font-size:12px;">
           Tid: ${escapeHtml(createdAt)}<br/>
@@ -310,7 +353,7 @@ export async function onRequest(context) {
     const sendResult = await sendViaResend({
       env,
       from,
-      to: PILOT_TO,
+      to: TO,
       replyTo: email,
       subject,
       html,
