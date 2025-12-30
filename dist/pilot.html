@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/assets/header.css?v=2025-12-25a" />
 
   <style>
-    /* Dölj status-pill tills vi faktiskt behöver visa något */
+    /* Dölj status-pill tills vi faktiskt har något att säga (skickar/fel/skickat) */
     #pilotStatus { display:none; }
   </style>
 </head>
@@ -117,8 +117,9 @@
           style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
         />
 
-        <!-- Anti-spam token från /api/form-token -->
-        <input type="hidden" name="form_token" id="formToken" value="" />
+        <!-- Anti-spam tokenfält (fylls av JS) -->
+        <input type="hidden" name="proofy_token" id="proofy_token" value="" />
+        <input type="hidden" name="proofy_ts" id="proofy_ts" value="" />
 
         <div class="formGrid">
           <div>
@@ -189,13 +190,15 @@
 
   const statusEl = document.getElementById("pilotStatus");
   const submitBtn = document.getElementById("pilotSubmitBtn");
-  const tokenEl = document.getElementById("formToken");
+  const tokenEl = document.getElementById("proofy_token");
+  const tsEl = document.getElementById("proofy_ts");
 
   function setStatus(text, tone){
     if (!statusEl) return;
 
     statusEl.style.display = "inline-block";
     statusEl.textContent = text;
+
     statusEl.style.fontWeight = "800";
     statusEl.style.border = "1px solid rgba(255,255,255,.14)";
     statusEl.style.background = "rgba(255,255,255,.06)";
@@ -251,18 +254,26 @@
 
   async function refreshToken(){
     try{
-      const res = await fetch("/api/form-token", { method: "GET" });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.ok === true && typeof data.token === "string"){
-        if (tokenEl) tokenEl.value = data.token;
-        return true;
-      }
-    }catch{}
-    return false;
-  }
+      // proofy_ts = klientens tid (för extra sanity-check server-side)
+      const now = Date.now();
+      if (tsEl) tsEl.value = String(now);
 
-  // Hämta token direkt när sidan laddas (tyst)
-  refreshToken();
+      const res = await fetch("/api/form-token", { method: "GET", cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.ok !== true || !data.token){
+        // Om token inte går att hämta vill vi ge tydlig status (men inte blocka sidan helt)
+        setStatus("Kunde inte initiera formulär (token). Ladda om sidan och försök igen.", "err");
+        return false;
+      }
+
+      if (tokenEl) tokenEl.value = String(data.token);
+      return true;
+    } catch (e){
+      setStatus("Kunde inte initiera formulär (token). Kontrollera nätet och försök igen.", "err");
+      return false;
+    }
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -286,13 +297,11 @@
       return;
     }
 
-    // Om token saknas: försök hämta igen innan vi skickar
-    if (!String(fd.get("form_token") || "").trim()){
-      const ok = await refreshToken();
-      if (!ok){
-        setStatus("Kunde inte verifiera formuläret just nu. Ladda om sidan och försök igen.", "err");
-        return;
-      }
+    // Säkerställ token precis vid submit (kan ha gått ut)
+    const okToken = await refreshToken();
+    if (!okToken){
+      disableForm(false);
+      return;
     }
 
     try{
@@ -300,7 +309,7 @@
       setStatus("Skickar…", "wait");
 
       const body = new URLSearchParams();
-      for (const [k, v] of new FormData(form).entries()) body.append(k, String(v));
+      for (const [k, v] of fd.entries()) body.append(k, String(v));
 
       const res = await fetch(form.action, {
         method: "POST",
@@ -319,23 +328,22 @@
         const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
         setStatus(msg, "err");
         disableForm(false);
-
-        // uppdatera token efter fel (kan vara “token utgången”)
-        refreshToken();
         return;
       }
 
       setStatus("Skickat ✅ Vi återkommer inom 1–2 arbetsdagar.", "ok");
       form.reset();
-      await refreshToken();
+      // Redirect till tack-sidan (som på kontakten)
       setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
 
     } catch (err){
       setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
       disableForm(false);
-      refreshToken();
     }
   });
+
+  // Första tokenförsök vid laddning (visar inget “Redo”)
+  refreshToken();
 })();
 </script>
 
