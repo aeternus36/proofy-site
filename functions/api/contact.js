@@ -3,11 +3,12 @@
 // - Kräver proofy_token + proofy_ts (anti-bot)
 // - Origin/Referer-skydd (same-site)
 // - Honeypots
-// - Tidsfälla (minst 300ms innan submit; revisor-vänligt)
+// - Tidsfälla (minst 300ms + kort meddelande -> bot)
 // - Token-giltighet (max 30 min)
-// - Gratis rate limiting via Cloudflare KV (5/10 min per IP)
+// - Gratis rate limiting via Cloudflare KV (30/10 min per IP)  ✅ höjt
 // - Skickar mail via Resend
 // - Returnerar alltid JSON (soft-fail vid misstänkt trafik)
+// - Debug: skicka header "x-proofy-debug: <DEBUG_KEY>" för att få debug_reason
 
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -79,7 +80,6 @@ async function readBody(request) {
       return { ok: true, data: Object.fromEntries(fd.entries()) };
     }
 
-    // fallback
     const text = await request.text();
     const t = safeTrim(text);
     if (!t) return { ok: true, data: {} };
@@ -111,21 +111,20 @@ function timingSafeEqualHex(a, b) {
   return out === 0;
 }
 
-// Gratis rate limiting via KV: 5 försök per 10 min per IP.
-// Kräver KV binding: RL_KV -> namespace PROOFY_RL
+// KV rate limiting
 async function rateLimit({ env, key, limit, windowSec }) {
   const kv = env?.RL_KV;
-  if (!kv) return { ok: true }; // om KV saknas: fail-open (övriga skydd finns)
+  if (!kv) return { ok: true, mode: "no_kv" };
 
   const now = Date.now();
   const bucket = Math.floor(now / (windowSec * 1000));
   const k = `rl:${key}:${bucket}`;
 
   const cur = Number(await kv.get(k)) || 0;
-  if (cur >= limit) return { ok: false };
+  if (cur >= limit) return { ok: false, cur, limit, key: k };
 
   await kv.put(k, String(cur + 1), { expirationTtl: windowSec + 15 });
-  return { ok: true };
+  return { ok: true, cur: cur + 1, limit, key: k };
 }
 
 async function sendViaResend({ env, from, to, replyTo, subject, html }) {
@@ -151,9 +150,7 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
       signal: controller.signal,
     });
 
-    // läs men exponera inte detaljer (dataminimering)
     await res.text().catch(() => "");
-
     if (!res.ok) return { ok: false, sent: false };
     return { ok: true, sent: true };
   } catch {
@@ -166,13 +163,25 @@ async function sendViaResend({ env, from, to, replyTo, subject, html }) {
 export async function onRequest(context) {
   const { request, env } = context;
 
+  const debugKey = safeTrim(env?.DEBUG_KEY);
+  const debugHdr = safeTrim(request.headers.get("x-proofy-debug"));
+  const debugOn = debugKey && debugHdr && debugHdr === debugKey;
+
+  const softBlock = (reason, extra = {}) => {
+    // Soft-fail utan att ge angripare info, men med debug_reason om du har debug header
+    const payload = { ok: true, sent: false, ignored: true };
+    if (debugOn) payload.debug_reason = reason;
+    if (debugOn && extra && typeof extra === "object") payload.debug_extra = extra;
+    return json(payload, 200);
+  };
+
   if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: {
         "access-control-allow-origin": "https://proofy.se",
         "access-control-allow-methods": "POST, OPTIONS",
-        "access-control-allow-headers": "content-type",
+        "access-control-allow-headers": "content-type, x-proofy-debug",
       },
     });
   }
@@ -181,14 +190,16 @@ export async function onRequest(context) {
     return json({ ok: false, sent: false }, 405);
   }
 
-  // Stoppa cross-site posts tidigt (soft-fail)
   if (!isAllowedOrigin(request, env)) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("origin_not_allowed", {
+      origin: safeTrim(request.headers.get("origin")),
+      referer: safeTrim(request.headers.get("referer")),
+    });
   }
 
   const parsed = await readBody(request);
   if (!parsed.ok) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("bad_body");
   }
 
   const data = parsed.data || {};
@@ -197,54 +208,53 @@ export async function onRequest(context) {
   const botFieldOld = safeTrim(data["bot-field"]);
   const botFieldNew = safeTrim(data["company_website"]);
   if (botFieldOld || botFieldNew) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("honeypot");
   }
 
-  // IP (för rate limit)
   const ip =
     request.headers.get("cf-connecting-ip") ||
     request.headers.get("x-forwarded-for") ||
     "unknown";
 
-  // Rate limit (soft-fail)
-  const rl = await rateLimit({ env, key: ip, limit: 5, windowSec: 600 });
+  // ✅ höjd limit: 30 per 10 min
+  const rl = await rateLimit({ env, key: ip, limit: 30, windowSec: 600 });
   if (!rl.ok) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("rate_limited", { key: rl.key, cur: rl.cur, limit: rl.limit });
   }
 
-  // Token + timestamp (måste finnas)
   const secret = env?.FORM_TOKEN_SECRET;
   const token = safeTrim(data.proofy_token);
   const clientTs = Number(data.proofy_ts || 0);
 
   if (!secret || !token.includes(".") || !clientTs) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("missing_token_or_ts", {
+      has_secret: Boolean(secret),
+      has_token: Boolean(token),
+      clientTs,
+    });
   }
 
   const [issuedStr, hash] = token.split(".", 2);
   const issued = Number(issuedStr);
   if (!issued || !hash) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("bad_token_format");
   }
 
   const now = Date.now();
 
-  // Token-giltighet: max 30 min
   if (now - issued > 30 * 60 * 1000) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("token_expired");
   }
 
-  // Tidsfälla: minst 300ms innan submit (revisor-vänligt)
-  // Extra villkor: korta meddelanden + supersnabbt = typiskt bot-mönster
+  // Revisor-vänlig timing: endast supersnabbt + väldigt kort meddelande blockas
   const messagePreview = safeTrim(data.message);
   if (now - clientTs < 300 && messagePreview.length < 20) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("too_fast_short_message", { delta_ms: now - clientTs, len: messagePreview.length });
   }
 
-  // Verifiera token hash = SHA256(issued + "." + secret)
   const expected = await sha256Hex(`${issuedStr}.${secret}`);
   if (!timingSafeEqualHex(expected, hash)) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("token_mismatch");
   }
 
   // Fält
@@ -267,14 +277,13 @@ export async function onRequest(context) {
     );
   }
 
-  // Spamfilter: länkar i meddelande är ofta spam (tillåt 0 länkar)
+  // Länkar: tillåt 0 (håll hårt). Vill du tillåta 1: ändra till >=2.
   if (countLinks(message) >= 1) {
-    return json({ ok: true, sent: false, ignored: true }, 200);
+    return softBlock("link_in_message");
   }
 
   const createdAt = new Date().toISOString();
 
-  // Resend inställningar
   const CONTACT_TO = env?.CONTACT_TO || "kontakt@proofy.se";
   const FROM_NAME = env?.CONTACT_FROM_NAME || "Proofy";
   const FROM_ADDR = env?.CONTACT_FROM || "onboarding@resend.dev";
