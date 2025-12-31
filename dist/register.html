@@ -74,7 +74,6 @@
 
           <div id="fileInfo" class="meta" style="margin-top:10px">Inget underlag valt.</div>
 
-          <!-- NYTT: tydlig påminnelse (visas bara när det behövs) -->
           <div id="fileHint" class="small" style="margin-top:8px; display:none;" aria-live="polite"></div>
 
           <div class="actions" style="margin-top:12px">
@@ -115,16 +114,7 @@
             <div class="qrWrap" style="margin-top:12px">
               <div>
                 <div class="meta" style="margin-bottom:8px">QR-kod</div>
-
-                <!-- Gör QR-boxen tydligt “rapportig” och alltid synlig -->
-                <div
-                  id="qrBox"
-                  class="qrBox"
-                  aria-label="QR-kod"
-                  style="display:grid; place-items:center; min-width:170px; min-height:170px; padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06);"
-                ></div>
-
-                <div id="qrStatus" class="small" style="margin-top:8px; opacity:.95;"></div>
+                <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
               </div>
 
               <div style="min-width:240px; flex:1">
@@ -191,15 +181,7 @@
             <div class="qrWrap" style="margin-top:12px">
               <div>
                 <div class="meta" style="margin-bottom:8px">QR-kod</div>
-
-                <div
-                  id="manualQrBox"
-                  class="qrBox"
-                  aria-label="QR-kod (manuell)"
-                  style="display:grid; place-items:center; min-width:170px; min-height:170px; padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06);"
-                ></div>
-
-                <div id="manualQrStatus" class="small" style="margin-top:8px; opacity:.95;"></div>
+                <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
               </div>
               <div style="min-width:240px; flex:1">
                 <div class="small" style="margin-top:0;">
@@ -255,7 +237,7 @@
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
 
-  const fileHint = $("fileHint"); // NYTT
+  const fileHint = $("fileHint");
   const createBtn = $("createBtn");
   const copyIdBtn = $("copyIdBtn");
   const copyLinkBtn = $("copyLinkBtn");
@@ -277,9 +259,6 @@
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
-  const qrStatus = $("qrStatus");
-  const manualQrStatus = $("manualQrStatus");
-
   const manualId = $("manualId");
   const manualBuildBtn = $("manualBuildBtn");
   const manualCopyLinkBtn = $("manualCopyLinkBtn");
@@ -295,15 +274,8 @@
   let busy = false;
   let opId = 0;
 
-  let __qrLoadAttempted = false;
-
   function setPill(text){ statusPill.textContent = text; }
   function setManualPill(text){ manualPill.textContent = text; }
-
-  function setQrStatus(el, msg){
-    if (!el) return;
-    el.textContent = msg || "";
-  }
 
   function showFileHint(msgHtml){
     if (!fileHint) return;
@@ -345,9 +317,6 @@
     submitterOut.textContent = "—";
     txOut.textContent = "—";
     qrBox.innerHTML = "";
-    manualQrBox.innerHTML = "";
-    setQrStatus(qrStatus, "");
-    setQrStatus(manualQrStatus, "");
     receiptBtn.style.display = "none";
   }
 
@@ -373,90 +342,67 @@
     return typeof window.QRCode === "function";
   }
 
-  function showQrError(targetEl, statusEl, extra){
+  function showQrError(targetEl, extra){
     const parts = [];
-    parts.push("QR-koden kunde inte renderas.");
-    if (window.__proofyQrLibError) parts.push("Scriptet /qr.min.js kunde inte laddas.");
+    parts.push("QR-funktionen kunde inte laddas.");
+    if (window.__proofyQrLibError) parts.push("Kontrollera att /qr.min.js finns i deploy.");
     if (extra) parts.push(extra);
-
-    if (targetEl) {
-      targetEl.innerHTML = `<div class="meta" style="text-align:center; max-width:26ch;">${parts.join(" ")}</div>`;
-    }
-    setQrStatus(statusEl, "QR: ej tillgänglig (kontrollera deploy av /qr.min.js).");
+    targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
 
-  function ensureQrScriptLoaded(){
-    if (__qrLoadAttempted) return;
-    __qrLoadAttempted = true;
+  function waitForQrLib(maxWaitMs = 2500){
+    if (canRenderQr()) return Promise.resolve(true);
+    if (window.__proofyQrLibError) return Promise.resolve(false);
 
-    // Försök ladda om /qr.min.js med cache-buster om global saknas.
-    const s = document.createElement("script");
-    s.src = `/qr.min.js?cb=${Date.now()}`;
-    s.async = true;
-    s.onload = () => { window.__proofyQrLibLoaded = true; };
-    s.onerror = () => { window.__proofyQrLibError = true; };
-    document.head.appendChild(s);
-  }
-
-  async function waitForQrLib(maxMs = 1200){
-    const start = Date.now();
-    while (Date.now() - start < maxMs){
-      if (canRenderQr()) return true;
-      await new Promise(r => setTimeout(r, 50));
-    }
-    return canRenderQr();
-  }
-
-  async function renderQr(targetEl, statusEl, text){
-    if (!targetEl) return;
-
-    targetEl.innerHTML = "";
-    setQrStatus(statusEl, "QR: genererar…");
-
-    if (!canRenderQr()){
-      // Om scriptet inte hunnit, vänta en kort stund — och försök sedan ladda om som fallback.
-      const ok = await waitForQrLib(500);
-      if (!ok){
-        ensureQrScriptLoaded();
-        const ok2 = await waitForQrLib(1200);
-        if (!ok2){
-          showQrError(targetEl, statusEl, "Ladda om sidan och försök igen.");
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const t = setInterval(() => {
+        if (canRenderQr()){
+          clearInterval(t);
+          resolve(true);
           return;
         }
-      }
+        if (window.__proofyQrLibError || (Date.now() - start) > maxWaitMs){
+          clearInterval(t);
+          resolve(false);
+        }
+      }, 50);
+    });
+  }
+
+  async function renderQr(targetEl, text){
+    if (!targetEl) return;
+    targetEl.innerHTML = `<div class="meta">Skapar QR…</div>`;
+
+    const ok = await waitForQrLib(2500);
+    if (!ok){
+      showQrError(targetEl, "Kunde inte initiera QR.");
+      return;
     }
 
     try{
-      doRender(targetEl, text);
+      // KORREKT för din minimal-build: new QRCode(el) + makeCode(text)
+      const qr = new window.QRCode(targetEl);
 
-      // Verifiera att något faktiskt renderades
+      // Sätt önskade options
+      qr._htOption.width = 150;
+      qr._htOption.height = 150;
+      qr._htOption.colorDark = "#0b1220";
+      qr._htOption.colorLight = "#eaf0ff";
+      qr._htOption.correctLevel =
+        window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
+          ? window.QRCodeCorrectLevel.M
+          : qr._htOption.correctLevel;
+
+      qr.makeCode(text);
+
       const canvas = targetEl.querySelector("canvas");
       if (!canvas){
-        showQrError(targetEl, statusEl, "Canvas skapades inte.");
-        return;
+        showQrError(targetEl, "QR-koden kunde inte renderas (canvas skapades inte).");
       }
-
-      setQrStatus(statusEl, "QR: klar ✅");
-    } catch (e){
-      showQrError(targetEl, statusEl, "Ett fel uppstod vid rendering.");
+    } catch {
+      showQrError(targetEl, "QR-koden kunde inte renderas.");
     }
-  }
-
-  function doRender(targetEl, text){
-    targetEl.innerHTML = "";
-    const correctLevel =
-      window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
-        ? window.QRCodeCorrectLevel.M
-        : undefined;
-
-    new QRCode(targetEl, {
-      text,
-      width: 150,
-      height: 150,
-      colorDark: "#0b1220",
-      colorLight: "#eaf0ff",
-      correctLevel
-    });
   }
 
   function setFile(file){
@@ -523,14 +469,14 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
+      // QR (robust + korrekt)
+      renderQr(qrBox, currentLink);
+
       resultBox.style.display = "block";
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
-      setPill("Registrerar…");
 
-      // Rendera QR robust (med status och fallback)
-      await renderQr(qrBox, qrStatus, currentLink);
-      if(myOp !== opId) return;
+      setPill("Registrerar…");
 
       const res = await fetch("/api/register", {
         method: "POST",
@@ -592,7 +538,6 @@
     if (!isIdFormat(clean)){
       manualLinkOut.textContent = "—";
       manualQrBox.innerHTML = "";
-      setQrStatus(manualQrStatus, "");
       manualCopyLinkBtn.disabled = true;
       manualVerifyBtn.href = "/verify.html";
       manualVerifyBtn.style.pointerEvents = "none";
@@ -604,8 +549,8 @@
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
 
-    // Rendera QR robust även här
-    renderQr(manualQrBox, manualQrStatus, link);
+    // QR även här
+    renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
     manualVerifyBtn.href = link;
