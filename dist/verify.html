@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
-  <meta name="description" content="Verifiera om ett underlag är oförändrad jämfört med ett registrerat Verifierings-ID." />
+  <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
@@ -22,12 +22,14 @@
         <span>Proofy</span>
       </a>
 
+      <!-- Desktop actions -->
       <div class="navActions" id="navActionsDesktop">
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
+      <!-- Mobile menu -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
@@ -56,8 +58,8 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om ett underlag är samma filversion som den som tidigare fastställdes.
-      <strong>Underlaget lämnar aldrig din dator.</strong>
+      Kontrollera om ett underlag är samma version som det som tidigare fastställdes.
+      Underlaget lämnar aldrig din dator.
     </p>
 
     <div class="card content" style="margin-top:14px;">
@@ -70,28 +72,27 @@
           <input id="hashInput" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:6px" />
 
           <div class="small" style="margin-top:8px">
-            ID:t fylls i automatiskt om du öppnat verifieringslänken.
+            ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
           <div class="hr"></div>
 
           <div style="font-weight:950; font-size:16px;">2. Välj underlag att verifiera</div>
 
-          <!-- PRIMÄR HANDLING: välj underlag -->
+          <!-- PRIMÄR handling först: välj underlag -->
           <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:8px; cursor:pointer;">
             Välj underlag (fil)
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
           <div id="fileInfo"
-               style="margin-top:10px; padding:10px 12px; border-radius:12px;
-                      border:1px dashed rgba(255,255,255,.25); background:rgba(255,255,255,.04);"
-               class="small">
+               class="meta"
+               style="margin-top:10px; padding:10px 12px; border-radius:12px; border:1px dashed rgba(255,255,255,.25); background:rgba(255,255,255,.04);">
             Inget underlag valt.
           </div>
 
           <div class="actions" style="margin-top:14px">
-            <!-- SEKUNDÄR tills allt är klart -->
+            <!-- blir primär automatiskt när allt är redo -->
             <button class="btn soft" id="verifyBtn" disabled>Verifiera underlag</button>
             <span id="statusPill" class="pill">Förbered verifiering</span>
           </div>
@@ -105,11 +106,11 @@
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            <b>Observera:</b> Ny export, omskanning eller konvertering kan ge en annan filversion även om dokumentet upplevs som oförändrat.
+            <b>Tips:</b> Ny export/omskanning kan ge annan filversion även om dokumentet “ser likadant ut”.
           </p>
         </section>
 
-        <section aria-label="Verifieringsresultat">
+        <section aria-label="Resultat">
           <div style="font-weight:950; font-size:16px;">Verifieringsresultat</div>
           <div class="hr"></div>
 
@@ -119,7 +120,7 @@
             <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
             <pre class="mono" id="outHash">—</pre>
 
-            <div class="meta" style="margin-top:10px;">Underlagets tekniska fingeravtryck</div>
+            <div class="meta" style="margin-top:10px;">Underlagets fingeravtryck</div>
             <pre class="mono" id="outFileHash">—</pre>
 
             <div class="hr"></div>
@@ -134,15 +135,24 @@
             <pre class="mono" id="outRegUtc">—</pre>
 
             <div id="outExplain"
-                 style="margin-top:12px; padding:10px 12px; border-radius:12px;
-                        border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+                 style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
               <div id="outExplainTitle" style="font-weight:900;"></div>
               <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
             </div>
 
-            <div class="actions" style="margin-top:12px">
+            <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
               <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
+              <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringssammanfattning</button>
+              <span id="copySummaryPill" class="pill" style="display:none;"> </span>
             </div>
+
+            <details style="margin-top:12px;">
+              <summary>Sammanfattning för dokumentation (valfritt)</summary>
+              <p class="small" style="margin:10px 0 8px; opacity:.95;">
+                Praktiskt om du vill klistra in en kort notering i arbetsdokument/revisionsfil.
+              </p>
+              <pre class="mono" id="summaryOut" style="white-space:pre-wrap;">—</pre>
+            </details>
           </div>
 
           <div id="errorBox" style="display:none;">
@@ -181,7 +191,413 @@
 </footer>
 
 <script>
-/* Endast UI-copy och färghierarki ändrad – ingen funktionalitet ändrad */
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const hashInput = $("hashInput");
+  const fileInput = $("fileInput");
+  const fileInfo = $("fileInfo");
+  const verifyBtn = $("verifyBtn");
+  const statusPill = $("statusPill");
+
+  const inputAlert = $("inputAlert");
+  const inputAlertText = $("inputAlertText");
+  const inputAlertHelp = $("inputAlertHelp");
+
+  const resultBox = $("resultBox");
+  const resultHeadline = $("resultHeadline");
+  const outHash = $("outHash");
+  const outFileHash = $("outFileHash");
+  const outRegStatus = $("outRegStatus");
+  const outRegSe = $("outRegSe");
+  const outRegUtc = $("outRegUtc");
+  const openCertBtn = $("openCertBtn");
+
+  const outExplainTitle = $("outExplainTitle");
+  const outExplainBody = $("outExplainBody");
+
+  const copySummaryBtn = $("copySummaryBtn");
+  const copySummaryPill = $("copySummaryPill");
+  const summaryOut = $("summaryOut");
+
+  const errorBox = $("errorBox");
+  const errorMsg = $("errorMsg");
+
+  let currentFile = null;
+  let busy = false;
+  let opId = 0;
+
+  let lastRun = null;
+
+  function isValidId(h){
+    return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
+  }
+
+  function setStatus(text){
+    statusPill.textContent = text;
+  }
+
+  function setVerifyBtnTone(isReady){
+    if (!verifyBtn) return;
+    verifyBtn.classList.remove("primary");
+    verifyBtn.classList.remove("soft");
+    verifyBtn.classList.add(isReady ? "primary" : "soft");
+  }
+
+  function showAlert(title, help, tone){
+    inputAlert.style.display = "block";
+    inputAlertText.textContent = title || "";
+    inputAlertHelp.textContent = help || "";
+
+    if (tone === "err") {
+      inputAlert.style.borderColor = "rgba(255,80,80,.35)";
+      inputAlert.style.background = "rgba(255,80,80,.10)";
+      inputAlertText.style.color = "rgba(255,220,220,.95)";
+    } else if (tone === "ok") {
+      inputAlert.style.borderColor = "rgba(80,255,180,.28)";
+      inputAlert.style.background = "rgba(80,255,180,.08)";
+      inputAlertText.style.color = "rgba(220,255,245,.95)";
+    } else {
+      inputAlert.style.borderColor = "rgba(255,255,255,.14)";
+      inputAlert.style.background = "rgba(255,255,255,.06)";
+      inputAlertText.style.color = "";
+    }
+  }
+
+  function hideAlert(){
+    inputAlert.style.display = "none";
+    inputAlertText.textContent = "";
+    inputAlertHelp.textContent = "";
+  }
+
+  function setBusy(v){
+    busy = v;
+    verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
+    setVerifyBtnTone(!verifyBtn.disabled);
+  }
+
+  function bytesToHex(bytes){
+    return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  async function sha256Hex(file){
+    const buf = await file.arrayBuffer();
+    const dig = await crypto.subtle.digest("SHA-256", buf);
+    return "0x" + bytesToHex(new Uint8Array(dig));
+  }
+
+  function resetUI(){
+    resultBox.style.display = "none";
+    errorBox.style.display = "none";
+    errorMsg.textContent = "";
+    if (openCertBtn) openCertBtn.style.display = "none";
+
+    if (copySummaryBtn) copySummaryBtn.style.display = "none";
+    if (copySummaryPill) copySummaryPill.style.display = "none";
+    if (summaryOut) summaryOut.textContent = "—";
+    lastRun = null;
+
+    outHash.textContent = "—";
+    outFileHash.textContent = "—";
+    outRegStatus.textContent = "—";
+    outRegSe.textContent = "—";
+    outRegUtc.textContent = "—";
+    resultHeadline.textContent = "";
+    outExplainTitle.textContent = "";
+    outExplainBody.textContent = "";
+  }
+
+  function getIdFromUrl(){
+    const url = new URL(location.href);
+    return (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
+  }
+
+  function setIdInUrl(id){
+    const url = new URL(location.href);
+    if (id) {
+      url.searchParams.set("hash", id);
+      url.searchParams.delete("id");
+    } else {
+      url.searchParams.delete("hash");
+      url.searchParams.delete("id");
+    }
+    history.replaceState({}, "", url.toString());
+  }
+
+  function isoUtcNoMs(d){
+    return d.toISOString().replace("T"," ").replace(/\.\d{3}Z$/, " UTC");
+  }
+
+  function fmtSe(ts){
+    try{
+      return new Intl.DateTimeFormat("sv-SE", {
+        timeZone:"Europe/Stockholm",
+        year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit"
+      }).format(new Date(Number(ts) * 1000)) + " (Europe/Stockholm)";
+    } catch {
+      return "—";
+    }
+  }
+
+  function fmtUtc(ts){
+    try{
+      return isoUtcNoMs(new Date(Number(ts) * 1000));
+    } catch {
+      return "—";
+    }
+  }
+
+  async function fetchVerify(hash){
+    try{
+      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
+    } catch { /* ignore */ }
+
+    const r2 = await fetch(`/api/verify`, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hash })
+    });
+    const j2 = await r2.json().catch(() => ({}));
+    if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
+    return { ok:true, data:j2 };
+  }
+
+  function buildSummaryText(run){
+    if (!run) return "—";
+
+    const lines = [];
+    lines.push("PROOFY – Verifieringsnotering");
+    lines.push("");
+
+    lines.push(`Verifierings-ID: ${run.refHash || "—"}`);
+    if (run.fileName) lines.push(`Underlag: ${run.fileName}`);
+    if (run.fileSizeMb != null) lines.push(`Filstorlek: ${run.fileSizeMb} MB`);
+    lines.push(`Resultat: ${run.match ? "MATCH (oförändrad filversion)" : "INGEN MATCH (annan filversion)"}`);
+    lines.push("");
+
+    if (run.exists === true) {
+      lines.push("Registreringsstatus: Registrerad");
+      if (run.regSe) lines.push(`Registreringstid (SE): ${run.regSe}`);
+      if (run.regUtc) lines.push(`Registreringstid (UTC): ${run.regUtc}`);
+    } else if (run.exists === false) {
+      lines.push("Registreringsstatus: Ej registrerad");
+    } else {
+      lines.push("Registreringsstatus: Kunde inte kontrolleras (tillfälligt tekniskt fel)");
+    }
+
+    lines.push("");
+    lines.push(`Tidpunkt för verifiering: ${new Date().toLocaleString("sv-SE")}`);
+
+    return lines.join("\n");
+  }
+
+  function updateValidationUI(){
+    const id = (hashInput.value || "").trim();
+
+    if (!id && !currentFile){
+      hideAlert();
+      setStatus("Förbered verifiering");
+      setBusy(false);
+      return;
+    }
+
+    if (!id){
+      showAlert(
+        "⚠️ Ange Verifierings-ID för att kunna verifiera",
+        "Klistra in ID (format: 0x + 64 hex-tecken) eller öppna verifieringslänken du fått.",
+        "err"
+      );
+      setStatus("Ange Verifierings-ID");
+      setBusy(false);
+      return;
+    }
+
+    if (!isValidId(id)){
+      showAlert(
+        "⚠️ Ogiltigt Verifierings-ID",
+        "Kontrollera att ID börjar med 0x och innehåller exakt 64 hex-tecken (0–9, a–f).",
+        "err"
+      );
+      setStatus("Åtgärd krävs");
+      setBusy(false);
+      return;
+    }
+
+    hideAlert();
+
+    if (!currentFile) {
+      setStatus("Välj underlag");
+      setBusy(false);
+      return;
+    }
+
+    setStatus("Redo att verifiera");
+    setBusy(false);
+  }
+
+  const urlId = getIdFromUrl();
+  if (isValidId(urlId)) {
+    hashInput.value = urlId;
+    setIdInUrl(urlId);
+  }
+
+  hashInput.addEventListener("input", () => {
+    const v = hashInput.value.trim();
+    if (isValidId(v)) setIdInUrl(v);
+    updateValidationUI();
+  });
+
+  fileInput.addEventListener("change", () => {
+    currentFile = fileInput.files?.[0] || null;
+    fileInfo.textContent = currentFile
+      ? `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
+      : "Inget underlag valt.";
+    updateValidationUI();
+  });
+
+  if (copySummaryBtn) {
+    copySummaryBtn.addEventListener("click", async () => {
+      if (!lastRun) return;
+      const txt = buildSummaryText(lastRun);
+
+      if (copySummaryPill) {
+        copySummaryPill.style.display = "inline-block";
+        copySummaryPill.textContent = "Kopierar…";
+      }
+
+      try {
+        await navigator.clipboard.writeText(txt);
+        if (copySummaryPill) copySummaryPill.textContent = "Kopierad ✅";
+        setTimeout(() => {
+          if (copySummaryPill) {
+            copySummaryPill.style.display = "none";
+            copySummaryPill.textContent = "";
+          }
+        }, 1600);
+      } catch {
+        if (copySummaryPill) copySummaryPill.textContent = "Kunde inte kopiera";
+      }
+    });
+  }
+
+  verifyBtn.addEventListener("click", async () => {
+    if (busy) return;
+
+    resetUI();
+
+    const refHash = hashInput.value.trim();
+    if (!isValidId(refHash)) {
+      showAlert(
+        "⚠️ Verifiering kan inte starta – ogiltigt Verifierings-ID",
+        "Kontrollera ID (0x + 64 hex-tecken).",
+        "err"
+      );
+      setStatus("Åtgärd krävs");
+      hashInput.focus();
+      return;
+    }
+    if (!currentFile) {
+      showAlert(
+        "⚠️ Välj ett underlag att verifiera",
+        "Välj filen du vill kontrollera. Underlaget lämnar aldrig din dator.",
+        "err"
+      );
+      setStatus("Välj underlag");
+      fileInput.focus();
+      return;
+    }
+
+    setStatus("Verifierar…");
+    setBusy(true);
+
+    const myOp = ++opId;
+
+    try{
+      const fileHash = await sha256Hex(currentFile);
+      if (myOp !== opId) return;
+
+      const match = (fileHash.toLowerCase() === refHash.toLowerCase());
+
+      const verifyRes = await fetchVerify(refHash);
+      if (myOp !== opId) return;
+
+      resultBox.style.display = "block";
+      outHash.textContent = refHash;
+      outFileHash.textContent = fileHash;
+
+      resultHeadline.innerHTML = match
+        ? `<span class="ok">✅ Match</span>`
+        : `<span class="err">❌ Ingen match</span>`;
+
+      if (match) {
+        outExplainTitle.textContent = "Filen är oförändrad (identisk filversion).";
+        outExplainBody.textContent =
+          "Match betyder att underlaget är exakt samma bytes som referensen. Detta säger inget om innehållets riktighet – endast att filversionen inte har ändrats.";
+      } else {
+        outExplainTitle.textContent = "Filen skiljer sig från referensen (annan filversion).";
+        outExplainBody.textContent =
+          "Ingen match betyder att underlaget inte är identiskt med den registrerade referensen. Vanliga orsaker: ny export, omskanning, konvertering eller att fel fil valts.";
+      }
+
+      let exists = null;
+      let ts = null;
+
+      if (!verifyRes.ok) {
+        outRegStatus.textContent = "Kunde inte kontrollera registreringsstatus (tillfälligt tekniskt problem).";
+        outRegSe.textContent = "—";
+        outRegUtc.textContent = "—";
+      } else {
+        const data = verifyRes.data || {};
+        exists = Boolean(data.exists);
+        ts = data.timestamp ? Number(data.timestamp) : null;
+
+        outRegStatus.textContent = exists ? "Registrerad" : "Ej registrerad";
+        outRegSe.textContent = (exists && ts) ? fmtSe(ts) : "—";
+        outRegUtc.textContent = (exists && ts) ? fmtUtc(ts) : "—";
+      }
+
+      if (openCertBtn) {
+        openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refHash)}`;
+        openCertBtn.style.display = "inline-flex";
+      }
+
+      lastRun = {
+        refHash,
+        match,
+        exists,
+        regSe: (exists && ts) ? fmtSe(ts) : null,
+        regUtc: (exists && ts) ? fmtUtc(ts) : null,
+        fileName: currentFile?.name || "",
+        fileSizeMb: currentFile ? (currentFile.size/1024/1024).toFixed(2) : null
+      };
+
+      const summaryText = buildSummaryText(lastRun);
+      if (summaryOut) summaryOut.textContent = summaryText;
+
+      if (copySummaryBtn) copySummaryBtn.style.display = "inline-flex";
+      if (copySummaryPill) {
+        copySummaryPill.style.display = "none";
+        copySummaryPill.textContent = "";
+      }
+
+      hideAlert();
+
+      setStatus("Verifiering klar");
+      setBusy(false);
+    } catch (e){
+      if (myOp !== opId) return;
+      errorBox.style.display = "block";
+      errorMsg.textContent = e?.message || "Tekniskt fel.";
+      setStatus("Åtgärd krävs");
+      setBusy(false);
+    }
+  });
+
+  updateValidationUI();
+})();
 </script>
 
 <script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
