@@ -103,7 +103,7 @@
             <b>Tips:</b> Ny export/omskanning/konvertering kan ge annan filversion även om dokumentet “ser likadant ut”.
           </p>
 
-          <!-- Behåll tidigare “lokal” ID-box (du sa: ta aldrig bort kod utan att du ber om det) -->
+          <!-- Behåll tidigare “lokal” ID-box -->
           <div id="localIdBox" style="display:none;margin-top:12px">
             <div class="meta">Verifierings-ID (för din notering i ärendet):</div>
             <div id="localIdOut" class="mono">—</div>
@@ -307,7 +307,8 @@
   </div>
 </footer>
 
-<script src="/qr.min.js?v=2025-12-24a"
+<!-- ✅ ENDA ändringen här: peka på din nya plats i dist/assets -->
+<script src="/dist/assets/qr.min.js?v=2025-12-31-qrfix"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -492,6 +493,7 @@
     submitterOut.textContent = "—";
     txOut.textContent = "—";
     qrBox.innerHTML = "";
+    manualQrBox.innerHTML = "";
 
     if (receiptBtn) receiptBtn.style.display = "none";
 
@@ -540,7 +542,7 @@
   function showQrError(targetEl, extra){
     const parts = [];
     parts.push("QR-funktionen kunde inte laddas.");
-    if (window.__proofyQrLibError) parts.push("Kontrollera att /qr.min.js finns i deploy.");
+    if (window.__proofyQrLibError) parts.push("Kontrollera att /dist/assets/qr.min.js finns i deploy.");
     if (extra) parts.push(extra);
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
@@ -573,21 +575,52 @@
     doRender(targetEl, text);
   }
 
+  // ✅ ENDA kodändringen som fixar QR:
+  // Din minimal-build kräver: new QRCode(el) + makeCode(text)
   function doRender(targetEl, text){
     targetEl.innerHTML = "";
-    const correctLevel =
-      window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
-        ? window.QRCodeCorrectLevel.M
-        : undefined;
 
-    new QRCode(targetEl, {
-      text,
-      width: 150,
-      height: 150,
-      colorDark: "#0b1220",
-      colorLight: "#eaf0ff",
-      correctLevel
-    });
+    let qr;
+    try{
+      qr = new window.QRCode(targetEl);
+    } catch (e){
+      console.error("QR init error:", e);
+      showQrError(targetEl, "Kunde inte initiera QR (scriptfel).");
+      return;
+    }
+
+    // sätt options om builden exponerar _htOption
+    try{
+      if (qr && typeof qr === "object"){
+        qr._htOption = qr._htOption || {};
+        qr._htOption.width = 150;
+        qr._htOption.height = 150;
+        qr._htOption.colorDark = "#0b1220";
+        qr._htOption.colorLight = "#eaf0ff";
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M){
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
+        }
+      }
+    } catch { /* ignore */ }
+
+    if (!qr || typeof qr.makeCode !== "function"){
+      showQrError(targetEl, "QR-biblioteket laddades men API matchar inte din build.");
+      return;
+    }
+
+    try{
+      qr.makeCode(String(text || ""));
+    } catch (e){
+      console.error("QR render error:", e);
+      showQrError(targetEl, "Ett scriptfel inträffade vid rendering.");
+      return;
+    }
+
+    // om canvas inte skapades -> visa hjälp
+    const canvas = targetEl.querySelector("canvas");
+    if (!canvas){
+      showQrError(targetEl, "QR-koden kunde inte renderas (canvas skapades inte).");
+    }
   }
 
   function updateValidationUI(){
@@ -692,7 +725,7 @@
       currentId = id;
       currentLink = buildVerifyLink(id);
 
-      // Visa lokal notering (behåll)
+      // Visa lokal notering
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
@@ -700,7 +733,6 @@
       resultBox.style.display = "block";
       if (reportMeta) reportMeta.style.display = "block";
 
-      // Headline neutral direkt (uppdateras efter registrering)
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
       headline.innerHTML = `<span class="meta">Verifierings-ID skapat</span>`;
@@ -716,6 +748,7 @@
         receiptBtn.style.display = "inline-flex";
       }
 
+      // QR
       renderQr(qrBox, currentLink);
 
       regStatusOut.textContent = "Registrerar…";
@@ -736,7 +769,6 @@
         throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
       }
 
-      // audit-ton (nedtonad grön)
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
 
