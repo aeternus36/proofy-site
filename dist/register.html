@@ -22,12 +22,29 @@
         <span>Proofy</span>
       </a>
 
-      <div class="navActions">
+      <div class="navActions" id="navActionsDesktop">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
+
+      <details class="mnav" id="mnav">
+        <summary class="mnavSummary" aria-label="Öppna meny">
+          <span class="mnavIcon" aria-hidden="true"></span>
+        </summary>
+        <nav class="mnavMenu" aria-label="Meny">
+          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
+
+          <div class="mnavMeta">
+            <div class="mnavNote">För byråer · revision · granskning</div>
+            <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+          </div>
+        </nav>
+      </details>
     </div>
   </div>
 </header>
@@ -46,41 +63,69 @@
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <!-- VÄNSTER -->
-        <section>
-          <div style="font-weight:900">Välj referensunderlag</div>
+        <section aria-label="Skapa via fil">
+          <div style="font-weight:950; font-size:16px;">Välj referensunderlag</div>
           <p class="meta" style="margin-top:8px">
-            Denna filversion blir referens i ärendet.
+            Välj den filversion som ska gälla som referens. Du får Verifierings-ID, delbar länk och QR-kod.
           </p>
 
           <input id="fileInput" type="file" />
+          <div id="dropZone" class="drop" style="margin-top:10px">Dra &amp; släpp underlag här</div>
+
           <div id="fileInfo" class="meta" style="margin-top:10px">Inget underlag valt.</div>
+
+          <div id="fileHint" class="small" style="margin-top:8px; display:none;" aria-live="polite"></div>
 
           <div class="actions" style="margin-top:12px">
             <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
-            <span id="statusPill" class="pill">Välj underlag</span>
+            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
+            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
+            <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
+            <span id="statusPill" class="pill">Välj ett underlag</span>
+          </div>
+
+          <div id="localIdBox" style="display:none;margin-top:12px">
+            <div class="meta">Verifierings-ID (för din notering i ärendet):</div>
+            <div id="localIdOut" class="mono">—</div>
+          </div>
+
+          <div class="small" style="margin-top:10px">
+            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).
+            <br />
+            <b>Obs:</b> En ny export/omskanning kan räknas som en ny filversion även om dokumentet “ser likadant ut”.
           </div>
         </section>
 
-        <!-- HÖGER -->
-        <section>
-          <div style="font-weight:900">Resultat</div>
+        <section aria-label="Resultat">
+          <div style="font-weight:950; font-size:16px;">Resultat</div>
           <div class="hr"></div>
 
           <div class="meta">Verifierings-ID</div>
-          <pre id="idOut" class="mono">—</pre>
+          <div id="idOut" class="mono" style="margin-top:8px">—</div>
 
-          <div class="meta" style="margin-top:10px">Delbar verifieringslänk</div>
-          <pre id="linkOut" class="mono">—</pre>
+          <div class="hr"></div>
 
-          <div class="meta" style="margin-top:10px">QR-kod</div>
-          <div id="qrBox" class="qrBox" style="margin-top:8px"></div>
+          <div id="resultBox" style="display:none;">
+            <div id="headline" style="font-size:18px; margin-bottom:10px;"></div>
 
-          <div class="meta" style="margin-top:10px">Registreringsstatus</div>
-          <div id="regStatusOut" class="mono">—</div>
+            <div class="meta">Delbar verifieringslänk</div>
+            <div id="linkOut" class="mono" style="margin-top:8px">—</div>
 
-          <div class="meta" style="margin-top:10px">Registreringstid</div>
-          <div id="timeOut" class="mono">—</div>
+            <div class="qrWrap" style="margin-top:12px">
+              <div>
+                <div class="meta" style="margin-bottom:8px">QR-kod</div>
+                <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
+              </div>
+
+              <div style="min-width:240px; flex:1">
+                <div class="meta">Registreringsstatus</div>
+                <div id="regStatusOut" class="mono" style="margin-top:8px">—</div>
+
+                <div class="meta" style="margin-top:10px;">Registreringstid</div>
+                <div id="timeOut" class="mono" style="margin-top:8px">—</div>
+              </div>
+            </div>
+          </div>
         </section>
 
       </div>
@@ -92,100 +137,24 @@
   <div class="wrap">
     <div class="foot">
       <div>
-        <div style="font-weight:800">Proofy</div>
+        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
+      </div>
+      <div class="links">
+        <a href="/security.html">Säkerhet</a>
+        <a href="/privacy.html">Integritet</a>
+        <a href="/terms.html">Villkor</a>
+        <a href="/#kontakt">Kontakt</a>
       </div>
     </div>
   </div>
 </footer>
 
-<!-- QR-bibliotek (DIN build) -->
-<script src="/qr.min.js" defer></script>
+<!-- ✅ KORREKT QR-SCRIPT: NU FRÅN /assets -->
+<script src="/assets/qr.min.js?v=2025-12-24a" defer></script>
 
-<script>
-(() => {
-  const fileInput = document.getElementById("fileInput");
-  const fileInfo = document.getElementById("fileInfo");
-  const createBtn = document.getElementById("createBtn");
-  const statusPill = document.getElementById("statusPill");
-
-  const idOut = document.getElementById("idOut");
-  const linkOut = document.getElementById("linkOut");
-  const qrBox = document.getElementById("qrBox");
-  const regStatusOut = document.getElementById("regStatusOut");
-  const timeOut = document.getElementById("timeOut");
-
-  let currentFile = null;
-
-  fileInput.addEventListener("change", () => {
-    currentFile = fileInput.files[0] || null;
-    if (!currentFile) {
-      fileInfo.textContent = "Inget underlag valt.";
-      createBtn.disabled = true;
-      statusPill.textContent = "Välj underlag";
-      return;
-    }
-    fileInfo.textContent = `Valt: ${currentFile.name}`;
-    createBtn.disabled = false;
-    statusPill.textContent = "Redo";
-  });
-
-  function bytesToHex(bytes){
-    return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
-  }
-
-  async function sha256(file){
-    const buf = await file.arrayBuffer();
-    const hash = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + bytesToHex(new Uint8Array(hash));
-  }
-
-  function renderQr(el, text){
-    el.innerHTML = "";
-    if (typeof window.QRCode !== "function") {
-      el.textContent = "QR-biblioteket kunde inte laddas.";
-      return;
-    }
-    const qr = new window.QRCode(el);
-    qr.makeCode(text);
-    const canvas = el.querySelector("canvas");
-    if (canvas) {
-      canvas.style.width = "150px";
-      canvas.style.height = "150px";
-      canvas.style.borderRadius = "8px";
-      canvas.style.background = "#eaf0ff";
-    }
-  }
-
-  createBtn.addEventListener("click", async () => {
-    if (!currentFile) return;
-
-    statusPill.textContent = "Skapar…";
-    const id = await sha256(currentFile);
-    const link = `${location.origin}/verify.html?hash=${id}`;
-
-    idOut.textContent = id;
-    linkOut.textContent = link;
-    renderQr(qrBox, link);
-
-    regStatusOut.textContent = "Registrerar…";
-
-    const r = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hash: id })
-    });
-    const j = await r.json();
-
-    regStatusOut.textContent = "Registrerad";
-    timeOut.textContent = j.timestamp
-      ? new Date(j.timestamp * 1000).toLocaleString("sv-SE")
-      : "—";
-
-    statusPill.textContent = "Klar";
-  });
-})();
-</script>
+<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
+<script src="/chat-widget.js?v=2025-12-24a" defer></script>
 
 </body>
 </html>
