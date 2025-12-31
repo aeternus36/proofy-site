@@ -36,7 +36,7 @@
         <nav class="mnavMenu" aria-label="Meny">
           <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
-          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
@@ -57,20 +57,17 @@
 
     <p class="lead">
       Skapa ett Verifierings-ID för den filversion som ska vara <b>referens</b> i ärendet.
-      Underlaget lämnar aldrig din dator. Proofy lagrar inte dokument.
+      <strong>Underlaget lämnar aldrig din dator.</strong>
     </p>
 
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <section aria-label="Skapa via fil">
-          <div style="font-weight:950; font-size:16px;">Välj referensunderlag</div>
-          <p class="meta" style="margin-top:8px">
-            Välj den filversion som ska gälla som referens. Du får Verifierings-ID, delbar länk och QR-kod.
-          </p>
+        <!-- Vänster: input/åtgärd (matchar verify.html’s “Verifieringsuppgifter”) -->
+        <section aria-label="Skapa Verifierings-ID">
+          <div style="font-weight:950; font-size:16px;">1. Välj referensunderlag</div>
 
-          <!-- Förbättrat filval: “audit”-känsla, tydligare än native choose file -->
-          <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:6px; cursor:pointer;">
+          <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:8px; cursor:pointer;">
             Välj referensunderlag (fil)
           </label>
           <input id="fileInput" type="file" style="display:none;" />
@@ -83,29 +80,37 @@
             Inget underlag valt.
           </div>
 
-          <!-- NYTT: tydlig påminnelse (visas bara när det behövs) -->
-          <div id="fileHint" class="small" style="margin-top:8px; display:none;" aria-live="polite"></div>
+          <div class="hr"></div>
 
-          <div class="actions" style="margin-top:12px">
+          <div style="font-weight:950; font-size:16px;">2. Skapa &amp; registrera referens</div>
+
+          <div class="actions" style="margin-top:14px; flex-wrap:wrap; gap:10px;">
             <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
-            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
-            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
             <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
-            <span id="statusPill" class="pill">Välj ett underlag</span>
+            <span id="statusPill" class="pill">Förbered registrering</span>
           </div>
 
+          <!-- verify-like alert (istället för fileHint) -->
+          <div id="inputAlert"
+               role="status"
+               aria-live="polite"
+               style="display:none; margin-top:10px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+            <div id="inputAlertText" style="font-weight:800;"></div>
+            <div id="inputAlertHelp" class="small" style="margin-top:6px; opacity:.95;"></div>
+          </div>
+
+          <p class="small" style="margin-top:12px; margin-bottom:0;">
+            <b>Tips:</b> Ny export/omskanning/konvertering kan ge annan filversion även om dokumentet “ser likadant ut”.
+          </p>
+
+          <!-- Behåll tidigare “lokal” ID-box (du sa: ta aldrig bort kod utan att du ber om det) -->
           <div id="localIdBox" style="display:none;margin-top:12px">
             <div class="meta">Verifierings-ID (för din notering i ärendet):</div>
             <div id="localIdOut" class="mono">—</div>
           </div>
-
-          <div class="small" style="margin-top:10px">
-            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).
-            <br />
-            <b>Obs:</b> En ny export/omskanning kan räknas som en ny filversion även om dokumentet “ser likadant ut”.
-          </div>
         </section>
 
+        <!-- Höger: rapport (matchar verify.html’s “Verifieringsresultat”) -->
         <section aria-label="Registreringsrapport">
           <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
             <div style="font-weight:950; font-size:16px;">Registreringsrapport</div>
@@ -118,10 +123,10 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- Kompakta “fält” som på verify -->
             <div style="margin-top:12px;">
               <div class="meta">Verifierings-ID</div>
-              <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
+
+              <div style="position:relative; margin-top:6px;">
                 <button type="button" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
@@ -151,7 +156,8 @@
               </div>
 
               <div class="meta" style="margin-top:12px;">Delbar verifieringslänk</div>
-              <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
+
+              <div style="position:relative; margin-top:6px;">
                 <button type="button" id="copyLinkIconBtn" aria-label="Kopiera verifieringslänk" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
@@ -180,6 +186,14 @@
                 <span id="copyLinkPill" class="pill" style="display:none; margin-top:8px;"> </span>
               </div>
 
+              <div class="hr" style="margin-top:14px;"></div>
+
+              <div class="meta">Registreringsstatus</div>
+              <div id="regStatusOut" class="mono" style="margin-top:6px">—</div>
+
+              <div class="meta" style="margin-top:10px;">Registreringstid</div>
+              <div id="timeOut" class="mono" style="margin-top:6px">—</div>
+
               <div class="qrWrap" style="margin-top:12px">
                 <div>
                   <div class="meta" style="margin-bottom:8px">QR-kod</div>
@@ -187,13 +201,7 @@
                 </div>
 
                 <div style="min-width:240px; flex:1">
-                  <div class="meta">Registreringsstatus</div>
-                  <div id="regStatusOut" class="mono" style="margin-top:6px">—</div>
-
-                  <div class="meta" style="margin-top:10px;">Registreringstid</div>
-                  <div id="timeOut" class="mono" style="margin-top:6px">—</div>
-
-                  <div class="small" style="margin-top:10px">
+                  <div class="small" style="margin-top:0;">
                     Tips: Spara ID i ärendet. Dela länken om någon behöver kontrollera senare.
                   </div>
                 </div>
@@ -213,6 +221,10 @@
                 <div class="meta" style="margin-top:10px;">Teknisk identitet</div>
                 <div id="submitterOut" class="mono" style="margin-top:8px">—</div>
               </details>
+
+              <div class="meta" style="margin-top:12px; opacity:.85;">
+                Not: Proofy verifierar filversion (referens), inte dokumentets sakliga riktighet.
+              </div>
             </div>
           </div>
 
@@ -307,35 +319,36 @@
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
 
-  const fileHint = $("fileHint"); // NYTT
   const createBtn = $("createBtn");
-  const copyIdBtn = $("copyIdBtn");
-  const copyLinkBtn = $("copyLinkBtn");
   const receiptBtn = $("receiptBtn");
   const statusPill = $("statusPill");
+
+  const inputAlert = $("inputAlert");
+  const inputAlertText = $("inputAlertText");
+  const inputAlertHelp = $("inputAlertHelp");
 
   const localIdBox = $("localIdBox");
   const localIdOut = $("localIdOut");
 
   const reportMeta = $("reportMeta");
-
-  const idOut = $("idOut");
   const resultBox = $("resultBox");
   const headline = $("headline");
+
+  const idOut = $("idOut");
   const linkOut = $("linkOut");
   const qrBox = $("qrBox");
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
   const submitterOut = $("submitterOut");
   const txOut = $("txOut");
-  const errorBox = $("errorBox");
-  const errorMsg = $("errorMsg");
 
   const copyIdIconBtn = $("copyIdIconBtn");
   const copyIdPill = $("copyIdPill");
-
   const copyLinkIconBtn = $("copyLinkIconBtn");
   const copyLinkPill = $("copyLinkPill");
+
+  const errorBox = $("errorBox");
+  const errorMsg = $("errorMsg");
 
   const manualId = $("manualId");
   const manualBuildBtn = $("manualBuildBtn");
@@ -355,15 +368,42 @@
   function setPill(text){ statusPill.textContent = text; }
   function setManualPill(text){ manualPill.textContent = text; }
 
-  function showFileHint(msgHtml){
-    if (!fileHint) return;
-    if (!msgHtml){
-      fileHint.style.display = "none";
-      fileHint.textContent = "";
-      return;
+  function showAlert(title, help, tone){
+    inputAlert.style.display = "block";
+    inputAlertText.textContent = title || "";
+    inputAlertHelp.textContent = help || "";
+
+    if (tone === "err") {
+      inputAlert.style.borderColor = "rgba(255,80,80,.35)";
+      inputAlert.style.background = "rgba(255,80,80,.10)";
+      inputAlertText.style.color = "rgba(255,220,220,.95)";
+    } else if (tone === "ok") {
+      inputAlert.style.borderColor = "rgba(80,255,180,.28)";
+      inputAlert.style.background = "rgba(80,255,180,.08)";
+      inputAlertText.style.color = "rgba(220,255,245,.95)";
+    } else {
+      inputAlert.style.borderColor = "rgba(255,255,255,.14)";
+      inputAlert.style.background = "rgba(255,255,255,.06)";
+      inputAlertText.style.color = "";
     }
-    fileHint.style.display = "block";
-    fileHint.innerHTML = msgHtml;
+  }
+
+  function hideAlert(){
+    inputAlert.style.display = "none";
+    inputAlertText.textContent = "";
+    inputAlertHelp.textContent = "";
+  }
+
+  function setCreateBtnTone(isReady){
+    if (!createBtn) return;
+    createBtn.classList.remove("primary");
+    createBtn.classList.add(isReady ? "primary" : "soft");
+  }
+
+  function setBusy(v){
+    busy = v;
+    createBtn.disabled = v || !currentFile;
+    setCreateBtnTone(!createBtn.disabled);
   }
 
   function resetCopyPill(pill){
@@ -435,31 +475,16 @@
     };
   }
 
-  function setBusy(v){
-    busy = v;
-    createBtn.disabled = !currentFile || busy;
-    copyIdBtn.disabled = !currentId || busy;
-    copyLinkBtn.disabled = !currentLink || busy;
-
-    if (busy) return;
-
-    if (!currentFile) {
-      setPill("Välj underlag");
-      showFileHint(`<span class="err">Välj ett referensunderlag för att skapa Verifierings-ID.</span> <span class="meta">Filen behandlas lokalt och lämnar inte din dator.</span>`);
-    } else {
-      showFileHint("");
-      setPill("Redo");
-    }
-  }
-
-  function resetRight(){
+  function resetReport(){
+    if (reportMeta) reportMeta.style.display = "none";
     resultBox.style.display = "none";
     errorBox.style.display = "none";
     errorMsg.textContent = "";
 
-    if (reportMeta) reportMeta.style.display = "none";
-
     headline.textContent = "";
+    headline.style.borderColor = "rgba(255,255,255,.14)";
+    headline.style.background = "rgba(255,255,255,.05)";
+
     idOut.textContent = "—";
     linkOut.textContent = "—";
     regStatusOut.textContent = "—";
@@ -467,24 +492,27 @@
     submitterOut.textContent = "—";
     txOut.textContent = "—";
     qrBox.innerHTML = "";
-    receiptBtn.style.display = "none";
+
+    if (receiptBtn) receiptBtn.style.display = "none";
 
     if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
     if (copyLinkIconBtn) copyLinkIconBtn.style.display = "none";
     resetCopyPill(copyIdPill);
     resetCopyPill(copyLinkPill);
 
-    // reset hover state
-    if (idOut) {
+    if (idOut){
       idOut.style.outline = "";
       idOut.style.outlineOffset = "";
       idOut.style.background = "rgba(255,255,255,.03)";
     }
-    if (linkOut) {
+    if (linkOut){
       linkOut.style.outline = "";
       linkOut.style.outlineOffset = "";
       linkOut.style.background = "rgba(255,255,255,.03)";
     }
+
+    localIdBox.style.display = "none";
+    localIdOut.textContent = "—";
   }
 
   function bytesToHex(bytes){
@@ -562,25 +590,30 @@
     });
   }
 
+  function updateValidationUI(){
+    if (!currentFile){
+      hideAlert();
+      setPill("Förbered registrering");
+      setBusy(false);
+      return;
+    }
+    hideAlert();
+    setPill("Redo att registrera");
+    setBusy(false);
+  }
+
   function setFile(file){
     currentFile = file || null;
     currentId = null;
     currentLink = null;
 
-    resetRight();
+    resetReport();
 
-    localIdBox.style.display = "none";
-    localIdOut.textContent = "—";
+    fileInfo.textContent = currentFile
+      ? `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
+      : "Inget underlag valt.";
 
-    // behåll: vi gör inte programmatisk reset av fileInput här (den är hidden, och vissa browsers beter sig olika)
-    if(!currentFile){
-      fileInfo.textContent = "Inget underlag valt.";
-      setBusy(false);
-      return;
-    }
-
-    fileInfo.textContent = `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
-    setBusy(false);
+    updateValidationUI();
   }
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
@@ -594,7 +627,6 @@
     if(f) setFile(f);
   });
 
-  // klicka på fälten för kopiering (audit-UX)
   if (idOut) {
     idOut.addEventListener("click", async () => {
       await copyWithPill({ text: idOut.textContent, pillEl: copyIdPill });
@@ -635,31 +667,32 @@
     });
   }
 
-  // NYTT: om man klickar på disabled-knappen via keyboard/assistive, eller om ni senare gör den enabled,
-  // så får man ändå en tydlig påminnelse.
   createBtn.addEventListener("click", async () => {
-    if(!currentFile){
-      showFileHint(`<span class="err">Du har inte valt något referensunderlag.</span> <span class="meta">Välj en fil (eller dra &amp; släpp) för att skapa Verifierings-ID.</span>`);
+    if (!currentFile) {
+      showAlert(
+        "⚠️ Välj referensunderlag för att kunna registrera",
+        "Välj en fil (eller dra & släpp) för att skapa Verifierings-ID. Underlaget lämnar aldrig din dator.",
+        "err"
+      );
       setPill("Välj underlag");
       return;
     }
-    if(busy) return;
+    if (busy) return;
 
     const myOp = ++opId;
     setBusy(true);
-    resetRight();
-
     setPill("Skapar ID lokalt…");
 
     try{
       const id = await makeLocalId(currentFile);
-      if(myOp !== opId) return;
+      if (myOp !== opId) return;
 
-      if(!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt Verifierings-ID.");
+      if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt Verifierings-ID.");
 
       currentId = id;
       currentLink = buildVerifyLink(id);
 
+      // Visa lokal notering (behåll)
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
@@ -667,7 +700,7 @@
       resultBox.style.display = "block";
       if (reportMeta) reportMeta.style.display = "block";
 
-      // rapportheader (neutral, uppdateras efter registrering)
+      // Headline neutral direkt (uppdateras efter registrering)
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
       headline.innerHTML = `<span class="meta">Verifierings-ID skapat</span>`;
@@ -675,12 +708,13 @@
       idOut.textContent = id;
       linkOut.textContent = currentLink;
 
-      // Kopiera-ikon vid hover/focus
       applyCopyHover(idOut, copyIdIconBtn, true);
       applyCopyHover(linkOut, copyLinkIconBtn, true);
 
-      receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
-      receiptBtn.style.display = "inline-flex";
+      if (receiptBtn) {
+        receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
+        receiptBtn.style.display = "inline-flex";
+      }
 
       renderQr(qrBox, currentLink);
 
@@ -696,20 +730,20 @@
       });
 
       const data = await res.json().catch(() => ({}));
-      if(myOp !== opId) return;
+      if (myOp !== opId) return;
 
-      if(!res.ok || data.ok === false){
-        throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}). Försök igen och dokumentera tidpunkten om det är ett granskningsärende.`);
+      if (!res.ok || data.ok === false) {
+        throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
       }
 
-      // Headline audit-ton: grön (registrerad) men nedtonad
+      // audit-ton (nedtonad grön)
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
 
       if (data.alreadyExists) {
         headline.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`;
       } else {
-        headline.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="meta">(ny referens skapad)</span>`;
+        headline.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="meta">(referens fastställd)</span>`;
       }
 
       regStatusOut.textContent = "Registrerad";
@@ -723,31 +757,20 @@
       submitterOut.textContent = data.submitter || "—";
       txOut.textContent = data.txHash || "—";
 
-      setPill("Klart ✅");
+      setPill("Registrering klar");
       setBusy(false);
     } catch (e){
       console.error(e);
-      if(myOp !== opId) return;
+      if (myOp !== opId) return;
 
       errorBox.style.display = "block";
       errorMsg.textContent = (e?.message || "Registreringstjänsten kunde inte nås just nu.");
-      setPill("Fel");
+      setPill("Åtgärd krävs");
       setBusy(false);
     }
   });
 
-  copyIdBtn.addEventListener("click", async () => {
-    if(!currentId) return;
-    try{ await navigator.clipboard.writeText(currentId); setPill("ID kopierat ✅"); }
-    catch { setPill("Kunde inte kopiera"); }
-  });
-
-  copyLinkBtn.addEventListener("click", async () => {
-    if(!currentLink) return;
-    try{ await navigator.clipboard.writeText(currentLink); setPill("Länk kopierad ✅"); }
-    catch { setPill("Kunde inte kopiera"); }
-  });
-
+  // Manuell del (oförändrad)
   function setManualState(id){
     const clean = (id || "").trim();
     if (!isIdFormat(clean)){
@@ -783,8 +806,9 @@
     catch { setManualPill("Kunde inte kopiera"); }
   });
 
-  resetRight();
-  setBusy(false);
+  // init
+  resetReport();
+  updateValidationUI();
   setManualState("");
 })();
 </script>
