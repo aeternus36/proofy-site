@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="sv">
 <head>
@@ -254,7 +253,8 @@
   </div>
 </footer>
 
-<script src="/qr.min.js?v=2025-12-31-qrfix"
+<!-- ENDA ÄNDRING 1: script-src -> dist/assets -->
+<script src="/dist/assets/qr.min.js?v=2025-12-31-qrfix"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -399,6 +399,7 @@
     });
   }
 
+  /* ENDA ÄNDRING 2: QR-init skyddad + kompatibel med din minimal-build */
   async function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -406,33 +407,46 @@
 
     const ok = await waitForQrLib(2500);
     if (!ok){
-      showQrError(targetEl, "Kontrollera att /qr.min.js finns i deploy och inte cache:as fel.");
+      showQrError(targetEl, "Kontrollera att qr.min.js verkligen laddas (Network → qr.min.js).");
       return;
     }
 
     try{
-      // Din qr.min.js-build: QRCode(el) + makeCode(text)
+      targetEl.innerHTML = "";
       const qr = new window.QRCode(targetEl);
 
-      // Anpassa optioner innan makeCode
-      qr._htOption.width = 150;
-      qr._htOption.height = 150;
-      qr._htOption.colorDark = "#0b1220";
-      qr._htOption.colorLight = "#eaf0ff";
-      qr._htOption.correctLevel =
-        window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
-          ? window.QRCodeCorrectLevel.M
-          : qr._htOption.correctLevel;
+      // Skydda mot att _htOption saknas i någon build
+      if (qr && typeof qr === "object") {
+        qr._htOption = qr._htOption || {};
+        qr._htOption.width = 150;
+        qr._htOption.height = 150;
+        qr._htOption.colorDark = "#0b1220";
+        qr._htOption.colorLight = "#eaf0ff";
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M) {
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
+        }
+      }
 
-      qr.makeCode(text);
+      if (!qr || typeof qr.makeCode !== "function") {
+        showQrError(targetEl, "QR-biblioteket laddades, men API matchar inte förväntad build.");
+        return;
+      }
+
+      qr.makeCode(String(text || ""));
 
       const canvas = targetEl.querySelector("canvas");
       if (!canvas){
-        showQrError(targetEl, "Canvas skapades inte (okänt scriptfel).");
+        showQrError(targetEl, "Canvas skapades inte.");
+        return;
       }
+
+      // Säkerställ synlighet i mörkt UI
+      canvas.style.display = "block";
+      canvas.style.width = "150px";
+      canvas.style.height = "150px";
+      canvas.style.borderRadius = "10px";
     } catch (e){
       showQrError(targetEl, "Ett scriptfel inträffade vid rendering.");
-      // Extra hjälp i console vid behov:
       console.error("QR render error:", e);
     }
   }
@@ -505,7 +519,7 @@
       timeOut.textContent = "—";
       setPill("Registrerar…");
 
-      // Rendera QR tidigt (oavsett register-API)
+      // QR tidigt (oavsett register-API)
       renderQr(qrBox, currentLink);
 
       const res = await fetch("/api/register", {
