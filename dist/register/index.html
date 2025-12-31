@@ -209,12 +209,11 @@
   </div>
 </footer>
 
-<!-- QR lib -->
-<script
-  src="/assets/qr.min.js?v=2025-12-31-qrfix"
-  onload="window.__proofyQrLibLoaded = true"
-  onerror="window.__proofyQrLibError = true"
-></script>
+<!-- ✅ Inline: exakt din qr.min.js för att göra laddningen 100% deterministisk -->
+<script>
+/*! qrcode.js (MIT) - minimal build for Proofy */
+(function(){function e(t){this.mode=s.MODE_8BIT_BYTE,this.data=t}function r(t,e){this.totalCount=t,this.dataCount=e}function n(){this.buffer=[],this.length=0}function o(t,e){this.typeNumber=t,this.errorCorrectLevel=e,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function i(t,e){if(void 0==t.length)throw new Error(t.length+"/"+e);for(var r=0;r<t.length&&0==t[r];)r++;this.num=new Array(t.length-r+e);for(var n=0;n<t.length-r;n++)this.num[n]=t[n+r]}function a(){this.expTable=new Array(256),this.logTable=new Array(256);for(var t=0;t<8;t++)this.expTable[t]=1<<t;for(t=8;t<256;t++)this.expTable[t]=this.expTable[t-4]^this.expTable[t-5]^this.expTable[t-6]^this.expTable[t-8];for(t=0;t<255;t++)this.logTable[this.expTable[t]]=t}function u(t,e){this.num=t,this.shift=e}function h(t,e){var r=t<<e;return r^=r>>>12,r^=r<<25,r^=r>>>27,r>>>0}function c(t){this._el="string"==typeof t?document.getElementById(t):t,this._htOption={width:256,height:256,typeNumber:4,colorDark:"#000000",colorLight:"#ffffff",correctLevel:l.H}}var s={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8},l={L:1,M:0,Q:3,H:2},f={PATTERN_POSITION_TABLE:[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],G15:1335,G18:7973,G15_MASK:21522,getBCHTypeInfo:function(t){for(var e=t<<10;f.getBCHDigit(e)-f.getBCHDigit(f.G15)>=0;)e^=f.G15<<f.getBCHDigit(e)-f.getBCHDigit(f.G15);return(t<<10|e)^f.G15_MASK},getBCHTypeNumber:function(t){for(var e=t<<12;f.getBCHDigit(e)-f.getBCHDigit(f.G18)>=0;)e^=f.G18<<f.getBCHDigit(e)-f.getBCHDigit(f.G18);return t<<12|e},getBCHDigit:function(t){for(var e=0;0!=t;)e++,t>>>=1;return e},getPatternPosition:function(t){return f.PATTERN_POSITION_TABLE[t-1]},getMask:function(t,e,r){switch(t){case 0:return(e+r)%2==0;case 1:return e%2==0;case 2:return r%3==0;case 3:return(e+r)%3==0;case 4:return(Math.floor(e/2)+Math.floor(r/3))%2==0;case 5:return e*r%2+e*r%3==0;case 6:return(e*r%2+e*r%3)%2==0;case 7:return(e*r%3+(e+r)%2)%2==0;default:throw new Error("bad maskPattern:"+t)}},getErrorCorrectPolynomial:function(t){for(var e=new u([1],0),r=0;r<t;r++)e=e.multiply(new u([1,a.exp(r)],0));return e},getLengthInBits:function(t,e){if(1<=e&&e<10)switch(t){case s.MODE_NUMBER:return 10;case s.MODE_ALPHA_NUM:return 9;case s.MODE_8BIT_BYTE:return 8;case s.MODE_KANJI:return 8;default:throw new Error("mode:"+t)}else if(e<27)switch(t){case s.MODE_NUMBER:return 12;case s.MODE_ALPHA_NUM:return 11;case s.MODE_8BIT_BYTE:return 16;case s.MODE_KANJI:return 10;default:throw new Error("mode:"+t)}else{if(!(e<41))throw new Error("typeNumber:"+e);switch(t){case s.MODE_NUMBER:return 14;case s.MODE_ALPHA_NUM:return 13;case s.MODE_8BIT_BYTE:return 16;case s.MODE_KANJI:return 12;default:throw new Error("mode:"+t)}}},getLostPoint:function(t){for(var e=t.getModuleCount(),r=0,n=0;n<e;n++)for(var o=0;o<e;o++){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u++)if(!(n+u<0||e<=n+u))for(var h=-1;h<=1;h++)o+h<0||e<=o+h||0==u&&0==h||a==t.isDark(n+u,o+h)&&i++;i>5&&(r+=3+i-5)}for(n=0;n<e-1;n++)for(o=0;o<e-1;o++){var c=0;t.isDark(n,o)&&c++,t.isDark(n+1,o)&&c++,t.isDark(n,o+1)&&c++,t.isDark(n+1,o+1)&&c++,(0==c||4==c)&&(r+=3)}for(n=0;n<e;n++)for(o=0;o<e-6;o++)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(r+=40);for(o=0;o<e;o++)for(n=0;n<e-6;n++)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(r+=40);var s=0;for(o=0;o<e;o++)for(n=0;n<e;n++)t.isDark(n,o)&&s++;return r+=10*(Math.abs(100*s/e/e-50)/5),r}},d={getRSBlocks:function(t,e){var n=d.getRsBlockTable(t,e);if(void 0==n)throw new Error("bad rs block @ typeNumber:"+t+"/errorCorrectLevel:"+e);for(var o=n.length/3,i=[],a=0;a<o;a++)for(var u=n[3*a+0],h=n[3*a+1],c=n[3*a+2],s=0;s<u;s++)i.push(new r(h,c));return i},getRsBlockTable:function(t,e){switch(e){case l.L:return d.RS_BLOCK_TABLE[4*(t-1)+0];case l.M:return d.RS_BLOCK_TABLE[4*(t-1)+1];case l.Q:return d.RS_BLOCK_TABLE[4*(t-1)+2];case l.H:return d.RS_BLOCK_TABLE[4*(t-1)+3];default:return void 0}},RS_BLOCK_TABLE:[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15]]};a();u.prototype={get:function(t){return this.num[t]},getLength:function(){return this.num.length},multiply:function(t){for(var e=new Array(this.getLength()+t.getLength()-1),r=0;r<e.length;r++)e[r]=0;for(r=0;r<this.getLength();r++)for(var n=0;n<t.getLength();n++)e[r+n]^=a.mul(this.get(r),t.get(n));return new u(e,0)},mod:function(t){if(this.getLength()-t.getLength()<0)return this;for(var e=a.log(this.get(0))-a.log(t.get(0)),r=new Array(this.getLength()),n=0;n<this.getLength();n++)r[n]=this.get(n);for(n=0;n<t.getLength();n++)r[n]^=a.exp(a.log(t.get(n))+e);return new u(r,0).mod(t)}};a.mul=function(t,e){if(0==t||0==e)return 0;return a.exp(a.log(t)+a.log(e))};a.exp=function(t){for(;t<0;)t+=255;for(;t>=256;)t-=255;return this.expTable[t]};a.log=function(t){if(0==t)throw new Error("log(0)");return this.logTable[t]};n.prototype={getBuffer:function(){return this.buffer},getAt:function(t){var e=Math.floor(t/8);return 1==(this.buffer[e]>>>7-t%8&1)},put:function(t,e){for(var r=0;r<e;r++)this.putBit(1==(t>>>e-r-1&1))},putBit:function(t){var e=Math.floor(this.length/8);this.buffer.length<=e&&this.buffer.push(0),t&&(this.buffer[e]|=128>>>this.length%8),this.length++}};o.prototype={addData:function(t){this.dataList.push(new e(t)),this.dataCache=null},isDark:function(t,e){if(t<0||this.moduleCount<=t||e<0||this.moduleCount<=e)throw new Error(t+","+e);return this.modules[t][e]},getModuleCount:function(){return this.moduleCount},make:function(){if(this.typeNumber<1){for(this.typeNumber=1;this.typeNumber<40;){for(var t=d.getRSBlocks(this.typeNumber,this.errorCorrectLevel),e=new n,r=0;r<this.dataList.length;r++){var o=this.dataList[r];e.put(o.mode,4),e.put(o.data.length,f.getLengthInBits(o.mode,this.typeNumber)),o.write(e)}for(var i=0,a=0;a<t.length;a++)i+=t[a].dataCount;for(var u=8*i,h=e.getLengthInBits?e.getLengthInBits():e.length;h<=u;)break;this.typeNumber++;}this.typeNumber--}this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(t,e){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var r=0;r<this.moduleCount;r++){this.modules[r]=new Array(this.moduleCount);for(var n=0;n<this.moduleCount;n++)this.modules[r][n]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.setupTypeInfo(t,e),this.typeNumber>=7&&this.setupTypeNumber(t);null==this.dataCache&&(this.dataCache=o.createData(this.typeNumber,this.errorCorrectLevel,this.dataList)),this.mapData(this.dataCache,e)},setupPositionProbePattern:function(t,e){for(var r=-1;r<=7;r++)if(!(t+r<=-1||this.moduleCount<=t+r))for(var n=-1;n<=7;n++)e+n<=-1||this.moduleCount<=e+n||(0<=r&&r<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==r||6==r)||2<=r&&r<=4&&2<=n&&n<=4?this.modules[t+r][e+n]=!0:this.modules[t+r][e+n]=!1)},getBestMaskPattern:function(){for(var t=0,e=0,r=0;r<8;r++){this.makeImpl(!0,r);var n=f.getLostPoint(this);(0==r||t>n)&&(t=n,e=r)}return e},setupTimingPattern:function(){for(var t=8;t<this.moduleCount-8;t++)null==this.modules[t][6]&&(this.modules[t][6]=t%2==0),null==this.modules[6][t]&&(this.modules[6][t]=t%2==0)},setupPositionAdjustPattern:function(){for(var t=f.getPatternPosition(this.typeNumber),e=0;e<t.length;e++)for(var r=0;r<t.length;r++){var n=t[e],o=t[r];if(null==this.modules[n][o])for(var i=-2;i<=2;i++)for(var a=-2;a<=2;a++)this.modules[n+i][o+a]=-2==i||2==i||-2==a||2==a||0==i&&0==a}},setupTypeNumber:function(t){for(var e=f.getBCHTypeNumber(this.typeNumber),r=0;r<18;r++){var n=!t&&1==(e>>r&1);this.modules[Math.floor(r/3)][r%3+this.moduleCount-8-3]=n}for(r=0;r<18;r++){n=!t&&1==(e>>r&1);this.modules[r%3+this.moduleCount-8-3][Math.floor(r/3)]=n}},setupTypeInfo:function(t,e){for(var r=this.errorCorrectLevel<<3|e,n=f.getBCHTypeInfo(r),o=0;o<15;o++){var i=!t&&1==(n>>o&1);o<6?this.modules[o][8]=i:o<8?this.modules[o+1][8]=i:this.modules[this.moduleCount-15+o][8]=i}for(o=0;o<15;o++){i=!t&&1==(n>>o&1);o<8?this.modules[8][this.moduleCount-o-1]=i:o<9?this.modules[8][15-o-1+1]=i:this.modules[8][15-o-1]=i}this.modules[this.moduleCount-8][8]=!t},mapData:function(t,e){for(var r=-1,n=this.moduleCount-1,o=7,i=0,a=this.moduleCount-1;a>0;a-=2)for(6==a&&a--;n>=0;){for(var u=0;u<2;u++)if(null==this.modules[n][a-u]){var h=!1;i<t.length&&(h=1==(t[i]>>>o&1));var c=f.getMask(e,n,a-u);c&&(h=!h),this.modules[n][a-u]=h,--o,-1==o&&(i++,o=7)}if(n+=r,n<0||this.moduleCount<=n){n-=r,r=-r;break}}}};o.createData=function(t,e,r){for(var n=d.getRSBlocks(t,e),i=new n,o=0;o<r.length;o++){var a=r[o];i.put(a.mode,4),i.put(a.data.length,f.getLengthInBits(a.mode,t)),a.write(i)}for(var u=0,h=0;h<n.length;h++)u+=n[h].dataCount;for(var c=8*u;i.length+4<=c;)i.put(0,4);for(;i.length%8!=0;)i.putBit(!1);for(;!(i.length>=c);){if(i.put(236,8),i.length>=c)break;i.put(17,8)}return function(t,e){for(var r=0,n=0,o=0,i=new Array(e),a=new Array(e),u=0;u<e;u++)i[u]=0,a[u]=0;for(u=0;u<t.length;u++)i[u]=255&t[u];for(var h=f.getErrorCorrectPolynomial(e),c=new u(i,0).mod(h),s=c.getLength(),l=0;l<e-s;l++)a[l]=0;for(l=0;l<s;l++)a[l+e-s]=c.get(l);return a}(i.getBuffer(),function(t,e){for(var r=0,n=0,o=0,i=0;i<t.length;i++)r+=t[i].dataCount,n=Math.max(n,t[i].dataCount),o=Math.max(o,t[i].totalCount-t[i].dataCount);return{totalCount:r,dataCount:n,eccCount:o}}(n).totalCount)};e.prototype={getLength:function(){return this.data.length},write:function(t){for(var e=0;e<this.data.length;e++)t.put(this.data.charCodeAt(e),8)}};c.prototype={makeCode:function(t){this._oQRCode=new o(this._htOption.typeNumber,this._htOption.correctLevel),this._oQRCode.addData(t),this._oQRCode.make(),this._el.title=t,this._el.innerHTML="",this._el.appendChild(this._createCanvas())},_createCanvas:function(){var t=document.createElement("canvas"),e=t.getContext("2d"),r=this._htOption.width,n=this._htOption.height,o=this._oQRCode.getModuleCount(),i=r/o,a=n/o,u=Math.round(i),h=Math.round(a);t.width=r,t.height=n;for(var c=0;c<o;c++)for(var s=0;s<o;s++){e.fillStyle=this._oQRCode.isDark(c,s)?this._htOption.colorDark:this._htOption.colorLight;var l=Math.ceil((s+1)*i)-Math.floor(s*i),f=Math.ceil((c+1)*a)-Math.floor(c*a);e.fillRect(Math.round(s*i),Math.round(c*a),l,f)}return t}};window.QRCode=c;window.QRCodeCorrectLevel=l;})();
+</script>
 
 <script>
 (() => {
@@ -304,57 +303,37 @@
     return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
-  function canRenderQr(){
-    return typeof window.QRCode === "function";
+  function showQrError(targetEl){
+    targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
-  function showQrError(targetEl, extra){
-    const parts = [];
-    parts.push("QR-koden kunde inte renderas.");
-    if (window.__proofyQrLibError) parts.push("QR-biblioteket kunde inte laddas.");
-    if (extra) parts.push(extra);
-    targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
-  }
-
+  // ✅ 100% match mot din qr.min.js: new QRCode(el); set _htOption; makeCode(text)
   function renderQr(targetEl, text){
-    if (!targetEl) return;
+    try{
+      if (!targetEl) return;
 
-    targetEl.innerHTML = `<div class="meta">Laddar QR…</div>`;
+      targetEl.innerHTML = "";
 
-    let tries = 0;
-    const maxTries = 200;
-
-    const t = setInterval(() => {
-      tries++;
-
-      if (canRenderQr()){
-        clearInterval(t);
-        doRender(targetEl, text);
+      if (typeof window.QRCode !== "function"){
+        showQrError(targetEl);
         return;
       }
 
-      if (window.__proofyQrLibError || tries >= maxTries){
-        clearInterval(t);
-        showQrError(targetEl, tries >= maxTries ? "Tog för lång tid att ladda." : "");
-      }
-    }, 50);
-  }
-
-  // ✅ Anpassad till din qr.min.js + FIX för långa URL:er (typeNumber=0 => auto-fit)
-  function doRender(targetEl, text){
-    try{
-      targetEl.innerHTML = "";
-
       const qr = new window.QRCode(targetEl);
 
-      if (qr && qr._htOption){
+      if (!qr || typeof qr.makeCode !== "function"){
+        showQrError(targetEl);
+        return;
+      }
+
+      // Sätt optioner på rätt plats för din build
+      if (qr._htOption){
         qr._htOption.width = 150;
         qr._htOption.height = 150;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#eaf0ff";
 
-        // ✅ VIKTIGT: din build har default typeNumber=4 (för liten för URL ibland)
-        // typeNumber < 1 triggar auto-fit i qr.min.js
+        // ✅ Auto-fit (din build auto-itererar bara när typeNumber < 1)
         qr._htOption.typeNumber = 0;
 
         if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
@@ -362,20 +341,14 @@
         }
       }
 
-      if (!qr || typeof qr.makeCode !== "function"){
-        showQrError(targetEl, "QR-biblioteket laddades, men API saknar makeCode().");
-        return;
-      }
-
       qr.makeCode(text);
 
-      const ok = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
-      if (!ok){
-        showQrError(targetEl, "QR-biblioteket körde, men skapade ingen canvas.");
-      }
+      // säkerställ att canvas verkligen skapades
+      const ok = !!targetEl.querySelector("canvas");
+      if (!ok) showQrError(targetEl);
     } catch (e){
       console.error("QR render error:", e);
-      showQrError(targetEl, "Ett scriptfel inträffade vid rendering.");
+      showQrError(targetEl);
     }
   }
 
