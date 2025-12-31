@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="sv">
 <head>
@@ -9,6 +10,28 @@
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
   <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
+
+  <style>
+    /* Gör filvalet “professionellt” (ingen browser-UI som säger Choose file) */
+    .filePickRow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+    .filePickRow .filePickBtn { display:inline-flex; align-items:center; gap:8px; cursor:pointer; }
+    .filePickRow .filePickMeta { opacity:.9; }
+    .fileInputHidden {
+      position:absolute !important;
+      left:-10000px !important;
+      top:auto !important;
+      width:1px !important;
+      height:1px !important;
+      overflow:hidden !important;
+    }
+
+    /* QR-box: säkerställ att canvas får plats och syns */
+    .qrBox { min-height:150px; min-width:150px; display:flex; align-items:center; justify-content:center; border-radius:14px; }
+    .qrBox canvas { display:block; border-radius:10px; }
+
+    /* “Rapportkänsla” i resultat (kompakt) */
+    .mono { word-break: break-all; }
+  </style>
 </head>
 
 <body>
@@ -36,7 +59,7 @@
         <nav class="mnavMenu" aria-label="Meny">
           <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
-          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
@@ -69,11 +92,19 @@
             Välj den filversion som ska gälla som referens. Du får Verifierings-ID, delbar länk och QR-kod.
           </p>
 
-          <input id="fileInput" type="file" />
+          <!-- HIDDEN native input (vi triggar den med label-knapp) -->
+          <input id="fileInput" class="fileInputHidden" type="file" />
+
+          <div class="filePickRow">
+            <label class="btn primary filePickBtn" for="fileInput" role="button" aria-label="Välj referensunderlag (fil)">
+              Välj referensunderlag
+            </label>
+            <span class="small filePickMeta">PDF, Excel, bilder, ZIP…</span>
+          </div>
+
           <div id="dropZone" class="drop" style="margin-top:10px">Dra &amp; släpp underlag här</div>
 
           <div id="fileInfo" class="meta" style="margin-top:10px">Inget underlag valt.</div>
-
           <div id="fileHint" class="small" style="margin-top:8px; display:none;" aria-live="polite"></div>
 
           <div class="actions" style="margin-top:12px">
@@ -90,9 +121,7 @@
           </div>
 
           <div class="small" style="margin-top:10px">
-            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).
-            <br />
-            <b>Obs:</b> En ny export/omskanning kan räknas som en ny filversion även om dokumentet “ser likadant ut”.
+            <b>Obs:</b> En ny export/omskanning/konvertering räknas ofta som ny filversion även om dokumentet “ser likadant ut”.
           </div>
         </section>
 
@@ -133,7 +162,7 @@
             <details style="margin-top:12px;">
               <summary>Tekniska detaljer (valfritt)</summary>
               <p style="margin: 10px 0 0;" class="meta">
-                Dessa uppgifter kan vara användbara vid teknisk felsökning, men behövs normalt inte i byråprocessen.
+                För felsökning – behövs normalt inte i byråprocessen.
               </p>
 
               <div class="hr"></div>
@@ -225,7 +254,7 @@
   </div>
 </footer>
 
-<script src="/qr.min.js?v=2025-12-24a"
+<script src="/qr.min.js?v=2025-12-31-qrfix"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -317,6 +346,7 @@
     submitterOut.textContent = "—";
     txOut.textContent = "—";
     qrBox.innerHTML = "";
+    manualQrBox.innerHTML = "";
     receiptBtn.style.display = "none";
   }
 
@@ -344,8 +374,7 @@
 
   function showQrError(targetEl, extra){
     const parts = [];
-    parts.push("QR-funktionen kunde inte laddas.");
-    if (window.__proofyQrLibError) parts.push("Kontrollera att /qr.min.js finns i deploy.");
+    parts.push("QR-koden kunde inte renderas.");
     if (extra) parts.push(extra);
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
@@ -372,19 +401,20 @@
 
   async function renderQr(targetEl, text){
     if (!targetEl) return;
+
     targetEl.innerHTML = `<div class="meta">Skapar QR…</div>`;
 
     const ok = await waitForQrLib(2500);
     if (!ok){
-      showQrError(targetEl, "Kunde inte initiera QR.");
+      showQrError(targetEl, "Kontrollera att /qr.min.js finns i deploy och inte cache:as fel.");
       return;
     }
 
     try{
-      // KORREKT för din minimal-build: new QRCode(el) + makeCode(text)
+      // Din qr.min.js-build: QRCode(el) + makeCode(text)
       const qr = new window.QRCode(targetEl);
 
-      // Sätt önskade options
+      // Anpassa optioner innan makeCode
       qr._htOption.width = 150;
       qr._htOption.height = 150;
       qr._htOption.colorDark = "#0b1220";
@@ -398,10 +428,12 @@
 
       const canvas = targetEl.querySelector("canvas");
       if (!canvas){
-        showQrError(targetEl, "QR-koden kunde inte renderas (canvas skapades inte).");
+        showQrError(targetEl, "Canvas skapades inte (okänt scriptfel).");
       }
-    } catch {
-      showQrError(targetEl, "QR-koden kunde inte renderas.");
+    } catch (e){
+      showQrError(targetEl, "Ett scriptfel inträffade vid rendering.");
+      // Extra hjälp i console vid behov:
+      console.error("QR render error:", e);
     }
   }
 
@@ -414,7 +446,6 @@
 
     localIdBox.style.display = "none";
     localIdOut.textContent = "—";
-    fileInput.value = "";
 
     if(!currentFile){
       fileInfo.textContent = "Inget underlag valt.";
@@ -469,14 +500,13 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      // QR (robust + korrekt)
-      renderQr(qrBox, currentLink);
-
       resultBox.style.display = "block";
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
-
       setPill("Registrerar…");
+
+      // Rendera QR tidigt (oavsett register-API)
+      renderQr(qrBox, currentLink);
 
       const res = await fetch("/api/register", {
         method: "POST",
@@ -498,12 +528,9 @@
       }
 
       regStatusOut.textContent = "Registrerad";
-
-      if (data.timestamp) {
-        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
-      } else {
-        timeOut.textContent = "—";
-      }
+      timeOut.textContent = data.timestamp
+        ? new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE")
+        : "—";
 
       submitterOut.textContent = data.submitter || "—";
       txOut.textContent = data.txHash || "—";
@@ -549,7 +576,6 @@
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
 
-    // QR även här
     renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
