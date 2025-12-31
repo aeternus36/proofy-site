@@ -307,8 +307,9 @@
   </div>
 </footer>
 
-<!-- ✅ Byt hit (din fungerande URL) -->
+<!-- ✅ QR-lib: gör laddning deterministisk -->
 <script src="/assets/qr.min.js?v=2025-12-31-qrfix"
+  defer
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -557,6 +558,17 @@
     // tydlig placeholder
     targetEl.innerHTML = `<div class="meta">Skapar QR…</div>`;
 
+    // 🔒 Säkerställ att QR-lib finns även om sidan råkar sakna script-import (t.ex. /register/)
+    if (!canRenderQr() && !window.__proofyQrLibLoaded && !window.__proofyQrScriptInjected) {
+      window.__proofyQrScriptInjected = true;
+
+      const s = document.createElement("script");
+      s.src = "/assets/qr.min.js?v=2025-12-31-qrfix";
+      s.onload = () => { window.__proofyQrLibLoaded = true; };
+      s.onerror = () => { window.__proofyQrLibError = true; };
+      document.head.appendChild(s);
+    }
+
     // om script inte laddat ännu: vänta kort
     if (!canRenderQr()){
       let tries = 0;
@@ -753,7 +765,7 @@
         receiptBtn.style.display = "inline-flex";
       }
 
-      // ✅ QR render (fixad)
+      // ✅ QR render
       renderQr(qrBox, currentLink);
 
       regStatusOut.textContent = "Registrerar…";
