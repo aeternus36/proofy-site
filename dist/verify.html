@@ -107,66 +107,126 @@
         </section>
 
         <section aria-label="Verifieringsresultat">
-          <div style="font-weight:950; font-size:16px;">Verifieringsresultat</div>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+            <div style="font-weight:950; font-size:16px;">Verifieringsresultat</div>
+            <div class="meta" id="reportMeta" style="opacity:.85; display:none;">Rapport</div>
+          </div>
           <div class="hr"></div>
 
           <div id="resultBox" style="display:none;">
-            <div id="resultHeadline" style="font-size:20px; font-weight:900;"></div>
-
-            <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
-            <div class="copyBlockWrap" style="position:relative; margin-top:8px;">
-              <button type="button" class="copyIconBtn" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID"
-                      style="display:none; position:absolute; top:8px; right:8px; width:36px; height:32px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
-                <span aria-hidden="true" style="display:block; font-size:16px; line-height:30px;">⧉</span>
-              </button>
-              <pre class="mono copyBlock" id="outHash" tabindex="0" role="button" aria-label="Verifierings-ID (klicka för att kopiera)"
-                   style="margin:0; cursor:pointer; padding-right:56px;">—</pre>
-              <div class="small" id="copyIdHint" style="display:none; margin-top:6px; opacity:.9;">Klicka på blocket för att kopiera.</div>
-              <span id="copyIdPill" class="pill" style="display:none; margin-top:8px;"> </span>
+            <!-- Rapport-head -->
+            <div id="resultHeadline"
+                 style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <div class="meta" style="margin-top:10px;">Underlagets tekniska fingeravtryck</div>
-            <div class="copyBlockWrap" style="position:relative; margin-top:8px;">
-              <button type="button" class="copyIconBtn" id="copyFileHashIconBtn" aria-label="Kopiera fingeravtryck"
-                      style="display:none; position:absolute; top:8px; right:8px; width:36px; height:32px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
-                <span aria-hidden="true" style="display:block; font-size:16px; line-height:30px;">⧉</span>
-              </button>
-              <pre class="mono copyBlock" id="outFileHash" tabindex="0" role="button" aria-label="Underlagets fingeravtryck (klicka för att kopiera)"
-                   style="margin:0; cursor:pointer; padding-right:56px;">—</pre>
-              <div class="small" id="copyFileHashHint" style="display:none; margin-top:6px; opacity:.9;">Klicka på blocket för att kopiera.</div>
-              <span id="copyFileHashPill" class="pill" style="display:none; margin-top:8px;"> </span>
+            <!-- Kompakt “fält”-layout -->
+            <div style="margin-top:12px;">
+              <div class="meta">Verifierings-ID</div>
+              <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
+                <button type="button" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID" title="Kopiera"
+                        style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
+                  <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
+                </button>
+
+                <div id="outHash"
+                     class="mono"
+                     tabindex="0"
+                     role="button"
+                     title="Klicka för att kopiera"
+                     aria-label="Verifierings-ID (klicka för att kopiera)"
+                     style="
+                       padding:8px 10px;
+                       border-radius:12px;
+                       border:1px solid rgba(255,255,255,.14);
+                       background:rgba(255,255,255,.03);
+                       cursor:pointer;
+                       padding-right:52px;
+                       user-select:text;
+                       overflow-wrap:anywhere;
+                       word-break:break-word;
+                       font-size:13px;
+                       line-height:1.3;
+                     ">—</div>
+
+                <span id="copyIdPill" class="pill" style="display:none; margin-top:8px;"> </span>
+              </div>
+
+              <div class="meta" style="margin-top:12px;">Underlagets tekniska fingeravtryck</div>
+              <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
+                <button type="button" id="copyFileHashIconBtn" aria-label="Kopiera fingeravtryck" title="Kopiera"
+                        style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
+                  <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
+                </button>
+
+                <div id="outFileHash"
+                     class="mono"
+                     tabindex="0"
+                     role="button"
+                     title="Klicka för att kopiera"
+                     aria-label="Underlagets fingeravtryck (klicka för att kopiera)"
+                     style="
+                       padding:8px 10px;
+                       border-radius:12px;
+                       border:1px solid rgba(255,255,255,.14);
+                       background:rgba(255,255,255,.03);
+                       cursor:pointer;
+                       padding-right:52px;
+                       user-select:text;
+                       overflow-wrap:anywhere;
+                       word-break:break-word;
+                       font-size:13px;
+                       line-height:1.3;
+                     ">—</div>
+
+                <span id="copyFileHashPill" class="pill" style="display:none; margin-top:8px;"> </span>
+              </div>
+
+              <div class="hr" style="margin-top:14px;"></div>
+
+              <!-- Status/tider: rapporttabell-känsla -->
+              <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
+                <div>
+                  <div class="meta">Registreringsstatus</div>
+                  <div id="outRegStatus" class="mono" style="margin-top:6px;">—</div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
+                  <div>
+                    <div class="meta">Registreringstid (Sverige)</div>
+                    <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
+                  </div>
+
+                  <div>
+                    <div class="meta">Registreringstid (UTC)</div>
+                    <div id="outRegUtc" class="mono" style="margin-top:6px;">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="outExplain"
+                   style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+                <div id="outExplainTitle" style="font-weight:900;"></div>
+                <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
+              </div>
+
+              <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
+                <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
+                <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
+                <span id="copySummaryPill" class="pill" style="display:none;"> </span>
+              </div>
+
+              <details style="margin-top:12px;">
+                <summary>Notering för dokumentation (valfritt)</summary>
+                <p class="small" style="margin:10px 0 8px; opacity:.95;">
+                  Praktiskt om du vill klistra in en kort notering i arbetsdokument/revisionsfil.
+                </p>
+                <pre class="mono" id="summaryOut" style="white-space:pre-wrap;">—</pre>
+              </details>
+
+              <div class="meta" style="margin-top:12px; opacity:.85;">
+                Not: Proofy verifierar filversion (identisk/avvikande), inte dokumentets sakliga riktighet.
+              </div>
             </div>
-
-            <div class="hr"></div>
-
-            <div class="meta">Registreringsstatus</div>
-            <div id="outRegStatus" class="mono">—</div>
-
-            <div class="meta" style="margin-top:10px;">Registreringstid (Sverige)</div>
-            <pre class="mono" id="outRegSe">—</pre>
-
-            <div class="meta" style="margin-top:10px;">Registreringstid (UTC)</div>
-            <pre class="mono" id="outRegUtc">—</pre>
-
-            <div id="outExplain"
-                 style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
-              <div id="outExplainTitle" style="font-weight:900;"></div>
-              <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
-            </div>
-
-            <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
-              <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
-              <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
-              <span id="copySummaryPill" class="pill" style="display:none;"> </span>
-            </div>
-
-            <details style="margin-top:12px;">
-              <summary>Notering för dokumentation (valfritt)</summary>
-              <p class="small" style="margin:10px 0 8px; opacity:.95;">
-                Praktiskt om du vill klistra in en kort notering i arbetsdokument/revisionsfil.
-              </p>
-              <pre class="mono" id="summaryOut" style="white-space:pre-wrap;">—</pre>
-            </details>
           </div>
 
           <div id="errorBox" style="display:none;">
@@ -218,6 +278,8 @@
   const inputAlertText = $("inputAlertText");
   const inputAlertHelp = $("inputAlertHelp");
 
+  const reportMeta = $("reportMeta");
+
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
   const outHash = $("outHash");
@@ -233,11 +295,9 @@
 
   const copyIdIconBtn = $("copyIdIconBtn");
   const copyIdPill = $("copyIdPill");
-  const copyIdHint = $("copyIdHint");
 
   const copyFileHashIconBtn = $("copyFileHashIconBtn");
   const copyFileHashPill = $("copyFileHashPill");
-  const copyFileHashHint = $("copyFileHashHint");
 
   const copySummaryBtn = $("copySummaryBtn");
   const copySummaryPill = $("copySummaryPill");
@@ -321,12 +381,12 @@
     errorMsg.textContent = "";
     if (openCertBtn) openCertBtn.style.display = "none";
 
+    if (reportMeta) reportMeta.style.display = "none";
+
     if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
-    if (copyIdHint) copyIdHint.style.display = "none";
     resetCopyPill(copyIdPill);
 
     if (copyFileHashIconBtn) copyFileHashIconBtn.style.display = "none";
-    if (copyFileHashHint) copyFileHashHint.style.display = "none";
     resetCopyPill(copyFileHashPill);
 
     if (copySummaryBtn) copySummaryBtn.style.display = "none";
@@ -340,6 +400,7 @@
     outRegStatus.textContent = "—";
     outRegSe.textContent = "—";
     outRegUtc.textContent = "—";
+
     resultHeadline.textContent = "";
     outExplainTitle.textContent = "";
     outExplainBody.textContent = "";
@@ -349,14 +410,15 @@
       outExplain.style.background = "rgba(255,255,255,.06)";
     }
 
-    // reset hover styling (inline) if any
     if (outHash){
-      outHash.style.borderColor = "";
-      outHash.style.background = "";
+      outHash.style.outline = "";
+      outHash.style.outlineOffset = "";
+      outHash.style.background = "rgba(255,255,255,.03)";
     }
     if (outFileHash){
-      outFileHash.style.borderColor = "";
-      outFileHash.style.background = "";
+      outFileHash.style.outline = "";
+      outFileHash.style.outlineOffset = "";
+      outFileHash.style.background = "rgba(255,255,255,.03)";
     }
   }
 
@@ -450,7 +512,6 @@
   function setExplainTone(match){
     if (!outExplain) return;
 
-    // audit-tone: väldigt nedtonat (inte “glad-grönt”)
     if (match === true) {
       outExplain.style.borderColor = "rgba(80,255,180,.22)";
       outExplain.style.background = "rgba(80,255,180,.07)";
@@ -466,46 +527,44 @@
     outExplain.style.background = "rgba(255,255,255,.06)";
   }
 
-  function setCopyBlockInteractivity(blockEl, iconBtnEl, hintEl, enabled){
-    if (!blockEl) return;
+  function applyCopyHover(fieldEl, iconBtnEl, enabled){
+    if (!fieldEl) return;
+
     if (!enabled){
-      blockEl.style.cursor = "";
-      blockEl.style.outline = "";
+      fieldEl.onmouseenter = null;
+      fieldEl.onmouseleave = null;
+      fieldEl.onfocus = null;
+      fieldEl.onblur = null;
       if (iconBtnEl) iconBtnEl.style.display = "none";
-      if (hintEl) hintEl.style.display = "none";
       return;
     }
 
-    blockEl.style.cursor = "pointer";
-    if (iconBtnEl) iconBtnEl.style.display = "inline-flex";
-    if (hintEl) hintEl.style.display = "none";
-
-    // Hover-effekt (audit-grade, subtil)
     const onEnter = () => {
-      if (hintEl) hintEl.style.display = "block";
-      blockEl.style.outline = "1px solid rgba(255,255,255,.14)";
-      blockEl.style.outlineOffset = "2px";
-      blockEl.style.background = "rgba(255,255,255,.05)";
+      if (iconBtnEl) iconBtnEl.style.display = "inline-flex";
+      fieldEl.style.outline = "1px solid rgba(255,255,255,.14)";
+      fieldEl.style.outlineOffset = "2px";
+      fieldEl.style.background = "rgba(255,255,255,.05)";
     };
+
     const onLeave = () => {
-      if (hintEl) hintEl.style.display = "none";
-      blockEl.style.outline = "";
-      blockEl.style.outlineOffset = "";
-      blockEl.style.background = "";
+      if (iconBtnEl) iconBtnEl.style.display = "none";
+      fieldEl.style.outline = "";
+      fieldEl.style.outlineOffset = "";
+      fieldEl.style.background = "rgba(255,255,255,.03)";
     };
 
-    // undvik dubbla listeners vid flera körningar
-    blockEl.onmouseenter = onEnter;
-    blockEl.onmouseleave = onLeave;
+    fieldEl.onmouseenter = onEnter;
+    fieldEl.onmouseleave = onLeave;
 
-    // keyboard-focus: samma känsla
-    blockEl.onfocus = () => {
-      blockEl.style.outline = "2px solid rgba(120, 180, 255, .25)";
-      blockEl.style.outlineOffset = "2px";
+    fieldEl.onfocus = () => {
+      if (iconBtnEl) iconBtnEl.style.display = "inline-flex";
+      fieldEl.style.outline = "2px solid rgba(120, 180, 255, .25)";
+      fieldEl.style.outlineOffset = "2px";
     };
-    blockEl.onblur = () => {
-      blockEl.style.outline = "";
-      blockEl.style.outlineOffset = "";
+    fieldEl.onblur = () => {
+      if (iconBtnEl) iconBtnEl.style.display = "none";
+      fieldEl.style.outline = "";
+      fieldEl.style.outlineOffset = "";
     };
   }
 
@@ -595,7 +654,6 @@
     updateValidationUI();
   });
 
-  // Kopiering: klick på blocket (primärt) + ikon (sekundärt)
   if (outHash) {
     outHash.addEventListener("click", async () => {
       await copyWithPill({ text: outHash.textContent, pillEl: copyIdPill });
@@ -686,16 +744,24 @@
       if (myOp !== opId) return;
 
       resultBox.style.display = "block";
+      if (reportMeta) reportMeta.style.display = "block";
+
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
 
-      // visa kopieringsaffordance först när vi har riktiga värden
-      setCopyBlockInteractivity(outHash, copyIdIconBtn, copyIdHint, true);
-      setCopyBlockInteractivity(outFileHash, copyFileHashIconBtn, copyFileHashHint, true);
+      applyCopyHover(outHash, copyIdIconBtn, true);
+      applyCopyHover(outFileHash, copyFileHashIconBtn, true);
 
-      resultHeadline.innerHTML = match
-        ? `<span class="ok">✅ Oförändrat underlag</span>`
-        : `<span class="err">⚠️ Avvikelse – annan filversion</span>`;
+      // rapportkänsla: rubriken bor i en “report header”-rad
+      if (match) {
+        resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
+        resultHeadline.style.background = "rgba(80,255,180,.06)";
+        resultHeadline.innerHTML = `<span class="ok">✅ Oförändrat underlag</span> <span class="meta">(överensstämmer med referensen)</span>`;
+      } else {
+        resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
+        resultHeadline.style.background = "rgba(255,80,80,.06)";
+        resultHeadline.innerHTML = `<span class="err">⚠️ Avvikelse</span> <span class="meta">(annan filversion än referensen)</span>`;
+      }
 
       setExplainTone(match);
 
