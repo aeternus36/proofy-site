@@ -110,7 +110,7 @@
           </div>
         </section>
 
-        <!-- Höger: rapport -->
+        <!-- Höger: rapport (matchar verify.html’s “Verifieringsresultat”) -->
         <section aria-label="Registreringsrapport">
           <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
             <div style="font-weight:950; font-size:16px;">Registreringsrapport</div>
@@ -307,8 +307,8 @@
   </div>
 </footer>
 
-<!-- ✅ FIX: peka på den enda URL som ni verifierat funkar hos er (inte /assets eller /dist/assets) -->
-<script src="/qr.min.js?v=2025-12-31-qrfix"
+<!-- VIKTIGT: peka på den fil som faktiskt finns (du har haft 404 på /dist/assets/...) -->
+<script src="/dist/assets/qr.min.js?v=2025-12-31-qrfix"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -541,20 +541,21 @@
   function showQrError(targetEl, extra){
     const parts = [];
     parts.push("QR-koden kunde inte renderas.");
-    if (window.__proofyQrLibError) parts.push("QR-skriptet kunde inte laddas (kontrollera sökvägen).");
     if (extra) parts.push(extra);
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
 
+  // ✅ Robust: stödjer både "minimal build" (QRCode(el)+makeCode)
+  // och "options build" (QRCode(el,{text,...}))
   function renderQr(targetEl, text){
     if (!targetEl) return;
 
     if (!canRenderQr()){
-      if (window.__proofyQrLibError) { showQrError(targetEl); return; }
+      if (window.__proofyQrLibError) { showQrError(targetEl, "QR-biblioteket kunde inte laddas."); return; }
       targetEl.innerHTML = `<div class="meta">Laddar QR…</div>`;
 
       let tries = 0;
-      const maxTries = 40;
+      const maxTries = 60;
       const t = setInterval(() => {
         tries++;
         if (canRenderQr()){
@@ -574,21 +575,45 @@
     doRender(targetEl, text);
   }
 
-  /**
-   * ✅ FIX: Använd rätt API för din qr.min.js-build (qrcodejs):
-   * new QRCode(el, options) + qr.makeCode(text)
-   * (inte { text: ... }-varianten)
-   */
   function doRender(targetEl, text){
     targetEl.innerHTML = "";
 
-    try{
+    const t = String(text || "").trim();
+    if (!t) {
+      showQrError(targetEl, "Ingen länk att koda.");
+      return;
+    }
+
+    // Försök A: minimal-build (new QRCode(el) + makeCode)
+    try {
+      const qr = new window.QRCode(targetEl);
+      if (qr && qr._htOption) {
+        qr._htOption.width = 150;
+        qr._htOption.height = 150;
+        qr._htOption.colorDark = "#0b1220";
+        qr._htOption.colorLight = "#eaf0ff";
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M) {
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
+        }
+      }
+      if (typeof qr.makeCode === "function") {
+        qr.makeCode(t);
+        const node = targetEl.querySelector("canvas, img");
+        if (node) return;
+      }
+    } catch (e1) {
+      console.error("QR try A failed:", e1);
+    }
+
+    // Försök B: options-build (new QRCode(el,{text,...}))
+    try {
       const correctLevel =
         (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M)
           ? window.QRCodeCorrectLevel.M
           : undefined;
 
-      const qr = new window.QRCode(targetEl, {
+      const qr2 = new window.QRCode(targetEl, {
+        text: t,
         width: 150,
         height: 150,
         colorDark: "#0b1220",
@@ -596,16 +621,15 @@
         correctLevel
       });
 
-      qr.makeCode(text);
+      if (qr2 && typeof qr2.makeCode === "function") qr2.makeCode(t);
 
-      const canvas = targetEl.querySelector("canvas");
-      if (!canvas){
-        showQrError(targetEl, "Canvas skapades inte (okänt scriptfel).");
-      }
-    } catch (e){
-      console.error("QR render error:", e);
-      showQrError(targetEl, "Ett scriptfel inträffade vid rendering.");
+      const node = targetEl.querySelector("canvas, img");
+      if (node) return;
+    } catch (e2) {
+      console.error("QR try B failed:", e2);
     }
+
+    showQrError(targetEl, "Ett scriptfel inträffade vid rendering. Se Console → 'QR try A/B failed'.");
   }
 
   function updateValidationUI(){
@@ -718,7 +742,6 @@
       resultBox.style.display = "block";
       if (reportMeta) reportMeta.style.display = "block";
 
-      // Headline neutral direkt (uppdateras efter registrering)
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
       headline.innerHTML = `<span class="meta">Verifierings-ID skapat</span>`;
@@ -734,12 +757,11 @@
         receiptBtn.style.display = "inline-flex";
       }
 
-      // Rendera QR tidigt
+      // QR tidigt (oavsett register-API)
       renderQr(qrBox, currentLink);
 
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
-
       setPill("Registrerar…");
 
       const res = await fetch("/api/register", {
@@ -755,7 +777,6 @@
         throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
       }
 
-      // audit-ton (nedtonad grön)
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
 
@@ -766,7 +787,6 @@
       }
 
       regStatusOut.textContent = "Registrerad";
-
       timeOut.textContent = data.timestamp
         ? new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE")
         : "—";
@@ -787,7 +807,7 @@
     }
   });
 
-  // Manuell del (oförändrad)
+  // Manuell del
   function setManualState(id){
     const clean = (id || "").trim();
     if (!isIdFormat(clean)){
@@ -803,6 +823,7 @@
 
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
+
     renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
