@@ -59,11 +59,21 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om ett underlag är samma version som det som tidigare fastställdes.
-      Underlaget lämnar aldrig din dator.
+      Kontrollera om ett underlag är samma filversion som den som registrerades när referensen fastställdes.
+      <strong>Underlaget lämnar aldrig din dator.</strong>
     </p>
 
     <div class="card content" style="margin-top:14px;">
+      <!-- NY: kort “hur funkar det” (revisorspråk, låg risk) -->
+      <div style="margin-bottom:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+        <div style="font-weight:900;">Så funkar verifieringen</div>
+        <div class="small" style="margin-top:6px; opacity:.95;">
+          1) Klistra in Verifierings-ID som ligger i ärendet.<br/>
+          2) Välj filen du vill kontrollera.<br/>
+          3) Proofy beräknar ett fingeravtryck lokalt och visar om filen är identisk med referensen.
+        </div>
+      </div>
+
       <div class="grid2">
 
         <section aria-label="Verifieringsuppgifter">
@@ -99,6 +109,11 @@
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
             <b>Tips:</b> Ny export/omskanning kan ge annan filversion även om dokumentet “ser likadant ut”.
+          </p>
+
+          <!-- NY: praktisk notis för revisorsflöde -->
+          <p class="small" style="margin-top:10px; margin-bottom:0;">
+            <b>Rekommendation:</b> Spara Verifierings-ID i ärendet vid fastställande (t.ex. bokslut/rapport/beslut) och verifiera bara vid behov.
           </p>
         </section>
 
@@ -136,6 +151,11 @@
             <div class="actions" style="margin-top:12px">
               <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
             </div>
+
+            <!-- NY: “vad betyder det i praktiken” (revisorspråk) -->
+            <p class="small" style="margin-top:12px; margin-bottom:0;">
+              <b>Tolkning:</b> Match betyder att filen är identisk med referensen. Ingen match betyder att filversionen skiljer sig (vanligt vid ny export, konvertering eller fel fil).
+            </p>
           </div>
 
           <div id="errorBox" style="display:none;">
@@ -438,7 +458,7 @@
         ? `<span class="ok">✅ Match</span>`
         : `<span class="err">❌ Ingen match</span>`;
 
-      // NY: mer “revisions”-förklaring
+      // mer “revisions”-förklaring
       if (match) {
         outExplainTitle.textContent = "Filen är oförändrad (identisk filversion).";
         outExplainBody.textContent =
