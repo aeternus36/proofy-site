@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
-  <meta name="description" content="Verifiera om en fil är oförändrad jämfört med ett registrerat Verifierings-ID." />
+  <meta name="description" content="Verifiera om ett underlag är oförändrat jämfört med ett registrerat Verifierings-ID." />
   <meta name="theme-color" content="#0b1220" />
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
@@ -58,8 +58,8 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om ett underlag är samma version som det som tidigare fastställdes.
-      Underlaget lämnar aldrig din dator.
+      Kontrollera om ett underlag är samma filversion som den som tidigare fastställdes.
+      <strong>Underlaget lämnar aldrig din dator.</strong>
     </p>
 
     <div class="card content" style="margin-top:14px;">
@@ -92,7 +92,6 @@
           </div>
 
           <div class="actions" style="margin-top:14px">
-            <!-- blir primär automatiskt när allt är redo -->
             <button class="btn soft" id="verifyBtn" disabled>Verifiera underlag</button>
             <span id="statusPill" class="pill">Förbered verifiering</span>
           </div>
@@ -106,11 +105,11 @@
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            <b>Tips:</b> Ny export/omskanning kan ge annan filversion även om dokumentet “ser likadant ut”.
+            <b>Tips:</b> Ny export/omskanning/konvertering kan ge annan filversion även om dokumentet “ser likadant ut”.
           </p>
         </section>
 
-        <section aria-label="Resultat">
+        <section aria-label="Verifieringsresultat">
           <div style="font-weight:950; font-size:16px;">Verifieringsresultat</div>
           <div class="hr"></div>
 
@@ -118,10 +117,18 @@
             <div id="resultHeadline" style="font-size:20px; font-weight:900;"></div>
 
             <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
-            <pre class="mono" id="outHash">—</pre>
+            <div class="actions" style="margin-top:8px; flex-wrap:wrap; gap:10px; align-items:center;">
+              <pre class="mono" id="outHash" style="margin:0; flex:1;">—</pre>
+              <button class="btn" id="copyIdInlineBtn" type="button" style="white-space:nowrap; display:none;">Kopiera ID</button>
+              <span id="copyIdInlinePill" class="pill" style="display:none;"> </span>
+            </div>
 
-            <div class="meta" style="margin-top:10px;">Underlagets fingeravtryck</div>
-            <pre class="mono" id="outFileHash">—</pre>
+            <div class="meta" style="margin-top:10px;">Underlagets tekniska fingeravtryck</div>
+            <div class="actions" style="margin-top:8px; flex-wrap:wrap; gap:10px; align-items:center;">
+              <pre class="mono" id="outFileHash" style="margin:0; flex:1;">—</pre>
+              <button class="btn" id="copyFileHashInlineBtn" type="button" style="white-space:nowrap; display:none;">Kopiera fingeravtryck</button>
+              <span id="copyFileHashInlinePill" class="pill" style="display:none;"> </span>
+            </div>
 
             <div class="hr"></div>
 
@@ -134,6 +141,7 @@
             <div class="meta" style="margin-top:10px;">Registreringstid (UTC)</div>
             <pre class="mono" id="outRegUtc">—</pre>
 
+            <!-- Audit-tone: diskret grön/röd beroende på match -->
             <div id="outExplain"
                  style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
               <div id="outExplainTitle" style="font-weight:900;"></div>
@@ -142,12 +150,12 @@
 
             <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
               <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
-              <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringssammanfattning</button>
+              <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
               <span id="copySummaryPill" class="pill" style="display:none;"> </span>
             </div>
 
             <details style="margin-top:12px;">
-              <summary>Sammanfattning för dokumentation (valfritt)</summary>
+              <summary>Notering för dokumentation (valfritt)</summary>
               <p class="small" style="margin:10px 0 8px; opacity:.95;">
                 Praktiskt om du vill klistra in en kort notering i arbetsdokument/revisionsfil.
               </p>
@@ -213,8 +221,14 @@
   const outRegUtc = $("outRegUtc");
   const openCertBtn = $("openCertBtn");
 
+  const outExplain = $("outExplain");
   const outExplainTitle = $("outExplainTitle");
   const outExplainBody = $("outExplainBody");
+
+  const copyIdInlineBtn = $("copyIdInlineBtn");
+  const copyIdInlinePill = $("copyIdInlinePill");
+  const copyFileHashInlineBtn = $("copyFileHashInlineBtn");
+  const copyFileHashInlinePill = $("copyFileHashInlinePill");
 
   const copySummaryBtn = $("copySummaryBtn");
   const copySummaryPill = $("copySummaryPill");
@@ -286,14 +300,23 @@
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
+  function resetCopyPills(){
+    if (copyIdInlinePill) { copyIdInlinePill.style.display = "none"; copyIdInlinePill.textContent = ""; }
+    if (copyFileHashInlinePill) { copyFileHashInlinePill.style.display = "none"; copyFileHashInlinePill.textContent = ""; }
+    if (copySummaryPill) { copySummaryPill.style.display = "none"; copySummaryPill.textContent = ""; }
+  }
+
   function resetUI(){
     resultBox.style.display = "none";
     errorBox.style.display = "none";
     errorMsg.textContent = "";
     if (openCertBtn) openCertBtn.style.display = "none";
 
+    if (copyIdInlineBtn) copyIdInlineBtn.style.display = "none";
+    if (copyFileHashInlineBtn) copyFileHashInlineBtn.style.display = "none";
     if (copySummaryBtn) copySummaryBtn.style.display = "none";
-    if (copySummaryPill) copySummaryPill.style.display = "none";
+    resetCopyPills();
+
     if (summaryOut) summaryOut.textContent = "—";
     lastRun = null;
 
@@ -305,6 +328,11 @@
     resultHeadline.textContent = "";
     outExplainTitle.textContent = "";
     outExplainBody.textContent = "";
+
+    if (outExplain){
+      outExplain.style.borderColor = "rgba(255,255,255,.14)";
+      outExplain.style.background = "rgba(255,255,255,.06)";
+    }
   }
 
   function getIdFromUrl(){
@@ -375,7 +403,7 @@
     lines.push(`Verifierings-ID: ${run.refHash || "—"}`);
     if (run.fileName) lines.push(`Underlag: ${run.fileName}`);
     if (run.fileSizeMb != null) lines.push(`Filstorlek: ${run.fileSizeMb} MB`);
-    lines.push(`Resultat: ${run.match ? "MATCH (oförändrad filversion)" : "INGEN MATCH (annan filversion)"}`);
+    lines.push(`Resultat: ${run.match ? "OFÖRÄNDRAT UNDERLAG (överensstämmer med referensen)" : "AVVIKELSE (annan filversion än referensen)"}`);
     lines.push("");
 
     if (run.exists === true) {
@@ -392,6 +420,42 @@
     lines.push(`Tidpunkt för verifiering: ${new Date().toLocaleString("sv-SE")}`);
 
     return lines.join("\n");
+  }
+
+  function setExplainTone(match){
+    if (!outExplain) return;
+
+    if (match === true) {
+      outExplain.style.borderColor = "rgba(80,255,180,.22)";
+      outExplain.style.background = "rgba(80,255,180,.07)";
+      return;
+    }
+    if (match === false) {
+      outExplain.style.borderColor = "rgba(255,80,80,.22)";
+      outExplain.style.background = "rgba(255,80,80,.07)";
+      return;
+    }
+
+    outExplain.style.borderColor = "rgba(255,255,255,.14)";
+    outExplain.style.background = "rgba(255,255,255,.06)";
+  }
+
+  async function copyWithPill({ text, pillEl }){
+    if (!pillEl) return false;
+    pillEl.style.display = "inline-block";
+    pillEl.textContent = "Kopierar…";
+    try {
+      await navigator.clipboard.writeText(text);
+      pillEl.textContent = "Kopierad ✅";
+      setTimeout(() => {
+        pillEl.style.display = "none";
+        pillEl.textContent = "";
+      }, 1600);
+      return true;
+    } catch {
+      pillEl.textContent = "Kunde inte kopiera";
+      return false;
+    }
   }
 
   function updateValidationUI(){
@@ -458,28 +522,27 @@
     updateValidationUI();
   });
 
+  if (copyIdInlineBtn) {
+    copyIdInlineBtn.addEventListener("click", async () => {
+      const txt = String(outHash?.textContent || "").trim();
+      if (!txt || txt === "—") return;
+      await copyWithPill({ text: txt, pillEl: copyIdInlinePill });
+    });
+  }
+
+  if (copyFileHashInlineBtn) {
+    copyFileHashInlineBtn.addEventListener("click", async () => {
+      const txt = String(outFileHash?.textContent || "").trim();
+      if (!txt || txt === "—") return;
+      await copyWithPill({ text: txt, pillEl: copyFileHashInlinePill });
+    });
+  }
+
   if (copySummaryBtn) {
     copySummaryBtn.addEventListener("click", async () => {
       if (!lastRun) return;
       const txt = buildSummaryText(lastRun);
-
-      if (copySummaryPill) {
-        copySummaryPill.style.display = "inline-block";
-        copySummaryPill.textContent = "Kopierar…";
-      }
-
-      try {
-        await navigator.clipboard.writeText(txt);
-        if (copySummaryPill) copySummaryPill.textContent = "Kopierad ✅";
-        setTimeout(() => {
-          if (copySummaryPill) {
-            copySummaryPill.style.display = "none";
-            copySummaryPill.textContent = "";
-          }
-        }, 1600);
-      } catch {
-        if (copySummaryPill) copySummaryPill.textContent = "Kunde inte kopiera";
-      }
+      await copyWithPill({ text: txt, pillEl: copySummaryPill });
     });
   }
 
@@ -529,17 +592,19 @@
       outFileHash.textContent = fileHash;
 
       resultHeadline.innerHTML = match
-        ? `<span class="ok">✅ Match</span>`
-        : `<span class="err">❌ Ingen match</span>`;
+        ? `<span class="ok">✅ Oförändrat underlag</span>`
+        : `<span class="err">⚠️ Avvikelse – annan filversion</span>`;
+
+      setExplainTone(match);
 
       if (match) {
-        outExplainTitle.textContent = "Filen är oförändrad (identisk filversion).";
+        outExplainTitle.textContent = "Underlaget överensstämmer med referensen.";
         outExplainBody.textContent =
-          "Match betyder att underlaget är exakt samma bytes som referensen. Detta säger inget om innehållets riktighet – endast att filversionen inte har ändrats.";
+          "Detta innebär att filen är identisk med referensen (samma bytes). Det säger inget om innehållets riktighet – endast att filversionen inte har ändrats.";
       } else {
-        outExplainTitle.textContent = "Filen skiljer sig från referensen (annan filversion).";
+        outExplainTitle.textContent = "Underlaget avviker från referensen.";
         outExplainBody.textContent =
-          "Ingen match betyder att underlaget inte är identiskt med den registrerade referensen. Vanliga orsaker: ny export, omskanning, konvertering eller att fel fil valts.";
+          "Detta innebär att filen inte är identisk med referensen. Vanliga orsaker: ny export, omskanning, konvertering eller att fel fil valts.";
       }
 
       let exists = null;
@@ -577,11 +642,10 @@
       const summaryText = buildSummaryText(lastRun);
       if (summaryOut) summaryOut.textContent = summaryText;
 
+      if (copyIdInlineBtn) copyIdInlineBtn.style.display = "inline-flex";
+      if (copyFileHashInlineBtn) copyFileHashInlineBtn.style.display = "inline-flex";
       if (copySummaryBtn) copySummaryBtn.style.display = "inline-flex";
-      if (copySummaryPill) {
-        copySummaryPill.style.display = "none";
-        copySummaryPill.textContent = "";
-      }
+      resetCopyPills();
 
       hideAlert();
 
