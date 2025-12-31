@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="sv">
 <head>
@@ -210,9 +209,10 @@
   </div>
 </footer>
 
-<!-- QR lib -->
+<!-- QR lib (FIX: korrekt path i deploy) -->
 <script
-  src="/qr.min.js?v=2025-12-20"
+  src="/assets/qr.min.js?v=2025-12-31-qrfix"
+  defer
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"
 ></script>
@@ -312,7 +312,7 @@
   function showQrError(targetEl, extra){
     const parts = [];
     parts.push("QR-funktionen kunde inte laddas.");
-    if (window.__proofyQrLibError) parts.push("Kontrollera att /qr.min.js finns i deploy.");
+    if (window.__proofyQrLibError) parts.push("Kontrollera att /assets/qr.min.js finns i deploy.");
     if (extra) parts.push(extra);
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
@@ -456,7 +456,6 @@
       if (data.timestamp) {
         timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
       } else {
-        // Efter API-ändringen ska detta inte inträffa vid ok:true.
         timeOut.textContent = "—";
       }
 
@@ -545,4 +544,3 @@
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
 </html>
-
