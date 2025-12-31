@@ -22,14 +22,12 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Desktop actions -->
       <div class="navActions" id="navActionsDesktop">
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
-      <!-- Mobile menu -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
@@ -79,7 +77,6 @@
 
           <div style="font-weight:950; font-size:16px;">2. Välj underlag att verifiera</div>
 
-          <!-- PRIMÄR handling först: välj underlag -->
           <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:8px; cursor:pointer;">
             Välj underlag (fil)
           </label>
@@ -117,17 +114,27 @@
             <div id="resultHeadline" style="font-size:20px; font-weight:900;"></div>
 
             <div class="meta" style="margin-top:12px;">Verifierings-ID</div>
-            <div class="actions" style="margin-top:8px; flex-wrap:wrap; gap:10px; align-items:center;">
-              <pre class="mono" id="outHash" style="margin:0; flex:1;">—</pre>
-              <button class="btn" id="copyIdInlineBtn" type="button" style="white-space:nowrap; display:none;">Kopiera ID</button>
-              <span id="copyIdInlinePill" class="pill" style="display:none;"> </span>
+            <div class="copyBlockWrap" style="position:relative; margin-top:8px;">
+              <button type="button" class="copyIconBtn" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID"
+                      style="display:none; position:absolute; top:8px; right:8px; width:36px; height:32px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
+                <span aria-hidden="true" style="display:block; font-size:16px; line-height:30px;">⧉</span>
+              </button>
+              <pre class="mono copyBlock" id="outHash" tabindex="0" role="button" aria-label="Verifierings-ID (klicka för att kopiera)"
+                   style="margin:0; cursor:pointer; padding-right:56px;">—</pre>
+              <div class="small" id="copyIdHint" style="display:none; margin-top:6px; opacity:.9;">Klicka på blocket för att kopiera.</div>
+              <span id="copyIdPill" class="pill" style="display:none; margin-top:8px;"> </span>
             </div>
 
             <div class="meta" style="margin-top:10px;">Underlagets tekniska fingeravtryck</div>
-            <div class="actions" style="margin-top:8px; flex-wrap:wrap; gap:10px; align-items:center;">
-              <pre class="mono" id="outFileHash" style="margin:0; flex:1;">—</pre>
-              <button class="btn" id="copyFileHashInlineBtn" type="button" style="white-space:nowrap; display:none;">Kopiera fingeravtryck</button>
-              <span id="copyFileHashInlinePill" class="pill" style="display:none;"> </span>
+            <div class="copyBlockWrap" style="position:relative; margin-top:8px;">
+              <button type="button" class="copyIconBtn" id="copyFileHashIconBtn" aria-label="Kopiera fingeravtryck"
+                      style="display:none; position:absolute; top:8px; right:8px; width:36px; height:32px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
+                <span aria-hidden="true" style="display:block; font-size:16px; line-height:30px;">⧉</span>
+              </button>
+              <pre class="mono copyBlock" id="outFileHash" tabindex="0" role="button" aria-label="Underlagets fingeravtryck (klicka för att kopiera)"
+                   style="margin:0; cursor:pointer; padding-right:56px;">—</pre>
+              <div class="small" id="copyFileHashHint" style="display:none; margin-top:6px; opacity:.9;">Klicka på blocket för att kopiera.</div>
+              <span id="copyFileHashPill" class="pill" style="display:none; margin-top:8px;"> </span>
             </div>
 
             <div class="hr"></div>
@@ -141,7 +148,6 @@
             <div class="meta" style="margin-top:10px;">Registreringstid (UTC)</div>
             <pre class="mono" id="outRegUtc">—</pre>
 
-            <!-- Audit-tone: diskret grön/röd beroende på match -->
             <div id="outExplain"
                  style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
               <div id="outExplainTitle" style="font-weight:900;"></div>
@@ -225,10 +231,13 @@
   const outExplainTitle = $("outExplainTitle");
   const outExplainBody = $("outExplainBody");
 
-  const copyIdInlineBtn = $("copyIdInlineBtn");
-  const copyIdInlinePill = $("copyIdInlinePill");
-  const copyFileHashInlineBtn = $("copyFileHashInlineBtn");
-  const copyFileHashInlinePill = $("copyFileHashInlinePill");
+  const copyIdIconBtn = $("copyIdIconBtn");
+  const copyIdPill = $("copyIdPill");
+  const copyIdHint = $("copyIdHint");
+
+  const copyFileHashIconBtn = $("copyFileHashIconBtn");
+  const copyFileHashPill = $("copyFileHashPill");
+  const copyFileHashHint = $("copyFileHashHint");
 
   const copySummaryBtn = $("copySummaryBtn");
   const copySummaryPill = $("copySummaryPill");
@@ -300,10 +309,10 @@
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
-  function resetCopyPills(){
-    if (copyIdInlinePill) { copyIdInlinePill.style.display = "none"; copyIdInlinePill.textContent = ""; }
-    if (copyFileHashInlinePill) { copyFileHashInlinePill.style.display = "none"; copyFileHashInlinePill.textContent = ""; }
-    if (copySummaryPill) { copySummaryPill.style.display = "none"; copySummaryPill.textContent = ""; }
+  function resetCopyPill(pill){
+    if (!pill) return;
+    pill.style.display = "none";
+    pill.textContent = "";
   }
 
   function resetUI(){
@@ -312,10 +321,16 @@
     errorMsg.textContent = "";
     if (openCertBtn) openCertBtn.style.display = "none";
 
-    if (copyIdInlineBtn) copyIdInlineBtn.style.display = "none";
-    if (copyFileHashInlineBtn) copyFileHashInlineBtn.style.display = "none";
+    if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
+    if (copyIdHint) copyIdHint.style.display = "none";
+    resetCopyPill(copyIdPill);
+
+    if (copyFileHashIconBtn) copyFileHashIconBtn.style.display = "none";
+    if (copyFileHashHint) copyFileHashHint.style.display = "none";
+    resetCopyPill(copyFileHashPill);
+
     if (copySummaryBtn) copySummaryBtn.style.display = "none";
-    resetCopyPills();
+    resetCopyPill(copySummaryPill);
 
     if (summaryOut) summaryOut.textContent = "—";
     lastRun = null;
@@ -332,6 +347,16 @@
     if (outExplain){
       outExplain.style.borderColor = "rgba(255,255,255,.14)";
       outExplain.style.background = "rgba(255,255,255,.06)";
+    }
+
+    // reset hover styling (inline) if any
+    if (outHash){
+      outHash.style.borderColor = "";
+      outHash.style.background = "";
+    }
+    if (outFileHash){
+      outFileHash.style.borderColor = "";
+      outFileHash.style.background = "";
     }
   }
 
@@ -425,6 +450,7 @@
   function setExplainTone(match){
     if (!outExplain) return;
 
+    // audit-tone: väldigt nedtonat (inte “glad-grönt”)
     if (match === true) {
       outExplain.style.borderColor = "rgba(80,255,180,.22)";
       outExplain.style.background = "rgba(80,255,180,.07)";
@@ -440,17 +466,64 @@
     outExplain.style.background = "rgba(255,255,255,.06)";
   }
 
+  function setCopyBlockInteractivity(blockEl, iconBtnEl, hintEl, enabled){
+    if (!blockEl) return;
+    if (!enabled){
+      blockEl.style.cursor = "";
+      blockEl.style.outline = "";
+      if (iconBtnEl) iconBtnEl.style.display = "none";
+      if (hintEl) hintEl.style.display = "none";
+      return;
+    }
+
+    blockEl.style.cursor = "pointer";
+    if (iconBtnEl) iconBtnEl.style.display = "inline-flex";
+    if (hintEl) hintEl.style.display = "none";
+
+    // Hover-effekt (audit-grade, subtil)
+    const onEnter = () => {
+      if (hintEl) hintEl.style.display = "block";
+      blockEl.style.outline = "1px solid rgba(255,255,255,.14)";
+      blockEl.style.outlineOffset = "2px";
+      blockEl.style.background = "rgba(255,255,255,.05)";
+    };
+    const onLeave = () => {
+      if (hintEl) hintEl.style.display = "none";
+      blockEl.style.outline = "";
+      blockEl.style.outlineOffset = "";
+      blockEl.style.background = "";
+    };
+
+    // undvik dubbla listeners vid flera körningar
+    blockEl.onmouseenter = onEnter;
+    blockEl.onmouseleave = onLeave;
+
+    // keyboard-focus: samma känsla
+    blockEl.onfocus = () => {
+      blockEl.style.outline = "2px solid rgba(120, 180, 255, .25)";
+      blockEl.style.outlineOffset = "2px";
+    };
+    blockEl.onblur = () => {
+      blockEl.style.outline = "";
+      blockEl.style.outlineOffset = "";
+    };
+  }
+
   async function copyWithPill({ text, pillEl }){
     if (!pillEl) return false;
+
+    const t = String(text || "").trim();
+    if (!t || t === "—") return false;
+
     pillEl.style.display = "inline-block";
     pillEl.textContent = "Kopierar…";
     try {
-      await navigator.clipboard.writeText(text);
-      pillEl.textContent = "Kopierad ✅";
+      await navigator.clipboard.writeText(t);
+      pillEl.textContent = "Kopierad ✓";
       setTimeout(() => {
         pillEl.style.display = "none";
         pillEl.textContent = "";
-      }, 1600);
+      }, 1400);
       return true;
     } catch {
       pillEl.textContent = "Kunde inte kopiera";
@@ -522,19 +595,44 @@
     updateValidationUI();
   });
 
-  if (copyIdInlineBtn) {
-    copyIdInlineBtn.addEventListener("click", async () => {
-      const txt = String(outHash?.textContent || "").trim();
-      if (!txt || txt === "—") return;
-      await copyWithPill({ text: txt, pillEl: copyIdInlinePill });
+  // Kopiering: klick på blocket (primärt) + ikon (sekundärt)
+  if (outHash) {
+    outHash.addEventListener("click", async () => {
+      await copyWithPill({ text: outHash.textContent, pillEl: copyIdPill });
+    });
+    outHash.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        await copyWithPill({ text: outHash.textContent, pillEl: copyIdPill });
+      }
     });
   }
 
-  if (copyFileHashInlineBtn) {
-    copyFileHashInlineBtn.addEventListener("click", async () => {
-      const txt = String(outFileHash?.textContent || "").trim();
-      if (!txt || txt === "—") return;
-      await copyWithPill({ text: txt, pillEl: copyFileHashInlinePill });
+  if (copyIdIconBtn) {
+    copyIdIconBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await copyWithPill({ text: outHash.textContent, pillEl: copyIdPill });
+    });
+  }
+
+  if (outFileHash) {
+    outFileHash.addEventListener("click", async () => {
+      await copyWithPill({ text: outFileHash.textContent, pillEl: copyFileHashPill });
+    });
+    outFileHash.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        await copyWithPill({ text: outFileHash.textContent, pillEl: copyFileHashPill });
+      }
+    });
+  }
+
+  if (copyFileHashIconBtn) {
+    copyFileHashIconBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await copyWithPill({ text: outFileHash.textContent, pillEl: copyFileHashPill });
     });
   }
 
@@ -591,6 +689,10 @@
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
 
+      // visa kopieringsaffordance först när vi har riktiga värden
+      setCopyBlockInteractivity(outHash, copyIdIconBtn, copyIdHint, true);
+      setCopyBlockInteractivity(outFileHash, copyFileHashIconBtn, copyFileHashHint, true);
+
       resultHeadline.innerHTML = match
         ? `<span class="ok">✅ Oförändrat underlag</span>`
         : `<span class="err">⚠️ Avvikelse – annan filversion</span>`;
@@ -642,10 +744,7 @@
       const summaryText = buildSummaryText(lastRun);
       if (summaryOut) summaryOut.textContent = summaryText;
 
-      if (copyIdInlineBtn) copyIdInlineBtn.style.display = "inline-flex";
-      if (copyFileHashInlineBtn) copyFileHashInlineBtn.style.display = "inline-flex";
       if (copySummaryBtn) copySummaryBtn.style.display = "inline-flex";
-      resetCopyPills();
 
       hideAlert();
 
