@@ -209,7 +209,7 @@
   </div>
 </footer>
 
-<!-- ✅ QR lib: din build kräver makeCode(), inte options i constructor -->
+<!-- QR lib -->
 <script
   src="/assets/qr.min.js?v=2025-12-31-qrfix"
   onload="window.__proofyQrLibLoaded = true"
@@ -310,8 +310,8 @@
 
   function showQrError(targetEl, extra){
     const parts = [];
-    parts.push("QR-funktionen kunde inte laddas.");
-    if (window.__proofyQrLibError) parts.push("Kontrollera att /assets/qr.min.js finns i deploy.");
+    parts.push("QR-koden kunde inte renderas.");
+    if (window.__proofyQrLibError) parts.push("QR-biblioteket kunde inte laddas.");
     if (extra) parts.push(extra);
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
@@ -319,7 +319,6 @@
   function renderQr(targetEl, text){
     if (!targetEl) return;
 
-    // placeholder
     targetEl.innerHTML = `<div class="meta">Laddar QR…</div>`;
 
     let tries = 0;
@@ -341,19 +340,23 @@
     }, 50);
   }
 
-  // ✅ Anpassad till din qr.min.js: new QRCode(el); qr.makeCode(text)
+  // ✅ Anpassad till din qr.min.js + FIX för långa URL:er (typeNumber=0 => auto-fit)
   function doRender(targetEl, text){
     try{
       targetEl.innerHTML = "";
 
       const qr = new window.QRCode(targetEl);
 
-      // Sätt dina önskade värden (din build använder _htOption)
       if (qr && qr._htOption){
         qr._htOption.width = 150;
         qr._htOption.height = 150;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#eaf0ff";
+
+        // ✅ VIKTIGT: din build har default typeNumber=4 (för liten för URL ibland)
+        // typeNumber < 1 triggar auto-fit i qr.min.js
+        qr._htOption.typeNumber = 0;
+
         if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
           qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
         }
@@ -437,10 +440,8 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      // ✅ QR render (matchar din qr.min.js)
       renderQr(qrBox, currentLink);
 
-      // Visa preliminärt innan API-svar
       resultBox.style.display = "block";
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
@@ -474,7 +475,6 @@
         timeOut.textContent = "—";
       }
 
-      // Tekniska detaljer (valfritt)
       submitterOut.textContent = data.submitter || "—";
       txOut.textContent = data.txHash || "—";
 
@@ -527,7 +527,6 @@
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
 
-    // ✅ QR även här (matchar din qr.min.js)
     renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
