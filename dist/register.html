@@ -110,7 +110,7 @@
           </div>
         </section>
 
-        <!-- Höger: rapport (matchar verify.html’s “Verifieringsresultat”) -->
+        <!-- Höger: rapport -->
         <section aria-label="Registreringsrapport">
           <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
             <div style="font-weight:950; font-size:16px;">Registreringsrapport</div>
@@ -307,8 +307,8 @@
   </div>
 </footer>
 
-<!-- ✅ ÄNDRING: peka på den sökväg som faktiskt finns (du sa att du flyttat till dist/assets) -->
-<script src="/assets/qr.min.js?v=2025-12-31-qrfix"
+<!-- ✅ FIX: peka på den enda URL som ni verifierat funkar hos er (inte /assets eller /dist/assets) -->
+<script src="/qr.min.js?v=2025-12-31-qrfix"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -540,8 +540,8 @@
 
   function showQrError(targetEl, extra){
     const parts = [];
-    parts.push("QR-funktionen kunde inte laddas.");
-    if (window.__proofyQrLibError) parts.push("Kontrollera att qr.min.js finns på rätt sökväg.");
+    parts.push("QR-koden kunde inte renderas.");
+    if (window.__proofyQrLibError) parts.push("QR-skriptet kunde inte laddas (kontrollera sökvägen).");
     if (extra) parts.push(extra);
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
@@ -574,54 +574,35 @@
     doRender(targetEl, text);
   }
 
-  // ✅ ÄNDRING: kompatibel render som funkar både med “options-QR” och din minimal-build (makeCode)
+  /**
+   * ✅ FIX: Använd rätt API för din qr.min.js-build (qrcodejs):
+   * new QRCode(el, options) + qr.makeCode(text)
+   * (inte { text: ... }-varianten)
+   */
   function doRender(targetEl, text){
     targetEl.innerHTML = "";
 
-    const level =
-      (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M)
-        ? window.QRCodeCorrectLevel.M
-        : undefined;
+    try{
+      const correctLevel =
+        (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M)
+          ? window.QRCodeCorrectLevel.M
+          : undefined;
 
-    // 1) Försök “options-objekt” (om builden stödjer det)
-    try {
-      new window.QRCode(targetEl, {
-        text,
+      const qr = new window.QRCode(targetEl, {
         width: 150,
         height: 150,
         colorDark: "#0b1220",
         colorLight: "#eaf0ff",
-        correctLevel: level
+        correctLevel
       });
 
-      if (targetEl.querySelector("canvas")) return;
-      // annars: fallthrough
-    } catch (_) {
-      // ignore -> fallback
-    }
+      qr.makeCode(text);
 
-    // 2) Fallback: minimal-build (QRCode(el) + makeCode)
-    try {
-      const qr = new window.QRCode(targetEl);
-
-      if (qr && qr._htOption) {
-        qr._htOption.width = 150;
-        qr._htOption.height = 150;
-        qr._htOption.colorDark = "#0b1220";
-        qr._htOption.colorLight = "#eaf0ff";
-        if (level !== undefined) qr._htOption.correctLevel = level;
+      const canvas = targetEl.querySelector("canvas");
+      if (!canvas){
+        showQrError(targetEl, "Canvas skapades inte (okänt scriptfel).");
       }
-
-      if (qr && typeof qr.makeCode === "function") {
-        qr.makeCode(text);
-      } else {
-        throw new Error("QRCode.makeCode saknas i biblioteket.");
-      }
-
-      if (!targetEl.querySelector("canvas")) {
-        showQrError(targetEl, "Canvas skapades inte (biblioteket renderade inget).");
-      }
-    } catch (e) {
+    } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl, "Ett scriptfel inträffade vid rendering.");
     }
@@ -729,7 +710,7 @@
       currentId = id;
       currentLink = buildVerifyLink(id);
 
-      // Visa lokal notering (behåll)
+      // Visa lokal notering
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
@@ -753,8 +734,7 @@
         receiptBtn.style.display = "inline-flex";
       }
 
-      // Gör det extra robust: rendera när resultBox blivit synlig
-      await new Promise(r => setTimeout(r, 0));
+      // Rendera QR tidigt
       renderQr(qrBox, currentLink);
 
       regStatusOut.textContent = "Registrerar…";
@@ -787,11 +767,9 @@
 
       regStatusOut.textContent = "Registrerad";
 
-      if (data.timestamp) {
-        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
-      } else {
-        timeOut.textContent = "—";
-      }
+      timeOut.textContent = data.timestamp
+        ? new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE")
+        : "—";
 
       submitterOut.textContent = data.submitter || "—";
       txOut.textContent = data.txHash || "—";
@@ -825,9 +803,7 @@
 
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
-
-    // Robust även här
-    setTimeout(() => renderQr(manualQrBox, link), 0);
+    renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
     manualVerifyBtn.href = link;
