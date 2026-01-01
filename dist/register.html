@@ -548,9 +548,9 @@
   }
 
   /**
-   * ✅ FIX: din qr.min.js har default typeNumber=4 → klarar inte långa URL:er.
-   * Lösning: tvinga AUTO (typeNumber=0) och normal felkorr (M) innan makeCode().
-   * Funkar med din minimal/patchade qrcode.js.
+   * ✅ QR FIX (kapacitet):
+   * Din qrcode.js har default typeNumber=4 + correctLevel=H → overflow på långa URL:er.
+   * Lösning: tvinga AUTO (typeNumber=0) + L (max kapacitet) innan makeCode().
    */
   function renderQr(targetEl, text){
     if (!targetEl) return;
@@ -560,18 +560,8 @@
 
     targetEl.innerHTML = `<div class="meta">Skapar QR…</div>`;
 
-    // säkerställ script laddas även om något blivit fel i HTML
-    if (!canRenderQr() && !window.__proofyQrLibLoaded && !window.__proofyQrScriptInjected) {
-      window.__proofyQrScriptInjected = true;
-
-      const s = document.createElement("script");
-      s.src = "/assets/qr.min.js?v=2025-12-31-qrfix";
-      s.onload = () => { window.__proofyQrLibLoaded = true; };
-      s.onerror = () => { window.__proofyQrLibError = true; };
-      document.head.appendChild(s);
-    }
-
     if (!canRenderQr()){
+      // Vänta lite om scriptet (defer) inte hunnit
       let tries = 0;
       const t = setInterval(() => {
         tries++;
@@ -580,9 +570,9 @@
           renderQr(targetEl, payload);
           return;
         }
-        if (window.__proofyQrLibError || tries > 60){
+        if (window.__proofyQrLibError || tries > 80){
           clearInterval(t);
-          showQrError(targetEl, "Kontrollera att /assets/qr.min.js finns och inte blockeras.");
+          showQrError(targetEl, "QRCode saknas. Kontrollera att /assets/qr.min.js laddas.");
         }
       }, 50);
       return;
@@ -591,37 +581,39 @@
     try{
       targetEl.innerHTML = "";
 
-      // ⚠️ Viktigt: använd API som säkert finns i din build: new QRCode(el) + makeCode(text)
       const qr = new window.QRCode(targetEl);
-
-      // Force AUTO size + rimlig felkorr (M) för långa länkar
-      if (qr && qr._htOption){
-        qr._htOption.typeNumber = 0; // ✅ auto-fit för lång text/URL
-        qr._htOption.correctLevel =
-          (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M != null)
-            ? window.QRCodeCorrectLevel.M
-            : qr._htOption.correctLevel;
-
-        qr._htOption.width = 150;
-        qr._htOption.height = 150;
-        qr._htOption.colorDark = "#0b1220";
-        qr._htOption.colorLight = "#eaf0ff";
-      }
 
       if (!qr || typeof qr.makeCode !== "function"){
         showQrError(targetEl, "QR-biblioteket laddades men saknar makeCode().");
         return;
       }
 
+      // Force AUTO + max kapacitet
+      if (qr._htOption){
+        qr._htOption.typeNumber = 0; // ✅ AUTO (viktigt)
+        if (window.QRCodeCorrectLevel) {
+          // ✅ L ger störst payload-capacity
+          qr._htOption.correctLevel =
+            (window.QRCodeCorrectLevel.L != null) ? window.QRCodeCorrectLevel.L : qr._htOption.correctLevel;
+        }
+
+        // sizing/colors som du hade
+        qr._htOption.width = 150;
+        qr._htOption.height = 150;
+        qr._htOption.colorDark = "#0b1220";
+        qr._htOption.colorLight = "#eaf0ff";
+      }
+
       qr.makeCode(payload);
 
       const ok = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
       if (!ok){
-        showQrError(targetEl, "QR-biblioteket kördes men skapade ingen canvas.");
+        showQrError(targetEl, "QR kördes men skapade ingen canvas.");
       }
     } catch (e){
       console.error("QR render error:", e);
-      showQrError(targetEl, "Ett scriptfel inträffade vid rendering.");
+      // Visa lite mer diagnos i texten utan console
+      showQrError(targetEl, (e && e.message) ? e.message : "Ett scriptfel inträffade vid rendering.");
     }
   }
 
@@ -748,7 +740,7 @@
         receiptBtn.style.display = "inline-flex";
       }
 
-      // ✅ QR render (fixad för lång URL)
+      // ✅ QR render (fixad)
       renderQr(qrBox, currentLink);
 
       regStatusOut.textContent = "Registrerar…";
@@ -818,7 +810,7 @@
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
 
-    // ✅ QR även här (fixad för lång URL)
+    // ✅ QR även här (fixad)
     renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
