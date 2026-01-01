@@ -26,13 +26,9 @@ function json(status, obj, origin) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
+    "Vary": "Origin",
   };
-
   if (origin) headers["Access-Control-Allow-Origin"] = origin;
-
-  // För att minska CORS-strul vid credential-less fetch
-  headers["Vary"] = "Origin";
-
   return new Response(JSON.stringify(obj), { status, headers });
 }
 
@@ -73,32 +69,6 @@ function normalizePrivateKey(pk) {
   const trimmed = pk.trim();
   if (!trimmed) return "";
   return trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
-}
-
-function parseAllowedOrigins(envValue) {
-  const raw = String(envValue || "").trim();
-  if (!raw) return null; // default: enforce same-origin
-  if (raw === "*") return ["*"];
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function isOriginAllowed({ requestOrigin, requestUrlOrigin, allowed }) {
-  // Non-browser clients may omit Origin; allow if same-origin by URL or if allowlist is '*'
-  if (allowed && allowed.includes("*")) return true;
-
-  // If no Origin header, allow (curl/server-to-server). You can tighten this later if needed.
-  if (!requestOrigin) return true;
-
-  // If allowlist provided, enforce it.
-  if (allowed && allowed.length > 0) {
-    return allowed.includes(requestOrigin);
-  }
-
-  // Default: strict same-origin (minskar risken att andra sidor triggar gasförbrukning via browser)
-  return requestOrigin === requestUrlOrigin;
 }
 
 function toSafeTimestamp(timestampBig) {
@@ -148,97 +118,54 @@ async function readProofWithRetry({
 }
 
 function sanitizeError(e) {
-  // Viem errors har ofta shortMessage; fallbacka till message
   const msg =
     (e && typeof e === "object" && "shortMessage" in e && e.shortMessage) ||
     (e && typeof e === "object" && "message" in e && e.message) ||
     "Unexpected error";
-
-  // Håll kort och utan stack
   return String(msg).slice(0, 300);
 }
 
 export async function onRequest({ request, env }) {
-  const requestOrigin = request.headers.get("Origin") || "";
-  const requestUrlOrigin = new URL(request.url).origin;
-
-  const allowedOrigins = parseAllowedOrigins(env.ALLOWED_ORIGINS);
-  const originForCors = requestOrigin || ""; // om tomt blir ingen ACAO (ok för curl)
+  const origin = request.headers.get("Origin") || "";
 
   if (request.method === "OPTIONS") {
-    // Preflight ska följa samma policy
-    const ok = isOriginAllowed({
-      requestOrigin,
-      requestUrlOrigin,
-      allowed: allowedOrigins,
-    });
-    if (!ok) return corsPreflight(""); // inga CORS-headers vid block
-    return corsPreflight(requestOrigin || "*");
+    return corsPreflight(origin || "*");
   }
 
   if (request.method !== "POST") {
-    return json(405, { ok: false, error: "Method Not Allowed" }, originForCors);
-  }
-
-  // Origin-skydd (minskar risken att andra webbplatser triggar din signerande endpoint från browser)
-  const originOk = isOriginAllowed({
-    requestOrigin,
-    requestUrlOrigin,
-    allowed: allowedOrigins,
-  });
-  if (!originOk) {
-    return json(
-      403,
-      { ok: false, error: "Forbidden origin" },
-      originForCors
-    );
+    return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return json(400, { ok: false, error: "Invalid JSON body" }, originForCors);
+    return json(400, { ok: false, error: "Invalid JSON body" }, origin);
   }
 
   const hash = String(body?.hash || "").trim();
 
   if (!isValidBytes32Hex(hash)) {
-    return json(400, { ok: false, error: "Invalid hash format" }, originForCors);
+    return json(400, { ok: false, error: "Invalid hash format" }, origin);
   }
 
   const rpcUrl = env.AMOY_RPC_URL;
   const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
-  const privateKeyRaw = env.PROOFY_PRIVATE_KEY;
-
-  const privateKey = normalizePrivateKey(privateKeyRaw);
+  const privateKey = normalizePrivateKey(env.PROOFY_PRIVATE_KEY);
 
   if (!rpcUrl || !contractAddress || !privateKey) {
-    return json(
-      500,
-      { ok: false, error: "Server misconfiguration" },
-      originForCors
-    );
+    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
 
   if (!isValidAddressHex(contractAddress)) {
-    return json(
-      500,
-      { ok: false, error: "Server misconfiguration" },
-      originForCors
-    );
+    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
 
   if (!isValidBytes32Hex(privateKey)) {
-    // private key är 32 bytes => hex-längd 66 inkl 0x
-    return json(
-      500,
-      { ok: false, error: "Server misconfiguration" },
-      originForCors
-    );
+    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
 
-  // Timeout för hela operationen (förhindrar "häng" och gör fel mer deterministiska)
+  // Timeout för determinism
   const controller = new AbortController();
   const timeoutMs = Number(env.REGISTER_TIMEOUT_MS || 25_000);
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -251,7 +178,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 1) Pre-read
+    // Already registered?
     const pre = await readProof({ publicClient, contractAddress, hash });
     if (pre.exists && pre.timestamp && pre.timestamp !== 0) {
       return json(
@@ -264,11 +191,11 @@ export async function onRequest({ request, env }) {
           submitter: pre.submitter,
           txHash: null,
         },
-        originForCors
+        origin
       );
     }
 
-    // 2) Write
+    // Not registered -> write
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -288,7 +215,6 @@ export async function onRequest({ request, env }) {
       confirmations: 1,
     });
 
-    // 3) Post-read (med retry)
     const post = await readProofWithRetry({
       publicClient,
       contractAddress,
@@ -301,7 +227,7 @@ export async function onRequest({ request, env }) {
       return json(
         500,
         { ok: false, error: "Registration completed but not readable" },
-        originForCors
+        origin
       );
     }
 
@@ -315,24 +241,21 @@ export async function onRequest({ request, env }) {
         submitter: post.submitter,
         txHash,
       },
-      originForCors
+      origin
     );
   } catch (e) {
-    const msg = sanitizeError(e);
-
-    // AbortController -> tydligare fel
     if (e && typeof e === "object" && e.name === "AbortError") {
       return json(
         504,
         { ok: false, error: "Upstream timeout", detail: `Timeout after ${timeoutMs}ms` },
-        originForCors
+        origin
       );
     }
 
     return json(
       500,
-      { ok: false, error: "Register failed", detail: msg },
-      originForCors
+      { ok: false, error: "Register failed", detail: sanitizeError(e) },
+      origin
     );
   } finally {
     clearTimeout(timeout);
