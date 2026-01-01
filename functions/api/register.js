@@ -210,10 +210,16 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
-    await publicClient.waitForTransactionReceipt({
-      hash: txHash,
-      confirmations: 1,
-    });
+    // ✅ ÄNDRING 1: vänta max ~20s på kvitto, annars fortsätt (undvik att UI fastnar)
+    try {
+      await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        confirmations: 1,
+        timeout: 20_000,
+      });
+    } catch {
+      // ignore – vi försöker ändå läsa proof efteråt
+    }
 
     const post = await readProofWithRetry({
       publicClient,
@@ -223,10 +229,19 @@ export async function onRequest({ request, env }) {
       delayMs: 800,
     });
 
+    // ✅ ÄNDRING 2: returnera 200 + pending istället för 500 (frontend kan poll:a /api/verify)
     if (!post.exists || !post.timestamp || post.timestamp === 0) {
       return json(
-        500,
-        { ok: false, error: "Registration completed but not readable" },
+        200,
+        {
+          ok: true,
+          pending: true,
+          exists: false,
+          alreadyExists: false,
+          timestamp: null,
+          submitter: null,
+          txHash,
+        },
         origin
       );
     }
@@ -235,6 +250,7 @@ export async function onRequest({ request, env }) {
       200,
       {
         ok: true,
+        pending: false,
         exists: true,
         alreadyExists: false,
         timestamp: post.timestamp,
