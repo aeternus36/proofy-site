@@ -207,7 +207,7 @@
   </div>
 </footer>
 
-<!-- ✅ Deterministisk QR: använd din dist/assets/qr.min.js (patched build, full RS_BLOCK_TABLE) -->
+<!-- ✅ Deterministisk QR-laddning (cache-busting) -->
 <script src="/assets/qr.min.js?v=2026-01-01"></script>
 
 <script>
@@ -302,7 +302,6 @@
     targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
-  // ✅ Matchar din qr.min.js: new QRCode(el); set _htOption; makeCode(text)
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -319,15 +318,12 @@
         return;
       }
 
-      // options för din build
       if (qr._htOption){
         qr._htOption.width = 150;
         qr._htOption.height = 150;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#eaf0ff";
-
-        // ✅ auto-fit för lång URL (kräver full RS_BLOCK_TABLE, vilket din dist har)
-        qr._htOption.typeNumber = 0;
+        qr._htOption.typeNumber = 0; // auto-fit (lång URL)
 
         if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
           qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
@@ -336,8 +332,7 @@
 
       qr.makeCode(text);
 
-      const ok = !!targetEl.querySelector("canvas");
-      if (!ok) showQrError(targetEl);
+      if (!targetEl.querySelector("canvas")) showQrError(targetEl);
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
@@ -379,7 +374,6 @@
   });
 
   async function copyText(text){
-    // Primär: Clipboard API
     try{
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
@@ -387,7 +381,6 @@
       }
     } catch {}
 
-    // Fallback: hidden textarea (funkar ofta på mobil)
     try{
       const ta = document.createElement("textarea");
       ta.value = text;
@@ -457,15 +450,14 @@
         throw new Error((data?.error || `Registreringen misslyckades (HTTP ${res.status}).`) + detail);
       }
 
-      const already = data.alreadyExists === true || data.exists === true;
-
       if (data.alreadyExists) {
         headline.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`;
       } else {
         headline.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="meta">(ny referens skapad)</span>`;
       }
 
-      regStatusOut.textContent = already ? "Registrerad" : "Registrerad";
+      regStatusOut.textContent = "Registrerad";
+
       if (data.timestamp) {
         const num = Number(data.timestamp);
         timeOut.textContent = Number.isFinite(num)
