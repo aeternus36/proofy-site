@@ -97,7 +97,10 @@
             <div class="qrWrap" style="margin-top:12px">
               <div>
                 <div class="meta" style="margin-bottom:8px">QR-kod</div>
-                <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
+
+                <!-- ✅ Endast ändring här: vit bakgrund + padding + rundning för bättre skanning -->
+                <div id="qrBox" class="qrBox" aria-label="QR-kod"
+                     style="display:inline-block;background:#fff;padding:12px;border-radius:14px"></div>
               </div>
 
               <div style="min-width:240px; flex:1">
@@ -165,7 +168,10 @@
             <div class="qrWrap" style="margin-top:12px">
               <div>
                 <div class="meta" style="margin-bottom:8px">QR-kod</div>
-                <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
+
+                <!-- ✅ Endast ändring här: vit bakgrund + padding + rundning för bättre skanning -->
+                <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"
+                     style="display:inline-block;background:#fff;padding:12px;border-radius:14px"></div>
               </div>
               <div style="min-width:240px; flex:1">
                 <div class="small" style="margin-top:0;">
@@ -304,7 +310,7 @@
     targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
-  // ✅ Robust mot lång URL: full RS table + typeNumber=0 (auto-fit) + M
+  // ✅ Skanningsvänlig QR: större + svart/vit + auto-fit
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -324,10 +330,12 @@
       }
 
       if (qr._htOption){
-        qr._htOption.width = 150;
-        qr._htOption.height = 150;
-        qr._htOption.colorDark = "#0b1220";
-        qr._htOption.colorLight = "#eaf0ff";
+        qr._htOption.width = 240;
+        qr._htOption.height = 240;
+
+        // Viktigt för mobilscanners:
+        qr._htOption.colorDark = "#000000";
+        qr._htOption.colorLight = "#ffffff";
 
         // Auto-fit för längre texter: typeNumber < 1 triggar iterering i denna build
         qr._htOption.typeNumber = 0;
