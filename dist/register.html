@@ -20,8 +20,6 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
-
       <div class="navActions">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
@@ -92,15 +90,32 @@
             <div id="headline" style="font-size:18px; margin-bottom:10px;"></div>
 
             <div class="meta">Delbar verifieringslänk</div>
+
+            <!-- ✅ gör länken klickbar -->
             <div id="linkOut" class="mono" style="margin-top:8px">—</div>
+
+            <!-- ✅ öppna/dela utan QR (mobilvänligt) -->
+            <div class="actions" style="margin-top:10px; flex-wrap:wrap; gap:10px;">
+              <a class="btn primary" id="openLinkBtn" href="#" target="_blank" rel="noopener"
+                 style="display:none;">Öppna länk</a>
+              <button class="btn soft" id="shareLinkBtn" type="button" style="display:none;">Dela</button>
+            </div>
 
             <div class="qrWrap" style="margin-top:12px">
               <div>
                 <div class="meta" style="margin-bottom:8px">QR-kod</div>
 
-                <!-- ✅ Endast ändring här: vit bakgrund + padding + rundning för bättre skanning -->
-                <div id="qrBox" class="qrBox" aria-label="QR-kod"
-                     style="display:inline-block;background:#fff;padding:12px;border-radius:14px"></div>
+                <!-- ✅ vit bakgrund + padding + större för bättre skanning -->
+                <a id="qrTap"
+                   href="#"
+                   aria-label="Öppna verifieringslänk"
+                   style="display:inline-block; background:#fff; padding:12px; border-radius:14px; text-decoration:none;">
+                  <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
+                </a>
+
+                <div class="small" style="margin-top:8px; opacity:.85;">
+                  Tips: Du kan även trycka på QR-koden för att öppna länken.
+                </div>
               </div>
 
               <div style="min-width:240px; flex:1">
@@ -163,15 +178,25 @@
 
           <div>
             <div class="meta">Delbar verifieringslänk</div>
+
+            <!-- ✅ klickbar manual-länk -->
             <div id="manualLinkOut" class="mono" style="margin-top:8px">—</div>
 
             <div class="qrWrap" style="margin-top:12px">
               <div>
                 <div class="meta" style="margin-bottom:8px">QR-kod</div>
 
-                <!-- ✅ Endast ändring här: vit bakgrund + padding + rundning för bättre skanning -->
-                <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"
-                     style="display:inline-block;background:#fff;padding:12px;border-radius:14px"></div>
+                <!-- ✅ vit bakgrund + padding + tryckbar -->
+                <a id="manualQrTap"
+                   href="#"
+                   aria-label="Öppna verifieringslänk (manuell)"
+                   style="display:inline-block; background:#fff; padding:12px; border-radius:14px; text-decoration:none;">
+                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
+                </a>
+
+                <div class="small" style="margin-top:8px; opacity:.85;">
+                  Tips: Du kan trycka på QR-koden för att öppna länken.
+                </div>
               </div>
               <div style="min-width:240px; flex:1">
                 <div class="small" style="margin-top:0;">
@@ -240,6 +265,11 @@
   const headline = $("headline");
   const linkOut = $("linkOut");
   const qrBox = $("qrBox");
+  const qrTap = $("qrTap");
+
+  const openLinkBtn = $("openLinkBtn");
+  const shareLinkBtn = $("shareLinkBtn");
+
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
   const submitterOut = $("submitterOut");
@@ -255,6 +285,7 @@
   const manualPill = $("manualPill");
   const manualLinkOut = $("manualLinkOut");
   const manualQrBox = $("manualQrBox");
+  const manualQrTap = $("manualQrTap");
 
   let currentFile = null;
   let currentId = null;
@@ -286,6 +317,10 @@
     txOut.textContent = "—";
     qrBox.innerHTML = "";
     receiptBtn.style.display = "none";
+
+    if (openLinkBtn) openLinkBtn.style.display = "none";
+    if (shareLinkBtn) shareLinkBtn.style.display = "none";
+    if (qrTap) qrTap.href = "#";
   }
 
   function bytesToHex(bytes){
@@ -337,7 +372,7 @@
         qr._htOption.colorDark = "#000000";
         qr._htOption.colorLight = "#ffffff";
 
-        // Auto-fit för längre texter: typeNumber < 1 triggar iterering i denna build
+        // Auto-fit för längre texter
         qr._htOption.typeNumber = 0;
 
         if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
@@ -352,6 +387,39 @@
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
+    }
+  }
+
+  function setLinkOut(el, url){
+    if (!el) return;
+    el.innerHTML = "";
+    const a = document.createElement("a");
+    a.href = url;
+    a.textContent = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.style.color = "inherit";
+    a.style.textDecoration = "underline";
+    a.style.textUnderlineOffset = "3px";
+    el.appendChild(a);
+  }
+
+  async function shareUrl(url){
+    try{
+      if (navigator.share){
+        await navigator.share({ title: "Proofy verifiering", url });
+        setPill("Delat ✅");
+        return true;
+      }
+    } catch { /* ignore */ }
+
+    try{
+      await navigator.clipboard.writeText(url);
+      setPill("Länk kopierad ✅");
+      return true;
+    } catch {
+      setPill("Kunde inte dela");
+      return false;
     }
   }
 
@@ -389,6 +457,20 @@
     if(f) setFile(f);
   });
 
+  if (qrTap) {
+    qrTap.addEventListener("click", (e) => {
+      if (currentLink) return; // länken finns redan via href när den är satt
+      e.preventDefault();
+    });
+  }
+
+  if (shareLinkBtn) {
+    shareLinkBtn.addEventListener("click", async () => {
+      if (!currentLink) return;
+      await shareUrl(currentLink);
+    });
+  }
+
   createBtn.addEventListener("click", async () => {
     if(!currentFile || busy) return;
 
@@ -411,7 +493,20 @@
       localIdOut.textContent = id;
 
       idOut.textContent = id;
-      linkOut.textContent = currentLink;
+
+      // ✅ klickbar länk + knappar
+      setLinkOut(linkOut, currentLink);
+
+      if (openLinkBtn){
+        openLinkBtn.href = currentLink;
+        openLinkBtn.style.display = "inline-flex";
+      }
+      if (shareLinkBtn){
+        shareLinkBtn.style.display = "inline-flex";
+      }
+      if (qrTap){
+        qrTap.href = currentLink;
+      }
 
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
@@ -497,11 +592,14 @@
       manualVerifyBtn.style.pointerEvents = "none";
       manualVerifyBtn.style.opacity = ".55";
       setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
+      if (manualQrTap) manualQrTap.href = "#";
       return null;
     }
 
     const link = buildVerifyLink(clean);
-    manualLinkOut.textContent = link;
+
+    // ✅ klickbar manual-länk
+    setLinkOut(manualLinkOut, link);
 
     renderQr(manualQrBox, link);
 
@@ -510,7 +608,17 @@
     manualVerifyBtn.style.pointerEvents = "auto";
     manualVerifyBtn.style.opacity = "1";
     setManualPill("Redo ✅");
+
+    if (manualQrTap) manualQrTap.href = link;
+
     return link;
+  }
+
+  if (manualQrTap) {
+    manualQrTap.addEventListener("click", (e) => {
+      // default funkar när href är satt
+      if (!manualQrTap.href || manualQrTap.href.endsWith("#")) e.preventDefault();
+    });
   }
 
   manualBuildBtn.addEventListener("click", () => setManualState(manualId.value));
