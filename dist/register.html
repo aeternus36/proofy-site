@@ -20,6 +20,8 @@
         <span>Proofy</span>
       </a>
 
+      <!-- Beslut A: inga ankarlänkar i headern (navLinks borttaget) -->
+
       <div class="navActions">
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
@@ -61,7 +63,7 @@
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
             <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
-            <span id="statusPill" class="pill" aria-live="polite">Välj en fil</span>
+            <span id="statusPill" class="pill">Välj en fil</span>
           </div>
 
           <div id="localIdBox" style="display:none;margin-top:12px">
@@ -152,7 +154,7 @@
               <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
               <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
               <a class="btn soft" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
-              <span id="manualPill" class="pill" aria-live="polite">Klistra in ID</span>
+              <span id="manualPill" class="pill">Klistra in ID</span>
             </div>
           </div>
 
@@ -207,7 +209,7 @@
   </div>
 </footer>
 
-<!-- ✅ Deterministisk QR-laddning (cache-busting) -->
+<!-- ✅ QR-lib: full build, laddas deterministiskt före app-scriptet -->
 <script src="/assets/qr.min.js?v=2026-01-01"></script>
 
 <script>
@@ -302,9 +304,11 @@
     targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
+  // ✅ Robust mot lång URL: full RS table + typeNumber=0 (auto-fit) + M
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
+
       targetEl.innerHTML = "";
 
       if (typeof window.QRCode !== "function"){
@@ -313,6 +317,7 @@
       }
 
       const qr = new window.QRCode(targetEl);
+
       if (!qr || typeof qr.makeCode !== "function"){
         showQrError(targetEl);
         return;
@@ -323,7 +328,9 @@
         qr._htOption.height = 150;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#eaf0ff";
-        qr._htOption.typeNumber = 0; // auto-fit (lång URL)
+
+        // Auto-fit för längre texter: typeNumber < 1 triggar iterering i denna build
+        qr._htOption.typeNumber = 0;
 
         if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
           qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
@@ -332,7 +339,8 @@
 
       qr.makeCode(text);
 
-      if (!targetEl.querySelector("canvas")) showQrError(targetEl);
+      const ok = !!targetEl.querySelector("canvas");
+      if (!ok) showQrError(targetEl);
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
@@ -373,33 +381,6 @@
     if(f) setFile(f);
   });
 
-  async function copyText(text){
-    try{
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        return true;
-      }
-    } catch {}
-
-    try{
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "fixed";
-      ta.style.top = "-1000px";
-      ta.style.left = "-1000px";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      ta.setSelectionRange(0, ta.value.length);
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return !!ok;
-    } catch {
-      return false;
-    }
-  }
-
   createBtn.addEventListener("click", async () => {
     if(!currentFile || busy) return;
 
@@ -437,7 +418,6 @@
 
       const res = await fetch("/api/register", {
         method: "POST",
-        cache: "no-store",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ hash: id })
       });
@@ -446,8 +426,7 @@
       if(myOp !== opId) return;
 
       if(!res.ok || data.ok === false){
-        const detail = data?.detail ? ` ${String(data.detail)}` : "";
-        throw new Error((data?.error || `Registreringen misslyckades (HTTP ${res.status}).`) + detail);
+        throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
       }
 
       if (data.alreadyExists) {
@@ -459,10 +438,7 @@
       regStatusOut.textContent = "Registrerad";
 
       if (data.timestamp) {
-        const num = Number(data.timestamp);
-        timeOut.textContent = Number.isFinite(num)
-          ? new Date(num * 1000).toLocaleString("sv-SE")
-          : String(data.timestamp);
+        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
       } else {
         timeOut.textContent = "—";
       }
@@ -485,14 +461,22 @@
 
   copyIdBtn.addEventListener("click", async () => {
     if(!currentId) return;
-    const ok = await copyText(currentId);
-    setPill(ok ? "ID kopierat ✅" : "Kunde inte kopiera");
+    try{
+      await navigator.clipboard.writeText(currentId);
+      setPill("ID kopierat ✅");
+    } catch {
+      setPill("Kunde inte kopiera");
+    }
   });
 
   copyLinkBtn.addEventListener("click", async () => {
     if(!currentLink) return;
-    const ok = await copyText(currentLink);
-    setPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
+    try{
+      await navigator.clipboard.writeText(currentLink);
+      setPill("Länk kopierad ✅");
+    } catch {
+      setPill("Kunde inte kopiera");
+    }
   });
 
   function setManualState(id){
@@ -527,8 +511,12 @@
   manualCopyLinkBtn.addEventListener("click", async () => {
     const link = setManualState(manualId.value);
     if (!link) return;
-    const ok = await copyText(link);
-    setManualPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
+    try{
+      await navigator.clipboard.writeText(link);
+      setManualPill("Länk kopierad ✅");
+    } catch {
+      setManualPill("Kunde inte kopiera");
+    }
   });
 
   resetRight();
