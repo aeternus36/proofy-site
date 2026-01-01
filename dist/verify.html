@@ -73,6 +73,14 @@
             ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
+          <!-- ✅ NYTT: Öppna/Dela verifieringslänk (mobilvänligt, stör ej UI) -->
+          <div class="actions" style="margin-top:10px; flex-wrap:wrap; gap:10px;">
+            <a class="btn soft" id="openLinkBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna länk</a>
+            <button class="btn" id="shareLinkBtn" type="button" disabled>Dela</button>
+            <button class="btn" id="copyLinkBtn" type="button" disabled>Kopiera länk</button>
+            <span id="linkPill" class="pill" style="display:none;"></span>
+          </div>
+
           <div class="hr"></div>
 
           <div style="font-weight:950; font-size:16px;">2. Välj underlag att verifiera</div>
@@ -114,12 +122,10 @@
           <div class="hr"></div>
 
           <div id="resultBox" style="display:none;">
-            <!-- Rapport-head -->
             <div id="resultHeadline"
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- Kompakt “fält”-layout -->
             <div style="margin-top:12px;">
               <div class="meta">Verifierings-ID</div>
               <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
@@ -183,7 +189,6 @@
 
               <div class="hr" style="margin-top:14px;"></div>
 
-              <!-- Status/tider: rapporttabell-känsla -->
               <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
                 <div>
                   <div class="meta">Registreringsstatus</div>
@@ -306,6 +311,12 @@
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
+  // ✅ nya länkkontroller
+  const openLinkBtn = $("openLinkBtn");
+  const shareLinkBtn = $("shareLinkBtn");
+  const copyLinkBtn = $("copyLinkBtn");
+  const linkPill = $("linkPill");
+
   let currentFile = null;
   let busy = false;
   let opId = 0;
@@ -314,6 +325,59 @@
 
   function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
+  }
+
+  function buildSelfLink(id){
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(id)}`;
+  }
+
+  function showLinkPill(text){
+    if (!linkPill) return;
+    linkPill.style.display = "inline-block";
+    linkPill.textContent = text || "";
+    setTimeout(() => {
+      linkPill.style.display = "none";
+      linkPill.textContent = "";
+    }, 1400);
+  }
+
+  async function tryCopy(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function shareOrFallback(link){
+    // native share om möjligt, annars kopiera
+    try{
+      if (navigator.share) {
+        await navigator.share({ title: "Proofy – verifieringslänk", url: link });
+        showLinkPill("Delad ✓");
+        return;
+      }
+    } catch {
+      // ignore och fallback till kopiera
+    }
+    const ok = await tryCopy(link);
+    showLinkPill(ok ? "Kopierad ✓" : "Kunde inte dela");
+  }
+
+  function updateLinkActions(){
+    const id = (hashInput.value || "").trim();
+    const ok = isValidId(id);
+
+    const link = ok ? buildSelfLink(id) : "/verify.html";
+
+    if (openLinkBtn){
+      openLinkBtn.href = link;
+      openLinkBtn.style.pointerEvents = ok ? "auto" : "none";
+      openLinkBtn.style.opacity = ok ? "1" : ".55";
+    }
+    if (shareLinkBtn) shareLinkBtn.disabled = !ok;
+    if (copyLinkBtn) copyLinkBtn.disabled = !ok;
   }
 
   function setStatus(text){
@@ -486,13 +550,11 @@
     const lines = [];
     lines.push("PROOFY – Verifieringsnotering");
     lines.push("");
-
     lines.push(`Verifierings-ID: ${run.refHash || "—"}`);
     if (run.fileName) lines.push(`Underlag: ${run.fileName}`);
     if (run.fileSizeMb != null) lines.push(`Filstorlek: ${run.fileSizeMb} MB`);
     lines.push(`Resultat: ${run.match ? "OFÖRÄNDRAT UNDERLAG (överensstämmer med referensen)" : "AVVIKELSE (annan filversion än referensen)"}`);
     lines.push("");
-
     if (run.exists === true) {
       lines.push("Registreringsstatus: Registrerad");
       if (run.regSe) lines.push(`Registreringstid (SE): ${run.regSe}`);
@@ -502,16 +564,13 @@
     } else {
       lines.push("Registreringsstatus: Kunde inte kontrolleras (tillfälligt tekniskt fel)");
     }
-
     lines.push("");
     lines.push(`Tidpunkt för verifiering: ${new Date().toLocaleString("sv-SE")}`);
-
     return lines.join("\n");
   }
 
   function setExplainTone(match){
     if (!outExplain) return;
-
     if (match === true) {
       outExplain.style.borderColor = "rgba(80,255,180,.22)";
       outExplain.style.background = "rgba(80,255,180,.07)";
@@ -522,7 +581,6 @@
       outExplain.style.background = "rgba(255,80,80,.07)";
       return;
     }
-
     outExplain.style.borderColor = "rgba(255,255,255,.14)";
     outExplain.style.background = "rgba(255,255,255,.06)";
   }
@@ -593,6 +651,8 @@
   function updateValidationUI(){
     const id = (hashInput.value || "").trim();
 
+    updateLinkActions();
+
     if (!id && !currentFile){
       hideAlert();
       setStatus("Förbered verifiering");
@@ -634,10 +694,29 @@
     setBusy(false);
   }
 
+  // init URL
   const urlId = getIdFromUrl();
   if (isValidId(urlId)) {
     hashInput.value = urlId;
     setIdInUrl(urlId);
+  }
+
+  // ✅ bind share/copy/open actions
+  if (shareLinkBtn){
+    shareLinkBtn.addEventListener("click", async () => {
+      const id = (hashInput.value || "").trim();
+      if (!isValidId(id)) return;
+      await shareOrFallback(buildSelfLink(id));
+    });
+  }
+  if (copyLinkBtn){
+    copyLinkBtn.addEventListener("click", async () => {
+      const id = (hashInput.value || "").trim();
+      if (!isValidId(id)) return;
+      const link = buildSelfLink(id);
+      const ok = await tryCopy(link);
+      showLinkPill(ok ? "Kopierad ✓" : "Kunde inte kopiera");
+    });
   }
 
   hashInput.addEventListener("input", () => {
@@ -752,7 +831,6 @@
       applyCopyHover(outHash, copyIdIconBtn, true);
       applyCopyHover(outFileHash, copyFileHashIconBtn, true);
 
-      // rapportkänsla: rubriken bor i en “report header”-rad
       if (match) {
         resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
         resultHeadline.style.background = "rgba(80,255,180,.06)";
