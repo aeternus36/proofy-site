@@ -63,7 +63,6 @@
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <!-- Vänster: input/åtgärd (matchar verify.html’s “Verifieringsuppgifter”) -->
         <section aria-label="Skapa Verifierings-ID">
           <div style="font-weight:950; font-size:16px;">1. Välj referensunderlag</div>
 
@@ -90,7 +89,6 @@
             <span id="statusPill" class="pill">Förbered registrering</span>
           </div>
 
-          <!-- verify-like alert (istället för fileHint) -->
           <div id="inputAlert"
                role="status"
                aria-live="polite"
@@ -103,14 +101,12 @@
             <b>Tips:</b> Ny export/omskanning/konvertering kan ge annan filversion även om dokumentet “ser likadant ut”.
           </p>
 
-          <!-- Behåll tidigare “lokal” ID-box -->
           <div id="localIdBox" style="display:none;margin-top:12px">
             <div class="meta">Verifierings-ID (för din notering i ärendet):</div>
             <div id="localIdOut" class="mono">—</div>
           </div>
         </section>
 
-        <!-- Höger: rapport (matchar verify.html’s “Verifieringsresultat”) -->
         <section aria-label="Registreringsrapport">
           <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
             <div style="font-weight:950; font-size:16px;">Registreringsrapport</div>
@@ -307,8 +303,8 @@
   </div>
 </footer>
 
-<!-- ✅ QR-lib: LÅT DEN KÖRA INNAN inline-scriptet (INTE defer) -->
-<script src="/assets/qr.min.js?v=2025-12-31-qrfix"
+<!-- QR-lib -->
+<script src="/assets/qr.min.js?v=2026-01-01"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -535,9 +531,7 @@
   }
 
   function canRenderQr(){
-    return typeof window.QRCode === "function"
-      && window.QRCode.prototype
-      && typeof window.QRCode.prototype.makeCode === "function";
+    return typeof window.QRCode === "function";
   }
 
   function showQrError(targetEl, extra){
@@ -548,7 +542,7 @@
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
 
-  // ✅ Renderar enligt DIN qr.min.js: new QRCode(el) + makeCode(text)
+  // ✅ FIX: använd minimal-buildens API (makeCode) som default
   function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -565,7 +559,7 @@
         }
         if (window.__proofyQrLibError || tries > 40){
           clearInterval(t);
-          showQrError(targetEl, "Kontrollera att /assets/qr.min.js finns och laddas.");
+          showQrError(targetEl, "Kontrollera att /assets/qr.min.js finns och inte blockeras.");
         }
       }, 50);
       return;
@@ -574,23 +568,53 @@
     try{
       targetEl.innerHTML = "";
 
-      const qr = new window.QRCode(targetEl);
+      const width = 150;
+      const height = 150;
+      const level =
+        window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
+          ? window.QRCodeCorrectLevel.M
+          : (window.QRCodeCorrectLevel ? window.QRCodeCorrectLevel.H : undefined);
 
-      if (qr && qr._htOption){
-        qr._htOption.width = 150;
-        qr._htOption.height = 150;
-        qr._htOption.colorDark = "#0b1220";
-        qr._htOption.colorLight = "#eaf0ff";
-        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M) {
-          qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
-        }
+      let did = false;
+
+      // Om biblioteket stöder options i constructor (många “full builds” gör det):
+      if (typeof window.QRCode === "function" && window.QRCode.length >= 2){
+        new window.QRCode(targetEl, {
+          text,
+          width,
+          height,
+          colorDark: "#0b1220",
+          colorLight: "#eaf0ff",
+          correctLevel: level
+        });
+        did = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
       }
 
-      qr.makeCode(String(text || ""));
+      // Annars: minimal build (din): new QRCode(el); qr.makeCode(text)
+      if (!did){
+        const qr = new window.QRCode(targetEl);
 
-      const ok = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
-      if (!ok){
-        showQrError(targetEl, "QR-biblioteket laddades men inget canvas/img skapades.");
+        // sätt options (din build använder _htOption)
+        if (qr && qr._htOption){
+          qr._htOption.width = width;
+          qr._htOption.height = height;
+          qr._htOption.colorDark = "#0b1220";
+          qr._htOption.colorLight = "#eaf0ff";
+          if (level !== undefined) qr._htOption.correctLevel = level;
+          // typeNumber 0 = auto i många varianter, men din build defaultar 4 — låt vara.
+        }
+
+        if (!qr || typeof qr.makeCode !== "function"){
+          showQrError(targetEl, "QR-biblioteket laddades men saknar makeCode().");
+          return;
+        }
+
+        qr.makeCode(text);
+        did = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
+      }
+
+      if (!did){
+        showQrError(targetEl, "QR-biblioteket laddades men kunde inte rita canvas.");
       }
     } catch (e){
       console.error("QR render error:", e);
@@ -721,11 +745,11 @@
         receiptBtn.style.display = "inline-flex";
       }
 
+      // ✅ QR render (fixad)
       renderQr(qrBox, currentLink);
 
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
-
       setPill("Registrerar…");
 
       const res = await fetch("/api/register", {
@@ -751,7 +775,6 @@
       }
 
       regStatusOut.textContent = "Registrerad";
-
       if (data.timestamp) {
         timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
       } else {
@@ -790,6 +813,7 @@
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
 
+    // ✅ QR även här (fixad)
     renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
