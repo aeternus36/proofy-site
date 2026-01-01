@@ -27,7 +27,12 @@ function json(status, obj, origin) {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
   };
+
   if (origin) headers["Access-Control-Allow-Origin"] = origin;
+
+  // För att minska CORS-strul vid credential-less fetch
+  headers["Vary"] = "Origin";
+
   return new Response(JSON.stringify(obj), { status, headers });
 }
 
@@ -40,6 +45,7 @@ function corsPreflight(origin) {
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Max-Age": "86400",
+      "Vary": "Origin",
     },
   });
 }
@@ -62,6 +68,50 @@ function isValidAddressHex(addr) {
   );
 }
 
+function normalizePrivateKey(pk) {
+  if (typeof pk !== "string") return "";
+  const trimmed = pk.trim();
+  if (!trimmed) return "";
+  return trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
+}
+
+function parseAllowedOrigins(envValue) {
+  const raw = String(envValue || "").trim();
+  if (!raw) return null; // default: enforce same-origin
+  if (raw === "*") return ["*"];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function isOriginAllowed({ requestOrigin, requestUrlOrigin, allowed }) {
+  // Non-browser clients may omit Origin; allow if same-origin by URL or if allowlist is '*'
+  if (allowed && allowed.includes("*")) return true;
+
+  // If no Origin header, allow (curl/server-to-server). You can tighten this later if needed.
+  if (!requestOrigin) return true;
+
+  // If allowlist provided, enforce it.
+  if (allowed && allowed.length > 0) {
+    return allowed.includes(requestOrigin);
+  }
+
+  // Default: strict same-origin (minskar risken att andra sidor triggar gasförbrukning via browser)
+  return requestOrigin === requestUrlOrigin;
+}
+
+function toSafeTimestamp(timestampBig) {
+  const tsBig = BigInt(timestampBig ?? 0n);
+  const exists = tsBig !== 0n;
+
+  if (!exists) return { exists: false, timestamp: 0 };
+
+  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+  const timestamp = tsBig <= maxSafe ? Number(tsBig) : tsBig.toString();
+  return { exists: true, timestamp };
+}
+
 async function readProof({ publicClient, contractAddress, hash }) {
   const proof = await publicClient.readContract({
     address: contractAddress,
@@ -71,15 +121,15 @@ async function readProof({ publicClient, contractAddress, hash }) {
   });
 
   const timestampBig = proof?.[0] ?? 0n;
-  const exists = BigInt(timestampBig) !== 0n;
+  const submitter = proof?.[1];
 
-  const tsBig = BigInt(timestampBig);
-  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+  const { exists, timestamp } = toSafeTimestamp(timestampBig);
 
-  const timestamp =
-    exists && tsBig <= maxSafe ? Number(tsBig) : exists ? tsBig.toString() : 0;
-
-  return { exists, timestamp };
+  return {
+    exists,
+    timestamp,
+    submitter: isValidAddressHex(submitter) ? submitter : null,
+  };
 }
 
 async function readProofWithRetry({
@@ -97,60 +147,133 @@ async function readProofWithRetry({
   return readProof({ publicClient, contractAddress, hash });
 }
 
+function sanitizeError(e) {
+  // Viem errors har ofta shortMessage; fallbacka till message
+  const msg =
+    (e && typeof e === "object" && "shortMessage" in e && e.shortMessage) ||
+    (e && typeof e === "object" && "message" in e && e.message) ||
+    "Unexpected error";
+
+  // Håll kort och utan stack
+  return String(msg).slice(0, 300);
+}
+
 export async function onRequest({ request, env }) {
-  const origin = request.headers.get("Origin") || "";
+  const requestOrigin = request.headers.get("Origin") || "";
+  const requestUrlOrigin = new URL(request.url).origin;
+
+  const allowedOrigins = parseAllowedOrigins(env.ALLOWED_ORIGINS);
+  const originForCors = requestOrigin || ""; // om tomt blir ingen ACAO (ok för curl)
 
   if (request.method === "OPTIONS") {
-    return corsPreflight(origin || "*");
+    // Preflight ska följa samma policy
+    const ok = isOriginAllowed({
+      requestOrigin,
+      requestUrlOrigin,
+      allowed: allowedOrigins,
+    });
+    if (!ok) return corsPreflight(""); // inga CORS-headers vid block
+    return corsPreflight(requestOrigin || "*");
   }
 
   if (request.method !== "POST") {
-    return json(405, { ok: false, error: "Method Not Allowed" }, origin);
+    return json(405, { ok: false, error: "Method Not Allowed" }, originForCors);
+  }
+
+  // Origin-skydd (minskar risken att andra webbplatser triggar din signerande endpoint från browser)
+  const originOk = isOriginAllowed({
+    requestOrigin,
+    requestUrlOrigin,
+    allowed: allowedOrigins,
+  });
+  if (!originOk) {
+    return json(
+      403,
+      { ok: false, error: "Forbidden origin" },
+      originForCors
+    );
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return json(400, { ok: false, error: "Invalid JSON body" }, origin);
+    return json(400, { ok: false, error: "Invalid JSON body" }, originForCors);
   }
 
   const hash = String(body?.hash || "").trim();
 
   if (!isValidBytes32Hex(hash)) {
-    return json(400, { ok: false, error: "Invalid hash format" }, origin);
+    return json(400, { ok: false, error: "Invalid hash format" }, originForCors);
   }
 
   const rpcUrl = env.AMOY_RPC_URL;
   const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
-  const privateKey = env.PROOFY_PRIVATE_KEY;
+  const privateKeyRaw = env.PROOFY_PRIVATE_KEY;
+
+  const privateKey = normalizePrivateKey(privateKeyRaw);
 
   if (!rpcUrl || !contractAddress || !privateKey) {
-    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration" },
+      originForCors
+    );
   }
 
   if (!isValidAddressHex(contractAddress)) {
-    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration" },
+      originForCors
+    );
   }
 
+  if (!isValidBytes32Hex(privateKey)) {
+    // private key är 32 bytes => hex-längd 66 inkl 0x
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration" },
+      originForCors
+    );
+  }
+
+  // Timeout för hela operationen (förhindrar "häng" och gör fel mer deterministiska)
+  const controller = new AbortController();
+  const timeoutMs = Number(env.REGISTER_TIMEOUT_MS || 25_000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
+    const transport = http(rpcUrl, { fetchOptions: { signal: controller.signal } });
+
     const publicClient = createPublicClient({
       chain: polygonAmoy,
-      transport: http(rpcUrl),
+      transport,
     });
 
-    // If already registered, return exists+timestamp
+    // 1) Pre-read
     const pre = await readProof({ publicClient, contractAddress, hash });
     if (pre.exists && pre.timestamp && pre.timestamp !== 0) {
-      return json(200, { ok: true, exists: true, timestamp: pre.timestamp }, origin);
+      return json(
+        200,
+        {
+          ok: true,
+          exists: true,
+          alreadyExists: true,
+          timestamp: pre.timestamp,
+          submitter: pre.submitter,
+          txHash: null,
+        },
+        originForCors
+      );
     }
 
-    // Not registered -> write
+    // 2) Write
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
       chain: polygonAmoy,
-      transport: http(rpcUrl),
+      transport,
     });
 
     const txHash = await walletClient.writeContract({
@@ -165,6 +288,7 @@ export async function onRequest({ request, env }) {
       confirmations: 1,
     });
 
+    // 3) Post-read (med retry)
     const post = await readProofWithRetry({
       publicClient,
       contractAddress,
@@ -174,12 +298,43 @@ export async function onRequest({ request, env }) {
     });
 
     if (!post.exists || !post.timestamp || post.timestamp === 0) {
-      return json(500, { ok: false, error: "Registration completed but not readable" }, origin);
+      return json(
+        500,
+        { ok: false, error: "Registration completed but not readable" },
+        originForCors
+      );
     }
 
-    // Keep response minimal for frontend
-    return json(200, { ok: true, exists: true, timestamp: post.timestamp }, origin);
+    return json(
+      200,
+      {
+        ok: true,
+        exists: true,
+        alreadyExists: false,
+        timestamp: post.timestamp,
+        submitter: post.submitter,
+        txHash,
+      },
+      originForCors
+    );
   } catch (e) {
-    return json(500, { ok: false, error: "Register failed" }, origin);
+    const msg = sanitizeError(e);
+
+    // AbortController -> tydligare fel
+    if (e && typeof e === "object" && e.name === "AbortError") {
+      return json(
+        504,
+        { ok: false, error: "Upstream timeout", detail: `Timeout after ${timeoutMs}ms` },
+        originForCors
+      );
+    }
+
+    return json(
+      500,
+      { ok: false, error: "Register failed", detail: msg },
+      originForCors
+    );
+  } finally {
+    clearTimeout(timeout);
   }
 }
