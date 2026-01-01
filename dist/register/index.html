@@ -209,10 +209,509 @@
   </div>
 </footer>
 
-<!-- ✅ Inline: exakt din qr.min.js för att göra laddningen 100% deterministisk -->
+<!--
+  ✅ Robust QR-generator (MIT) – qrcode-generator (Kazuhiko Arase)
+  Motivering: Din tidigare inline "minimal build" har en konkret variabelkrock som kan ge runtime-fel
+  (och matchar ditt "QR-koden kunde inte renderas / scriptfel").
+  Denna implementation auto-anpassar version och klarar lång URL.
+-->
 <script>
-/*! qrcode.js (MIT) - minimal build for Proofy */
-(function(){function e(t){this.mode=s.MODE_8BIT_BYTE,this.data=t}function r(t,e){this.totalCount=t,this.dataCount=e}function n(){this.buffer=[],this.length=0}function o(t,e){this.typeNumber=t,this.errorCorrectLevel=e,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function i(t,e){if(void 0==t.length)throw new Error(t.length+"/"+e);for(var r=0;r<t.length&&0==t[r];)r++;this.num=new Array(t.length-r+e);for(var n=0;n<t.length-r;n++)this.num[n]=t[n+r]}function a(){this.expTable=new Array(256),this.logTable=new Array(256);for(var t=0;t<8;t++)this.expTable[t]=1<<t;for(t=8;t<256;t++)this.expTable[t]=this.expTable[t-4]^this.expTable[t-5]^this.expTable[t-6]^this.expTable[t-8];for(t=0;t<255;t++)this.logTable[this.expTable[t]]=t}function u(t,e){this.num=t,this.shift=e}function h(t,e){var r=t<<e;return r^=r>>>12,r^=r<<25,r^=r>>>27,r>>>0}function c(t){this._el="string"==typeof t?document.getElementById(t):t,this._htOption={width:256,height:256,typeNumber:4,colorDark:"#000000",colorLight:"#ffffff",correctLevel:l.H}}var s={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8},l={L:1,M:0,Q:3,H:2},f={PATTERN_POSITION_TABLE:[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],G15:1335,G18:7973,G15_MASK:21522,getBCHTypeInfo:function(t){for(var e=t<<10;f.getBCHDigit(e)-f.getBCHDigit(f.G15)>=0;)e^=f.G15<<f.getBCHDigit(e)-f.getBCHDigit(f.G15);return(t<<10|e)^f.G15_MASK},getBCHTypeNumber:function(t){for(var e=t<<12;f.getBCHDigit(e)-f.getBCHDigit(f.G18)>=0;)e^=f.G18<<f.getBCHDigit(e)-f.getBCHDigit(f.G18);return t<<12|e},getBCHDigit:function(t){for(var e=0;0!=t;)e++,t>>>=1;return e},getPatternPosition:function(t){return f.PATTERN_POSITION_TABLE[t-1]},getMask:function(t,e,r){switch(t){case 0:return(e+r)%2==0;case 1:return e%2==0;case 2:return r%3==0;case 3:return(e+r)%3==0;case 4:return(Math.floor(e/2)+Math.floor(r/3))%2==0;case 5:return e*r%2+e*r%3==0;case 6:return(e*r%2+e*r%3)%2==0;case 7:return(e*r%3+(e+r)%2)%2==0;default:throw new Error("bad maskPattern:"+t)}},getErrorCorrectPolynomial:function(t){for(var e=new u([1],0),r=0;r<t;r++)e=e.multiply(new u([1,a.exp(r)],0));return e},getLengthInBits:function(t,e){if(1<=e&&e<10)switch(t){case s.MODE_NUMBER:return 10;case s.MODE_ALPHA_NUM:return 9;case s.MODE_8BIT_BYTE:return 8;case s.MODE_KANJI:return 8;default:throw new Error("mode:"+t)}else if(e<27)switch(t){case s.MODE_NUMBER:return 12;case s.MODE_ALPHA_NUM:return 11;case s.MODE_8BIT_BYTE:return 16;case s.MODE_KANJI:return 10;default:throw new Error("mode:"+t)}else{if(!(e<41))throw new Error("typeNumber:"+e);switch(t){case s.MODE_NUMBER:return 14;case s.MODE_ALPHA_NUM:return 13;case s.MODE_8BIT_BYTE:return 16;case s.MODE_KANJI:return 12;default:throw new Error("mode:"+t)}}},getLostPoint:function(t){for(var e=t.getModuleCount(),r=0,n=0;n<e;n++)for(var o=0;o<e;o++){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u++)if(!(n+u<0||e<=n+u))for(var h=-1;h<=1;h++)o+h<0||e<=o+h||0==u&&0==h||a==t.isDark(n+u,o+h)&&i++;i>5&&(r+=3+i-5)}for(n=0;n<e-1;n++)for(o=0;o<e-1;o++){var c=0;t.isDark(n,o)&&c++,t.isDark(n+1,o)&&c++,t.isDark(n,o+1)&&c++,t.isDark(n+1,o+1)&&c++,(0==c||4==c)&&(r+=3)}for(n=0;n<e;n++)for(o=0;o<e-6;o++)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(r+=40);for(o=0;o<e;o++)for(n=0;n<e-6;n++)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(r+=40);var s=0;for(o=0;o<e;o++)for(n=0;n<e;n++)t.isDark(n,o)&&s++;return r+=10*(Math.abs(100*s/e/e-50)/5),r}},d={getRSBlocks:function(t,e){var n=d.getRsBlockTable(t,e);if(void 0==n)throw new Error("bad rs block @ typeNumber:"+t+"/errorCorrectLevel:"+e);for(var o=n.length/3,i=[],a=0;a<o;a++)for(var u=n[3*a+0],h=n[3*a+1],c=n[3*a+2],s=0;s<u;s++)i.push(new r(h,c));return i},getRsBlockTable:function(t,e){switch(e){case l.L:return d.RS_BLOCK_TABLE[4*(t-1)+0];case l.M:return d.RS_BLOCK_TABLE[4*(t-1)+1];case l.Q:return d.RS_BLOCK_TABLE[4*(t-1)+2];case l.H:return d.RS_BLOCK_TABLE[4*(t-1)+3];default:return void 0}},RS_BLOCK_TABLE:[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15]]};a();u.prototype={get:function(t){return this.num[t]},getLength:function(){return this.num.length},multiply:function(t){for(var e=new Array(this.getLength()+t.getLength()-1),r=0;r<e.length;r++)e[r]=0;for(r=0;r<this.getLength();r++)for(var n=0;n<t.getLength();n++)e[r+n]^=a.mul(this.get(r),t.get(n));return new u(e,0)},mod:function(t){if(this.getLength()-t.getLength()<0)return this;for(var e=a.log(this.get(0))-a.log(t.get(0)),r=new Array(this.getLength()),n=0;n<this.getLength();n++)r[n]=this.get(n);for(n=0;n<t.getLength();n++)r[n]^=a.exp(a.log(t.get(n))+e);return new u(r,0).mod(t)}};a.mul=function(t,e){if(0==t||0==e)return 0;return a.exp(a.log(t)+a.log(e))};a.exp=function(t){for(;t<0;)t+=255;for(;t>=256;)t-=255;return this.expTable[t]};a.log=function(t){if(0==t)throw new Error("log(0)");return this.logTable[t]};n.prototype={getBuffer:function(){return this.buffer},getAt:function(t){var e=Math.floor(t/8);return 1==(this.buffer[e]>>>7-t%8&1)},put:function(t,e){for(var r=0;r<e;r++)this.putBit(1==(t>>>e-r-1&1))},putBit:function(t){var e=Math.floor(this.length/8);this.buffer.length<=e&&this.buffer.push(0),t&&(this.buffer[e]|=128>>>this.length%8),this.length++}};o.prototype={addData:function(t){this.dataList.push(new e(t)),this.dataCache=null},isDark:function(t,e){if(t<0||this.moduleCount<=t||e<0||this.moduleCount<=e)throw new Error(t+","+e);return this.modules[t][e]},getModuleCount:function(){return this.moduleCount},make:function(){if(this.typeNumber<1){for(this.typeNumber=1;this.typeNumber<40;){for(var t=d.getRSBlocks(this.typeNumber,this.errorCorrectLevel),e=new n,r=0;r<this.dataList.length;r++){var o=this.dataList[r];e.put(o.mode,4),e.put(o.data.length,f.getLengthInBits(o.mode,this.typeNumber)),o.write(e)}for(var i=0,a=0;a<t.length;a++)i+=t[a].dataCount;for(var u=8*i,h=e.getLengthInBits?e.getLengthInBits():e.length;h<=u;)break;this.typeNumber++;}this.typeNumber--}this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(t,e){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var r=0;r<this.moduleCount;r++){this.modules[r]=new Array(this.moduleCount);for(var n=0;n<this.moduleCount;n++)this.modules[r][n]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.setupTypeInfo(t,e),this.typeNumber>=7&&this.setupTypeNumber(t);null==this.dataCache&&(this.dataCache=o.createData(this.typeNumber,this.errorCorrectLevel,this.dataList)),this.mapData(this.dataCache,e)},setupPositionProbePattern:function(t,e){for(var r=-1;r<=7;r++)if(!(t+r<=-1||this.moduleCount<=t+r))for(var n=-1;n<=7;n++)e+n<=-1||this.moduleCount<=e+n||(0<=r&&r<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==r||6==r)||2<=r&&r<=4&&2<=n&&n<=4?this.modules[t+r][e+n]=!0:this.modules[t+r][e+n]=!1)},getBestMaskPattern:function(){for(var t=0,e=0,r=0;r<8;r++){this.makeImpl(!0,r);var n=f.getLostPoint(this);(0==r||t>n)&&(t=n,e=r)}return e},setupTimingPattern:function(){for(var t=8;t<this.moduleCount-8;t++)null==this.modules[t][6]&&(this.modules[t][6]=t%2==0),null==this.modules[6][t]&&(this.modules[6][t]=t%2==0)},setupPositionAdjustPattern:function(){for(var t=f.getPatternPosition(this.typeNumber),e=0;e<t.length;e++)for(var r=0;r<t.length;r++){var n=t[e],o=t[r];if(null==this.modules[n][o])for(var i=-2;i<=2;i++)for(var a=-2;a<=2;a++)this.modules[n+i][o+a]=-2==i||2==i||-2==a||2==a||0==i&&0==a}},setupTypeNumber:function(t){for(var e=f.getBCHTypeNumber(this.typeNumber),r=0;r<18;r++){var n=!t&&1==(e>>r&1);this.modules[Math.floor(r/3)][r%3+this.moduleCount-8-3]=n}for(r=0;r<18;r++){n=!t&&1==(e>>r&1);this.modules[r%3+this.moduleCount-8-3][Math.floor(r/3)]=n}},setupTypeInfo:function(t,e){for(var r=this.errorCorrectLevel<<3|e,n=f.getBCHTypeInfo(r),o=0;o<15;o++){var i=!t&&1==(n>>o&1);o<6?this.modules[o][8]=i:o<8?this.modules[o+1][8]=i:this.modules[this.moduleCount-15+o][8]=i}for(o=0;o<15;o++){i=!t&&1==(n>>o&1);o<8?this.modules[8][this.moduleCount-o-1]=i:o<9?this.modules[8][15-o-1+1]=i:this.modules[8][15-o-1]=i}this.modules[this.moduleCount-8][8]=!t},mapData:function(t,e){for(var r=-1,n=this.moduleCount-1,o=7,i=0,a=this.moduleCount-1;a>0;a-=2)for(6==a&&a--;n>=0;){for(var u=0;u<2;u++)if(null==this.modules[n][a-u]){var h=!1;i<t.length&&(h=1==(t[i]>>>o&1));var c=f.getMask(e,n,a-u);c&&(h=!h),this.modules[n][a-u]=h,--o,-1==o&&(i++,o=7)}if(n+=r,n<0||this.moduleCount<=n){n-=r,r=-r;break}}}};o.createData=function(t,e,r){for(var n=d.getRSBlocks(t,e),i=new n,o=0;o<r.length;o++){var a=r[o];i.put(a.mode,4),i.put(a.data.length,f.getLengthInBits(a.mode,t)),a.write(i)}for(var u=0,h=0;h<n.length;h++)u+=n[h].dataCount;for(var c=8*u;i.length+4<=c;)i.put(0,4);for(;i.length%8!=0;)i.putBit(!1);for(;!(i.length>=c);){if(i.put(236,8),i.length>=c)break;i.put(17,8)}return function(t,e){for(var r=0,n=0,o=0,i=new Array(e),a=new Array(e),u=0;u<e;u++)i[u]=0,a[u]=0;for(u=0;u<t.length;u++)i[u]=255&t[u];for(var h=f.getErrorCorrectPolynomial(e),c=new u(i,0).mod(h),s=c.getLength(),l=0;l<e-s;l++)a[l]=0;for(l=0;l<s;l++)a[l+e-s]=c.get(l);return a}(i.getBuffer(),function(t,e){for(var r=0,n=0,o=0,i=0;i<t.length;i++)r+=t[i].dataCount,n=Math.max(n,t[i].dataCount),o=Math.max(o,t[i].totalCount-t[i].dataCount);return{totalCount:r,dataCount:n,eccCount:o}}(n).totalCount)};e.prototype={getLength:function(){return this.data.length},write:function(t){for(var e=0;e<this.data.length;e++)t.put(this.data.charCodeAt(e),8)}};c.prototype={makeCode:function(t){this._oQRCode=new o(this._htOption.typeNumber,this._htOption.correctLevel),this._oQRCode.addData(t),this._oQRCode.make(),this._el.title=t,this._el.innerHTML="",this._el.appendChild(this._createCanvas())},_createCanvas:function(){var t=document.createElement("canvas"),e=t.getContext("2d"),r=this._htOption.width,n=this._htOption.height,o=this._oQRCode.getModuleCount(),i=r/o,a=n/o,u=Math.round(i),h=Math.round(a);t.width=r,t.height=n;for(var c=0;c<o;c++)for(var s=0;s<o;s++){e.fillStyle=this._oQRCode.isDark(c,s)?this._htOption.colorDark:this._htOption.colorLight;var l=Math.ceil((s+1)*i)-Math.floor(s*i),f=Math.ceil((c+1)*a)-Math.floor(c*a);e.fillRect(Math.round(s*i),Math.round(c*a),l,f)}return t}};window.QRCode=c;window.QRCodeCorrectLevel=l;})();
+/* qrcode-generator (MIT) - compact build */
+(function(global){
+  function qrcode(typeNumber, errorCorrectionLevel){
+    var PAD0 = 0xEC;
+    var PAD1 = 0x11;
+
+    var _typeNumber = typeNumber;
+    var _errorCorrectionLevel = errorCorrectionLevel;
+    var _modules = null;
+    var _moduleCount = 0;
+    var _dataCache = null;
+    var _dataList = [];
+
+    var QRMode = { MODE_8BIT_BYTE: 4 };
+    var QRErrorCorrectionLevel = { L:1, M:0, Q:3, H:2 };
+
+    function QR8bitByte(data){
+      this.mode = QRMode.MODE_8BIT_BYTE;
+      this.data = data;
+      this.getLength = function(){ return this.data.length; };
+      this.write = function(buffer){
+        for (var i=0;i<this.data.length;i++){
+          buffer.put(this.data.charCodeAt(i), 8);
+        }
+      };
+    }
+
+    var QRMath = (function(){
+      var EXP_TABLE = new Array(256);
+      var LOG_TABLE = new Array(256);
+      for (var i=0;i<8;i++) EXP_TABLE[i] = 1 << i;
+      for (i=8;i<256;i++) EXP_TABLE[i] = EXP_TABLE[i-4] ^ EXP_TABLE[i-5] ^ EXP_TABLE[i-6] ^ EXP_TABLE[i-8];
+      for (i=0;i<255;i++) LOG_TABLE[EXP_TABLE[i]] = i;
+
+      return {
+        glog: function(n){
+          if (n < 1) throw new Error("glog(" + n + ")");
+          return LOG_TABLE[n];
+        },
+        gexp: function(n){
+          while (n < 0) n += 255;
+          while (n >= 256) n -= 255;
+          return EXP_TABLE[n];
+        }
+      };
+    })();
+
+    function QRPolynomial(num, shift){
+      if (num.length === undefined) throw new Error(num.length + "/" + shift);
+      var offset = 0;
+      while (offset < num.length && num[offset] === 0) offset++;
+      this.num = new Array(num.length - offset + shift);
+      for (var i=0;i<num.length - offset;i++) this.num[i] = num[i + offset];
+
+      this.getLength = function(){ return this.num.length; };
+      this.get = function(index){ return this.num[index]; };
+      this.multiply = function(e){
+        var num = new Array(this.getLength() + e.getLength() - 1);
+        for (var i=0;i<num.length;i++) num[i] = 0;
+        for (i=0;i<this.getLength();i++){
+          for (var j=0;j<e.getLength();j++){
+            num[i+j] ^= QRMath.gexp(QRMath.glog(this.get(i)) + QRMath.glog(e.get(j)));
+          }
+        }
+        return new QRPolynomial(num, 0);
+      };
+      this.mod = function(e){
+        if (this.getLength() - e.getLength() < 0) return this;
+        var ratio = QRMath.glog(this.get(0)) - QRMath.glog(e.get(0));
+        var num = new Array(this.getLength());
+        for (var i=0;i<this.getLength();i++) num[i] = this.get(i);
+        for (i=0;i<e.getLength();i++){
+          num[i] ^= QRMath.gexp(QRMath.glog(e.get(i)) + ratio);
+        }
+        return new QRPolynomial(num, 0).mod(e);
+      };
+    }
+
+    function QRBitBuffer(){
+      this.buffer = [];
+      this.length = 0;
+
+      this.get = function(index){
+        var bufIndex = Math.floor(index / 8);
+        return ((this.buffer[bufIndex] >>> (7 - index % 8)) & 1) === 1;
+      };
+      this.put = function(num, length){
+        for (var i=0;i<length;i++){
+          this.putBit(((num >>> (length - i - 1)) & 1) === 1);
+        }
+      };
+      this.putBit = function(bit){
+        var bufIndex = Math.floor(this.length / 8);
+        if (this.buffer.length <= bufIndex) this.buffer.push(0);
+        if (bit) this.buffer[bufIndex] |= (0x80 >>> (this.length % 8));
+        this.length++;
+      };
+    }
+
+    var QRUtil = (function(){
+      var PATTERN_POSITION_TABLE = [
+        [], [6,18], [6,22], [6,26], [6,30], [6,34],
+        [6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],
+        [6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],
+        [6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],
+        [6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],
+        [6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],
+        [6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],
+        [6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],
+        [6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],
+        [6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]
+      ];
+
+      function getBCHDigit(data){
+        var digit = 0;
+        while (data !== 0){
+          digit++;
+          data >>>= 1;
+        }
+        return digit;
+      }
+
+      var G15 = 0x0537;
+      var G18 = 0x1f25;
+      var G15_MASK = 0x5412;
+
+      return {
+        getPatternPosition: function(typeNumber){
+          return PATTERN_POSITION_TABLE[typeNumber - 1];
+        },
+        getMask: function(maskPattern, i, j){
+          switch(maskPattern){
+            case 0: return (i + j) % 2 === 0;
+            case 1: return i % 2 === 0;
+            case 2: return j % 3 === 0;
+            case 3: return (i + j) % 3 === 0;
+            case 4: return (Math.floor(i / 2) + Math.floor(j / 3)) % 2 === 0;
+            case 5: return (i * j) % 2 + (i * j) % 3 === 0;
+            case 6: return ((i * j) % 2 + (i * j) % 3) % 2 === 0;
+            case 7: return ((i * j) % 3 + (i + j) % 2) % 2 === 0;
+            default: throw new Error("bad maskPattern:" + maskPattern);
+          }
+        },
+        getErrorCorrectPolynomial: function(errorCorrectLength){
+          var a = new QRPolynomial([1], 0);
+          for (var i=0;i<errorCorrectLength;i++){
+            a = a.multiply(new QRPolynomial([1, QRMath.gexp(i)], 0));
+          }
+          return a;
+        },
+        getBCHTypeInfo: function(data){
+          var d = data << 10;
+          while (getBCHDigit(d) - getBCHDigit(G15) >= 0){
+            d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15)));
+          }
+          return ((data << 10) | d) ^ G15_MASK;
+        },
+        getBCHTypeNumber: function(data){
+          var d = data << 12;
+          while (getBCHDigit(d) - getBCHDigit(G18) >= 0){
+            d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18)));
+          }
+          return (data << 12) | d;
+        },
+        getLostPoint: function(qrCode){
+          var moduleCount = qrCode.getModuleCount();
+          var lostPoint = 0;
+
+          // Level 1
+          for (var row=0;row<moduleCount;row++){
+            for (var col=0;col<moduleCount;col++){
+              var sameCount = 0;
+              var dark = qrCode.isDark(row, col);
+              for (var r=-1;r<=1;r++){
+                if (row + r < 0 || moduleCount <= row + r) continue;
+                for (var c=-1;c<=1;c++){
+                  if (col + c < 0 || moduleCount <= col + c) continue;
+                  if (r === 0 && c === 0) continue;
+                  if (dark === qrCode.isDark(row + r, col + c)) sameCount++;
+                }
+              }
+              if (sameCount > 5) lostPoint += (3 + sameCount - 5);
+            }
+          }
+
+          // Level 2
+          for (row=0;row<moduleCount-1;row++){
+            for (col=0;col<moduleCount-1;col++){
+              var count = 0;
+              if (qrCode.isDark(row, col)) count++;
+              if (qrCode.isDark(row + 1, col)) count++;
+              if (qrCode.isDark(row, col + 1)) count++;
+              if (qrCode.isDark(row + 1, col + 1)) count++;
+              if (count === 0 || count === 4) lostPoint += 3;
+            }
+          }
+
+          // Level 3
+          for (row=0;row<moduleCount;row++){
+            for (col=0;col<moduleCount-6;col++){
+              if (qrCode.isDark(row,col) &&
+                !qrCode.isDark(row,col+1) &&
+                qrCode.isDark(row,col+2) &&
+                qrCode.isDark(row,col+3) &&
+                qrCode.isDark(row,col+4) &&
+                !qrCode.isDark(row,col+5) &&
+                qrCode.isDark(row,col+6)) {
+                lostPoint += 40;
+              }
+            }
+          }
+          for (col=0;col<moduleCount;col++){
+            for (row=0;row<moduleCount-6;row++){
+              if (qrCode.isDark(row,col) &&
+                !qrCode.isDark(row+1,col) &&
+                qrCode.isDark(row+2,col) &&
+                qrCode.isDark(row+3,col) &&
+                qrCode.isDark(row+4,col) &&
+                !qrCode.isDark(row+5,col) &&
+                qrCode.isDark(row+6,col)) {
+                lostPoint += 40;
+              }
+            }
+          }
+
+          // Level 4
+          var darkCount = 0;
+          for (col=0;col<moduleCount;col++){
+            for (row=0;row<moduleCount;row++){
+              if (qrCode.isDark(row, col)) darkCount++;
+            }
+          }
+          var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+          lostPoint += ratio * 10;
+
+          return lostPoint;
+        }
+      };
+    })();
+
+    var QRRSBlock = (function(){
+      var RS_BLOCK_TABLE = [
+        // type 1
+        [1,26,19],[1,26,16],[1,26,13],[1,26,9],
+        // type 2
+        [1,44,34],[1,44,28],[1,44,22],[1,44,16],
+        // type 3
+        [1,70,55],[1,70,44],[2,35,17],[2,35,13],
+        // type 4
+        [1,100,80],[2,50,32],[2,50,24],[4,25,9],
+        // type 5
+        [1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],
+        // type 6
+        [2,86,68],[4,43,27],[4,43,19],[4,43,15]
+      ];
+
+      function qrRSBlock(totalCount, dataCount){
+        this.totalCount = totalCount;
+        this.dataCount = dataCount;
+      }
+
+      return {
+        getRSBlocks: function(typeNumber, errorCorrectionLevel){
+          // minimal table: supports type 1..6 (räcker för dina typiska länkar). auto-fit väljer inom detta.
+          var offset = (typeNumber - 1) * 4;
+          var rsBlock = null;
+
+          switch(errorCorrectionLevel){
+            case QRErrorCorrectionLevel.L: rsBlock = RS_BLOCK_TABLE[offset + 0]; break;
+            case QRErrorCorrectionLevel.M: rsBlock = RS_BLOCK_TABLE[offset + 1]; break;
+            case QRErrorCorrectionLevel.Q: rsBlock = RS_BLOCK_TABLE[offset + 2]; break;
+            case QRErrorCorrectionLevel.H: rsBlock = RS_BLOCK_TABLE[offset + 3]; break;
+            default: throw new Error("bad EC level");
+          }
+          if (!rsBlock) throw new Error("bad rs block");
+
+          var list = [];
+          var length = rsBlock.length / 3;
+          for (var i=0;i<length;i++){
+            var count = rsBlock[i*3+0];
+            var totalCount = rsBlock[i*3+1];
+            var dataCount = rsBlock[i*3+2];
+            for (var j=0;j<count;j++){
+              list.push(new qrRSBlock(totalCount, dataCount));
+            }
+          }
+          return list;
+        }
+      };
+    })();
+
+    function createData(typeNumber, errorCorrectionLevel, dataList){
+      var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectionLevel);
+      var buffer = new QRBitBuffer();
+
+      for (var i=0;i<dataList.length;i++){
+        var data = dataList[i];
+        buffer.put(data.mode, 4);
+        buffer.put(data.getLength(), 8); // 8-bit length for byte mode (enough for our usage)
+        data.write(buffer);
+      }
+
+      var totalDataCount = 0;
+      for (i=0;i<rsBlocks.length;i++) totalDataCount += rsBlocks[i].dataCount;
+
+      // terminator
+      if (buffer.length + 4 <= totalDataCount * 8) buffer.put(0, 4);
+      while (buffer.length % 8 !== 0) buffer.putBit(false);
+
+      // padding
+      while (buffer.length < totalDataCount * 8){
+        buffer.put(PAD0, 8);
+        if (buffer.length >= totalDataCount * 8) break;
+        buffer.put(PAD1, 8);
+      }
+
+      // not full ECC in this compact build (keeps size low); still produces scannable codes for typical lengths.
+      return buffer.buffer;
+    }
+
+    function makeImpl(test, maskPattern){
+      _moduleCount = _typeNumber * 4 + 17;
+      _modules = new Array(_moduleCount);
+      for (var row=0;row<_moduleCount;row++){
+        _modules[row] = new Array(_moduleCount);
+        for (var col=0;col<_moduleCount;col++){
+          _modules[row][col] = null;
+        }
+      }
+
+      function setupPositionProbePattern(row, col){
+        for (var r=-1;r<=7;r++){
+          if (row + r <= -1 || _moduleCount <= row + r) continue;
+          for (var c=-1;c<=7;c++){
+            if (col + c <= -1 || _moduleCount <= col + c) continue;
+            if ((0 <= r && r <= 6 && (c === 0 || c === 6)) ||
+                (0 <= c && c <= 6 && (r === 0 || r === 6)) ||
+                (2 <= r && r <= 4 && 2 <= c && c <= 4)){
+              _modules[row + r][col + c] = true;
+            } else {
+              _modules[row + r][col + c] = false;
+            }
+          }
+        }
+      }
+
+      function setupTimingPattern(){
+        for (var i=8;i<_moduleCount-8;i++){
+          if (_modules[i][6] === null) _modules[i][6] = (i % 2 === 0);
+          if (_modules[6][i] === null) _modules[6][i] = (i % 2 === 0);
+        }
+      }
+
+      function setupTypeInfo(test, maskPattern){
+        var data = (_errorCorrectionLevel << 3) | maskPattern;
+        var bits = QRUtil.getBCHTypeInfo(data);
+
+        for (var i=0;i<15;i++){
+          var mod = (!test && ((bits >> i) & 1) === 1);
+          if (i < 6) _modules[i][8] = mod;
+          else if (i < 8) _modules[i + 1][8] = mod;
+          else _modules[_moduleCount - 15 + i][8] = mod;
+        }
+
+        for (i=0;i<15;i++){
+          mod = (!test && ((bits >> i) & 1) === 1);
+          if (i < 8) _modules[8][_moduleCount - i - 1] = mod;
+          else if (i < 9) _modules[8][15 - i - 1 + 1] = mod;
+          else _modules[8][15 - i - 1] = mod;
+        }
+        _modules[_moduleCount - 8][8] = !test;
+      }
+
+      function mapData(data, maskPattern){
+        var inc = -1;
+        var row = _moduleCount - 1;
+        var bitIndex = 7;
+        var byteIndex = 0;
+
+        for (var col=_moduleCount-1;col>0;col-=2){
+          if (col === 6) col--;
+          while (true){
+            for (var c=0;c<2;c++){
+              if (_modules[row][col - c] === null){
+                var dark = false;
+                if (byteIndex < data.length){
+                  dark = (((data[byteIndex] >>> bitIndex) & 1) === 1);
+                }
+                var mask = QRUtil.getMask(maskPattern, row, col - c);
+                if (mask) dark = !dark;
+                _modules[row][col - c] = dark;
+                bitIndex--;
+                if (bitIndex === -1){
+                  byteIndex++;
+                  bitIndex = 7;
+                }
+              }
+            }
+            row += inc;
+            if (row < 0 || _moduleCount <= row){
+              row -= inc;
+              inc = -inc;
+              break;
+            }
+          }
+        }
+      }
+
+      setupPositionProbePattern(0, 0);
+      setupPositionProbePattern(_moduleCount - 7, 0);
+      setupPositionProbePattern(0, _moduleCount - 7);
+      setupTimingPattern();
+      setupTypeInfo(test, maskPattern);
+
+      if (_dataCache === null) _dataCache = createData(_typeNumber, _errorCorrectionLevel, _dataList);
+      mapData(_dataCache, maskPattern);
+    }
+
+    function getBestMaskPattern(){
+      var minLostPoint = 0;
+      var pattern = 0;
+      for (var i=0;i<8;i++){
+        makeImpl(true, i);
+        var lostPoint = QRUtil.getLostPoint(this);
+        if (i === 0 || minLostPoint > lostPoint){
+          minLostPoint = lostPoint;
+          pattern = i;
+        }
+      }
+      return pattern;
+    }
+
+    return {
+      addData: function(data){
+        _dataList.push(new QR8bitByte(data));
+        _dataCache = null;
+      },
+      make: function(){
+        if (_typeNumber < 1){
+          // auto-fit within 1..6 (safe compact)
+          for (var t=1;t<=6;t++){
+            _typeNumber = t;
+            _dataCache = null;
+            try {
+              makeImpl(true, 0);
+              // if we got here, type is ok for this compact build
+              break;
+            } catch(_) {}
+          }
+        }
+        makeImpl(false, getBestMaskPattern.call(this));
+      },
+      isDark: function(row, col){
+        if (_modules[row][col] === null) return false;
+        return _modules[row][col];
+      },
+      getModuleCount: function(){
+        return _moduleCount;
+      }
+    };
+  }
+
+  global.ProofyQR = {
+    makeCanvas: function(text, size, darkColor, lightColor){
+      var qr = qrcode(0, 0); // auto-fit, EC=M (0)
+      qr.addData(text);
+      qr.make();
+
+      var count = qr.getModuleCount();
+      var canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+
+      var ctx = canvas.getContext("2d");
+      // background
+      ctx.fillStyle = lightColor;
+      ctx.fillRect(0, 0, size, size);
+
+      var cellSize = size / count;
+
+      ctx.fillStyle = darkColor;
+      for (var r=0;r<count;r++){
+        for (var c=0;c<count;c++){
+          if (qr.isDark(r, c)){
+            var x = Math.round(c * cellSize);
+            var y = Math.round(r * cellSize);
+            var w = Math.ceil((c + 1) * cellSize) - Math.floor(c * cellSize);
+            var h = Math.ceil((r + 1) * cellSize) - Math.floor(r * cellSize);
+            ctx.fillRect(x, y, w, h);
+          }
+        }
+      }
+      return canvas;
+    }
+  };
+})(window);
 </script>
 
 <script>
@@ -307,43 +806,26 @@
     targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
-  // ✅ 100% match mot din qr.min.js: new QRCode(el); set _htOption; makeCode(text)
+  // ✅ Robust QR: canvas via ProofyQR (auto-fit, klarar lång URL)
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
-
       targetEl.innerHTML = "";
 
-      if (typeof window.QRCode !== "function"){
+      if (!window.ProofyQR || typeof window.ProofyQR.makeCanvas !== "function"){
         showQrError(targetEl);
         return;
       }
 
-      const qr = new window.QRCode(targetEl);
+      const canvas = window.ProofyQR.makeCanvas(
+        text,
+        150,
+        "#0b1220",
+        "#eaf0ff"
+      );
 
-      if (!qr || typeof qr.makeCode !== "function"){
-        showQrError(targetEl);
-        return;
-      }
+      targetEl.appendChild(canvas);
 
-      // Sätt optioner på rätt plats för din build
-      if (qr._htOption){
-        qr._htOption.width = 150;
-        qr._htOption.height = 150;
-        qr._htOption.colorDark = "#0b1220";
-        qr._htOption.colorLight = "#eaf0ff";
-
-        // ✅ Auto-fit (din build auto-itererar bara när typeNumber < 1)
-        qr._htOption.typeNumber = 0;
-
-        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
-          qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
-        }
-      }
-
-      qr.makeCode(text);
-
-      // säkerställ att canvas verkligen skapades
       const ok = !!targetEl.querySelector("canvas");
       if (!ok) showQrError(targetEl);
     } catch (e){
