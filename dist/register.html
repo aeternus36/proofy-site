@@ -307,9 +307,8 @@
   </div>
 </footer>
 
-<!-- ✅ QR-lib: gör laddning deterministisk -->
+<!-- ✅ QR-lib: LÅT DEN KÖRA INNAN inline-scriptet (INTE defer) -->
 <script src="/assets/qr.min.js?v=2025-12-31-qrfix"
-  defer
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -536,7 +535,9 @@
   }
 
   function canRenderQr(){
-    return typeof window.QRCode === "function";
+    return typeof window.QRCode === "function"
+      && window.QRCode.prototype
+      && typeof window.QRCode.prototype.makeCode === "function";
   }
 
   function showQrError(targetEl, extra){
@@ -547,29 +548,12 @@
     targetEl.innerHTML = `<div class="meta">${parts.join(" ")}</div>`;
   }
 
-  /**
-   * ✅ Robust QR-render: stödjer både
-   * A) new QRCode(el, { text, ... })  (vissa builds)
-   * B) const qr = new QRCode(el); qr.makeCode(text)  (din minimal-build)
-   */
+  // ✅ Renderar enligt DIN qr.min.js: new QRCode(el) + makeCode(text)
   function renderQr(targetEl, text){
     if (!targetEl) return;
 
-    // tydlig placeholder
     targetEl.innerHTML = `<div class="meta">Skapar QR…</div>`;
 
-    // 🔒 Säkerställ att QR-lib finns även om sidan råkar sakna script-import (t.ex. /register/)
-    if (!canRenderQr() && !window.__proofyQrLibLoaded && !window.__proofyQrScriptInjected) {
-      window.__proofyQrScriptInjected = true;
-
-      const s = document.createElement("script");
-      s.src = "/assets/qr.min.js?v=2025-12-31-qrfix";
-      s.onload = () => { window.__proofyQrLibLoaded = true; };
-      s.onerror = () => { window.__proofyQrLibError = true; };
-      document.head.appendChild(s);
-    }
-
-    // om script inte laddat ännu: vänta kort
     if (!canRenderQr()){
       let tries = 0;
       const t = setInterval(() => {
@@ -581,57 +565,32 @@
         }
         if (window.__proofyQrLibError || tries > 40){
           clearInterval(t);
-          showQrError(targetEl, "Kontrollera att /assets/qr.min.js finns och inte blockeras.");
+          showQrError(targetEl, "Kontrollera att /assets/qr.min.js finns och laddas.");
         }
       }, 50);
       return;
     }
 
-    // försök rendera
     try{
       targetEl.innerHTML = "";
 
-      const opts = {
-        text,
-        width: 150,
-        height: 150,
-        colorDark: "#0b1220",
-        colorLight: "#eaf0ff",
-        correctLevel:
-          window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
-            ? window.QRCodeCorrectLevel.M
-            : undefined
-      };
+      const qr = new window.QRCode(targetEl);
 
-      let did = false;
-
-      // 1) Försök API A (options i constructor)
-      try{
-        // vissa builds skapar direkt canvas/img
-        new window.QRCode(targetEl, opts);
-        did = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
-      } catch { /* ignore */ }
-
-      // 2) Fallback API B (minimal: makeCode)
-      if (!did){
-        const qr = new window.QRCode(targetEl);
-        if (qr && typeof qr.makeCode === "function"){
-          if (qr._htOption){
-            qr._htOption.width = 150;
-            qr._htOption.height = 150;
-            qr._htOption.colorDark = "#0b1220";
-            qr._htOption.colorLight = "#eaf0ff";
-            if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M) {
-              qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
-            }
-          }
-          qr.makeCode(text);
-          did = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
+      if (qr && qr._htOption){
+        qr._htOption.width = 150;
+        qr._htOption.height = 150;
+        qr._htOption.colorDark = "#0b1220";
+        qr._htOption.colorLight = "#eaf0ff";
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M) {
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
         }
       }
 
-      if (!did){
-        showQrError(targetEl, "QR-biblioteket laddades, men API-matchning misslyckades.");
+      qr.makeCode(String(text || ""));
+
+      const ok = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
+      if (!ok){
+        showQrError(targetEl, "QR-biblioteket laddades men inget canvas/img skapades.");
       }
     } catch (e){
       console.error("QR render error:", e);
@@ -741,15 +700,12 @@
       currentId = id;
       currentLink = buildVerifyLink(id);
 
-      // Visa lokal notering (behåll)
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
-      // Visa rapport
       resultBox.style.display = "block";
       if (reportMeta) reportMeta.style.display = "block";
 
-      // Headline neutral direkt (uppdateras efter registrering)
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
       headline.innerHTML = `<span class="meta">Verifierings-ID skapat</span>`;
@@ -765,7 +721,6 @@
         receiptBtn.style.display = "inline-flex";
       }
 
-      // ✅ QR render
       renderQr(qrBox, currentLink);
 
       regStatusOut.textContent = "Registrerar…";
@@ -786,7 +741,6 @@
         throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
       }
 
-      // audit-ton (nedtonad grön)
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
 
@@ -820,7 +774,6 @@
     }
   });
 
-  // Manuell del (oförändrad)
   function setManualState(id){
     const clean = (id || "").trim();
     if (!isIdFormat(clean)){
@@ -837,7 +790,6 @@
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
 
-    // ✅ QR även här
     renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
@@ -858,7 +810,6 @@
     catch { setManualPill("Kunde inte kopiera"); }
   });
 
-  // init
   resetReport();
   updateValidationUI();
   setManualState("");
@@ -868,4 +819,4 @@
 <script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
 <script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
-          </html>
+</html>
