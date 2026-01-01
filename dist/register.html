@@ -6,8 +6,8 @@
   <title>Proofy – Skapa Verifierings-ID</title>
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
-  <!-- ✅ samma header-stöd som verify -->
+
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-24a" />
   <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
 </head>
 
@@ -22,25 +22,22 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Desktop actions -->
       <div class="navActions" id="navActionsDesktop">
-        <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
-        <a class="btn" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
-        <a class="btn primary" href="/#kontakt">Boka demo</a>
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
-      <!-- ✅ Mobile hamburger -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
         </summary>
 
         <nav class="mnavMenu" aria-label="Meny">
-          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/pilot.html">Starta pilot</a>
-          <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka demo</a>
+          <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
             <div class="mnavNote">Verifiering · revision · granskning</div>
@@ -73,13 +70,16 @@
             Välj den filversion som ska gälla som referens. Du får Verifierings-ID, delbar länk och QR-kod.
           </p>
 
-          <input id="fileInput" type="file" />
-          <div id="dropZone" class="drop" style="margin-top:10px">Dra &amp; släpp fil här</div>
+          <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:8px; cursor:pointer;">
+            Välj referensfil (fil)
+          </label>
+          <input id="fileInput" type="file" style="display:none;" />
 
+          <div id="dropZone" class="drop" style="margin-top:10px">Dra &amp; släpp fil här</div>
           <div id="fileInfo" class="meta" style="margin-top:10px">Ingen fil vald.</div>
 
-          <div class="actions" style="margin-top:12px">
-            <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
+          <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
+            <button class="btn soft" id="createBtn" disabled>Skapa &amp; registrera</button>
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
             <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
@@ -170,7 +170,7 @@
           <div>
             <label class="meta" for="manualId">Verifierings-ID</label>
             <input id="manualId" type="text" placeholder="Klistra in Verifierings-ID…" style="margin-top:8px" />
-            <div class="actions" style="margin-top:12px">
+            <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
               <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
               <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
               <a class="btn soft" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
@@ -229,7 +229,7 @@
   </div>
 </footer>
 
-<!-- ✅ QR-lib: full build -->
+<!-- QR-lib (din patched build) -->
 <script src="/assets/qr.min.js?v=2026-01-01"></script>
 
 <script>
@@ -280,6 +280,9 @@
   function setBusy(v){
     busy = v;
     createBtn.disabled = !currentFile || busy;
+    createBtn.classList.toggle("primary", !!currentFile && !busy);
+    createBtn.classList.toggle("soft", !currentFile || busy);
+
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
   }
@@ -327,7 +330,6 @@
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
-
       targetEl.innerHTML = "";
 
       if (typeof window.QRCode !== "function"){
@@ -342,8 +344,8 @@
       }
 
       if (qr._htOption){
-        qr._htOption.width = 170;
-        qr._htOption.height = 170;
+        qr._htOption.width = 150;
+        qr._htOption.height = 150;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#eaf0ff";
         qr._htOption.typeNumber = 0; // auto-fit
@@ -396,6 +398,41 @@
     if(f) setFile(f);
   });
 
+  async function apiRegisterWithTimeout(hash, ms){
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try{
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ hash }),
+        signal: ctrl.signal
+      });
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async function apiVerify(hash){
+    const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
+    return { ok:false };
+  }
+
+  async function waitForTimestamp(hash, { attempts=20, delayMs=1500 } = {}){
+    for (let i=0; i<attempts; i++){
+      const v = await apiVerify(hash);
+      if (v.ok && v.data && v.data.exists && v.data.timestamp && Number(v.data.timestamp) > 0) {
+        return Number(v.data.timestamp);
+      }
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+    return null;
+  }
+
   createBtn.addEventListener("click", async () => {
     if(!currentFile || busy) return;
 
@@ -428,40 +465,60 @@
       resultBox.style.display = "block";
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
+      headline.innerHTML = `<span class="meta">Startar registrering…</span>`;
 
       setPill("Registrerar…");
 
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ hash: id })
-      });
+      // 1) Försök registrera (snabb timeout så sidan inte “hänger” på mobil)
+      let registerData = null;
+      try{
+        const { res, data } = await apiRegisterWithTimeout(id, 25000);
+        if(myOp !== opId) return;
 
-      const data = await res.json().catch(() => ({}));
+        if(!res.ok || data.ok === false){
+          throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
+        }
+        registerData = data || {};
+      } catch (e){
+        if(myOp !== opId) return;
+        // Timeout eller nätfel: fortsätt ändå med polling mot verify
+        console.warn("Register timeout/fail -> polling verify", e);
+        registerData = { pending: true };
+      }
+
+      // 2) UI direkt (registrering initierad / redan registrerad)
+      if (registerData.alreadyExists) {
+        headline.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`;
+        regStatusOut.textContent = "Registrerad";
+      } else if (registerData.pending) {
+        headline.innerHTML = `<span class="meta">⏳ Registrering pågår…</span> <span class="meta">(kontrollerar status)</span>`;
+        regStatusOut.textContent = "Registrerar…";
+      } else {
+        headline.innerHTML = `<span class="ok">✅ Registrering skickad</span> <span class="meta">(kontrollerar status)</span>`;
+        regStatusOut.textContent = "Registrerar…";
+      }
+
+      submitterOut.textContent = registerData.submitter || "—";
+      txOut.textContent = registerData.txHash || "—";
+
+      // 3) Vänta in timestamp via verify (detta gör att du slipper fastna på “Registrerar…”)
+      const ts = await waitForTimestamp(id, { attempts: 26, delayMs: 1500 });
       if(myOp !== opId) return;
 
-      if(!res.ok || data.ok === false){
-        throw new Error(data?.error || `Registreringen misslyckades (HTTP ${res.status}).`);
-      }
-
-      if (data.alreadyExists) {
-        headline.innerHTML = `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`;
+      if (ts) {
+        regStatusOut.textContent = "Registrerad";
+        timeOut.textContent = new Date(ts * 1000).toLocaleString("sv-SE");
+        if (!registerData.alreadyExists) {
+          headline.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="meta">(klar)</span>`;
+        }
+        setPill("Klart ✅");
       } else {
-        headline.innerHTML = `<span class="ok">✅ Registrerad</span> <span class="meta">(ny referens skapad)</span>`;
-      }
-
-      regStatusOut.textContent = "Registrerad";
-
-      if (data.timestamp) {
-        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
-      } else {
+        // inte klar inom poll-fönstret
+        regStatusOut.textContent = "Registrering pågår (kan ta lite längre tid)";
         timeOut.textContent = "—";
+        setPill("Pågår…");
       }
 
-      submitterOut.textContent = data.submitter || "—";
-      txOut.textContent = data.txHash || "—";
-
-      setPill("Klart ✅");
       setBusy(false);
     } catch (e){
       console.error(e);
@@ -540,8 +597,7 @@
 })();
 </script>
 
-<!-- ✅ samma toggler som verify -->
 <script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
-<script src="/chat-widget.js?v=2025-01" defer></script>
+<script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
 </html>
