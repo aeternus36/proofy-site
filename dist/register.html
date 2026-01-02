@@ -7,8 +7,8 @@
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-02a" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-02a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-02b" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-02b" />
 </head>
 
 <body>
@@ -170,19 +170,18 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
-                  <!-- Placeholder före registrering -->
                   <div id="qrPlaceholder" class="qrPlaceholder">
                     <div class="qrPlaceholderTitle">Skapas efter registrering</div>
                     <div class="qrPlaceholderText">Skanna med mobilkamera för att öppna verifiering.</div>
                   </div>
 
-                  <!-- Själva QR: svart/vit, quiet zone, inte klickbar -->
-                  <div id="qrFrame" class="qrFrame" style="display:none;">
+                  <div id="qrMat" class="qrMat" style="display:none;">
                     <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
                   </div>
 
                   <div class="small" style="margin-top:10px; opacity:.92;">
-                    QR används främst när verifieringslänken ska vidare till en annan enhet (t.ex. klient, kollega eller akt).
+                    QR är främst när verifieringslänken ska vidare till en annan enhet (t.ex. klient/kollega/akt).
+                    För intern hantering: använd “Kopiera länk”.
                   </div>
                 </div>
 
@@ -229,7 +228,6 @@
       </div>
     </div>
 
-    <!-- Manual -->
     <section style="margin-top:14px;">
       <div class="card content">
         <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
@@ -270,7 +268,7 @@
                   <div class="qrPlaceholderText">Skanna med mobilkamera för att öppna verifiering.</div>
                 </div>
 
-                <div id="manualQrFrame" class="qrFrame" style="display:none;">
+                <div id="manualQrMat" class="qrMat" style="display:none;">
                   <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
                 </div>
               </div>
@@ -323,12 +321,10 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Inputs
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
 
-  // Actions
   const createBtn = $("createBtn");
   const copyIdBtn = $("copyIdBtn");
   const copyLinkBtn = $("copyLinkBtn");
@@ -336,12 +332,10 @@
   const receiptBtn = $("receiptBtn");
   const statusPill = $("statusPill");
 
-  // Left local id
   const localIdBox = $("localIdBox");
   const localIdOut = $("localIdOut");
   const copyIdPill = $("copyIdPill");
 
-  // Report
   const reportMeta = $("reportMeta");
   const resultBox = $("resultBox");
   const headline = $("headline");
@@ -362,12 +356,10 @@
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
-  // QR (auto)
   const qrPlaceholder = $("qrPlaceholder");
-  const qrFrame = $("qrFrame");
+  const qrMat = $("qrMat");
   const qrBox = $("qrBox");
 
-  // Manual
   const manualId = $("manualId");
   const manualBuildBtn = $("manualBuildBtn");
   const manualCopyLinkBtn = $("manualCopyLinkBtn");
@@ -375,7 +367,7 @@
   const manualPill = $("manualPill");
   const manualLinkOut = $("manualLinkOut");
   const manualQrPlaceholder = $("manualQrPlaceholder");
-  const manualQrFrame = $("manualQrFrame");
+  const manualQrMat = $("manualQrMat");
   const manualQrBox = $("manualQrBox");
 
   let currentFile = null;
@@ -495,9 +487,9 @@
     hidePill(copyNotePill);
     if (copyNoteBtn) copyNoteBtn.style.display = "none";
 
-    // QR: tillbaka till placeholder
+    // QR tillbaka till placeholder
     if (qrBox) qrBox.innerHTML = "";
-    if (qrFrame) qrFrame.style.display = "none";
+    if (qrMat) qrMat.style.display = "none";
     if (qrPlaceholder) qrPlaceholder.style.display = "grid";
 
     lastRun = null;
@@ -544,7 +536,6 @@
     };
   }
 
-  // Långtryck för kopiering (mobil): på LÄNK, inte på QR.
   function attachLongPressCopy(el, getText, onCopied){
     if (!el) return;
 
@@ -582,7 +573,13 @@
     });
   }
 
-  // Skanningsvänlig QR: svart/vit, stor, låg ECC, riktig quiet zone.
+  // ===== QR: maxa skanningsbarhet =====
+  // - större
+  // - ingen CSS-skalning
+  // - svart/vit
+  // - correctLevel L (glesare)
+  const QR_SIZE = 360;
+
   function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -594,21 +591,27 @@
     }
 
     const qr = new window.QRCode(targetEl);
+
     if (qr && qr._htOption){
-      qr._htOption.width = 256;
-      qr._htOption.height = 256;
+      qr._htOption.width = QR_SIZE;
+      qr._htOption.height = QR_SIZE;
       qr._htOption.colorDark = "#000000";
       qr._htOption.colorLight = "#ffffff";
-      qr._htOption.typeNumber = 0; // auto
-      qr._htOption.correctLevel = window.QRCodeCorrectLevel.L; // viktig för lång URL
+      qr._htOption.typeNumber = 0;
+      qr._htOption.correctLevel = window.QRCodeCorrectLevel.L;
     }
 
     qr.makeCode(text);
 
-    const ok = !!targetEl.querySelector("canvas");
-    if (!ok){
+    const canvas = targetEl.querySelector("canvas");
+    if (!canvas){
       targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+      return;
     }
+
+    // Viktigt: förhindra att canvas blir skalad/blurry
+    canvas.style.width = QR_SIZE + "px";
+    canvas.style.height = QR_SIZE + "px";
   }
 
   function buildNote(run){
@@ -651,10 +654,8 @@
     setBusy(false);
   }
 
-  // File picker
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
 
-  // Drag & drop
   dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
   dropZone.addEventListener("drop", (e) => {
@@ -664,7 +665,6 @@
     if (f) setFile(f);
   });
 
-  // Copy by click (ID)
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
@@ -728,7 +728,6 @@
     setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
 
-  // Register
   createBtn.addEventListener("click", async () => {
     if (!currentFile || busy) return;
 
@@ -745,11 +744,9 @@
       currentId = id;
       currentLink = buildVerifyLink(id);
 
-      // Left
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
-      // Report visible
       resultBox.style.display = "block";
       reportMeta.style.display = "block";
 
@@ -764,9 +761,9 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      // QR: visa ram + rendera QR (skanning), göm placeholder
+      // QR synlig
       if (qrPlaceholder) qrPlaceholder.style.display = "none";
-      if (qrFrame) qrFrame.style.display = "block";
+      if (qrMat) qrMat.style.display = "block";
       renderQr(qrBox, currentLink);
 
       applyCopyHover(idOut, copyIdIconBtn, true);
@@ -776,7 +773,6 @@
         await copyWithFeedback({ text: currentLink, pillEl: copyLinkPill });
       });
 
-      // Status
       setPill("Registrerar…");
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
@@ -807,7 +803,7 @@
       }
 
       const already = !!data.alreadyExists;
-      headline.className = already ? "headline okHead" : "headline okHead";
+      headline.className = "headline okHead";
       headline.innerHTML = already
         ? `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`
         : `<span class="ok">✅ Registrerad</span> <span class="meta">(ny referens skapad)</span>`;
@@ -845,7 +841,6 @@
         ? "Timeout: registreringen tog för lång tid (30s). Försök igen."
         : (e?.message || "Registreringstjänsten kunde inte nås just nu.");
 
-      // Behåll QR + länk användbara även vid fel
       if (currentId && currentLink){
         resultBox.style.display = "block";
         reportMeta.style.display = "block";
@@ -856,7 +851,7 @@
         debugOut.textContent = errorMsg.textContent;
 
         if (qrPlaceholder) qrPlaceholder.style.display = "none";
-        if (qrFrame) qrFrame.style.display = "block";
+        if (qrMat) qrMat.style.display = "block";
         renderQr(qrBox, currentLink);
       }
 
@@ -879,7 +874,7 @@
       manualVerifyBtn.style.opacity = ".55";
 
       if (manualQrBox) manualQrBox.innerHTML = "";
-      if (manualQrFrame) manualQrFrame.style.display = "none";
+      if (manualQrMat) manualQrMat.style.display = "none";
       if (manualQrPlaceholder) manualQrPlaceholder.style.display = "grid";
 
       setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
@@ -896,7 +891,7 @@
     manualVerifyBtn.style.opacity = "1";
 
     if (manualQrPlaceholder) manualQrPlaceholder.style.display = "none";
-    if (manualQrFrame) manualQrFrame.style.display = "block";
+    if (manualQrMat) manualQrMat.style.display = "block";
     renderQr(manualQrBox, link);
 
     setManualPill("Redo ✅");
