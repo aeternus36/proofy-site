@@ -130,7 +130,7 @@
 
           <div class="hr"></div>
 
-          <!-- Empty state (visas innan ID finns) -->
+          <!-- Empty state -->
           <div id="emptyState"
                style="
                  border:1px solid rgba(255,255,255,.10);
@@ -215,7 +215,6 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
-                  <!-- Klick kopierar länk. Skanning sker med annan enhet -->
                   <div id="qrTap"
                        role="button"
                        tabindex="0"
@@ -521,8 +520,10 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
   }
 
+  // ✅ Kortare länk för QR + delning (minskar densitet rejält)
   function buildVerifyLink(hash){
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
+    const clean = String(hash || "").trim();
+    return `${location.origin}/v/${clean}`;
   }
 
   async function copyTextToClipboard(text){
@@ -638,7 +639,7 @@
     targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
-  // ✅ KORREKT FÖR DITT QR-LIB: options i constructor + text via makeCode()
+  // ✅ Rätt för ditt QR-lib: options i constructor + text via makeCode()
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -649,7 +650,7 @@
         return;
       }
 
-      const tap = targetEl.parentElement; // qrTap / manualQrTap
+      const tap = targetEl.parentElement;
       const available = tap ? (tap.clientWidth - 32) : 280;
       const size = Math.max(240, Math.min(320, available || 280));
 
@@ -674,7 +675,6 @@
         return;
       }
 
-      // Lås endast style (inte canvas.width/height, som skulle rensa)
       canvas.style.display = "block";
       canvas.style.width = canvas.width + "px";
       canvas.style.height = canvas.height + "px";
@@ -850,6 +850,7 @@
       openVerifyBtn.style.pointerEvents = "auto";
       openVerifyBtn.style.opacity = "1";
 
+      // Intyg behåller query (server/verify-förväntan)
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
