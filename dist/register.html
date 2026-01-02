@@ -110,6 +110,9 @@
                    background:rgba(255,255,255,.03);
                    cursor:pointer;
                    user-select:text;
+                   overflow-wrap:anywhere;
+                   word-break:break-word;
+                   white-space:normal;
                  ">—</div>
 
             <span id="copyIdPill" class="pill" style="display:none; margin-top:8px;"></span>
@@ -174,6 +177,9 @@
                        cursor:pointer;
                        padding-right:52px;
                        user-select:text;
+                       overflow-wrap:anywhere;
+                       word-break:break-word;
+                       white-space:normal;
                      ">—</div>
 
                 <span id="copyIdPill2" class="pill" style="display:none; margin-top:8px;"></span>
@@ -204,6 +210,9 @@
                      padding-right:52px;
                      user-select:text;
                      text-decoration:none;
+                     overflow-wrap:anywhere;
+                     word-break:break-word;
+                     white-space:normal;
                    ">—</a>
 
                 <span id="copyLinkPill" class="pill" style="display:none; margin-top:8px;"></span>
@@ -224,13 +233,14 @@
                        style="
                          display:inline-block;
                          border-radius:16px;
-                         padding:12px;              /* quiet zone */
+                         padding:16px;              /* tydligare quiet zone */
                          background:#ffffff;        /* max scannability */
                          border:1px solid rgba(255,255,255,.14);
                          cursor:pointer;
                          max-width: 100%;
+                         overflow:visible;
                        ">
-                    <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
+                    <div id="qrBox" class="qrBox" aria-label="QR-kod" style="background:#ffffff; display:inline-block;"></div>
                   </div>
 
                   <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
@@ -241,10 +251,10 @@
 
                 <div style="min-width:240px; flex:1;">
                   <div class="meta">Registreringsstatus</div>
-                  <div id="regStatusOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="regStatusOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
                   <div class="meta" style="margin-top:10px;">Registreringstid</div>
-                  <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="timeOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
                   <div class="actions" style="margin-top:12px;">
                     <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera registreringsnotering</button>
@@ -260,13 +270,13 @@
                     <div class="hr"></div>
 
                     <div class="meta">Teknisk referens (tx)</div>
-                    <div id="txOut" class="mono" style="margin-top:8px;">—</div>
+                    <div id="txOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Teknisk identitet</div>
-                    <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
+                    <div id="submitterOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Felsvar (om något)</div>
-                    <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
+                    <div id="debugOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
                   </details>
                 </div>
               </div>
@@ -275,7 +285,7 @@
 
           <div id="errorBox" style="display:none; margin-top:12px;">
             <div class="err">Tillfälligt tekniskt problem</div>
-            <div id="errorMsg" class="mono" style="margin-top:8px;"></div>
+            <div id="errorMsg" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;"></div>
           </div>
         </section>
 
@@ -320,6 +330,9 @@
                  border:1px solid rgba(255,255,255,.14);
                  background:rgba(255,255,255,.03);
                  text-decoration:none;
+                 overflow-wrap:anywhere;
+                 word-break:break-word;
+                 white-space:normal;
                ">—</a>
 
             <div class="qrWrap" style="margin-top:12px;">
@@ -334,13 +347,14 @@
                      style="
                        display:inline-block;
                        border-radius:16px;
-                       padding:12px;
+                       padding:16px;
                        background:#ffffff;
                        border:1px solid rgba(255,255,255,.14);
                        cursor:pointer;
                        max-width: 100%;
+                       overflow:visible;
                      ">
-                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
+                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)" style="background:#ffffff; display:inline-block;"></div>
                 </div>
               </div>
               <div style="min-width:240px; flex:1;">
@@ -638,7 +652,24 @@
     targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
-  // Dynamisk storlek: aldrig för stor, aldrig klippt, bra för mobil
+  // QR: lås 1:1 pixlar + hög felkorrigering + ren kontrast
+  function hardenCanvas(canvas, size){
+    if (!canvas) return;
+    // Lås interna pixlar
+    canvas.width = size;
+    canvas.height = size;
+    // Lås visuell storlek (förhindrar CSS-skalning)
+    canvas.style.width = size + "px";
+    canvas.style.height = size + "px";
+    canvas.style.display = "block";
+    canvas.style.maxWidth = "none";
+    canvas.style.borderRadius = "0";
+    canvas.style.transform = "none";
+    canvas.style.boxShadow = "none";
+    canvas.style.imageRendering = "pixelated";
+    canvas.style.background = "#ffffff";
+  }
+
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -649,10 +680,10 @@
         return;
       }
 
-      // räkna ut maxstorlek från layout
-      const container = targetEl.parentElement; // qrTap
-      const maxByLayout = container ? (container.clientWidth - 24) : 240; // padding
-      const size = Math.max(180, Math.min(260, maxByLayout || 240));
+      // Layout-baserad storlek men med högre min (tät QR behöver fysisk storlek)
+      const tap = targetEl.parentElement; // qrTap / manualQrTap
+      const available = tap ? (tap.clientWidth - 32) : 280; // 16px padding per sida
+      const size = Math.max(240, Math.min(320, available || 280));
 
       const qr = new window.QRCode(targetEl);
       if (!qr || typeof qr.makeCode !== "function"){
@@ -660,21 +691,29 @@
         return;
       }
 
+      // Försök styra lib: auto typNumber + H felkorrigering + max kontrast
       if (qr._htOption){
         qr._htOption.width = size;
         qr._htOption.height = size;
-        qr._htOption.colorDark = "#0b1220";
+        qr._htOption.colorDark = "#000000";
         qr._htOption.colorLight = "#ffffff";
         qr._htOption.typeNumber = 0;
-        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
-          qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
         }
       }
 
       qr.makeCode(text);
 
-      const ok = !!targetEl.querySelector("canvas");
-      if (!ok) showQrError(targetEl);
+      const canvas = targetEl.querySelector("canvas");
+      if (!canvas){
+        showQrError(targetEl);
+        return;
+      }
+
+      // Kritisk del: förhindra att canvas blir blur / anti-aliased av CSS
+      hardenCanvas(canvas, size);
+
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
@@ -915,7 +954,6 @@
       };
 
       setPill("Klart ✅");
-      setBusy(false);
     } catch (e){
       console.error(e);
       if (myOp !== opId) return;
@@ -925,6 +963,7 @@
         ? "Timeout: registreringen tog för lång tid (30s). Försök igen."
         : (e?.message || "Registreringstjänsten kunde inte nås just nu.");
 
+      // Viktigt: ID/länk/QR ska fortfarande vara användbara vid fel
       if (currentId && currentLink){
         resultBox.style.display = "block";
         reportMeta.style.display = "block";
@@ -942,7 +981,9 @@
       }
 
       setPill("Fel");
-      setBusy(false);
+    } finally {
+      // Säkring mot "fastnar": släpp alltid busy (om inte en ny op tagit över)
+      if (myOp === opId) setBusy(false);
     }
   });
 
