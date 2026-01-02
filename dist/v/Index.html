@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proofy – Öppnar verifiering…</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-02a" />
+</head>
+<body>
+<main id="main">
+  <div class="wrap" style="padding:34px 0 60px;">
+    <div class="card content">
+      <div style="font-weight:950; font-size:18px;">Öppnar verifiering…</div>
+      <p class="meta" style="margin:10px 0 0;">
+        Om du inte skickas vidare automatiskt kan du öppna verifieringen manuellt.
+      </p>
+
+      <div class="hr"></div>
+
+      <div class="meta">Länk</div>
+      <a id="fallbackLink" class="mono" href="/verify.html" style="
+        display:block;
+        margin-top:8px;
+        padding:10px 12px;
+        border-radius:12px;
+        border:1px solid rgba(255,255,255,.14);
+        background:rgba(255,255,255,.03);
+        text-decoration:none;
+      ">Öppna verifiering</a>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  // Förväntad URL: https://proofy.se/v/0x....
+  // Vi plockar hash från path och redirectar till /verify.html?hash=...
+  const path = location.pathname || "";
+  const parts = path.split("/").filter(Boolean); // ["v", "0x..."]
+  let hash = "";
+
+  if (parts.length >= 2 && parts[0].toLowerCase() === "v") {
+    hash = parts[1] || "";
+  }
+
+  // Stöd även query (?hash= / ?h=) om någon klistrar så
+  const qs = new URLSearchParams(location.search || "");
+  if (!hash) hash = qs.get("hash") || qs.get("h") || "";
+
+  const isValid = /^0x[0-9a-fA-F]{64}$/.test(hash);
+
+  const target = isValid
+    ? `/verify.html?hash=${encodeURIComponent(hash)}`
+    : `/verify.html`;
+
+  const a = document.getElementById("fallbackLink");
+  a.href = target;
+  a.textContent = isValid ? target : "Öppna verifiering";
+
+  // replace = bättre (ingen “back-loop”)
+  location.replace(target);
+})();
+</script>
+</body>
+</html>
