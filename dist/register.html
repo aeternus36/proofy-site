@@ -7,7 +7,7 @@
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- Bas + header (behåller hamburgermeny/UI som verify) -->
+  <!-- Bas + header (hamburgermeny/UI som verify) -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-02a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-02a" />
 </head>
@@ -115,6 +115,7 @@
                    user-select:text;
                    overflow-wrap:anywhere;
                    word-break:break-word;
+                   white-space:normal;
                  ">—</div>
 
             <span id="copyIdPill" class="pill" style="display:none; margin-top:8px;"> </span>
@@ -165,6 +166,7 @@
                        user-select:text;
                        overflow-wrap:anywhere;
                        word-break:break-word;
+                       white-space:normal;
                      ">—</div>
 
                 <span id="copyIdPill2" class="pill" style="display:none; margin-top:8px;"> </span>
@@ -178,7 +180,7 @@
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
 
-                <!-- Viktigt: A-tag så vanlig tryck öppnar, långtryck kopierar -->
+                <!-- A-tag för normal öppning / långtryck-kopia (mobil), men INTE auto-hoppa via QR -->
                 <a id="linkOut"
                    class="mono"
                    href="#"
@@ -197,6 +199,7 @@
                      user-select:text;
                      overflow-wrap:anywhere;
                      word-break:break-word;
+                     white-space:normal;
                      text-decoration:none;
                    ">—</a>
 
@@ -209,28 +212,35 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod</div>
 
-                  <!-- QR blir tryckbar (öppnar verify) -->
-                  <a id="qrTap"
-                     href="#"
-                     target="_blank"
-                     rel="noopener"
-                     aria-label="Öppna verifieringslänk via QR"
-                     title="Tryck för att öppna verifieringslänken"
-                     style="display:inline-block; border-radius:14px;">
-                    <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
-                  </a>
+                  <!-- QR ska vara skanningsvänlig: större + "quiet zone". Klick på QR kopierar länken. -->
+                  <div id="qrTap"
+                       role="button"
+                       tabindex="0"
+                       aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
+                       title="Klicka för att kopiera verifieringslänk"
+                       style="
+                         display:inline-block;
+                         border-radius:16px;
+                         padding:12px;              /* quiet zone runt canvas */
+                         background:#eaf0ff;        /* ljus bakgrund för skanning */
+                         border:1px solid rgba(255,255,255,.14);
+                         cursor:pointer;
+                       ">
+                    <div id="qrBox" class="qrBox" aria-label="QR-kod" style="background:transparent;"></div>
+                  </div>
 
                   <div class="small" style="margin-top:8px; opacity:.9;">
-                    Tips: QR öppnar verifieringslänken. Använd “Kopiera länk” om du vill klistra in i mail/akt.
+                    QR är främst för att <b>skanna</b>. Klick på QR kopierar länken.
+                    Använd “Öppna verifiering” om du vill öppna direkt.
                   </div>
                 </div>
 
                 <div style="min-width:240px; flex:1;">
                   <div class="meta">Registreringsstatus</div>
-                  <div id="regStatusOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="regStatusOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
                   <div class="meta" style="margin-top:10px;">Registreringstid</div>
-                  <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="timeOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
                   <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
                     <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera registreringsnotering</button>
@@ -246,13 +256,13 @@
                     <div class="hr"></div>
 
                     <div class="meta">Teknisk referens (tx)</div>
-                    <div id="txOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word;">—</div>
+                    <div id="txOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Teknisk identitet</div>
-                    <div id="submitterOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word;">—</div>
+                    <div id="submitterOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Felsvar (om något)</div>
-                    <div id="debugOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word;">—</div>
+                    <div id="debugOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
                   </details>
                 </div>
               </div>
@@ -261,7 +271,7 @@
 
           <div id="errorBox" style="display:none;">
             <div class="err">Tillfälligt tekniskt problem</div>
-            <div id="errorMsg" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word;"></div>
+            <div id="errorMsg" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;"></div>
           </div>
         </section>
 
@@ -307,15 +317,29 @@
                  background:rgba(255,255,255,.03);
                  overflow-wrap:anywhere;
                  word-break:break-word;
+                 white-space:normal;
                  text-decoration:none;
                ">—</a>
 
             <div class="qrWrap" style="margin-top:12px;">
               <div>
                 <div class="meta" style="margin-bottom:8px;">QR-kod</div>
-                <a id="manualQrTap" href="#" target="_blank" rel="noopener" style="display:inline-block; border-radius:14px;">
-                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
-                </a>
+
+                <div id="manualQrTap"
+                     role="button"
+                     tabindex="0"
+                     aria-label="QR-kod manuell (klicka för att kopiera verifieringslänk)"
+                     title="Klicka för att kopiera verifieringslänk"
+                     style="
+                       display:inline-block;
+                       border-radius:16px;
+                       padding:12px;
+                       background:#eaf0ff;
+                       border:1px solid rgba(255,255,255,.14);
+                       cursor:pointer;
+                     ">
+                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)" style="background:transparent;"></div>
+                </div>
               </div>
               <div style="min-width:240px; flex:1;">
                 <div class="small" style="margin-top:0;">
@@ -359,7 +383,7 @@
   </div>
 </footer>
 
-<!-- ✅ QR-lib (måste finnas som fil på servern) -->
+<!-- QR-lib -->
 <script src="/assets/qr.min.js?v=2026-01-02a"></script>
 
 <script>
@@ -432,38 +456,17 @@
     createBtn.disabled = !currentFile || busy;
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
-  }
-
-  function resetReport(){
-    if (resultBox) resultBox.style.display = "none";
-    if (errorBox) errorBox.style.display = "none";
-    if (errorMsg) errorMsg.textContent = "";
-    if (headline) headline.textContent = "";
-    if (idOut) idOut.textContent = "—";
-    if (linkOut) linkOut.textContent = "—";
-    if (linkOut) linkOut.href = "#";
-    if (qrTap) qrTap.href = "#";
-    if (qrBox) qrBox.innerHTML = "";
-    if (regStatusOut) regStatusOut.textContent = "—";
-    if (timeOut) timeOut.textContent = "—";
-    if (submitterOut) submitterOut.textContent = "—";
-    if (txOut) txOut.textContent = "—";
-    if (debugOut) debugOut.textContent = "—";
-    if (receiptBtn) receiptBtn.style.display = "none";
     if (openVerifyBtn){
-      openVerifyBtn.href = "/verify.html";
-      openVerifyBtn.style.pointerEvents = "none";
-      openVerifyBtn.style.opacity = ".55";
+      if (currentLink && !busy){
+        openVerifyBtn.href = currentLink;
+        openVerifyBtn.style.pointerEvents = "auto";
+        openVerifyBtn.style.opacity = "1";
+      } else {
+        openVerifyBtn.href = "/verify.html";
+        openVerifyBtn.style.pointerEvents = "none";
+        openVerifyBtn.style.opacity = ".55";
+      }
     }
-    if (reportMeta) reportMeta.style.display = "none";
-    if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
-    if (copyLinkIconBtn) copyLinkIconBtn.style.display = "none";
-    hidePill(copyIdPill);
-    hidePill(copyIdPill2);
-    hidePill(copyLinkPill);
-    hidePill(copyNotePill);
-    if (copyNoteBtn) copyNoteBtn.style.display = "none";
-    lastRun = null;
   }
 
   function hidePill(p){
@@ -476,6 +479,32 @@
     if (!p) return;
     p.style.display = "inline-block";
     p.textContent = text;
+  }
+
+  function resetReport(){
+    if (resultBox) resultBox.style.display = "none";
+    if (errorBox) errorBox.style.display = "none";
+    if (errorMsg) errorMsg.textContent = "";
+    if (headline) headline.textContent = "";
+    if (idOut) idOut.textContent = "—";
+    if (linkOut) linkOut.textContent = "—";
+    if (linkOut) linkOut.href = "#";
+    if (qrBox) qrBox.innerHTML = "";
+    if (regStatusOut) regStatusOut.textContent = "—";
+    if (timeOut) timeOut.textContent = "—";
+    if (submitterOut) submitterOut.textContent = "—";
+    if (txOut) txOut.textContent = "—";
+    if (debugOut) debugOut.textContent = "—";
+    if (receiptBtn) receiptBtn.style.display = "none";
+    if (reportMeta) reportMeta.style.display = "none";
+    if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
+    if (copyLinkIconBtn) copyLinkIconBtn.style.display = "none";
+    hidePill(copyIdPill);
+    hidePill(copyIdPill2);
+    hidePill(copyLinkPill);
+    hidePill(copyNotePill);
+    if (copyNoteBtn) copyNoteBtn.style.display = "none";
+    lastRun = null;
   }
 
   function bytesToHex(bytes){
@@ -504,7 +533,6 @@
       await navigator.clipboard.writeText(t);
       return true;
     } catch {
-      // Fallback
       try{
         const ta = document.createElement("textarea");
         ta.value = t;
@@ -572,7 +600,7 @@
     };
   }
 
-  // Långtryck för kopiering på mobil, men normal tryck öppnar.
+  // Långtryck för kopiering på mobil (utan att hindra normal klick för öppna)
   function attachLongPressCopy(el, getText, onCopied){
     if (!el) return;
 
@@ -615,6 +643,7 @@
     targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
+  // Skanningsvänlig QR: större canvas + tydlig kontrast + auto-fit
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -632,11 +661,11 @@
       }
 
       if (qr._htOption){
-        qr._htOption.width = 150;
-        qr._htOption.height = 150;
+        qr._htOption.width = 220;
+        qr._htOption.height = 220;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#eaf0ff";
-        qr._htOption.typeNumber = 0; // auto-fit
+        qr._htOption.typeNumber = 0;
 
         if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
           qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
@@ -758,13 +787,34 @@
   // Buttons
   copyIdBtn.addEventListener("click", async () => {
     if (!currentId) return;
-    await copyWithFeedback({ text: currentId, pillEl: statusPill, okText: "ID kopierat ✅", failText: "Kunde inte kopiera" });
+    // statusPill är alltid synlig => visa text där
+    setPill("Kopierar…");
+    const ok = await copyTextToClipboard(currentId);
+    setPill(ok ? "ID kopierat ✅" : "Kunde inte kopiera");
+    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
 
   copyLinkBtn.addEventListener("click", async () => {
     if (!currentLink) return;
-    await copyWithFeedback({ text: currentLink, pillEl: statusPill, okText: "Länk kopierad ✅", failText: "Kunde inte kopiera" });
+    setPill("Kopierar…");
+    const ok = await copyTextToClipboard(currentLink);
+    setPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
+    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
+
+  // Klick på QR kopierar länken (inte navigera)
+  function attachQrCopy(qrTapEl, getLink){
+    if (!qrTapEl) return;
+    const doCopy = async () => {
+      const link = getLink();
+      if (!link || link === "—") return;
+      await copyWithFeedback({ text: link, pillEl: copyLinkPill });
+    };
+    qrTapEl.addEventListener("click", (e) => { e.preventDefault(); doCopy(); });
+    qrTapEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+    });
+  }
 
   // Register
   createBtn.addEventListener("click", async () => {
@@ -805,9 +855,6 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      // QR tap should open link
-      if (qrTap) qrTap.href = currentLink;
-
       renderQr(qrBox, currentLink);
 
       // Copy affordances
@@ -818,6 +865,9 @@
         await copyWithFeedback({ text: currentLink, pillEl: copyLinkPill });
       });
 
+      attachQrCopy(qrTap, () => currentLink);
+
+      // Status
       setPill("Registrerar…");
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
@@ -825,7 +875,7 @@
       headline.style.background = "rgba(255,255,255,.05)";
       headline.textContent = "⏳ Registrering pågår…";
 
-      // Timeout wrapper (front-end)
+      // Timeout wrapper (front-end) => UI fastnar inte
       const controller = new AbortController();
       const t = setTimeout(() => controller.abort(), 30000);
 
@@ -869,7 +919,6 @@
       submitterOut.textContent = data.submitter || "—";
       debugOut.textContent = "—";
 
-      // show note button
       if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
 
       lastRun = {
@@ -902,6 +951,10 @@
         headline.style.background = "rgba(255,80,80,.06)";
         headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(se fel längst ner)</span>`;
         debugOut.textContent = errorMsg.textContent;
+
+        // QR + länk ska fortfarande vara användbara även om registrering failar
+        renderQr(qrBox, currentLink);
+        attachQrCopy(qrTap, () => currentLink);
       }
 
       setPill("Fel");
@@ -915,7 +968,6 @@
     if (!isIdFormat(clean)){
       manualLinkOut.textContent = "—";
       manualLinkOut.href = "#";
-      manualQrTap.href = "#";
       manualQrBox.innerHTML = "";
       manualCopyLinkBtn.disabled = true;
       manualVerifyBtn.href = "/verify.html";
@@ -928,7 +980,6 @@
     const link = buildVerifyLink(clean);
     manualLinkOut.textContent = link;
     manualLinkOut.href = link;
-    manualQrTap.href = link;
 
     renderQr(manualQrBox, link);
 
@@ -939,10 +990,12 @@
     setManualPill("Redo ✅");
 
     attachLongPressCopy(manualLinkOut, () => link, async () => {
-      await copyTextToClipboard(link);
       setManualPill("Länk kopierad ✅");
       setTimeout(() => setManualPill("Redo ✅"), 1200);
     });
+
+    // Klick på manuell QR kopierar länken
+    attachQrCopy(manualQrTap, () => link);
 
     return link;
   }
