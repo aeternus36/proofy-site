@@ -70,6 +70,7 @@ header{
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
+/* Stöd BOTH .nav och .navBar */
 .nav,
 .navBar{
   display:flex;
@@ -150,12 +151,16 @@ h2{
   font-weight: 800;
 }
 
+.ok{ color: rgba(124,241,198,.95); font-weight: 950; }
+.err{ color: rgba(255,160,160,.96); font-weight: 950; }
+
 /* ---------- Components ---------- */
 .card{
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.04);
   border-radius: 22px;
   box-shadow: var(--shadow);
+  overflow: hidden; /* viktigt: hindra spill */
 }
 
 .card.content{
@@ -204,170 +209,102 @@ h2{
   border-color: rgba(110,168,255,.25);
 }
 
-/* ---------- Register helpers ---------- */
+.btn.ghost{
+  background: transparent;
+  border-color: rgba(255,255,255,.12);
+}
+
+/* ---------- NEW: common layout helpers used by register ---------- */
 .grid2{
   display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
 }
 
 .actions{
   display:flex;
-  flex-wrap:wrap;
-  gap:10px;
   align-items:center;
+  gap:10px;
+  flex-wrap: wrap;
 }
 
 .pill{
   display:inline-flex;
   align-items:center;
-  gap:8px;
+  justify-content:center;
   padding: 8px 10px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.06);
+  background: rgba(255,255,255,.04);
   color: rgba(234,240,255,.86);
   font-weight: 900;
   font-size: 12.5px;
+  white-space: nowrap;
 }
 
+/* Monospace fields (IDs/links) */
 .mono{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 13px;
+  font-size: 13.5px;
+  line-height: 1.45;
   color: rgba(234,240,255,.92);
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 12px;
-  padding: 10px 12px;
-  overflow-wrap:anywhere;
-  word-break:break-word;
-  white-space:normal;
-  user-select:text;
-  cursor:pointer;
+
+  /* viktigast för “text rinner ut” */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  max-width: 100%;
 }
 
-.panelDashed{
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px dashed rgba(255,255,255,.25);
-  background:rgba(255,255,255,.04);
-}
-
+/* Drop zone */
 .drop{
-  border: 1px dashed rgba(255,255,255,.18);
+  border: 1px dashed rgba(255,255,255,.20);
   background: rgba(255,255,255,.03);
-  padding: 14px 12px;
-  border-radius: 16px;
+  border-radius: 14px;
+  padding: 12px 14px;
   color: rgba(234,240,255,.82);
-  font-weight: 800;
 }
 .drop.drag{
   border-color: rgba(110,168,255,.45);
-  box-shadow: 0 0 0 3px rgba(110,168,255,.12);
+  background: rgba(110,168,255,.10);
 }
 
-.stepTitle{
-  font-weight: 950;
-  font-size: 16px;
-}
-
-.reportHeader{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.headline{
-  font-size: 18px;
-  font-weight: 950;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.05);
-}
-
-.ok{ color: rgba(124,241,198,.95); font-weight: 950; }
-.err{ color: rgba(255,170,170,.95); font-weight: 950; }
-
-.okHead{
-  border-color: rgba(80,255,180,.20) !important;
-  background: rgba(80,255,180,.06) !important;
-}
-.errHead{
-  border-color: rgba(255,80,80,.20) !important;
-  background: rgba(255,80,80,.06) !important;
-}
-
-.copyIconBtn{
-  position:absolute;
-  top:6px;
-  right:6px;
-  width:34px;
-  height:30px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color: rgba(234,240,255,.92);
-  cursor:pointer;
-}
-.copyIconBtn:hover{
-  background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.18);
-}
-.copyIconBtn span{ display:block; font-size:15px; line-height:28px; }
-
+/* QR block layout */
 .qrWrap{
   display:flex;
   gap: 14px;
   align-items:flex-start;
-  flex-wrap:wrap;
+  flex-wrap: wrap;
 }
 
-/* ===== QR: maximal skanningsyta =====
-   qrMat = stor vit "matta" runt QR så kamera hittar lätt i mörk UI.
-*/
-.qrMat{
-  display:inline-block;
-  background:#ffffff;
-  border-radius: 0;          /* viktigt: inga rundade hörn som kan störa */
-  padding: 28px;             /* stor quiet zone + extra vit yta */
-  border: 1px solid rgba(0,0,0,.10);
-  box-shadow: 0 12px 34px rgba(0,0,0,.25);
-}
-
-/* QRBox styrs av JS till 360px, men vi sätter fallback */
+/* Container that ensures QR never spills */
 .qrBox{
-  width: 360px;
-  height: 360px;
+  width: min(260px, 100%);
+  max-width: 100%;
 }
+
+/* Make canvas crisp and prevent scaling blur */
 .qrBox canvas{
   display:block;
-  width: 360px;
-  height: 360px;
+  width: 100% !important;
+  height: auto !important;
+  image-rendering: pixelated;
 }
 
-/* Placeholder före registrering */
-.qrPlaceholder{
-  width: 416px;  /* 360 + 2*28 padding ungefär */
-  min-height: 416px;
-  display:grid;
-  place-items:center;
-  text-align:center;
-  gap:10px;
-  padding: 18px;
+/* Inputs (already present, but keep consistent) */
+input, textarea{
+  width:100%;
+  padding: 12px 12px;
   border-radius: 16px;
-  border: 1px dashed rgba(255,255,255,.18);
-  background: rgba(255,255,255,.03);
-}
-.qrPlaceholderTitle{
-  font-weight: 950;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
   color: rgba(234,240,255,.92);
+  outline: none;
 }
-.qrPlaceholderText{
-  font-size: 13px;
-  color: rgba(169,183,211,.92);
-  max-width: 34ch;
+input::placeholder, textarea::placeholder{ color: rgba(169,183,211,.62); }
+input:focus, textarea:focus{
+  border-color: rgba(110,168,255,.45);
+  box-shadow: 0 0 0 3px rgba(110,168,255,.12);
 }
 
 /* Footer */
@@ -390,9 +327,7 @@ footer{
   gap: 12px;
   flex-wrap:wrap;
 }
-.links a{
-  color: rgba(234,240,255,.78);
-}
+.links a{ color: rgba(234,240,255,.78); }
 .links a:hover{ color: rgba(234,240,255,.92); }
 
 /* ---------- Responsive ---------- */
@@ -402,15 +337,4 @@ footer{
   .lead{ font-size: 17px; }
 
   .grid2{ grid-template-columns: 1fr; }
-
-  /* Mobil: fortfarande stor, men lite mindre för att få plats */
-  .qrMat{ padding: 22px; }
-  .qrBox, .qrBox canvas{
-    width: 320px;
-    height: 320px;
-  }
-  .qrPlaceholder{
-    width: 364px;
-    min-height: 364px;
-  }
 }
