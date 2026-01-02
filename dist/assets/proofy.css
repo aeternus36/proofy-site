@@ -31,6 +31,12 @@ img{ max-width:100%; height:auto; }
 a{ color: rgba(180,210,255,.98); text-decoration:none; }
 a:hover{ text-decoration:underline; }
 
+/* Anti-overflow: långa hash/URL ska aldrig spräcka layout på mobil */
+a, .mono, pre, code{
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
 .skip{
   position:absolute;
   left:-9999px;
@@ -146,6 +152,18 @@ h2{
   color: rgba(169,183,211,.92);
 }
 
+/* ✅ Saknade “text utilities” som sidorna använder */
+.meta{
+  font-size: 13px;
+  color: rgba(169,183,211,.92);
+}
+
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  color: rgba(234,240,255,.92);
+}
+
 /* ---------- Components ---------- */
 .card{
   border: 1px solid rgba(255,255,255,.10);
@@ -204,6 +222,80 @@ h2{
   background: transparent;
   border-color: rgba(255,255,255,.12);
 }
+
+/* ✅ Saknade layout-klasser: används av register/verify */
+.grid2{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items:start;
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+/* Pills */
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: rgba(234,240,255,.86);
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Drop zone */
+.drop{
+  border: 1px dashed rgba(255,255,255,.22);
+  background: rgba(255,255,255,.03);
+  padding: 14px;
+  border-radius: 18px;
+  color: rgba(234,240,255,.82);
+  font-weight: 850;
+}
+.drop.drag{
+  border-color: rgba(110,168,255,.40);
+  background: rgba(110,168,255,.06);
+}
+
+/* QR layout */
+.qrWrap{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  align-items:flex-start;
+}
+
+/* QR container: förhindrar “konstiga” storlekar som gör den svår att skanna */
+.qrBox{
+  width: 220px;
+  height: 220px;
+  border-radius: 16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.10);
+  overflow:hidden;
+}
+.qrBox canvas{
+  display:block;
+  width: 220px;
+  height: 220px;
+}
+
+/* Status-toner (används i HTML via <span class="ok/err">) */
+.ok{ color: rgba(124,241,198,.92); font-weight: 950; }
+.err{ color: rgba(255,140,140,.95); font-weight: 950; }
 
 /* Hero CTA row */
 .heroCtas{
@@ -315,4 +407,6 @@ footer{
   .lead{ font-size: 17px; }
   .formGrid{ grid-template-columns: 1fr; }
   .grid3{ grid-template-columns: 1fr; }
+  .grid2{ grid-template-columns: 1fr; } /* ✅ viktigt för register/verify */
+  .qrBox{ width: 220px; height: 220px; } /* bibehåll skanningsstorlek */
 }
