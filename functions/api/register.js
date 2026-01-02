@@ -74,6 +74,7 @@ function normalizePrivateKey(pk) {
 function toSafeTimestamp(timestampBig) {
   const tsBig = BigInt(timestampBig ?? 0n);
   const exists = tsBig !== 0n;
+
   if (!exists) return { exists: false, timestamp: 0 };
 
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
@@ -91,6 +92,7 @@ async function readProof({ publicClient, contractAddress, hash }) {
 
   const timestampBig = proof?.[0] ?? 0n;
   const submitter = proof?.[1];
+
   const { exists, timestamp } = toSafeTimestamp(timestampBig);
 
   return {
@@ -98,6 +100,21 @@ async function readProof({ publicClient, contractAddress, hash }) {
     timestamp,
     submitter: isValidAddressHex(submitter) ? submitter : null,
   };
+}
+
+async function readProofWithRetry({
+  publicClient,
+  contractAddress,
+  hash,
+  retries = 3,
+  delayMs = 800,
+}) {
+  for (let i = 0; i < retries; i++) {
+    const proof = await readProof({ publicClient, contractAddress, hash });
+    if (proof.exists && proof.timestamp && proof.timestamp !== 0) return proof;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return readProof({ publicClient, contractAddress, hash });
 }
 
 function sanitizeError(e) {
@@ -111,9 +128,12 @@ function sanitizeError(e) {
 export async function onRequest({ request, env }) {
   const origin = request.headers.get("Origin") || "";
 
-  if (request.method === "OPTIONS") return corsPreflight(origin || "*");
-  if (request.method !== "POST")
+  if (request.method === "OPTIONS") {
+    return corsPreflight(origin || "*");
+  }
+  if (request.method !== "POST") {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
+  }
 
   let body;
   try {
@@ -123,30 +143,38 @@ export async function onRequest({ request, env }) {
   }
 
   const hash = String(body?.hash || "").trim();
-  if (!isValidBytes32Hex(hash))
+  if (!isValidBytes32Hex(hash)) {
     return json(400, { ok: false, error: "Invalid hash format" }, origin);
+  }
 
   const rpcUrl = env.AMOY_RPC_URL;
   const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
   const privateKey = normalizePrivateKey(env.PROOFY_PRIVATE_KEY);
 
-  if (!rpcUrl || !contractAddress || !privateKey)
+  if (!rpcUrl || !contractAddress || !privateKey) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
+  }
+  if (!isValidAddressHex(contractAddress)) {
+    return json(500, { ok: false, error: "Server misconfiguration (bad contract address)" }, origin);
+  }
+  if (!isValidBytes32Hex(privateKey)) {
+    return json(500, { ok: false, error: "Server misconfiguration (bad private key)" }, origin);
+  }
 
-  if (!isValidAddressHex(contractAddress))
-    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
-
-  if (!isValidBytes32Hex(privateKey))
-    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
-
-  // Transport
-  const publicClient = createPublicClient({
-    chain: polygonAmoy,
-    transport: http(rpcUrl),
-  });
+  // Timeout för determinism
+  const controller = new AbortController();
+  const timeoutMs = Number(env.REGISTER_TIMEOUT_MS || 25_000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    // 1) Already registered?
+    const transport = http(rpcUrl, { fetchOptions: { signal: controller.signal } });
+
+    const publicClient = createPublicClient({
+      chain: polygonAmoy,
+      transport,
+    });
+
+    // Already registered?
     const pre = await readProof({ publicClient, contractAddress, hash });
     if (pre.exists && pre.timestamp && pre.timestamp !== 0) {
       return json(
@@ -155,7 +183,6 @@ export async function onRequest({ request, env }) {
           ok: true,
           exists: true,
           alreadyExists: true,
-          pending: false,
           timestamp: pre.timestamp,
           submitter: pre.submitter,
           txHash: null,
@@ -164,66 +191,90 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // 2) Submit tx
+    // Not registered -> write
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
       chain: polygonAmoy,
-      transport: http(rpcUrl),
+      transport,
     });
+
+    // ✅ Fix för "gas required exceeds allowance (...)":
+    // estimera gas och lägg buffer, annars fallback.
+    let gasLimit = 200_000n;
+    try {
+      const est = await publicClient.estimateContractGas({
+        address: contractAddress,
+        abi: PROOFY_ABI,
+        functionName: "register",
+        args: [hash],
+        account: account.address,
+      });
+      // +30% buffer
+      gasLimit = (est * 130n) / 100n;
+      // safety floor
+      if (gasLimit < 120_000n) gasLimit = 120_000n;
+    } catch {
+      // keep fallback
+    }
 
     const txHash = await walletClient.writeContract({
       address: contractAddress,
       abi: PROOFY_ABI,
       functionName: "register",
       args: [hash],
+      gas: gasLimit,
     });
 
-    // 3) Try to wait quickly, but do NOT hang forever.
-    // If Amoy is slow, return 202 + txHash so frontend can poll /api/verify.
-    try {
-      await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-        confirmations: 1,
-        timeout: 12_000, // <— viktigt: kort timeout
-      });
+    await publicClient.waitForTransactionReceipt({
+      hash: txHash,
+      confirmations: 1,
+    });
 
-      const post = await readProof({ publicClient, contractAddress, hash });
-      if (post.exists && post.timestamp && post.timestamp !== 0) {
-        return json(
-          200,
-          {
-            ok: true,
-            exists: true,
-            alreadyExists: false,
-            pending: false,
-            timestamp: post.timestamp,
-            submitter: post.submitter,
-            txHash,
-          },
-          origin
-        );
-      }
-    } catch {
-      // ignore (pending)
+    const post = await readProofWithRetry({
+      publicClient,
+      contractAddress,
+      hash,
+      retries: 3,
+      delayMs: 800,
+    });
+
+    if (!post.exists || !post.timestamp || post.timestamp === 0) {
+      return json(
+        500,
+        { ok: false, error: "Registration completed but not readable" },
+        origin
+      );
     }
 
     return json(
-      202,
+      200,
       {
         ok: true,
-        exists: false,
+        exists: true,
         alreadyExists: false,
-        pending: true,
+        timestamp: post.timestamp,
+        submitter: post.submitter,
         txHash,
+        gasUsedHint: gasLimit.toString(),
       },
       origin
     );
   } catch (e) {
+    if (e && typeof e === "object" && e.name === "AbortError") {
+      return json(
+        504,
+        { ok: false, error: "Upstream timeout", detail: `Timeout after ${timeoutMs}ms` },
+        origin
+      );
+    }
+
     return json(
       500,
       { ok: false, error: "Register failed", detail: sanitizeError(e) },
       origin
     );
+  } finally {
+    clearTimeout(timeout);
   }
 }
