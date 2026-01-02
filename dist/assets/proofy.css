@@ -20,7 +20,6 @@ html,body{ height:100%; }
 
 body{
   margin:0;
-  /* Viktigt: EN bakgrund (ingen överlapp) */
   background: var(--bg);
   color:var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
@@ -30,12 +29,6 @@ body{
 img{ max-width:100%; height:auto; }
 a{ color: rgba(180,210,255,.98); text-decoration:none; }
 a:hover{ text-decoration:underline; }
-
-/* Anti-overflow: långa hash/URL ska aldrig spräcka layout på mobil */
-a, .mono, pre, code{
-  overflow-wrap:anywhere;
-  word-break:break-word;
-}
 
 .skip{
   position:absolute;
@@ -77,7 +70,7 @@ header{
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
-/* Stöd BOTH .nav och .navBar (så alla sidor beter sig lika) */
+/* Stöd BOTH .nav och .navBar */
 .nav,
 .navBar{
   display:flex;
@@ -152,16 +145,10 @@ h2{
   color: rgba(169,183,211,.92);
 }
 
-/* ✅ Saknade “text utilities” som sidorna använder */
 .meta{
   font-size: 13px;
   color: rgba(169,183,211,.92);
-}
-
-.mono{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 13px;
-  color: rgba(234,240,255,.92);
+  font-weight: 800;
 }
 
 /* ---------- Components ---------- */
@@ -223,22 +210,20 @@ h2{
   border-color: rgba(255,255,255,.12);
 }
 
-/* ✅ Saknade layout-klasser: används av register/verify */
+/* ---------- Missing-but-used-by-register ---------- */
 .grid2{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  align-items:start;
 }
 
 .actions{
   display:flex;
-  gap:10px;
   flex-wrap:wrap;
+  gap:10px;
   align-items:center;
 }
 
-/* Pills */
 .pill{
   display:inline-flex;
   align-items:center;
@@ -246,167 +231,159 @@ h2{
   padding: 8px 10px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.05);
+  background: rgba(255,255,255,.06);
   color: rgba(234,240,255,.86);
   font-weight: 900;
-  font-size: 12px;
-  line-height: 1;
+  font-size: 12.5px;
 }
 
-/* Drop zone */
-.drop{
-  border: 1px dashed rgba(255,255,255,.22);
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  color: rgba(234,240,255,.92);
   background: rgba(255,255,255,.03);
-  padding: 14px;
-  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  padding: 10px 12px;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  white-space:normal;
+  user-select:text;
+  cursor:pointer;
+}
+
+.panelDashed{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px dashed rgba(255,255,255,.25);
+  background:rgba(255,255,255,.04);
+}
+
+.drop{
+  border: 1px dashed rgba(255,255,255,.18);
+  background: rgba(255,255,255,.03);
+  padding: 14px 12px;
+  border-radius: 16px;
   color: rgba(234,240,255,.82);
-  font-weight: 850;
+  font-weight: 800;
 }
 .drop.drag{
-  border-color: rgba(110,168,255,.40);
-  background: rgba(110,168,255,.06);
-}
-
-/* QR layout */
-.qrWrap{
-  display:flex;
-  gap:14px;
-  flex-wrap:wrap;
-  align-items:flex-start;
-}
-
-/* QR container: förhindrar “konstiga” storlekar som gör den svår att skanna */
-.qrBox{
-  width: 220px;
-  height: 220px;
-  border-radius: 16px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.10);
-  overflow:hidden;
-}
-.qrBox canvas{
-  display:block;
-  width: 220px;
-  height: 220px;
-}
-
-/* Status-toner (används i HTML via <span class="ok/err">) */
-.ok{ color: rgba(124,241,198,.92); font-weight: 950; }
-.err{ color: rgba(255,140,140,.95); font-weight: 950; }
-
-/* Hero CTA row */
-.heroCtas{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-}
-
-/* Grid tiles */
-.grid3{
-  display:grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.tile{
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  border-radius: 18px;
-  padding: 14px;
-}
-.tile b{
-  display:block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  letter-spacing: -.2px;
-}
-
-/* Form */
-.form{ margin-top: 12px; }
-.formGrid{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.label{
-  display:block;
-  font-size: 13px;
-  font-weight: 900;
-  color: rgba(234,240,255,.86);
-  margin: 0 0 6px;
-}
-.req{ color: rgba(255,180,180,.95); }
-
-input, textarea{
-  width:100%;
-  padding: 12px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
-  color: rgba(234,240,255,.92);
-  outline: none;
-}
-input::placeholder, textarea::placeholder{ color: rgba(169,183,211,.62); }
-input:focus, textarea:focus{
   border-color: rgba(110,168,255,.45);
   box-shadow: 0 0 0 3px rgba(110,168,255,.12);
 }
 
-.help{
-  margin-top: 8px;
-  font-size: 13px;
-  color: rgba(169,183,211,.92);
+.stepTitle{
+  font-weight: 950;
+  font-size: 16px;
 }
 
-.formActions{
+.reportHeader{
   display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  margin-top: 12px;
-}
-
-.fineprint{
-  margin-top: 12px;
-  font-size: 12px;
-  color: rgba(169,183,211,.82);
-}
-
-/* Footer */
-footer{
-  padding: 28px 0 50px;
-  border-top: 1px solid rgba(255,255,255,.06);
-  background: rgba(0,0,0,.12);
-}
-
-.foot{
-  display:flex;
+  align-items:baseline;
   justify-content:space-between;
-  gap: 16px;
+  gap:12px;
+}
+
+.headline{
+  font-size: 18px;
+  font-weight: 950;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.05);
+}
+
+.ok{ color: rgba(124,241,198,.95); font-weight: 950; }
+.err{ color: rgba(255,170,170,.95); font-weight: 950; }
+
+.okHead{
+  border-color: rgba(80,255,180,.20) !important;
+  background: rgba(80,255,180,.06) !important;
+}
+.errHead{
+  border-color: rgba(255,80,80,.20) !important;
+  background: rgba(255,80,80,.06) !important;
+}
+
+.copyIconBtn{
+  position:absolute;
+  top:6px;
+  right:6px;
+  width:34px;
+  height:30px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  color: rgba(234,240,255,.92);
+  cursor:pointer;
+}
+.copyIconBtn:hover{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
+}
+.copyIconBtn span{ display:block; font-size:15px; line-height:28px; }
+
+.qrWrap{
+  display:flex;
+  gap: 14px;
   align-items:flex-start;
   flex-wrap:wrap;
 }
 
-.links{
-  display:flex;
-  gap: 12px;
-  flex-wrap:wrap;
+.qrFrame{
+  display:inline-block;
+  background:#ffffff;
+  border-radius: 0; /* viktigt för skanning */
+  padding: 16px;    /* quiet zone */
+  border: 1px solid rgba(0,0,0,.10);
 }
-.links a{
-  color: rgba(234,240,255,.78);
+
+.qrBox{
+  width: 256px;
+  height: 256px;
 }
-.links a:hover{ color: rgba(234,240,255,.92); }
+.qrBox canvas{
+  display:block;
+  width: 256px;
+  height: 256px;
+}
+
+.qrPlaceholder{
+  width: 288px; /* 256 + padding */
+  min-height: 288px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  gap:10px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255,255,255,.18);
+  background: rgba(255,255,255,.03);
+}
+.qrPlaceholderTitle{
+  font-weight: 950;
+  color: rgba(234,240,255,.92);
+}
+.qrPlaceholderText{
+  font-size: 13px;
+  color: rgba(169,183,211,.92);
+  max-width: 32ch;
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 920px){
   main{ padding: 26px 0 46px; }
   .pageTitle{ letter-spacing: -0.6px; }
   .lead{ font-size: 17px; }
-  .formGrid{ grid-template-columns: 1fr; }
-  .grid3{ grid-template-columns: 1fr; }
-  .grid2{ grid-template-columns: 1fr; } /* ✅ viktigt för register/verify */
-  .qrBox{ width: 220px; height: 220px; } /* bibehåll skanningsstorlek */
+
+  .grid2{ grid-template-columns: 1fr; }
+  .qrBox, .qrBox canvas{
+    width: 240px;
+    height: 240px;
+  }
+  .qrFrame{ padding: 14px; }
+  .qrPlaceholder{
+    width: 268px;
+    min-height: 268px;
+  }
 }
