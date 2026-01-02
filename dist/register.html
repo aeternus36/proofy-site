@@ -7,9 +7,41 @@
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- Bas + header (hamburgermeny/UI som verify) -->
+  <!-- Bas + header -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-02a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-02a" />
+
+  <!-- ✅ SÄKRA lokala tillägg (påverkar bara denna sida, förstör inte resten) -->
+  <style>
+    .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+    @media(max-width:920px){.grid2{grid-template-columns:1fr;}}
+    .meta{font-size:13px;color:rgba(169,183,211,.92);}
+    .mono{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:13px;color:rgba(234,240,255,.92);
+    }
+    .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+    .pill{
+      display:inline-flex;align-items:center;
+      padding:8px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.04);
+      font-weight:900;font-size:12.5px;color:rgba(234,240,255,.86);
+      white-space:nowrap;
+    }
+    .drop{
+      padding:14px;border:1px dashed rgba(255,255,255,.22);
+      background:rgba(255,255,255,.03);
+      border-radius:14px;text-align:center;color:rgba(234,240,255,.82);
+    }
+    .drop.drag{border-color:rgba(110,168,255,.35);background:rgba(110,168,255,.08);}
+    .qrWrap{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;}
+    /* ✅ Viktigt: QR får EXAKT samma storlek i DOM som den renderas i canvas */
+    .qrBox{width:220px;height:220px;border-radius:12px;overflow:hidden;}
+    .qrBox canvas{display:block;width:220px;height:220px;}
+    .ok{color:rgba(124,241,198,.95);font-weight:950;}
+    .err{color:rgba(255,150,150,.95);font-weight:950;}
+  </style>
 </head>
 
 <body>
@@ -74,9 +106,7 @@
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
-          <div id="dropZone"
-               class="drop"
-               style="margin-top:10px; border-radius:14px;">
+          <div id="dropZone" class="drop" style="margin-top:10px; border-radius:14px;">
             Dra &amp; släpp underlag här
           </div>
 
@@ -86,13 +116,12 @@
             Inget underlag valt.
           </div>
 
-          <div class="actions" style="margin-top:14px; flex-wrap:wrap; gap:10px;">
+          <div class="actions" style="margin-top:14px;">
             <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
             <a class="btn soft" id="openVerifyBtn" href="/verify.html" style="pointer-events:none; opacity:.55;">Öppna verifiering</a>
             <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
-
             <span id="statusPill" class="pill">Välj underlag</span>
           </div>
 
@@ -180,7 +209,7 @@
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
 
-                <!-- A-tag för normal öppning / långtryck-kopia (mobil), men INTE auto-hoppa via QR -->
+                <!-- Klick öppnar. Långtryck kopierar (mobil). -->
                 <a id="linkOut"
                    class="mono"
                    href="#"
@@ -212,7 +241,7 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod</div>
 
-                  <!-- QR ska vara skanningsvänlig: större + "quiet zone". Klick på QR kopierar länken. -->
+                  <!-- ✅ QR för skanning: ljus bakgrund + quiet zone. Klick kopierar länk. -->
                   <div id="qrTap"
                        role="button"
                        tabindex="0"
@@ -221,8 +250,8 @@
                        style="
                          display:inline-block;
                          border-radius:16px;
-                         padding:12px;              /* quiet zone runt canvas */
-                         background:#eaf0ff;        /* ljus bakgrund för skanning */
+                         padding:12px;
+                         background:#eaf0ff;
                          border:1px solid rgba(255,255,255,.14);
                          cursor:pointer;
                        ">
@@ -242,7 +271,7 @@
                   <div class="meta" style="margin-top:10px;">Registreringstid</div>
                   <div id="timeOut" class="mono" style="margin-top:8px; overflow-wrap:anywhere; word-break:break-word; white-space:normal;">—</div>
 
-                  <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
+                  <div class="actions" style="margin-top:12px;">
                     <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera registreringsnotering</button>
                     <span id="copyNotePill" class="pill" style="display:none;"> </span>
                   </div>
@@ -291,7 +320,7 @@
             <label class="meta" for="manualId">Verifierings-ID</label>
             <input id="manualId" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:8px" />
 
-            <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
+            <div class="actions" style="margin-top:12px;">
               <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
               <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
               <a class="btn soft" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
@@ -456,6 +485,7 @@
     createBtn.disabled = !currentFile || busy;
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
+
     if (openVerifyBtn){
       if (currentLink && !busy){
         openVerifyBtn.href = currentLink;
@@ -643,7 +673,7 @@
     targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
-  // Skanningsvänlig QR: större canvas + tydlig kontrast + auto-fit
+  // ✅ Skanningsvänlig QR: rendera i 220x220 och tvinga canvas att INTE skalas
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -674,8 +704,14 @@
 
       qr.makeCode(text);
 
-      const ok = !!targetEl.querySelector("canvas");
-      if (!ok) showQrError(targetEl);
+      const canvas = targetEl.querySelector("canvas");
+      if (canvas){
+        canvas.style.width = "220px";
+        canvas.style.height = "220px";
+        canvas.style.display = "block";
+      } else {
+        showQrError(targetEl);
+      }
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
@@ -715,17 +751,13 @@
       return;
     }
 
-    fileInfo.textContent =
-      `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
-
+    fileInfo.textContent = `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
     setPill("Redo att skapa");
     setBusy(false);
   }
 
-  // File picker
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
 
-  // Drag & drop
   dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
   dropZone.addEventListener("drop", (e) => {
@@ -735,7 +767,6 @@
     if (f) setFile(f);
   });
 
-  // Copy from local id box by click
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
@@ -748,7 +779,6 @@
     });
   }
 
-  // Copy from report id by click
   if (idOut){
     idOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
@@ -784,10 +814,8 @@
     });
   }
 
-  // Buttons
   copyIdBtn.addEventListener("click", async () => {
     if (!currentId) return;
-    // statusPill är alltid synlig => visa text där
     setPill("Kopierar…");
     const ok = await copyTextToClipboard(currentId);
     setPill(ok ? "ID kopierat ✅" : "Kunde inte kopiera");
@@ -802,7 +830,7 @@
     setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
 
-  // Klick på QR kopierar länken (inte navigera)
+  // Klick på QR kopierar länken (aldrig navigera)
   function attachQrCopy(qrTapEl, getLink){
     if (!qrTapEl) return;
     const doCopy = async () => {
@@ -816,7 +844,6 @@
     });
   }
 
-  // Register
   createBtn.addEventListener("click", async () => {
     if (!currentFile || busy) return;
 
@@ -834,20 +861,16 @@
       currentId = id;
       currentLink = buildVerifyLink(id);
 
-      // Left box
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
-      // Report visible
       resultBox.style.display = "block";
       reportMeta.style.display = "block";
 
-      // Fill report
       idOut.textContent = id;
       linkOut.textContent = currentLink;
       linkOut.href = currentLink;
 
-      // Enable open verify + receipt
       openVerifyBtn.href = currentLink;
       openVerifyBtn.style.pointerEvents = "auto";
       openVerifyBtn.style.opacity = "1";
@@ -857,7 +880,6 @@
 
       renderQr(qrBox, currentLink);
 
-      // Copy affordances
       applyCopyHover(idOut, copyIdIconBtn, true);
       applyCopyHover(linkOut, copyLinkIconBtn, true);
 
@@ -867,7 +889,6 @@
 
       attachQrCopy(qrTap, () => currentLink);
 
-      // Status
       setPill("Registrerar…");
       regStatusOut.textContent = "Registrerar…";
       timeOut.textContent = "—";
@@ -875,7 +896,6 @@
       headline.style.background = "rgba(255,255,255,.05)";
       headline.textContent = "⏳ Registrering pågår…";
 
-      // Timeout wrapper (front-end) => UI fastnar inte
       const controller = new AbortController();
       const t = setTimeout(() => controller.abort(), 30000);
 
@@ -899,7 +919,6 @@
         throw new Error((data?.error || `Registreringen misslyckades (HTTP ${res.status}).`) + detail);
       }
 
-      // Success
       const already = !!data.alreadyExists;
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
@@ -908,12 +927,9 @@
         : `<span class="ok">✅ Registrerad</span> <span class="meta">(ny referens skapad)</span>`;
 
       regStatusOut.textContent = already ? "Redan registrerad" : "Registrerad";
-
-      if (data.timestamp){
-        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
-      } else {
-        timeOut.textContent = "—";
-      }
+      timeOut.textContent = data.timestamp
+        ? new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE")
+        : "—";
 
       txOut.textContent = data.txHash || "—";
       submitterOut.textContent = data.submitter || "—";
@@ -935,13 +951,11 @@
       console.error(e);
       if (myOp !== opId) return;
 
-      // Show error
       errorBox.style.display = "block";
       errorMsg.textContent = (e?.name === "AbortError")
         ? "Timeout: registreringen tog för lång tid (30s). Försök igen."
         : (e?.message || "Registreringstjänsten kunde inte nås just nu.");
 
-      // Keep report visible if we already computed id/link
       if (currentId && currentLink){
         resultBox.style.display = "block";
         reportMeta.style.display = "block";
@@ -952,7 +966,6 @@
         headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(se fel längst ner)</span>`;
         debugOut.textContent = errorMsg.textContent;
 
-        // QR + länk ska fortfarande vara användbara även om registrering failar
         renderQr(qrBox, currentLink);
         attachQrCopy(qrTap, () => currentLink);
       }
@@ -962,7 +975,6 @@
     }
   });
 
-  // Manual section
   function setManualState(id){
     const clean = (id || "").trim();
     if (!isIdFormat(clean)){
@@ -1011,7 +1023,6 @@
     setTimeout(() => setManualPill("Redo ✅"), 1200);
   });
 
-  // Init
   resetReport();
   setFile(null);
   setBusy(false);
