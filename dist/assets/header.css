@@ -7,6 +7,7 @@
   position: relative;
   flex: 0 0 auto;
   margin-left: auto;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mnavSummary{
@@ -22,6 +23,7 @@
   color: rgba(234,240,255,.92);
   cursor:pointer;
   user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mnavSummary::-webkit-details-marker{ display:none; }
@@ -67,6 +69,12 @@
   flex-direction: column;
   gap: 10px;
   z-index: 2000;
+
+  /* ✅ Säkert: menyn får aldrig "spilla" utanför viewport på små mobiler */
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mnavLink{
