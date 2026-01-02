@@ -7,7 +7,6 @@
   position: relative;
   flex: 0 0 auto;
   margin-left: auto;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .mnavSummary{
@@ -23,7 +22,6 @@
   color: rgba(234,240,255,.92);
   cursor:pointer;
   user-select:none;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .mnavSummary::-webkit-details-marker{ display:none; }
@@ -69,12 +67,6 @@
   flex-direction: column;
   gap: 10px;
   z-index: 2000;
-
-  /* ✅ Säkert: menyn får aldrig "spilla" utanför viewport på små mobiler */
-  max-height: min(70vh, 520px);
-  overflow: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
 
 .mnavLink{
@@ -130,13 +122,8 @@
 
 /* ------- Responsive rules ------- */
 @media (max-width: 920px){
-  /* Stäng av desktop actions på mobil */
   #navActionsDesktop{ display:none !important; }
-
-  /* Visa hamburger på mobil */
   .mnav{ display:block; }
-
-  /* Säkerställ header-layout */
   .nav{
     display:flex;
     align-items:center;
@@ -146,15 +133,10 @@
 }
 
 @media (min-width: 921px){
-  /* Dölj mobilmeny på desktop */
   .mnav{ display:none !important; }
 }
 
-/* ===================================================================== */
-/*  SÄKERT TILLÄGG – policy/sekundära länkar i mobilmenyn (endast mobil)  */
-/* ===================================================================== */
-
-/* Mindre, lugnare länkar i mnavMeta (t.ex. Säkerhet / Integritet / Villkor) */
+/* SÄKERT TILLÄGG – policy/sekundära länkar i mobilmenyn (endast mobil) */
 .mnavMeta .mnavLink{
   padding: 12px 14px;
   border-radius: 14px;
@@ -169,7 +151,6 @@
   border-color: rgba(255,255,255,.12);
 }
 
-/* Aktiv sida (valfritt): sätt aria-current="page" på länken */
 .mnavMeta .mnavLink[aria-current="page"]{
   border-color: rgba(110,168,255,.45);
   box-shadow: 0 0 0 1px rgba(110,168,255,.18) inset;
