@@ -279,16 +279,19 @@ h2{
 
 /* Container that ensures QR never spills */
 .qrBox{
-  width: min(260px, 100%);
+  display: inline-block;     /* viktigt: boxen följer canvasens faktiska px */
   max-width: 100%;
 }
 
-/* Make canvas crisp and prevent scaling blur */
+/* IMPORTANT: Stop CSS scaling of canvas.
+   QR-canvas must be 1:1 px (no width:100% / height:auto). */
 .qrBox canvas{
   display:block;
-  width: 100% !important;
+  width: auto !important;
   height: auto !important;
+  max-width: 100%;
   image-rendering: pixelated;
+  background: #ffffff;
 }
 
 /* Inputs (already present, but keep consistent) */
