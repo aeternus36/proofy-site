@@ -277,17 +277,24 @@ h2{
   flex-wrap: wrap;
 }
 
-/* ✅ QR: lås INTE bredden som tvingar scaling */
+/* Container that ensures QR never spills */
 .qrBox{
-  display:inline-block;
   max-width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-/* ✅ KRITISKT: canvas får INTE skalas med CSS (annars blir den oskannbar) */
+/*
+  VIKTIGT FÖR SCANNING:
+  Skala INTE canvas med width:100% — det ger subpixel/moiré och QR blir oskannbar.
+  Vi låter canvas vara 1:1 (intrinsic size), men begränsar med max-width så den inte spillar på mobil.
+*/
 .qrBox canvas{
   display:block;
-  width: auto;   /* bort från 100% !important */
-  height: auto;  /* bort från auto !important */
+  width: auto !important;
+  height: auto !important;
+  max-width: 100%;
   image-rendering: pixelated;
 }
 
