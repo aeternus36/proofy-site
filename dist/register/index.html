@@ -222,10 +222,10 @@
                        aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
                        title="Klicka för att kopiera verifieringslänk"
                        style="
-                         display:inline-block;
+                         display:none;
                          border-radius:16px;
-                         padding:12px;              /* visuell luft runt (behålls) */
-                         background:#ffffff;        /* max scannability */
+                         padding:12px;
+                         background:#ffffff;
                          border:1px solid rgba(255,255,255,.14);
                          cursor:pointer;
                          max-width: 100%;
@@ -332,7 +332,7 @@
                      aria-label="QR-kod manuell (klicka för att kopiera verifieringslänk)"
                      title="Klicka för att kopiera verifieringslänk"
                      style="
-                       display:inline-block;
+                       display:none;
                        border-radius:16px;
                        padding:12px;
                        background:#ffffff;
@@ -489,6 +489,7 @@
     if (linkOut) linkOut.textContent = "—";
     if (linkOut) linkOut.href = "#";
     if (qrBox) qrBox.innerHTML = "";
+    if (qrTap) qrTap.style.display = "none";
     if (regStatusOut) regStatusOut.textContent = "—";
     if (timeOut) timeOut.textContent = "—";
     if (submitterOut) submitterOut.textContent = "—";
@@ -633,51 +634,58 @@
     });
   }
 
-  function showQrError(targetEl, msg){
-    if (!targetEl) return;
-    targetEl.innerHTML = `<div class="meta">${msg || "QR-koden kunde inte renderas."}</div>`;
-  }
-
   function renderQr(targetEl, text){
-    try{
-      if (!targetEl) return;
-      targetEl.innerHTML = "";
+    if (!targetEl) return;
 
-      if (typeof window.QRCode !== "function"){
-        showQrError(targetEl);
+    const payload = String(text || "").trim();
+    targetEl.innerHTML = "";
+
+    if (!payload || payload === "—") {
+      targetEl.innerHTML = `<div class="meta">Ingen länk att koda.</div>`;
+      return;
+    }
+
+    if (typeof window.QRCode !== "function") {
+      targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
+      return;
+    }
+
+    const container = targetEl.parentElement; // qrTap/manualQrTap
+    const maxByLayout = container ? (container.clientWidth - 24) : 280;
+    let size = Math.max(240, Math.min(360, maxByLayout || 280));
+    size = Math.floor(size / 4) * 4;
+
+    const level =
+      (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
+        ? window.QRCodeCorrectLevel.H
+        : undefined;
+
+    try {
+      new window.QRCode(targetEl, {
+        text: payload,
+        width: size,
+        height: size,
+        colorDark: "#0b1220",
+        colorLight: "#ffffff",
+        correctLevel: level
+      });
+    } catch (e1) {
+      try {
+        targetEl.innerHTML = "";
+        new window.QRCode(targetEl, payload);
+      } catch (e2) {
+        console.error("QR render failed:", e1, e2);
+        targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
         return;
       }
-
-      const container = targetEl.parentElement; // qrTap
-      const maxByLayout = container ? (container.clientWidth - 24) : 280;
-      const size = Math.floor(Math.max(240, Math.min(360, maxByLayout || 280)));
-
-      const qr = new window.QRCode(targetEl);
-
-      if (qr._htOption){
-        qr._htOption.width = size;
-        qr._htOption.height = size;
-
-        // IMPORTANT: pure black on white for maximum scannability
-        qr._htOption.colorDark = "#000000";
-        qr._htOption.colorLight = "#ffffff";
-
-        qr._htOption.typeNumber = 0; // auto
-        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
-          qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
-        }
-        qr._htOption.quiet = 4;
-        qr._htOption.minScale = 4;
-      }
-
-      qr.makeCode(text);
-
-      const ok = !!targetEl.querySelector("canvas");
-      if (!ok) showQrError(targetEl);
-    } catch (e){
-      console.error("QR render error:", e);
-      showQrError(targetEl);
     }
+
+    setTimeout(() => {
+      const ok = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
+      if (!ok) {
+        targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+      }
+    }, 300);
   }
 
   function buildNote(run){
@@ -843,7 +851,8 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      renderQr(qrBox, currentLink);
+      if (qrTap) qrTap.style.display = "block";
+      requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
       applyCopyHover(idOut, copyIdIconBtn, true);
       applyCopyHover(linkOut, copyLinkIconBtn, true);
@@ -936,7 +945,8 @@
         headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(ID/länk kan ändå delas)</span>`;
         debugOut.textContent = errorMsg.textContent;
 
-        renderQr(qrBox, currentLink);
+        if (qrTap) qrTap.style.display = "block";
+        requestAnimationFrame(() => renderQr(qrBox, currentLink));
         attachQrCopy(qrTap, () => currentLink);
       }
 
@@ -951,6 +961,7 @@
       manualLinkOut.textContent = "—";
       manualLinkOut.href = "#";
       manualQrBox.innerHTML = "";
+      if (manualQrTap) manualQrTap.style.display = "none";
       manualCopyLinkBtn.disabled = true;
       manualVerifyBtn.href = "/verify.html";
       manualVerifyBtn.style.pointerEvents = "none";
@@ -963,7 +974,8 @@
     manualLinkOut.textContent = link;
     manualLinkOut.href = link;
 
-    renderQr(manualQrBox, link);
+    if (manualQrTap) manualQrTap.style.display = "block";
+    requestAnimationFrame(() => renderQr(manualQrBox, link));
 
     manualCopyLinkBtn.disabled = false;
     manualVerifyBtn.href = link;
@@ -976,19 +988,7 @@
       setTimeout(() => setManualPill("Redo ✅"), 1200);
     });
 
-    (function attachQrCopy(qrTapEl, getLink){
-      if (!qrTapEl) return;
-      const doCopy = async () => {
-        const l = getLink();
-        if (!l || l === "—") return;
-        await copyTextToClipboard(l);
-      };
-      qrTapEl.addEventListener("click", (e) => { e.preventDefault(); doCopy(); });
-      qrTapEl.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
-      });
-    })(manualQrTap, () => link);
-
+    attachQrCopy(manualQrTap, () => link);
     return link;
   }
 
