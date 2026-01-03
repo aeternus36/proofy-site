@@ -7,7 +7,7 @@
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-02a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03b" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-02a" />
 </head>
 
@@ -130,7 +130,7 @@
 
           <div class="hr"></div>
 
-          <!-- Empty state -->
+          <!-- Empty state (visas innan ID finns) -->
           <div id="emptyState"
                style="
                  border:1px solid rgba(255,255,255,.10);
@@ -215,6 +215,7 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
+                  <!-- Klick kopierar länk. Skanning sker med annan enhet -->
                   <div id="qrTap"
                        role="button"
                        tabindex="0"
@@ -223,7 +224,7 @@
                        style="
                          display:inline-block;
                          border-radius:16px;
-                         padding:16px;              /* quiet zone */
+                         padding:12px;              /* extra luft, men quiet zone ska också ligga i canvas */
                          background:#ffffff;        /* max scannability */
                          border:1px solid rgba(255,255,255,.14);
                          cursor:pointer;
@@ -333,7 +334,7 @@
                      style="
                        display:inline-block;
                        border-radius:16px;
-                       padding:16px;
+                       padding:12px;
                        background:#ffffff;
                        border:1px solid rgba(255,255,255,.14);
                        cursor:pointer;
@@ -384,8 +385,8 @@
   </div>
 </footer>
 
-<!-- QR-lib -->
-<script src="/assets/qr.min.js?v=2026-01-02a"></script>
+<!-- QR-lib (cache-bust) -->
+<script src="/assets/qr.min.js?v=2026-01-03b"></script>
 
 <script>
 (() => {
@@ -520,10 +521,10 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
   }
 
-  // ✅ Kortare länk för QR + delning (minskar densitet rejält)
+  // OBS: du verkar redan använda /v/<hash> i UI. Vi behåller din strategi.
   function buildVerifyLink(hash){
-    const clean = String(hash || "").trim();
-    return `${location.origin}/v/${clean}`;
+    // om du vill tillbaka till verify.html, byt här – men vi rör inte det nu.
+    return `${location.origin}/v/${encodeURIComponent(hash)}`;
   }
 
   async function copyTextToClipboard(text){
@@ -634,59 +635,67 @@
     });
   }
 
-  function showQrError(targetEl){
+  function showQrError(targetEl, reason){
     if (!targetEl) return;
-    targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+    const msg = reason ? `QR-koden kunde inte renderas. (${reason})` : `QR-koden kunde inte renderas.`;
+    targetEl.innerHTML = `<div class="meta" style="padding:8px 2px;">${msg}</div>`;
   }
 
-  // ✅ Rätt för ditt QR-lib: options i constructor + text via makeCode()
+  // Robust QR rendering: no CSS scaling, H-level, quiet zone handled in lib (om stöds)
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
       targetEl.innerHTML = "";
 
       if (typeof window.QRCode !== "function"){
-        showQrError(targetEl);
+        showQrError(targetEl, "QR-lib ej laddad");
         return;
       }
 
-      const tap = targetEl.parentElement;
-      const available = tap ? (tap.clientWidth - 32) : 280;
-      const size = Math.max(240, Math.min(320, available || 280));
+      // räkna ut maxstorlek från layout
+      const container = targetEl.parentElement; // qrTap
+      const maxByLayout = container ? (container.clientWidth - 24) : 240;
+      const size = Math.max(200, Math.min(280, maxByLayout || 240));
 
-      const level =
-        (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
-          ? window.QRCodeCorrectLevel.H
-          : (window.QRCodeCorrectLevel ? window.QRCodeCorrectLevel.Q : undefined);
+      const qr = new window.QRCode(targetEl);
+      if (!qr || typeof qr.makeCode !== "function"){
+        showQrError(targetEl, "QR-lib saknar makeCode()");
+        return;
+      }
 
-      const qr = new window.QRCode(targetEl, {
-        width: size,
-        height: size,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: level
-      });
+      // konfigurera (kompat med din nuvarande usage)
+      if (qr._htOption){
+        qr._htOption.width = size;
+        qr._htOption.height = size;
+        qr._htOption.colorDark = "#0b1220";
+        qr._htOption.colorLight = "#ffffff";
+        qr._htOption.typeNumber = 0; // auto
+
+        // H om möjligt
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
+        }
+        // om lib stödjer margin/quiet-zone
+        if (qr._htOption.margin !== undefined) {
+          qr._htOption.margin = 4;
+        }
+      }
 
       qr.makeCode(text);
 
       const canvas = targetEl.querySelector("canvas");
       if (!canvas){
-        showQrError(targetEl);
+        showQrError(targetEl, "canvas saknas efter makeCode()");
         return;
       }
 
-      canvas.style.display = "block";
+      // säkra 1:1 (ingen “responsiv stretch”)
       canvas.style.width = canvas.width + "px";
       canvas.style.height = canvas.height + "px";
-      canvas.style.maxWidth = "none";
-      canvas.style.borderRadius = "0";
-      canvas.style.transform = "none";
-      canvas.style.boxShadow = "none";
-      canvas.style.background = "#ffffff";
-      canvas.style.imageRendering = "pixelated";
+
     } catch (e){
       console.error("QR render error:", e);
-      showQrError(targetEl);
+      showQrError(targetEl, (e && e.message) ? e.message : "okänt fel");
     }
   }
 
@@ -850,7 +859,6 @@
       openVerifyBtn.style.pointerEvents = "auto";
       openVerifyBtn.style.opacity = "1";
 
-      // Intyg behåller query (server/verify-förväntan)
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
@@ -925,6 +933,7 @@
       };
 
       setPill("Klart ✅");
+      setBusy(false);
     } catch (e){
       console.error(e);
       if (myOp !== opId) return;
@@ -951,8 +960,7 @@
       }
 
       setPill("Fel");
-    } finally {
-      if (myOp === opId) setBusy(false);
+      setBusy(false);
     }
   });
 
