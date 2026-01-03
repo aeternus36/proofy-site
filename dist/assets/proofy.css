@@ -281,19 +281,20 @@ h2{
   max-width: 100%;
 }
 
-/* IMPORTANT: prevent ANY CSS scaling of the QR canvas (wins over global canvas rules) */
+/* IMPORTANT: force QR canvas to keep intrinsic size and never be CSS-scaled */
 .qrBox canvas{
-  display:block;
+  display:block !important;
 
-  /* keep intrinsic pixel size (override global responsive rules) */
+  /* Never let other CSS do responsive scaling */
   width: auto !important;
   height: auto !important;
   max-width: none !important;
   max-height: none !important;
 
-  /* helpful if any scaling still happens */
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  /* Prevent transform/zoom rules from sneaking in */
+  transform: none !important;
+
+  image-rendering: pixelated !important;
 }
 
 /* Inputs */
