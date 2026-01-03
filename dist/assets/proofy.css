@@ -214,7 +214,7 @@ h2{
   border-color: rgba(255,255,255,.12);
 }
 
-/* ---------- common layout helpers used by register ---------- */
+/* ---------- NEW: common layout helpers used by register ---------- */
 .grid2{
   display:grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -279,20 +279,17 @@ h2{
 
 /* Container that ensures QR never spills */
 .qrBox{
+  width: fit-content;
   max-width: 100%;
-  display:block;
 }
 
-/*
-  KRITISKT:
-  - Tvinga INTE canvas till width:100% (det skalar och gör QR oskannbar).
-  - Vi väljer alltid en pixelperfekt storlek i JS istället.
+/* ✅ KRITISKT: canvas får INTE skalas via CSS
+   Vi låter JS sätta canvasens width/height + style width/height 1:1.
 */
 .qrBox canvas{
   display:block;
-  width: auto !important;
-  height: auto !important;
-  image-rendering: pixelated;
+  max-width: 100%;
+  height: auto;
 }
 
 /* Inputs */
