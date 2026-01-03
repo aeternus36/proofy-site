@@ -7,8 +7,8 @@
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-02a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-02a" />
 </head>
 
 <body>
@@ -224,7 +224,7 @@
                        style="
                          display:inline-block;
                          border-radius:16px;
-                         padding:12px;              /* extra visuellt luft */
+                         padding:12px;              /* extra luft utanför QR */
                          background:#ffffff;        /* max scannability */
                          border:1px solid rgba(255,255,255,.14);
                          cursor:pointer;
@@ -386,7 +386,7 @@
 </footer>
 
 <!-- QR-lib -->
-<script src="/assets/qr.min.js?v=2026-01-03a"></script>
+<script src="/assets/qr.min.js?v=2026-01-02a"></script>
 
 <script>
 (() => {
@@ -639,10 +639,11 @@
   }
 
   /*
-    Viktigt för scannability:
-    - Använd correctLevel H
-    - Sätt margin (quiet zone) i libben
-    - Låt canvas INTE skalas via CSS (fixas i proofy.css)
+    QR FIX (kritisk):
+    - Bygg QR med hög felkorrigering (H)
+    - Säkerställ 1:1 pixlar (ingen CSS-skalning)
+    - Lägg riktig quiet zone (4 moduler) i själva bilden
+    - Välj storlek som ger heltals-pixlar per modul => inga moiré/diagonaler
   */
   function renderQr(targetEl, text){
     try{
@@ -654,33 +655,96 @@
         return;
       }
 
-      const container = targetEl.parentElement; // qrTap
-      const maxByLayout = container ? (container.clientWidth - 24) : 260;
-      const size = Math.max(200, Math.min(280, maxByLayout || 260));
+      const container = targetEl.parentElement; // qrTap/manualQrTap
+      const containerWidth = container ? container.clientWidth : 320;
 
-      const qr = new window.QRCode(targetEl);
-      if (!qr || typeof qr.makeCode !== "function"){
-        showQrError(targetEl);
-        return;
-      }
+      // Vi vill att QR ska få plats utan att behöva CSS-skala canvas.
+      // Inre QR (utan quiet zone) ca 200–260 px beroende på utrymme.
+      const paddingAround = 24; // ungefär (qrTap har 12px padding på båda sidor)
+      const maxInner = Math.max(180, Math.min(260, (containerWidth - paddingAround) || 240));
+      const quietModules = 4;
+
+      // Först: rendera QR med innerSize. Libraryn ritar canvas exakt innerSize x innerSize.
+      const tmp = document.createElement("div");
+      const qr = new window.QRCode(tmp);
 
       if (qr._htOption){
-        qr._htOption.width = size;
-        qr._htOption.height = size;
+        qr._htOption.width = maxInner;
+        qr._htOption.height = maxInner;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#ffffff";
-        qr._htOption.typeNumber = 0;            // auto
-        qr._htOption.margin = 4;                // quiet zone (modules)
-
-        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
+        qr._htOption.typeNumber = 0; // auto
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined){
           qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
         }
       }
 
       qr.makeCode(text);
 
-      const canvas = targetEl.querySelector("canvas");
-      if (!canvas) showQrError(targetEl);
+      const innerCanvas = tmp.querySelector("canvas");
+      if (!innerCanvas) {
+        showQrError(targetEl);
+        return;
+      }
+
+      // Läs modulcount från QR-objektet (finns på _oQRCode)
+      const moduleCount = qr._oQRCode && typeof qr._oQRCode.getModuleCount === "function"
+        ? qr._oQRCode.getModuleCount()
+        : null;
+
+      if (!moduleCount) {
+        // Fallback: använd innerCanvas direkt men pixel-perfekt
+        innerCanvas.style.width = innerCanvas.width + "px";
+        innerCanvas.style.height = innerCanvas.height + "px";
+        targetEl.appendChild(innerCanvas);
+        return;
+      }
+
+      // Viktigt: välj cellSize som HELTAL => undvik aliasing/moiré.
+      // innerCanvas.width är vad libraryn ritade till (bör vara maxInner men kan bli exakt).
+      const rawInner = innerCanvas.width;
+      const cellSize = Math.max(3, Math.floor(rawInner / moduleCount)); // min 3 px/modul
+      const snappedInner = cellSize * moduleCount;
+
+      // Quiet zone i px
+      const quietPx = quietModules * cellSize;
+      const outSize = snappedInner + (quietPx * 2);
+
+      // Om outSize riskerar overflow på små skärmar, minska cellSize tills det ryms
+      const maxTotal = Math.max(200, Math.min(340, (containerWidth - 2) || outSize));
+      let finalCell = cellSize;
+      let finalOut = outSize;
+      while (finalOut > maxTotal && finalCell > 2){
+        finalCell -= 1;
+        const si = finalCell * moduleCount;
+        const qp = quietModules * finalCell;
+        finalOut = si + (qp * 2);
+      }
+
+      const finalInner = finalCell * moduleCount;
+      const finalQuiet = quietModules * finalCell;
+
+      // Rita om: vit bakgrund + skalad inner QR med nearest-neighbor (ingen smoothing)
+      const out = document.createElement("canvas");
+      out.width = finalOut;
+      out.height = finalOut;
+
+      const ctx = out.getContext("2d", { alpha: false });
+      ctx.imageSmoothingEnabled = false;
+
+      // vit bakgrund
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, finalOut, finalOut);
+
+      // Skala innerCanvas till finalInner (integer-multipel) och placera med quiet zone
+      ctx.drawImage(innerCanvas, 0, 0, rawInner, rawInner, finalQuiet, finalQuiet, finalInner, finalInner);
+
+      // Viktigt: sätt explicita CSS-dimensioner = pixelperfekt 1:1
+      out.style.width = finalOut + "px";
+      out.style.height = finalOut + "px";
+      out.style.display = "block";
+
+      targetEl.appendChild(out);
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
@@ -808,9 +872,10 @@
       if (!link || link === "—") return;
       await copyWithFeedback({ text: link, pillEl: copyLinkPill, okText: "Länk kopierad ✅" });
     };
-    qrTapEl.addEventListener("click", (e) => { e.preventDefault(); doCopy(); });
+    // Viktigt: aldrig navigera vid tap
+    qrTapEl.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); doCopy(); });
     qrTapEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); doCopy(); }
     });
   }
 
@@ -850,6 +915,7 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
+      // Rendera pixelperfekt QR
       renderQr(qrBox, currentLink);
 
       applyCopyHover(idOut, copyIdIconBtn, true);
@@ -983,7 +1049,10 @@
       setTimeout(() => setManualPill("Redo ✅"), 1200);
     });
 
-    attachQrCopy(manualQrTap, () => link);
+    // kopiera vid tap, aldrig nav
+    if (manualQrTap){
+      manualQrTap.onclick = (e) => { e.preventDefault(); e.stopPropagation(); copyTextToClipboard(link); };
+    }
     return link;
   }
 
@@ -1002,10 +1071,22 @@
   setFile(null);
   setBusy(false);
   setManualState("");
+
+  // Om QR renderas innan layout stabiliserats (mobil), rendera om på resize
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    if (!currentLink) return;
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      renderQr(qrBox, currentLink);
+      const mid = (manualId && manualId.value) ? manualId.value.trim() : "";
+      if (isIdFormat(mid)) renderQr(manualQrBox, buildVerifyLink(mid));
+    }, 120);
+  });
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
-<script src="/chat-widget.js?v=2026-01-03a" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-02a" defer></script>
+<script src="/chat-widget.js?v=2026-01-02a" defer></script>
 </body>
 </html>
