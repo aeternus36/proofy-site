@@ -277,21 +277,21 @@ h2{
   flex-wrap: wrap;
 }
 
-/* ✅ QR: lås INTE canvas till 100% (det förstör skannbarhet) */
+/* ✅ QR: lås INTE bredden som tvingar scaling */
 .qrBox{
   display:inline-block;
   max-width: 100%;
 }
 
-/* ✅ Canvas måste vara 1:1 pixlar (ingen CSS-skalning) */
+/* ✅ KRITISKT: canvas får INTE skalas med CSS (annars blir den oskannbar) */
 .qrBox canvas{
   display:block;
-  width: auto !important;
-  height: auto !important;
+  width: auto;   /* bort från 100% !important */
+  height: auto;  /* bort från auto !important */
   image-rendering: pixelated;
 }
 
-/* Inputs */
+/* Inputs (already present, but keep consistent) */
 input, textarea{
   width:100%;
   padding: 12px 12px;
