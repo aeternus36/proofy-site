@@ -634,15 +634,86 @@
     });
   }
 
-  function renderQr(targetEl, text){
-    if (!targetEl) return;
+function renderQr(targetEl, text){
+  if (!targetEl) return;
 
-    const payload = String(text || "").trim();
-    targetEl.innerHTML = "";
+  const payload = String(text || "").trim();
+  targetEl.innerHTML = "";
 
-    if (!payload || payload === "—") {
-      targetEl.innerHTML = `<div class="meta">Ingen länk att koda.</div>`;
+  if (!payload || payload === "—") {
+    targetEl.innerHTML = `<div class="meta">Ingen länk att koda.</div>`;
+    return;
+  }
+
+  // QR lib måste finnas
+  if (typeof window.QRCode !== "function") {
+    targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
+    return;
+  }
+
+  // Beräkna storlek utifrån tillgängligt utrymme (undvik skalning)
+  const container = targetEl.parentElement; // qrTap/manualQrTap
+  const maxByLayout = container ? Math.max(200, container.clientWidth - 24) : 280;
+  let size = Math.max(220, Math.min(360, maxByLayout || 280));
+  size = Math.floor(size); // viktigt: heltal
+
+  const level =
+    (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
+      ? window.QRCodeCorrectLevel.H
+      : undefined;
+
+  // Vi mountar QR i en egen wrapper så vi kan inspektera resultatet
+  const mount = document.createElement("div");
+  targetEl.appendChild(mount);
+
+  // Försök 1: options-objekt
+  try {
+    new window.QRCode(mount, {
+      text: payload,
+      width: size,
+      height: size,
+      colorDark: "#0b1220",
+      colorLight: "#ffffff",
+      correctLevel: level
+    });
+  } catch (e1) {
+    // Försök 2: klassisk signatur
+    try {
+      mount.innerHTML = "";
+      new window.QRCode(mount, payload);
+    } catch (e2) {
+      console.error("QR render failed:", e1, e2);
+      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
       return;
+    }
+  }
+
+  // Många libs ritar sync, vissa async – kolla efter canvas/img/svg/table
+  setTimeout(() => {
+    const node = mount.querySelector("canvas, img, svg, table");
+    if (!node) {
+      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+      return;
+    }
+
+    // Motverka “randig/moiré” QR: tvinga 1:1 pixelvisning om det är canvas/img
+    if (node.tagName === "CANVAS") {
+      node.style.width = node.width + "px";
+      node.style.height = node.height + "px";
+      node.style.imageRendering = "pixelated";
+      node.style.display = "block";
+    } else if (node.tagName === "IMG") {
+      node.style.width = size + "px";
+      node.style.height = size + "px";
+      node.style.imageRendering = "pixelated";
+      node.style.display = "block";
+    } else {
+      // svg/table: låt den vara – din CSS/backdrop kan fortfarande funka
+      node.style.display = "block";
+    }
+  }, 0);
+}
+
     }
 
     if (typeof window.QRCode !== "function") {
