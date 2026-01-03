@@ -640,99 +640,48 @@
     targetEl.innerHTML = `<div class="meta">${msg || "QR-koden kunde inte renderas."}</div>`;
   }
 
-  // ✅ Ny QR-render: ritar om modellen med riktig quiet zone + heltalsskala + 1:1-pixlar
-  function renderQr(targetEl, text){
-    try{
-      if (!targetEl) return;
-      targetEl.innerHTML = "";
+ function renderQr(targetEl, text){
+  try{
+    if (!targetEl) return;
+    targetEl.innerHTML = "";
 
-      if (typeof window.QRCode !== "function"){
-        showQrError(targetEl, "QR-bibliotek saknas.");
-        return;
-      }
-
-      // Mät tillgänglig bredd (utan att tvinga CSS-skalning av canvas)
-      const wrapper = targetEl.parentElement; // qrTap/manualQrTap
-      const available = wrapper ? Math.max(220, Math.min(340, wrapper.clientWidth - 24)) : 260;
-
-      // Skapa QR i en temporär nod så vi kan läsa modellen
-      const tmp = document.createElement("div");
-      const qr = new window.QRCode(tmp);
-
-      // Hög felkorrigering (Q) – bra kompromiss scannability vs densitet.
-      // typeNumber = 0 => auto version.
-      if (qr._htOption){
-        qr._htOption.typeNumber = 0;
-        qr._htOption.correctLevel = (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.Q !== undefined)
-          ? window.QRCodeCorrectLevel.Q
-          : window.QRCodeCorrectLevel.H;
-        qr._htOption.colorDark = "#0b1220";
-        qr._htOption.colorLight = "#ffffff";
-        qr._htOption.width = 256;
-        qr._htOption.height = 256;
-      }
-
-      qr.makeCode(text);
-
-      const model = qr._oQRCode;
-      if (!model || typeof model.getModuleCount !== "function" || typeof model.isDark !== "function"){
-        showQrError(targetEl, "QR-modellen kunde inte läsas.");
-        return;
-      }
-
-      const moduleCount = model.getModuleCount();
-      const quietModules = 4; // standardkrav
-      const totalModules = moduleCount + quietModules * 2;
-
-      // Heltalsskala (pixlar per modul) => inga diagonala artefakter.
-      // Minst 4px/modul för att vara snäll mot mobilkameror.
-      let scale = Math.floor(available / totalModules);
-      if (!Number.isFinite(scale) || scale < 4) scale = 4;
-
-      // Om QR blir för stor, cap: (UI)
-      const maxScale = 10;
-      if (scale > maxScale) scale = maxScale;
-
-      const sizePx = totalModules * scale;
-
-      // Rita om QR med quiet zone
-      const canvas = document.createElement("canvas");
-      canvas.width = sizePx;
-      canvas.height = sizePx;
-
-      // Förhindra CSS-skalning: sätt inline-storlek samma som pixelstorlek
-      canvas.style.width = sizePx + "px";
-      canvas.style.height = sizePx + "px";
-      canvas.style.display = "block";
-
-      const ctx = canvas.getContext("2d", { alpha: false });
-      if (!ctx){
-        showQrError(targetEl, "Canvas stöds inte.");
-        return;
-      }
-
-      // Vit bakgrund (inkl quiet zone)
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, sizePx, sizePx);
-
-      // Svarta moduler
-      ctx.fillStyle = "#0b1220";
-      const offset = quietModules * scale;
-
-      for (let r = 0; r < moduleCount; r++){
-        for (let c = 0; c < moduleCount; c++){
-          if (model.isDark(r, c)){
-            ctx.fillRect(offset + c * scale, offset + r * scale, scale, scale);
-          }
-        }
-      }
-
-      targetEl.appendChild(canvas);
-    } catch (e){
-      console.error("QR render error:", e);
-      showQrError(targetEl, "QR-koden kunde inte renderas.");
+    if (typeof window.QRCode !== "function"){
+      showQrError(targetEl);
+      return;
     }
+
+    const container = targetEl.parentElement; // qrTap
+    const maxByLayout = container ? (container.clientWidth - 24) : 280;
+    const size = Math.max(240, Math.min(360, maxByLayout || 280));
+
+    const qr = new window.QRCode(targetEl);
+
+    // Sätt options innan makeCode
+    if (qr._htOption){
+      qr._htOption.width = size;
+      qr._htOption.height = size;
+      qr._htOption.colorDark = "#0b1220";
+      qr._htOption.colorLight = "#ffffff";
+      qr._htOption.typeNumber = 0; // auto
+      // högre tolerans vid dålig kamera/skärm
+      if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
+        qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
+      }
+      // quiet zone + minScale hanteras i qr.min.js
+      qr._htOption.quiet = 4;
+      qr._htOption.minScale = 4;
+    }
+
+    qr.makeCode(text);
+
+    const ok = !!targetEl.querySelector("canvas");
+    if (!ok) showQrError(targetEl);
+  } catch (e){
+    console.error("QR render error:", e);
+    showQrError(targetEl);
   }
+}
+
 
   function buildNote(run){
     if (!run) return "—";
