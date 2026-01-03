@@ -638,13 +638,6 @@
     targetEl.innerHTML = `<div class="meta">${msg || "QR-koden kunde inte renderas."}</div>`;
   }
 
-  function lockCanvasCssSize(canvas){
-    if (!canvas) return;
-    // Force CSS size to exactly match intrinsic pixel size (prevents any scaling/moiré)
-    canvas.style.width = canvas.width + "px";
-    canvas.style.height = canvas.height + "px";
-  }
-
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -655,41 +648,32 @@
         return;
       }
 
-      const container = targetEl.parentElement; // qrTap / manualQrTap
+      const container = targetEl.parentElement; // qrTap
       const maxByLayout = container ? (container.clientWidth - 24) : 280;
-      const size = Math.max(260, Math.min(420, maxByLayout || 280));
+      const size = Math.floor(Math.max(240, Math.min(360, maxByLayout || 280)));
 
       const qr = new window.QRCode(targetEl);
 
       if (qr._htOption){
         qr._htOption.width = size;
         qr._htOption.height = size;
-        qr._htOption.colorDark = "#0b1220";
+
+        // IMPORTANT: pure black on white for maximum scannability
+        qr._htOption.colorDark = "#000000";
         qr._htOption.colorLight = "#ffffff";
+
         qr._htOption.typeNumber = 0; // auto
-
-        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.Q !== undefined) {
-          // Q är ofta "snällare" för skanning än H när datan är lång (mindre overhead)
-          qr._htOption.correctLevel = window.QRCodeCorrectLevel.Q;
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
         }
-
-        // Bigger quiet zone helps cameras
-        qr._htOption.quiet = 6;
+        qr._htOption.quiet = 4;
         qr._htOption.minScale = 4;
-
-        // NEW: force a calmer mask (0..7). 0 brukar se "lugnast" ut.
-        qr._htOption.maskPattern = 0;
       }
 
       qr.makeCode(text);
 
-      const canvas = targetEl.querySelector("canvas");
-      if (!canvas) {
-        showQrError(targetEl);
-        return;
-      }
-
-      lockCanvasCssSize(canvas);
+      const ok = !!targetEl.querySelector("canvas");
+      if (!ok) showQrError(targetEl);
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
@@ -992,7 +976,19 @@
       setTimeout(() => setManualPill("Redo ✅"), 1200);
     });
 
-    attachQrCopy(manualQrTap, () => link);
+    (function attachQrCopy(qrTapEl, getLink){
+      if (!qrTapEl) return;
+      const doCopy = async () => {
+        const l = getLink();
+        if (!l || l === "—") return;
+        await copyTextToClipboard(l);
+      };
+      qrTapEl.addEventListener("click", (e) => { e.preventDefault(); doCopy(); });
+      qrTapEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+      });
+    })(manualQrTap, () => link);
+
     return link;
   }
 
