@@ -521,8 +521,6 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
   }
 
-  // Behåll din befintliga länk (inte fragment) – scanners gillar query.
-  // Bonus: om du kör "pretty routes" (/verify) så kan du byta senare utan att QR-bråkar.
   function buildVerifyLink(hash){
     return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
@@ -640,48 +638,63 @@
     targetEl.innerHTML = `<div class="meta">${msg || "QR-koden kunde inte renderas."}</div>`;
   }
 
- function renderQr(targetEl, text){
-  try{
-    if (!targetEl) return;
-    targetEl.innerHTML = "";
-
-    if (typeof window.QRCode !== "function"){
-      showQrError(targetEl);
-      return;
-    }
-
-    const container = targetEl.parentElement; // qrTap
-    const maxByLayout = container ? (container.clientWidth - 24) : 280;
-    const size = Math.max(240, Math.min(360, maxByLayout || 280));
-
-    const qr = new window.QRCode(targetEl);
-
-    // Sätt options innan makeCode
-    if (qr._htOption){
-      qr._htOption.width = size;
-      qr._htOption.height = size;
-      qr._htOption.colorDark = "#0b1220";
-      qr._htOption.colorLight = "#ffffff";
-      qr._htOption.typeNumber = 0; // auto
-      // högre tolerans vid dålig kamera/skärm
-      if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
-        qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
-      }
-      // quiet zone + minScale hanteras i qr.min.js
-      qr._htOption.quiet = 4;
-      qr._htOption.minScale = 4;
-    }
-
-    qr.makeCode(text);
-
-    const ok = !!targetEl.querySelector("canvas");
-    if (!ok) showQrError(targetEl);
-  } catch (e){
-    console.error("QR render error:", e);
-    showQrError(targetEl);
+  function lockCanvasCssSize(canvas){
+    if (!canvas) return;
+    // Force CSS size to exactly match intrinsic pixel size (prevents any scaling/moiré)
+    canvas.style.width = canvas.width + "px";
+    canvas.style.height = canvas.height + "px";
   }
-}
 
+  function renderQr(targetEl, text){
+    try{
+      if (!targetEl) return;
+      targetEl.innerHTML = "";
+
+      if (typeof window.QRCode !== "function"){
+        showQrError(targetEl);
+        return;
+      }
+
+      const container = targetEl.parentElement; // qrTap / manualQrTap
+      const maxByLayout = container ? (container.clientWidth - 24) : 280;
+      const size = Math.max(260, Math.min(420, maxByLayout || 280));
+
+      const qr = new window.QRCode(targetEl);
+
+      if (qr._htOption){
+        qr._htOption.width = size;
+        qr._htOption.height = size;
+        qr._htOption.colorDark = "#0b1220";
+        qr._htOption.colorLight = "#ffffff";
+        qr._htOption.typeNumber = 0; // auto
+
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.Q !== undefined) {
+          // Q är ofta "snällare" för skanning än H när datan är lång (mindre overhead)
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.Q;
+        }
+
+        // Bigger quiet zone helps cameras
+        qr._htOption.quiet = 6;
+        qr._htOption.minScale = 4;
+
+        // NEW: force a calmer mask (0..7). 0 brukar se "lugnast" ut.
+        qr._htOption.maskPattern = 0;
+      }
+
+      qr.makeCode(text);
+
+      const canvas = targetEl.querySelector("canvas");
+      if (!canvas) {
+        showQrError(targetEl);
+        return;
+      }
+
+      lockCanvasCssSize(canvas);
+    } catch (e){
+      console.error("QR render error:", e);
+      showQrError(targetEl);
+    }
+  }
 
   function buildNote(run){
     if (!run) return "—";
@@ -804,7 +817,6 @@
       if (!link || link === "—") return;
       await copyWithFeedback({ text: link, pillEl: copyLinkPill, okText: "Länk kopierad ✅" });
     };
-    // Viktigt: aldrig navigera på tap – bara kopiera.
     qrTapEl.addEventListener("click", (e) => { e.preventDefault(); doCopy(); });
     qrTapEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
@@ -847,7 +859,6 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      // ✅ Ny robust QR
       renderQr(qrBox, currentLink);
 
       applyCopyHover(idOut, copyIdIconBtn, true);
@@ -929,7 +940,6 @@
         ? "Timeout: registreringen tog för lång tid (30s). Försök igen."
         : (e?.message || "Registreringstjänsten kunde inte nås just nu.");
 
-      // Viktigt: ID/länk/QR ska fortfarande vara användbara även vid registreringsfel
       if (currentId && currentLink){
         resultBox.style.display = "block";
         reportMeta.style.display = "block";
