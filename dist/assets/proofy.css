@@ -249,7 +249,6 @@ h2{
   line-height: 1.45;
   color: rgba(234,240,255,.92);
 
-  /* viktigast för “text rinner ut” */
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
@@ -277,19 +276,18 @@ h2{
   flex-wrap: wrap;
 }
 
-/* Container that ensures QR never spills */
+/* Target element that holds the QR canvas (do NOT scale canvas with CSS) */
 .qrBox{
-  width: fit-content;
   max-width: 100%;
 }
 
-/* ✅ KRITISKT: canvas får INTE skalas via CSS
-   Vi låter JS sätta canvasens width/height + style width/height 1:1.
-*/
+/* IMPORTANT: Do not force width:100% on canvas => it breaks scannability */
 .qrBox canvas{
   display:block;
-  max-width: 100%;
+  /* keep intrinsic pixel size */
+  width: auto;
   height: auto;
+  image-rendering: pixelated;
 }
 
 /* Inputs */
