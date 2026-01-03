@@ -130,7 +130,7 @@
 
           <div class="hr"></div>
 
-          <!-- Empty state (visas innan ID finns) -->
+          <!-- Empty state -->
           <div id="emptyState"
                style="
                  border:1px solid rgba(255,255,255,.10);
@@ -215,7 +215,6 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
-                  <!-- Klick kopierar länk. Skanning sker med annan enhet -->
                   <div id="qrTap"
                        role="button"
                        tabindex="0"
@@ -522,6 +521,7 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
   }
 
+  // Behåll query – scanners gillar query.
   function buildVerifyLink(hash){
     return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
@@ -634,6 +634,7 @@
     });
   }
 
+  // ✅ Robust QR-render: funkar med vanliga qrcodejs-varianter och undviker “randig” CSS-skalning
   function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -650,18 +651,23 @@
       return;
     }
 
+    // size: heltal, men framförallt: vi låter canvas behålla sin intrinsic storlek (ingen CSS-skalning)
     const container = targetEl.parentElement; // qrTap/manualQrTap
-    const maxByLayout = container ? (container.clientWidth - 24) : 280;
+    const maxByLayout = container ? Math.max(220, container.clientWidth - 24) : 280;
     let size = Math.max(240, Math.min(360, maxByLayout || 280));
-    size = Math.floor(size / 4) * 4;
+    size = Math.floor(size);
 
     const level =
       (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
         ? window.QRCodeCorrectLevel.H
         : undefined;
 
+    // Mounta i wrapper så vi kan hitta canvas/img oavsett lib
+    const mount = document.createElement("div");
+    targetEl.appendChild(mount);
+
     try {
-      new window.QRCode(targetEl, {
+      new window.QRCode(mount, {
         text: payload,
         width: size,
         height: size,
@@ -671,8 +677,8 @@
       });
     } catch (e1) {
       try {
-        targetEl.innerHTML = "";
-        new window.QRCode(targetEl, payload);
+        mount.innerHTML = "";
+        new window.QRCode(mount, payload);
       } catch (e2) {
         console.error("QR render failed:", e1, e2);
         targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
@@ -680,12 +686,29 @@
       }
     }
 
+    // Vissa libs ritar async
     setTimeout(() => {
-      const ok = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
-      if (!ok) {
+      const node = mount.querySelector("canvas, img, svg, table");
+      if (!node) {
         targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+        return;
       }
-    }, 300);
+
+      // Viktigt: tvinga 1:1 pixlar för att undvika “randigt”/moiré
+      if (node.tagName === "CANVAS") {
+        node.style.width = node.width + "px";
+        node.style.height = node.height + "px";
+        node.style.imageRendering = "pixelated";
+        node.style.display = "block";
+      } else if (node.tagName === "IMG") {
+        node.style.width = size + "px";
+        node.style.height = size + "px";
+        node.style.imageRendering = "pixelated";
+        node.style.display = "block";
+      } else {
+        node.style.display = "block";
+      }
+    }, 0);
   }
 
   function buildNote(run){
@@ -961,7 +984,7 @@
       manualLinkOut.textContent = "—";
       manualLinkOut.href = "#";
       manualQrBox.innerHTML = "";
-      if (manualQrTap) manualQrTap.style.display = "none";
+      if (manualQrTap) manualQrTap.style.display = "none"; // ingen vit prick
       manualCopyLinkBtn.disabled = true;
       manualVerifyBtn.href = "/verify.html";
       manualVerifyBtn.style.pointerEvents = "none";
