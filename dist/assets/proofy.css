@@ -279,22 +279,20 @@ h2{
 
 /* Container that ensures QR never spills */
 .qrBox{
+  width: min(260px, 100%);
   max-width: 100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
 }
 
 /*
-  VIKTIGT FÖR SCANNING:
-  Skala INTE canvas med width:100% — det ger subpixel/moiré och QR blir oskannbar.
-  Vi låter canvas vara 1:1 (intrinsic size), men begränsar med max-width så den inte spillar på mobil.
+  CRITICAL FIX:
+  Never force canvas to 100% width.
+  Let the QR lib set exact pixel size via canvas.style.width/height.
+  We only cap it with max-width:100% so it can shrink in narrow layouts.
 */
 .qrBox canvas{
   display:block;
-  width: auto !important;
-  height: auto !important;
   max-width: 100%;
+  height: auto;
   image-rendering: pixelated;
 }
 
