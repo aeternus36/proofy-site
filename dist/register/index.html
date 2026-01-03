@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="sv">
 <head>
@@ -7,8 +8,8 @@
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-02a" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-02a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 </head>
 
 <body>
@@ -224,7 +225,7 @@
                        style="
                          display:inline-block;
                          border-radius:16px;
-                         padding:12px;              /* quiet zone */
+                         padding:12px;              /* visuell luft runt (behålls) */
                          background:#ffffff;        /* max scannability */
                          border:1px solid rgba(255,255,255,.14);
                          cursor:pointer;
@@ -386,7 +387,7 @@
 </footer>
 
 <!-- QR-lib -->
-<script src="/assets/qr.min.js?v=2026-01-02a"></script>
+<script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
 <script>
 (() => {
@@ -456,7 +457,7 @@
   }
   function showPill(p, text){
     if (!p) return;
-    p.style.display = "inline-block";
+    p.style.display = "inline-flex";
     p.textContent = text;
   }
 
@@ -633,12 +634,18 @@
     });
   }
 
-  function showQrError(targetEl){
+  function showQrError(targetEl, msg){
     if (!targetEl) return;
-    targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+    targetEl.innerHTML = `<div class="meta">${msg || "QR-koden kunde inte renderas."}</div>`;
   }
 
-  // Dynamisk storlek: aldrig för stor, aldrig klippt, bra för mobil
+  function lockCanvasCssSize(canvas){
+    if (!canvas) return;
+    // Force CSS size to exactly match intrinsic pixel size (prevents any scaling/moiré)
+    canvas.style.width = canvas.width + "px";
+    canvas.style.height = canvas.height + "px";
+  }
+
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -649,32 +656,41 @@
         return;
       }
 
-      // räkna ut maxstorlek från layout
-      const container = targetEl.parentElement; // qrTap
-      const maxByLayout = container ? (container.clientWidth - 24) : 240; // padding
-      const size = Math.max(180, Math.min(260, maxByLayout || 240));
+      const container = targetEl.parentElement; // qrTap / manualQrTap
+      const maxByLayout = container ? (container.clientWidth - 24) : 280;
+      const size = Math.max(260, Math.min(420, maxByLayout || 280));
 
       const qr = new window.QRCode(targetEl);
-      if (!qr || typeof qr.makeCode !== "function"){
-        showQrError(targetEl);
-        return;
-      }
 
       if (qr._htOption){
         qr._htOption.width = size;
         qr._htOption.height = size;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#ffffff";
-        qr._htOption.typeNumber = 0;
-        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M !== undefined) {
-          qr._htOption.correctLevel = window.QRCodeCorrectLevel.M;
+        qr._htOption.typeNumber = 0; // auto
+
+        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.Q !== undefined) {
+          // Q är ofta "snällare" för skanning än H när datan är lång (mindre overhead)
+          qr._htOption.correctLevel = window.QRCodeCorrectLevel.Q;
         }
+
+        // Bigger quiet zone helps cameras
+        qr._htOption.quiet = 6;
+        qr._htOption.minScale = 4;
+
+        // NEW: force a calmer mask (0..7). 0 brukar se "lugnast" ut.
+        qr._htOption.maskPattern = 0;
       }
 
       qr.makeCode(text);
 
-      const ok = !!targetEl.querySelector("canvas");
-      if (!ok) showQrError(targetEl);
+      const canvas = targetEl.querySelector("canvas");
+      if (!canvas) {
+        showQrError(targetEl);
+        return;
+      }
+
+      lockCanvasCssSize(canvas);
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
@@ -930,11 +946,11 @@
         reportMeta.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Fel";
+        regStatusOut.textContent = "Fel (men ID/länk är klar)";
         timeOut.textContent = "—";
         headline.style.borderColor = "rgba(255,80,80,.20)";
         headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(se fel längst ner)</span>`;
+        headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(ID/länk kan ändå delas)</span>`;
         debugOut.textContent = errorMsg.textContent;
 
         renderQr(qrBox, currentLink);
@@ -999,7 +1015,7 @@
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2026-01-02a" defer></script>
-<script src="/chat-widget.js?v=2026-01-02a" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
+<script src="/chat-widget.js?v=2026-01-03a" defer></script>
 </body>
 </html>
