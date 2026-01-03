@@ -7,8 +7,8 @@
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03b" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-02a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 </head>
 
 <body>
@@ -224,7 +224,7 @@
                        style="
                          display:inline-block;
                          border-radius:16px;
-                         padding:12px;              /* extra luft, men quiet zone ska också ligga i canvas */
+                         padding:12px;              /* extra visuellt luft */
                          background:#ffffff;        /* max scannability */
                          border:1px solid rgba(255,255,255,.14);
                          cursor:pointer;
@@ -385,8 +385,8 @@
   </div>
 </footer>
 
-<!-- QR-lib (cache-bust) -->
-<script src="/assets/qr.min.js?v=2026-01-03b"></script>
+<!-- QR-lib -->
+<script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
 <script>
 (() => {
@@ -521,10 +521,8 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
   }
 
-  // OBS: du verkar redan använda /v/<hash> i UI. Vi behåller din strategi.
   function buildVerifyLink(hash){
-    // om du vill tillbaka till verify.html, byt här – men vi rör inte det nu.
-    return `${location.origin}/v/${encodeURIComponent(hash)}`;
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
   async function copyTextToClipboard(text){
@@ -635,67 +633,57 @@
     });
   }
 
-  function showQrError(targetEl, reason){
+  function showQrError(targetEl){
     if (!targetEl) return;
-    const msg = reason ? `QR-koden kunde inte renderas. (${reason})` : `QR-koden kunde inte renderas.`;
-    targetEl.innerHTML = `<div class="meta" style="padding:8px 2px;">${msg}</div>`;
+    targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
   }
 
-  // Robust QR rendering: no CSS scaling, H-level, quiet zone handled in lib (om stöds)
+  /*
+    Viktigt för scannability:
+    - Använd correctLevel H
+    - Sätt margin (quiet zone) i libben
+    - Låt canvas INTE skalas via CSS (fixas i proofy.css)
+  */
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
       targetEl.innerHTML = "";
 
       if (typeof window.QRCode !== "function"){
-        showQrError(targetEl, "QR-lib ej laddad");
+        showQrError(targetEl);
         return;
       }
 
-      // räkna ut maxstorlek från layout
       const container = targetEl.parentElement; // qrTap
-      const maxByLayout = container ? (container.clientWidth - 24) : 240;
-      const size = Math.max(200, Math.min(280, maxByLayout || 240));
+      const maxByLayout = container ? (container.clientWidth - 24) : 260;
+      const size = Math.max(200, Math.min(280, maxByLayout || 260));
 
       const qr = new window.QRCode(targetEl);
       if (!qr || typeof qr.makeCode !== "function"){
-        showQrError(targetEl, "QR-lib saknar makeCode()");
+        showQrError(targetEl);
         return;
       }
 
-      // konfigurera (kompat med din nuvarande usage)
       if (qr._htOption){
         qr._htOption.width = size;
         qr._htOption.height = size;
         qr._htOption.colorDark = "#0b1220";
         qr._htOption.colorLight = "#ffffff";
-        qr._htOption.typeNumber = 0; // auto
+        qr._htOption.typeNumber = 0;            // auto
+        qr._htOption.margin = 4;                // quiet zone (modules)
 
-        // H om möjligt
         if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
           qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
-        }
-        // om lib stödjer margin/quiet-zone
-        if (qr._htOption.margin !== undefined) {
-          qr._htOption.margin = 4;
         }
       }
 
       qr.makeCode(text);
 
       const canvas = targetEl.querySelector("canvas");
-      if (!canvas){
-        showQrError(targetEl, "canvas saknas efter makeCode()");
-        return;
-      }
-
-      // säkra 1:1 (ingen “responsiv stretch”)
-      canvas.style.width = canvas.width + "px";
-      canvas.style.height = canvas.height + "px";
-
+      if (!canvas) showQrError(targetEl);
     } catch (e){
       console.error("QR render error:", e);
-      showQrError(targetEl, (e && e.message) ? e.message : "okänt fel");
+      showQrError(targetEl);
     }
   }
 
@@ -1017,7 +1005,7 @@
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2026-01-02a" defer></script>
-<script src="/chat-widget.js?v=2026-01-02a" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
+<script src="/chat-widget.js?v=2026-01-03a" defer></script>
 </body>
 </html>
