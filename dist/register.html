@@ -641,49 +641,63 @@
   }
 
   function renderQr(targetEl, text){
-    try{
-      if (!targetEl) return;
-      const payload = String(text || "").trim();
+  if (!targetEl) return;
+
+  const payload = String(text || "").trim();
+  targetEl.innerHTML = "";
+
+  if (!payload || payload === "—") {
+    targetEl.innerHTML = `<div class="meta">Ingen länk att koda.</div>`;
+    return;
+  }
+
+  // QR lib måste finnas
+  if (typeof window.QRCode !== "function") {
+    targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
+    return;
+  }
+
+  // Beräkna storlek
+  const container = targetEl.parentElement; // qrTap/manualQrTap
+  const maxByLayout = container ? (container.clientWidth - 24) : 280;
+  let size = Math.max(240, Math.min(360, maxByLayout || 280));
+  size = Math.floor(size / 4) * 4;
+
+  const level =
+    (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
+      ? window.QRCodeCorrectLevel.H
+      : undefined;
+
+  // Försök 1: options-objekt (vissa QRCode-libs stödjer detta)
+  try {
+    new window.QRCode(targetEl, {
+      text: payload,
+      width: size,
+      height: size,
+      colorDark: "#0b1220",
+      colorLight: "#ffffff",
+      correctLevel: level
+    });
+  } catch (e1) {
+    // Försök 2: klassisk signatur (qrcodejs: new QRCode(el, "text"))
+    try {
       targetEl.innerHTML = "";
-
-      if (!payload || payload === "—"){
-        showQrError(targetEl, "Ingen länk att koda.");
-        return;
-      }
-
-      if (typeof window.QRCode !== "function"){
-        showQrError(targetEl, "QR-biblioteket kunde inte laddas.");
-        return;
-      }
-
-      const container = targetEl.parentElement; // qrTap/manualQrTap
-      const maxByLayout = container ? (container.clientWidth - 24) : 280;
-      let size = Math.max(240, Math.min(360, maxByLayout || 280));
-
-      // Snap till 4px för skarpare moduler (mindre “blur”/artefakter)
-      size = Math.floor(size / 4) * 4;
-
-      // Använd officiella options (inte privata _htOption)
-      const level = (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
-        ? window.QRCodeCorrectLevel.H
-        : undefined;
-
-      new window.QRCode(targetEl, {
-        text: payload,
-        width: size,
-        height: size,
-        colorDark: "#0b1220",
-        colorLight: "#ffffff",
-        correctLevel: level
-      });
-
-      const ok = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
-      if (!ok) showQrError(targetEl);
-    } catch (e){
-      console.error("QR render error:", e);
-      showQrError(targetEl);
+      new window.QRCode(targetEl, payload);
+    } catch (e2) {
+      console.error("QR render failed:", e1, e2);
+      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+      return;
     }
   }
+
+  // Vänta lite innan vi “bedömer” resultatet (många libs ritar async)
+  setTimeout(() => {
+    const ok = !!(targetEl.querySelector("canvas") || targetEl.querySelector("img"));
+    if (!ok) {
+      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+    }
+  }, 80);
+}
 
   function buildNote(run){
     if (!run) return "—";
