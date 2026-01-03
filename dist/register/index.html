@@ -23,9 +23,9 @@
       </a>
 
       <div class="navActions" id="navActionsDesktop">
-        <a class="btn" href="/register" aria-current="page">Skapa Verifierings-ID</a>
-        <a class="btn soft" href="/verify">Verifiera underlag</a>
-        <a class="btn soft" href="/pilot">Starta pilot</a>
+        <a class="btn" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
+        <a class="btn soft" href="/verify.html">Verifiera underlag</a>
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
@@ -35,9 +35,9 @@
         </summary>
 
         <nav class="mnavMenu" aria-label="Meny">
-          <a class="mnavLink" href="/register" aria-current="page">Skapa Verifierings-ID</a>
-          <a class="mnavLink" href="/verify">Verifiera underlag</a>
-          <a class="mnavLink" href="/pilot">Starta pilot</a>
+          <a class="mnavLink" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
@@ -87,7 +87,7 @@
             <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
-            <a class="btn soft" id="openVerifyBtn" href="/verify" style="pointer-events:none; opacity:.55;">Öppna verifiering</a>
+            <a class="btn soft" id="openVerifyBtn" href="/verify.html" style="pointer-events:none; opacity:.55;">Öppna verifiering</a>
             <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
 
             <span id="statusPill" class="pill">Välj underlag</span>
@@ -130,6 +130,7 @@
 
           <div class="hr"></div>
 
+          <!-- Empty state (visas innan ID finns) -->
           <div id="emptyState"
                style="
                  border:1px solid rgba(255,255,255,.10);
@@ -214,6 +215,7 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
+                  <!-- Klick kopierar länk. Skanning sker med annan enhet -->
                   <div id="qrTap"
                        role="button"
                        tabindex="0"
@@ -222,8 +224,8 @@
                        style="
                          display:inline-block;
                          border-radius:16px;
-                         padding:12px;
-                         background:#ffffff;
+                         padding:12px;              /* visuell luft runt (behålls) */
+                         background:#ffffff;        /* max scannability */
                          border:1px solid rgba(255,255,255,.14);
                          cursor:pointer;
                          max-width: 100%;
@@ -280,6 +282,7 @@
       </div>
     </div>
 
+    <!-- Manual -->
     <section style="margin-top:14px;">
       <div class="card content">
         <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
@@ -295,7 +298,7 @@
             <div class="actions" style="margin-top:12px;">
               <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
               <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
-              <a class="btn soft" id="manualVerifyBtn" href="/verify" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
+              <a class="btn soft" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
               <span id="manualPill" class="pill">Klistra in ID</span>
             </div>
           </div>
@@ -329,7 +332,7 @@
                      aria-label="QR-kod manuell (klicka för att kopiera verifieringslänk)"
                      title="Klicka för att kopiera verifieringslänk"
                      style="
-                       display:none;              /* GÖM tills QR finns */
+                       display:inline-block;
                        border-radius:16px;
                        padding:12px;
                        background:#ffffff;
@@ -373,15 +376,16 @@
         </div>
       </div>
       <div class="links">
-        <a href="/security">Säkerhet</a>
-        <a href="/privacy">Integritet</a>
-        <a href="/terms">Villkor</a>
+        <a href="/security.html">Säkerhet</a>
+        <a href="/privacy.html">Integritet</a>
+        <a href="/terms.html">Villkor</a>
         <a href="/#kontakt">Kontakt</a>
       </div>
     </div>
   </div>
 </footer>
 
+<!-- QR-lib -->
 <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
 <script>
@@ -439,7 +443,7 @@
   let currentId = null;
   let currentLink = null;
   let busy = false;
-  let op_hook = 0;
+  let opId = 0;
   let lastRun = null;
 
   function setPill(text){ statusPill.textContent = text; }
@@ -468,7 +472,7 @@
         openVerifyBtn.style.pointerEvents = "auto";
         openVerifyBtn.style.opacity = "1";
       } else {
-        openVerifyBtn.href = "/verify";
+        openVerifyBtn.href = "/verify.html";
         openVerifyBtn.style.pointerEvents = "none";
         openVerifyBtn.style.opacity = ".55";
       }
@@ -518,7 +522,7 @@
   }
 
   function buildVerifyLink(hash){
-    return `${location.origin}/verify?hash=${encodeURIComponent(hash)}`;
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
   }
 
   async function copyTextToClipboard(text){
@@ -634,16 +638,6 @@
     targetEl.innerHTML = `<div class="meta">${msg || "QR-koden kunde inte renderas."}</div>`;
   }
 
-  function forceCanvasPixelPerfect(targetEl){
-    const c = targetEl ? targetEl.querySelector("canvas") : null;
-    if (!c) return;
-    // CRITICAL: match computed size with backing store
-    c.style.width = c.width + "px";
-    c.style.height = c.height + "px";
-    c.style.display = "block";
-    c.style.imageRendering = "pixelated";
-  }
-
   function renderQr(targetEl, text){
     try{
       if (!targetEl) return;
@@ -656,16 +650,19 @@
 
       const container = targetEl.parentElement; // qrTap
       const maxByLayout = container ? (container.clientWidth - 24) : 280;
-      const size = Math.max(240, Math.min(360, maxByLayout || 280));
+      const size = Math.floor(Math.max(240, Math.min(360, maxByLayout || 280)));
 
       const qr = new window.QRCode(targetEl);
 
       if (qr._htOption){
         qr._htOption.width = size;
         qr._htOption.height = size;
-        qr._htOption.colorDark = "#0b1220";
+
+        // IMPORTANT: pure black on white for maximum scannability
+        qr._htOption.colorDark = "#000000";
         qr._htOption.colorLight = "#ffffff";
-        qr._htOption.typeNumber = 0;
+
+        qr._htOption.typeNumber = 0; // auto
         if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined) {
           qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
         }
@@ -677,8 +674,6 @@
 
       const ok = !!targetEl.querySelector("canvas");
       if (!ok) showQrError(targetEl);
-
-      forceCanvasPixelPerfect(targetEl);
     } catch (e){
       console.error("QR render error:", e);
       showQrError(targetEl);
@@ -815,14 +810,14 @@
   createBtn.addEventListener("click", async () => {
     if (!currentFile || busy) return;
 
-    const myOp = ++op_hook;
+    const myOp = ++opId;
     setBusy(true);
     resetReport();
     setPill("Skapar ID lokalt…");
 
     try{
       const id = await sha256Hex(currentFile);
-      if (myOp !== op_hook) return;
+      if (myOp !== opId) return;
 
       if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt Verifierings-ID.");
 
@@ -845,7 +840,7 @@
       openVerifyBtn.style.pointerEvents = "auto";
       openVerifyBtn.style.opacity = "1";
 
-      receiptBtn.href = `/certificate?hash=${encodeURIComponent(id)}`;
+      receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
       renderQr(qrBox, currentLink);
@@ -882,7 +877,7 @@
         clearTimeout(t);
       }
 
-      if (myOp !== op_hook) return;
+      if (myOp !== opId) return;
 
       if (!res.ok || data?.ok === false){
         const detail = data?.detail ? ` | ${data.detail}` : "";
@@ -922,7 +917,7 @@
       setBusy(false);
     } catch (e){
       console.error(e);
-      if (myOp !== op_hook) return;
+      if (myOp !== opId) return;
 
       errorBox.style.display = "block";
       errorMsg.textContent = (e?.name === "AbortError")
@@ -957,13 +952,10 @@
       manualLinkOut.href = "#";
       manualQrBox.innerHTML = "";
       manualCopyLinkBtn.disabled = true;
-      manualVerifyBtn.href = "/verify";
+      manualVerifyBtn.href = "/verify.html";
       manualVerifyBtn.style.pointerEvents = "none";
       manualVerifyBtn.style.opacity = ".55";
       setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
-
-      // GÖM så “pricken” försvinner
-      if (manualQrTap) manualQrTap.style.display = "none";
       return null;
     }
 
@@ -972,7 +964,6 @@
     manualLinkOut.href = link;
 
     renderQr(manualQrBox, link);
-    if (manualQrTap) manualQrTap.style.display = "inline-block";
 
     manualCopyLinkBtn.disabled = false;
     manualVerifyBtn.href = link;
@@ -985,7 +976,19 @@
       setTimeout(() => setManualPill("Redo ✅"), 1200);
     });
 
-    attachQrCopy(manualQrTap, () => link);
+    (function attachQrCopy(qrTapEl, getLink){
+      if (!qrTapEl) return;
+      const doCopy = async () => {
+        const l = getLink();
+        if (!l || l === "—") return;
+        await copyTextToClipboard(l);
+      };
+      qrTapEl.addEventListener("click", (e) => { e.preventDefault(); doCopy(); });
+      qrTapEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+      });
+    })(manualQrTap, () => link);
+
     return link;
   }
 
