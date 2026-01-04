@@ -73,7 +73,6 @@
             ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
-          <!-- ✅ NYTT: Öppna/Dela verifieringslänk (mobilvänligt, stör ej UI) -->
           <div class="actions" style="margin-top:10px; flex-wrap:wrap; gap:10px;">
             <a class="btn soft" id="openLinkBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna länk</a>
             <button class="btn" id="shareLinkBtn" type="button" disabled>Dela</button>
@@ -215,9 +214,14 @@
               </div>
 
               <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
-                <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna registreringskvitto</a><!-- CHANGE: "intyg" → "registreringskvitto" (revisorsspråk, matchar register.html) -->
+                <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna registreringskvitto</a>
                 <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
-                <button class="btn soft" id="openChatNoteBtn" type="button" style="display:none;">Skapa notering i chatten</button><!-- CHANGE: erbjuder “autofylld” notering i chatten (revisorsvärde, låg risk) -->
+
+                <!-- Nytt: skapa notering via chatten (skickar direkt, utan att lägga “prompt” i rutan) -->
+                <button class="btn soft" id="sendNoteToChatBtn" type="button" style="display:none;">
+                  Skapa verifieringsnotering i chatten
+                </button>
+
                 <span id="copySummaryPill" class="pill" style="display:none;"> </span>
               </div>
 
@@ -309,17 +313,16 @@
   const copySummaryPill = $("copySummaryPill");
   const summaryOut = $("summaryOut");
 
+  const sendNoteToChatBtn = $("sendNoteToChatBtn");
+
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
-  // ✅ nya länkkontroller
+  // länkkontroller
   const openLinkBtn = $("openLinkBtn");
   const shareLinkBtn = $("shareLinkBtn");
   const copyLinkBtn = $("copyLinkBtn");
   const linkPill = $("linkPill");
-
-  // CHANGE: knapp för “autofylld notering i chatten”
-  const openChatNoteBtn = $("openChatNoteBtn");
 
   let currentFile = null;
   let busy = false;
@@ -355,16 +358,13 @@
   }
 
   async function shareOrFallback(link){
-    // native share om möjligt, annars kopiera
     try{
       if (navigator.share) {
         await navigator.share({ title: "Proofy – verifieringslänk", url: link });
         showLinkPill("Delad ✓");
         return;
       }
-    } catch {
-      // ignore och fallback till kopiera
-    }
+    } catch {}
     const ok = await tryCopy(link);
     showLinkPill(ok ? "Kopierad ✓" : "Kunde inte dela");
   }
@@ -372,7 +372,6 @@
   function updateLinkActions(){
     const id = (hashInput.value || "").trim();
     const ok = isValidId(id);
-
     const link = ok ? buildSelfLink(id) : "/verify.html";
 
     if (openLinkBtn){
@@ -460,8 +459,7 @@
     if (copySummaryBtn) copySummaryBtn.style.display = "none";
     resetCopyPill(copySummaryPill);
 
-    // CHANGE: dölj chat-knapp tills vi har en färdig run att skicka
-    if (openChatNoteBtn) openChatNoteBtn.style.display = "none";
+    if (sendNoteToChatBtn) sendNoteToChatBtn.style.display = "none";
 
     if (summaryOut) summaryOut.textContent = "—";
     lastRun = null;
@@ -539,7 +537,7 @@
       const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
       const j = await r.json().catch(() => ({}));
       if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
-    } catch { /* ignore */ }
+    } catch {}
 
     const r2 = await fetch(`/api/verify`, {
       method:"POST",
@@ -574,58 +572,6 @@
     lines.push("");
     lines.push(`Tidpunkt för verifiering: ${new Date().toLocaleString("sv-SE")}`);
     return lines.join("\n");
-  }
-
-  // CHANGE: bygg en “autofylld” prompt till chatten (revisorsfokuserad och defensivt korrekt)
-  function buildChatNotePrompt(run){
-    if (!run) return "";
-    const resultLabel = run.match ? "Oförändrat underlag" : "Avvikelse";
-    const regLabel = (run.exists === true) ? "Registrerad" : (run.exists === false) ? "Ej registrerad" : "Okänt";
-    const regTime = run.regSe ? run.regSe : "—";
-    const verifyTime = new Date().toLocaleString("sv-SE");
-
-    return [
-      "Skapa en klistra-in-notering för revisionsfilen.",
-      "Krav: börja med rubriken 'PROOFY – Verifieringsnotering'. Neutral byråton. Max 10 rader.",
-      "",
-      `Verifierings-ID: ${run.refHash || "—"}`,
-      `Underlag/filnamn: ${run.fileName || "—"}`,
-      `Filstorlek: ${run.fileSizeMb != null ? run.fileSizeMb + " MB" : "—"}`,
-      `Resultat: ${resultLabel}`,
-      `Registreringsstatus: ${regLabel}`,
-      `Registreringstid (SE): ${regTime}`,
-      `Verifiering genomförd: ${verifyTime}`,
-      "",
-      "Avsluta med avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet."
-    ].join("\n");
-  }
-
-  // CHANGE: öppna chat-widget och fyll prompten (minsta säkra koppling, fallerar tyst om widget ej finns)
-  function openChatWithNote(run){
-    const prompt = buildChatNotePrompt(run);
-    if (!prompt) return false;
-
-    // 1) försök öppna chatten via knappen (om finns)
-    const chatBtn = document.querySelector(".proofy-chat-btn");
-    if (chatBtn) chatBtn.click();
-
-    // 2) försök fylla input (om widget finns)
-    const input = document.querySelector(".proofy-panel .proofy-input");
-    const sendBtn = document.querySelector(".proofy-panel .proofy-send");
-
-    if (!input) return false;
-    input.value = prompt;
-
-    // CHANGE: sätt fokus direkt (revisorsflöde: “klick → klart”)
-    try { input.focus(); } catch {}
-
-    // 3) skicka automatiskt om send-knappen finns (låg friktion)
-    if (sendBtn) {
-      sendBtn.click();
-      return true;
-    }
-
-    return true;
   }
 
   function setExplainTone(match){
@@ -707,6 +653,41 @@
     }
   }
 
+  // Skapa en kort “kommando-payload” som chatten kan tolka, och skicka direkt
+  function buildChatCommandForNote(run){
+    if (!run) return "";
+    const payload = {
+      t: "proofy_note_v1",
+      refHash: run.refHash || "",
+      fileName: run.fileName || "",
+      fileSizeMb: run.fileSizeMb != null ? String(run.fileSizeMb) : "",
+      match: Boolean(run.match),
+      exists: run.exists, // true/false/null
+      regSe: run.regSe || "",
+      regUtc: run.regUtc || "",
+      verifySe: new Date().toLocaleString("sv-SE")
+    };
+    return `__PROOFY_NOTE__ ${JSON.stringify(payload)}`;
+  }
+
+  function openChatWithNote(run){
+    const cmd = buildChatCommandForNote(run);
+    if (!cmd) return false;
+
+    // öppna chatten (om widget finns)
+    const chatBtn = document.querySelector(".proofy-chat-btn");
+    if (chatBtn) chatBtn.click();
+
+    // fyll och skicka direkt (utan att användaren behöver se “prompttext”)
+    const input = document.querySelector(".proofy-panel .proofy-input");
+    const sendBtn = document.querySelector(".proofy-panel .proofy-send");
+    if (!input || !sendBtn) return false;
+
+    input.value = cmd;
+    sendBtn.click();
+    return true;
+  }
+
   function updateValidationUI(){
     const id = (hashInput.value || "").trim();
 
@@ -760,7 +741,7 @@
     setIdInUrl(urlId);
   }
 
-  // ✅ bind share/copy/open actions
+  // bind share/copy actions
   if (shareLinkBtn){
     shareLinkBtn.addEventListener("click", async () => {
       const id = (hashInput.value || "").trim();
@@ -840,14 +821,14 @@
     });
   }
 
-  // CHANGE: skapa notering i chatten (autofyllt)
-  if (openChatNoteBtn) {
-    openChatNoteBtn.addEventListener("click", () => {
+  if (sendNoteToChatBtn) {
+    sendNoteToChatBtn.addEventListener("click", () => {
       if (!lastRun) return;
       const ok = openChatWithNote(lastRun);
       if (!ok) {
-        // fallback: om chat-widget saknas, låt användaren åtminstone kopiera noteringen här
-        copySummaryBtn?.click();
+        // fallback: om widget saknas, kopiera i stället
+        const txt = buildSummaryText(lastRun);
+        copyWithPill({ text: txt, pillEl: copySummaryPill });
       }
     });
   }
@@ -960,9 +941,7 @@
       if (summaryOut) summaryOut.textContent = summaryText;
 
       if (copySummaryBtn) copySummaryBtn.style.display = "inline-flex";
-
-      // CHANGE: visa “Skapa notering i chatten” när vi har ett färdigt underlag att skicka
-      if (openChatNoteBtn) openChatNoteBtn.style.display = "inline-flex";
+      if (sendNoteToChatBtn) sendNoteToChatBtn.style.display = "inline-flex";
 
       hideAlert();
 
@@ -981,7 +960,6 @@
 })();
 </script>
 
-<!-- CHANGE: Riskflagga: dessa två scripts kan bryta sidan om de råkar serveras som HTML/404 (du nämnde detta i register.html). Minsta säkra fix är att lägga dem bakom 'defer' (redan) och ev. tillfälligt kommentera om du ser console error "Unexpected token <". -->
 <script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
 <script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
