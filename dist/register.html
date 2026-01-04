@@ -648,28 +648,17 @@
   }
 
   function calcQrSize(targetEl){
-    const container = targetEl?.parentElement;
-    const w = container ? container.clientWidth : 0;
-    const maxByLayout = (w && w > 0) ? (w - 24) : 280;
+    const container = targetEl?.parentElement; // qrTap/manualQrTap
+    const maxByLayout = container ? (container.clientWidth - 24) : 280;
     let size = Math.max(240, Math.min(360, maxByLayout || 280));
     size = Math.floor(size / 4) * 4;
     return size;
   }
 
-  function waitForQRCode(timeoutMs = 2000){
-    return new Promise((resolve) => {
-      const start = Date.now();
-      const tick = () => {
-        if (typeof window.QRCode === "function") return resolve(true);
-        if (Date.now() - start > timeoutMs) return resolve(false);
-        requestAnimationFrame(tick);
-      };
-      tick();
-    });
-  }
-
-  // ✅ NY renderQr: väntar på att QR faktiskt renderas (MutationObserver)
-  async function renderQr(targetEl, text){
+  // Robust QR-render:
+  // - Ingen “post-check” som kan skriva över resultatet
+  // - Renderar i en egen mount med explicit size
+  function renderQr(targetEl, text){
     if (!targetEl) return;
 
     const payload = String(text || "").trim();
@@ -680,25 +669,28 @@
       return;
     }
 
-    // Visa “laddar…” istället för att fel-flagga direkt
-    targetEl.innerHTML = `<div class="meta">Laddar QR…</div>`;
-
-    const ok = await waitForQRCode(2000);
-    if (!ok) {
+    if (typeof window.QRCode !== "function") {
       targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
       return;
     }
 
-    // Rensa och skapa QR
-    targetEl.innerHTML = "";
     const size = calcQrSize(targetEl);
+
+    // Mount med hård storlek (så QR inte får 0x0)
+    const mount = document.createElement("div");
+    mount.style.width = size + "px";
+    mount.style.height = size + "px";
+    mount.style.maxWidth = "100%";
+    mount.style.margin = "0";
+    mount.style.display = "block";
+    targetEl.appendChild(mount);
 
     const correctLevel = (window.QRCode && window.QRCode.CorrectLevel)
       ? window.QRCode.CorrectLevel.H
       : undefined;
 
     try{
-      new window.QRCode(targetEl, {
+      new window.QRCode(mount, {
         text: payload,
         width: size,
         height: size,
@@ -712,35 +704,13 @@
       return;
     }
 
-    // Vänta på att biblioteket faktiskt stoppar in canvas/img/table
-    const findNode = () => targetEl.querySelector("canvas, img, svg, table");
-
-    const existing = findNode();
-    if (existing) {
-      existing.style.display = "block";
-      existing.style.imageRendering = "pixelated";
-      return;
-    }
-
-    await new Promise((resolve) => {
-      const timeout = setTimeout(resolve, 2500);
-      const obs = new MutationObserver(() => {
-        const node = findNode();
-        if (node) {
-          clearTimeout(timeout);
-          obs.disconnect();
-          node.style.display = "block";
-          node.style.imageRendering = "pixelated";
-          resolve();
-        }
-      });
-      obs.observe(targetEl, { childList: true, subtree: true });
-    });
-
-    // Om inget kom efter väntan: visa fel
-    const node = findNode();
-    if (!node) {
-      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+    // Gör ev. child (canvas/img) “tight” och skarp
+    const node = mount.querySelector("canvas, img, svg, table");
+    if (node) {
+      node.style.display = "block";
+      node.style.maxWidth = "100%";
+      node.style.height = "auto";
+      node.style.imageRendering = "pixelated";
     }
   }
 
@@ -894,6 +864,7 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
+      // Visa wrapper och rendera QR robust
       if (qrTap) qrTap.style.display = "inline-block";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
