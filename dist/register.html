@@ -10,6 +10,20 @@
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
+
+  <!-- QR hardening: se till att QR-noden alltid blir synlig -->
+  <style>
+    .qrBox { line-height: 0; }
+    .qrBox canvas,
+    .qrBox img,
+    .qrBox svg,
+    .qrBox table {
+      display: block !important;
+      max-width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+    }
+  </style>
 </head>
 
 <body>
@@ -385,10 +399,10 @@
   </div>
 </footer>
 
-<!-- QR-lib -->
-<script src="/assets/qr.min.js?v=2026-01-03a"></script>
+<!-- QR-lib: defer så vi slipper race -->
+<script src="/assets/qr.min.js?v=2026-01-03a" defer></script>
 
-<script>
+<script defer>
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -655,10 +669,37 @@
     return size;
   }
 
-  // Robust QR-render:
-  // - Ingen “post-check” som kan skriva över resultatet
-  // - Renderar i en egen mount med explicit size
-  function renderQr(targetEl, text){
+  function waitForQRCode(timeoutMs = 2000){
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const tick = () => {
+        if (typeof window.QRCode === "function") return resolve(true);
+        if (Date.now() - start > timeoutMs) return resolve(false);
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+  }
+
+  function findQrNode(targetEl){
+    if (!targetEl) return null;
+    return targetEl.querySelector("canvas, img, svg, table");
+  }
+
+  async function waitForQrNode(targetEl, timeoutMs = 1200){
+    const start = Date.now();
+    return new Promise((resolve) => {
+      const tick = () => {
+        const node = findQrNode(targetEl);
+        if (node) return resolve(node);
+        if (Date.now() - start > timeoutMs) return resolve(null);
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+  }
+
+  async function renderQr(targetEl, text){
     if (!targetEl) return;
 
     const payload = String(text || "").trim();
@@ -669,34 +710,28 @@
       return;
     }
 
-    if (typeof window.QRCode !== "function") {
+    const ok = await waitForQRCode(2000);
+    if (!ok) {
       targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
       return;
     }
 
     const size = calcQrSize(targetEl);
 
-    // Mount med hård storlek (så QR inte får 0x0)
-    const mount = document.createElement("div");
-    mount.style.width = size + "px";
-    mount.style.height = size + "px";
-    mount.style.maxWidth = "100%";
-    mount.style.margin = "0";
-    mount.style.display = "block";
-    targetEl.appendChild(mount);
-
-    const correctLevel = (window.QRCode && window.QRCode.CorrectLevel)
-      ? window.QRCode.CorrectLevel.H
-      : undefined;
+    // Reservyta så det aldrig blir “tom vit ruta” pga 0 höjd
+    targetEl.style.minWidth = size + "px";
+    targetEl.style.minHeight = size + "px";
 
     try{
-      new window.QRCode(mount, {
+      // Viktigt: vissa QR-libs är “lite async” i DOM-injektion.
+      // Därför väntar vi efteråt på att noden faktiskt dyker upp.
+      new window.QRCode(targetEl, {
         text: payload,
         width: size,
         height: size,
         colorDark: "#0b1220",
         colorLight: "#ffffff",
-        correctLevel
+        correctLevel: (window.QRCode?.CorrectLevel?.H ?? undefined)
       });
     } catch (e){
       console.error("QR render failed:", e);
@@ -704,14 +739,19 @@
       return;
     }
 
-    // Gör ev. child (canvas/img) “tight” och skarp
-    const node = mount.querySelector("canvas, img, svg, table");
-    if (node) {
-      node.style.display = "block";
-      node.style.maxWidth = "100%";
-      node.style.height = "auto";
-      node.style.imageRendering = "pixelated";
+    const node = await waitForQrNode(targetEl, 1200);
+    if (!node) {
+      // OBS: vi skriver inte över direkt längre (det var buggen)
+      // utan visar en mild text och lämnar ytan intakt.
+      targetEl.innerHTML = `<div class="meta">QR skapades inte (än). Testa uppdatera sidan.</div>`;
+      return;
     }
+
+    // Hard force synlighet
+    node.style.display = "block";
+    node.style.width = size + "px";
+    node.style.height = size + "px";
+    node.style.imageRendering = "pixelated";
   }
 
   function buildNote(run){
@@ -864,9 +904,9 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      // Visa wrapper och rendera QR robust
+      // Gör wrapper synlig först, rendera sen (stabilt)
       if (qrTap) qrTap.style.display = "inline-block";
-      requestAnimationFrame(() => renderQr(qrBox, currentLink));
+      await renderQr(qrBox, currentLink);
 
       applyCopyHover(idOut, copyIdIconBtn, true);
       applyCopyHover(linkOut, copyLinkIconBtn, true);
@@ -960,7 +1000,7 @@
         debugOut.textContent = errorMsg.textContent;
 
         if (qrTap) qrTap.style.display = "inline-block";
-        requestAnimationFrame(() => renderQr(qrBox, currentLink));
+        await renderQr(qrBox, currentLink);
         attachQrCopy(qrTap, () => currentLink, copyLinkPill);
       }
 
@@ -989,7 +1029,7 @@
     manualLinkOut.href = link;
 
     if (manualQrTap) manualQrTap.style.display = "inline-block";
-    requestAnimationFrame(() => renderQr(manualQrBox, link));
+    renderQr(manualQrBox, link);
 
     manualCopyLinkBtn.disabled = false;
     manualVerifyBtn.href = link;
@@ -1024,7 +1064,7 @@
 })();
 </script>
 
-<!-- Lägg tillbaka när du är 100% säker att de serveras som JS och inte HTML/404 -->
+<!-- Aktivera senare när du vet att de serveras som riktig JS (inte HTML/404) -->
 <!-- <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script> -->
 <!-- <script src="/chat-widget.js?v=2026-01-03a" defer></script> -->
 
