@@ -3,9 +3,10 @@
 */
 
 /* =========================================================
-   BRAND / LOGO (audit-grade, TRUST SEAL)
-   - ALLTID synlig (span-fix + last-wins)
-   - lugn, professionell, revisorvänlig
+   BRAND / LOGO (audit-grade, TRUST SEAL v2)
+   - tydlig i liten storlek
+   - mer premium/sigill
+   - konsekvent på alla sidor
 ========================================================= */
 
 .brand{
@@ -20,7 +21,7 @@
 }
 .brand:hover{ text-decoration:none; }
 
-/* LOGO — span MUST be inline-block */
+/* LOGO – span MUST be inline-block */
 .logo{
   display:inline-block; /* KRITISKT */
   width: 28px;
@@ -30,29 +31,48 @@
   border-radius: 10px;
   position: relative;
   flex: 0 0 auto;
+  vertical-align: middle;
 
-  /* audit-seal look */
+  /* Premium “seal”: lite mer djup + signal “verified” */
   background:
-    radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,.18), transparent 55%),
-    linear-gradient(135deg, rgba(110,168,255,.65), rgba(124,241,198,.45));
+    /* diskret highlight */
+    radial-gradient(120% 120% at 28% 22%, rgba(255,255,255,.20), transparent 58%),
+    /* verifierings-prick nere till höger */
+    radial-gradient(10px 10px at 78% 78%, rgba(124,241,198,.55), transparent 58%),
+    /* basgradient */
+    linear-gradient(135deg, rgba(110,168,255,.78), rgba(124,241,198,.46));
 
-  border: 1px solid rgba(255,255,255,.22);
+  border: 1px solid rgba(255,255,255,.20);
+
+  /* lugn, proffsig skugga (inte glow) */
   box-shadow:
-    0 6px 18px rgba(0,0,0,.28),
+    0 8px 22px rgba(0,0,0,.30),
     0 1px 0 rgba(255,255,255,.06) inset;
 }
 
-/* inner ring = sigill */
+/* inner ring (sigill-känsla) + micro-texture */
 .logo::before{
   content:"";
   position:absolute;
-  inset:4px;
-  border-radius:8px;
-  border:1px solid rgba(255,255,255,.14);
+  inset:3.5px;
+  border-radius: 8px;
+
+  background:
+    /* subtil ring som ger “stamp” */
+    radial-gradient(circle at 50% 50%,
+      transparent 58%,
+      rgba(255,255,255,.18) 59%,
+      rgba(255,255,255,.10) 69%,
+      transparent 70%
+    ),
+    /* diskret “grain” */
+    linear-gradient(180deg, rgba(255,255,255,.06), transparent 40%);
+
+  border: 1px solid rgba(255,255,255,.10);
   pointer-events:none;
 }
 
-/* monogram */
+/* monogram – lite mer “engraved” */
 .logo::after{
   content:"P";
   position:absolute;
@@ -60,29 +80,28 @@
   display:flex;
   align-items:center;
   justify-content:center;
-  font-weight:950;
-  font-size:15px;
-  letter-spacing:-0.6px;
+  font-weight: 950;
+  font-size: 15px;
+  letter-spacing: -0.6px;
   color: rgba(8,16,30,.92);
-  text-shadow: 0 1px 0 rgba(255,255,255,.35);
+
+  /* gör att bokstaven känns “stämplad” */
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.35),
+    0 -1px 0 rgba(0,0,0,.12);
 }
 
 /* Mobile tweak */
 @media (max-width: 920px){
-  .brand{ gap:9px; font-size:15.5px; }
-  .logo{ width:27px; height:27px; min-width:27px; min-height:27px; }
-  .logo::after{ font-size:14.5px; }
+  .brand{ gap: 9px; font-size: 15.5px; }
+  .logo{ width: 27px; height: 27px; min-width:27px; min-height:27px; }
+  .logo::after{ font-size: 14.5px; }
 }
 
-/* =========================================================
-   ABSOLUT LAST-WINS (förhindrar CSS-krockar)
-========================================================= */
-header .brand .logo{
-  display:inline-block !important;
-}
-header .brand .logo::after{
-  display:flex !important;
-}
+/* ABSOLUT last-wins (förhindrar CSS-krockar) */
+header .brand .logo{ display:inline-block !important; }
+header .brand .logo::after{ display:flex !important; }
+
 
 /* =========================================================
    MOBILMENY
@@ -157,53 +176,55 @@ header .brand .logo::after{
 .mnavLink{
   display:flex;
   align-items:center;
-  padding:14px 16px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.10);
+  justify-content:flex-start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.04);
   text-decoration:none;
-  font-weight:900;
-  font-size:16px;
+  font-weight: 900;
+  font-size: 16px;
   color: rgba(234,240,255,.92);
 }
 .mnavLink:hover{
   background: rgba(255,255,255,.07);
   border-color: rgba(255,255,255,.14);
 }
-
 .mnavLinkPrimary{
-  border:none;
-  color:#08101e;
+  border: none;
+  color: #08101e;
   background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
 }
 
 .mnavMeta{
-  margin-top:6px;
-  padding-top:10px;
-  border-top:1px solid rgba(255,255,255,.10);
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.10);
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap: 8px;
 }
 
 .mnavNote{
   color: rgba(169,183,211,.92);
-  font-size:13px;
-  font-weight:800;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .mnavMail{
   display:inline-flex;
-  padding:12px 14px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.10);
+  align-items:center;
+  justify-content:flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
   text-decoration:none;
-  font-weight:900;
+  font-weight: 900;
   color: rgba(234,240,255,.92);
 }
 
-/* Responsive */
+/* ------- Responsive rules ------- */
 @media (max-width: 920px){
   #navActionsDesktop{ display:none !important; }
   .mnav{ display:block; }
@@ -214,6 +235,25 @@ header .brand .logo::after{
     gap:14px;
   }
 }
+
 @media (min-width: 921px){
   .mnav{ display:none !important; }
+}
+
+/* Policy/sekundära länkar i mobilmenyn */
+.mnavMeta .mnavLink{
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  font-weight: 900;
+  font-size: 14.5px;
+  border-color: rgba(255,255,255,.08);
+}
+.mnavMeta .mnavLink:hover{
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.12);
+}
+.mnavMeta .mnavLink[aria-current="page"]{
+  border-color: rgba(110,168,255,.45);
+  box-shadow: 0 0 0 1px rgba(110,168,255,.18) inset;
 }
