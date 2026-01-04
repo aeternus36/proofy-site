@@ -1,4 +1,3 @@
-
 /* /assets/header.css
    Mobilmeny (native <details>) – stabil och enkel
 */
@@ -7,7 +6,7 @@
    BRAND / LOGO (audit-friendly)
    - tydlig i liten storlek
    - mindre "flashig"
-   - konsekvent på alla sidor (header.css laddas efter proofy.css)
+   - konsekvent på alla sidor
 ========================= */
 
 .brand{
@@ -24,6 +23,7 @@
 
 /* Span.logo i din HTML */
 .logo{
+  display:inline-block; /* ✅ KRITISKT: gör att width/height faktiskt gäller på <span> */
   width: 28px;
   height: 28px;
   border-radius: 10px;
@@ -63,6 +63,13 @@
   .brand{ gap: 9px; font-size: 15.5px; }
   .logo{ width: 27px; height: 27px; }
   .logo::after{ font-size: 14.5px; }
+}
+
+/* ✅ EXTRA “last-wins” försäkring (om någon annan CSS råkar skriva över .logo) */
+.brand .logo{
+  display:inline-block !important;
+  min-width: 28px;
+  min-height: 28px;
 }
 
 
