@@ -217,6 +217,7 @@
               <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
                 <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna registreringskvitto</a><!-- CHANGE: "intyg" → "registreringskvitto" (revisorsspråk, matchar register.html) -->
                 <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
+                <button class="btn soft" id="openChatNoteBtn" type="button" style="display:none;">Skapa notering i chatten</button><!-- CHANGE: erbjuder “autofylld” notering i chatten (revisorsvärde, låg risk) -->
                 <span id="copySummaryPill" class="pill" style="display:none;"> </span>
               </div>
 
@@ -316,6 +317,9 @@
   const shareLinkBtn = $("shareLinkBtn");
   const copyLinkBtn = $("copyLinkBtn");
   const linkPill = $("linkPill");
+
+  // CHANGE: knapp för “autofylld notering i chatten”
+  const openChatNoteBtn = $("openChatNoteBtn");
 
   let currentFile = null;
   let busy = false;
@@ -456,6 +460,9 @@
     if (copySummaryBtn) copySummaryBtn.style.display = "none";
     resetCopyPill(copySummaryPill);
 
+    // CHANGE: dölj chat-knapp tills vi har en färdig run att skicka
+    if (openChatNoteBtn) openChatNoteBtn.style.display = "none";
+
     if (summaryOut) summaryOut.textContent = "—";
     lastRun = null;
 
@@ -567,6 +574,58 @@
     lines.push("");
     lines.push(`Tidpunkt för verifiering: ${new Date().toLocaleString("sv-SE")}`);
     return lines.join("\n");
+  }
+
+  // CHANGE: bygg en “autofylld” prompt till chatten (revisorsfokuserad och defensivt korrekt)
+  function buildChatNotePrompt(run){
+    if (!run) return "";
+    const resultLabel = run.match ? "Oförändrat underlag" : "Avvikelse";
+    const regLabel = (run.exists === true) ? "Registrerad" : (run.exists === false) ? "Ej registrerad" : "Okänt";
+    const regTime = run.regSe ? run.regSe : "—";
+    const verifyTime = new Date().toLocaleString("sv-SE");
+
+    return [
+      "Skapa en klistra-in-notering för revisionsfilen.",
+      "Krav: börja med rubriken 'PROOFY – Verifieringsnotering'. Neutral byråton. Max 10 rader.",
+      "",
+      `Verifierings-ID: ${run.refHash || "—"}`,
+      `Underlag/filnamn: ${run.fileName || "—"}`,
+      `Filstorlek: ${run.fileSizeMb != null ? run.fileSizeMb + " MB" : "—"}`,
+      `Resultat: ${resultLabel}`,
+      `Registreringsstatus: ${regLabel}`,
+      `Registreringstid (SE): ${regTime}`,
+      `Verifiering genomförd: ${verifyTime}`,
+      "",
+      "Avsluta med avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet."
+    ].join("\n");
+  }
+
+  // CHANGE: öppna chat-widget och fyll prompten (minsta säkra koppling, fallerar tyst om widget ej finns)
+  function openChatWithNote(run){
+    const prompt = buildChatNotePrompt(run);
+    if (!prompt) return false;
+
+    // 1) försök öppna chatten via knappen (om finns)
+    const chatBtn = document.querySelector(".proofy-chat-btn");
+    if (chatBtn) chatBtn.click();
+
+    // 2) försök fylla input (om widget finns)
+    const input = document.querySelector(".proofy-panel .proofy-input");
+    const sendBtn = document.querySelector(".proofy-panel .proofy-send");
+
+    if (!input) return false;
+    input.value = prompt;
+
+    // CHANGE: sätt fokus direkt (revisorsflöde: “klick → klart”)
+    try { input.focus(); } catch {}
+
+    // 3) skicka automatiskt om send-knappen finns (låg friktion)
+    if (sendBtn) {
+      sendBtn.click();
+      return true;
+    }
+
+    return true;
   }
 
   function setExplainTone(match){
@@ -781,6 +840,18 @@
     });
   }
 
+  // CHANGE: skapa notering i chatten (autofyllt)
+  if (openChatNoteBtn) {
+    openChatNoteBtn.addEventListener("click", () => {
+      if (!lastRun) return;
+      const ok = openChatWithNote(lastRun);
+      if (!ok) {
+        // fallback: om chat-widget saknas, låt användaren åtminstone kopiera noteringen här
+        copySummaryBtn?.click();
+      }
+    });
+  }
+
   verifyBtn.addEventListener("click", async () => {
     if (busy) return;
 
@@ -889,6 +960,9 @@
       if (summaryOut) summaryOut.textContent = summaryText;
 
       if (copySummaryBtn) copySummaryBtn.style.display = "inline-flex";
+
+      // CHANGE: visa “Skapa notering i chatten” när vi har ett färdigt underlag att skicka
+      if (openChatNoteBtn) openChatNoteBtn.style.display = "inline-flex";
 
       hideAlert();
 
