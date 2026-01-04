@@ -6,20 +6,10 @@
   <title>Proofy – Skapa Verifierings-ID</title>
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
+  <meta name="robots" content="noindex" />
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
-
-  <style>
-    /* Hjälper mot “randigt/moiré” om canvas/img skalas */
-    .qrBox canvas, .qrBox img {
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      display: block;
-    }
-    .qrBox table { border-collapse: collapse; }
-    .qrBox td { padding: 0; }
-  </style>
 </head>
 
 <body>
@@ -141,6 +131,7 @@
 
           <div class="hr"></div>
 
+          <!-- Empty state -->
           <div id="emptyState"
                style="
                  border:1px solid rgba(255,255,255,.10);
@@ -153,7 +144,7 @@
               1) Välj filversionen som ska vara <b>referens</b>.<br/>
               2) Proofy skapar ett Verifierings-ID lokalt (ingen uppladdning).<br/>
               3) Du får en delbar länk + QR för att dela till kollega/klient/akt.<br/><br/>
-              <b>QR är för att skanna med en annan enhet.</b>
+              <b>QR är för att skanna med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att “scanna sin egen skärm” med kameran.
             </div>
           </div>
 
@@ -291,6 +282,7 @@
       </div>
     </div>
 
+    <!-- Manual -->
     <section style="margin-top:14px;">
       <div class="card content">
         <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
@@ -393,7 +385,7 @@
   </div>
 </footer>
 
-<!-- QR-lib (måste ligga FÖRE vår inline-script) -->
+<!-- QR-lib (måste finnas och vara JS, inte HTML/404) -->
 <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
 <script>
@@ -642,6 +634,27 @@
     });
   }
 
+  function attachQrCopy(qrTapEl, getLink, pillEl){
+    if (!qrTapEl) return;
+    const doCopy = async () => {
+      const link = getLink();
+      if (!link || link === "—") return;
+      await copyWithFeedback({ text: link, pillEl, okText: "Länk kopierad ✅" });
+    };
+    qrTapEl.onclick = (e) => { e.preventDefault(); doCopy(); };
+    qrTapEl.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+    };
+  }
+
+  function calcQrSize(targetEl){
+    const container = targetEl?.parentElement; // qrTap/manualQrTap
+    const maxByLayout = container ? (container.clientWidth - 24) : 280;
+    let size = Math.max(240, Math.min(360, maxByLayout || 280));
+    size = Math.floor(size / 4) * 4;
+    return size;
+  }
+
   function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -658,17 +671,12 @@
       return;
     }
 
-    const container = targetEl.parentElement;
-    const maxByLayout = container ? Math.max(220, container.clientWidth - 24) : 280;
-    let size = Math.max(220, Math.min(360, maxByLayout));
-    size = Math.floor(size);
+    const size = calcQrSize(targetEl);
 
-    const correctLevel =
-      (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H !== undefined)
-        ? window.QRCode.CorrectLevel.H
-        : (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
-          ? window.QRCodeCorrectLevel.H
-          : undefined;
+    // qrcodejs: correctLevel ligger på QRCode.CorrectLevel
+    const correctLevel = (window.QRCode && window.QRCode.CorrectLevel)
+      ? window.QRCode.CorrectLevel.H
+      : undefined;
 
     try{
       new window.QRCode(targetEl, {
@@ -679,33 +687,22 @@
         colorLight: "#ffffff",
         correctLevel
       });
-    } catch {
-      try{
-        targetEl.innerHTML = "";
-        new window.QRCode(targetEl, payload);
-      } catch (e2){
-        console.error("QR render failed:", e2);
-        targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
-        return;
-      }
+    } catch (e){
+      console.error("QR render failed:", e);
+      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+      return;
     }
 
-    // Viktigt: qrcodejs kan rendera som TABLE, inte bara canvas/img.
+    // Säkerställ att något faktiskt renderades
     setTimeout(() => {
-      const node = targetEl.querySelector("canvas, img, table, svg");
+      const node = targetEl.querySelector("canvas, img, svg, table");
       if (!node) {
         targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
         return;
       }
-
-      // Om canvas/img: lås 1:1 för att undvika “moiré”
-      if (node.tagName === "CANVAS") {
-        node.style.width = node.width + "px";
-        node.style.height = node.height + "px";
-      } else if (node.tagName === "IMG") {
-        node.style.width = size + "px";
-        node.style.height = size + "px";
-      }
+      // Undvik “randig/moiré” rendering när browser skalar
+      node.style.display = "block";
+      node.style.imageRendering = "pixelated";
     }, 0);
   }
 
@@ -823,19 +820,6 @@
     setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
 
-  function attachQrCopy(qrTapEl, getLink){
-    if (!qrTapEl) return;
-    const doCopy = async () => {
-      const link = getLink();
-      if (!link || link === "—") return;
-      await copyWithFeedback({ text: link, pillEl: copyLinkPill, okText: "Länk kopierad ✅" });
-    };
-    qrTapEl.addEventListener("click", (e) => { e.preventDefault(); doCopy(); });
-    qrTapEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
-    });
-  }
-
   createBtn.addEventListener("click", async () => {
     if (!currentFile || busy) return;
 
@@ -872,6 +856,7 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
+      // Gör wrapper synlig först, rendera sen (så storlek finns)
       if (qrTap) qrTap.style.display = "inline-block";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
@@ -882,7 +867,7 @@
         await copyWithFeedback({ text: currentLink, pillEl: copyLinkPill, okText: "Länk kopierad ✅" });
       });
 
-      attachQrCopy(qrTap, () => currentLink);
+      attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
       setPill("Registrerar…");
       regStatusOut.textContent = "Registrerar…";
@@ -968,7 +953,7 @@
 
         if (qrTap) qrTap.style.display = "inline-block";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
-        attachQrCopy(qrTap, () => currentLink);
+        attachQrCopy(qrTap, () => currentLink, copyLinkPill);
       }
 
       setPill("Fel");
@@ -982,7 +967,7 @@
       manualLinkOut.textContent = "—";
       manualLinkOut.href = "#";
       manualQrBox.innerHTML = "";
-      if (manualQrTap) manualQrTap.style.display = "none"; // ingen “vit prick”
+      if (manualQrTap) manualQrTap.style.display = "none";
       manualCopyLinkBtn.disabled = true;
       manualVerifyBtn.href = "/verify.html";
       manualVerifyBtn.style.pointerEvents = "none";
@@ -1009,7 +994,7 @@
       setTimeout(() => setManualPill("Redo ✅"), 1200);
     });
 
-    attachQrCopy(manualQrTap, () => link);
+    attachQrCopy(manualQrTap, () => link, manualPill);
     return link;
   }
 
@@ -1031,8 +1016,7 @@
 })();
 </script>
 
-<!-- OBS: om du får “Unexpected token '<'” för header-toggle.js så pekar den troligen fel (404 -> HTML).
-     Det påverkar inte QR längre, men fixa gärna sökvägen senare. -->
+<!-- Dessa får gärna vara kvar, men om de ger SyntaxError pga 404/HTML måste de fixas på servern -->
 <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
 <script src="/chat-widget.js?v=2026-01-03a" defer></script>
 </body>
