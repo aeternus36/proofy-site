@@ -92,11 +92,7 @@ header{
 }
 .brand:hover{ text-decoration:none; }
 
-/* CHANGE: Logo “audit-friendly”
-   - mindre “flashig”
-   - tydlig igenkänning i liten storlek (monogram)
-   - mjukare skugga, tydlig kant
-*/
+/* Logo “audit-friendly” */
 .logo{
   width: 28px;
   height: 28px;
@@ -244,7 +240,7 @@ h2{
   border-color: rgba(255,255,255,.12);
 }
 
-/* ---------- NEW: common layout helpers used by register ---------- */
+/* ---------- common layout helpers ---------- */
 .grid2{
   display:grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -370,8 +366,39 @@ footer{
 
   .grid2{ grid-template-columns: 1fr; }
 
-  /* CHANGE: lite tightare brand på mobil */
+  /* tightare brand på mobil */
   .brand{ gap: 9px; font-size: 15.5px; }
   .logo{ width: 27px; height: 27px; }
   .logo::after{ font-size: 14.5px; }
+}
+
+/* =========================================================
+   FORCE Proofy logo appearance (last-wins)
+   Om någon annan CSS råkar skriva över .logo så vinner detta.
+   ========================================================= */
+.brand .logo{
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 10px !important;
+  position: relative !important;
+  background: linear-gradient(135deg, rgba(110,168,255,.80), rgba(124,241,198,.62)) !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.28) !important;
+}
+.brand .logo::after{
+  content: "P" !important;
+  position:absolute !important;
+  inset:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  font-weight: 950 !important;
+  font-size: 15px !important;
+  letter-spacing: -0.6px !important;
+  color: rgba(8,16,30,.92) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.30) !important;
+}
+@media (max-width: 920px){
+  .brand .logo{ width: 27px !important; height: 27px !important; }
+  .brand .logo::after{ font-size: 14.5px !important; }
 }
