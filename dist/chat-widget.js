@@ -25,7 +25,7 @@
       .proofy-bubble{max-width:85%;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);line-height:1.35;font-size:13px;white-space:pre-wrap;}
       .proofy-msg.user .proofy-bubble{background:rgba(59,130,246,.20);border-color:rgba(59,130,246,.25);}
       .proofy-ctas{display:flex;gap:8px;flex-wrap:wrap;max-width:85%;}
-      .proofy-cta{display:inline-flex;align-items:center;padding:9px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#eaf1ff;text-decoration:none;font-weight:900;font-size:12px;}
+      .proofy-cta{display:inline-flex;align-items:center;padding:9px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#eaf1ff;text-decoration:none;font-weight:900;font-size:12px;cursor:pointer;}
       .proofy-cta:hover{background:rgba(255,255,255,.10);}
       .proofy-footer{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);}
       .proofy-input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);color:#eaf1ff;outline:none;}
@@ -83,51 +83,6 @@
       if (e.key === "Escape" && isOpen) toggle(false);
     });
 
-    // CHANGE: normalisera interna länkar så de blir “knappar” istället för råa länkar i text
-    function normalizeUrl(u){
-      const s = String(u || "").trim();
-      if (!s) return "";
-      try {
-        // tillåt absoluta proofy-länkar men gör dem interna
-        const abs = new URL(s, location.origin);
-        if (abs.origin === location.origin) return abs.pathname + abs.search + abs.hash;
-        return abs.href;
-      } catch {
-        // redan en path
-        return s;
-      }
-    }
-
-    function guessCtasFromText(text){
-      const t = String(text || "");
-      const found = [];
-
-      // endast de sidor vi vill stödja i chatten
-      const map = [
-        { path: "/register.html", label: "Skapa Verifierings-ID" },
-        { path: "/verify.html", label: "Verifiera underlag" },
-        { path: "/index.html", label: "Om Proofy" },
-      ];
-
-      map.forEach(({ path, label }) => {
-        // matcha både absoluta och relativa förekomster
-        const re = new RegExp(`(?:https?:\\/\\/[^\\s]+)?${path.replace(".", "\\.")}(?:\\?[^\\s]*)?`, "i");
-        if (re.test(t)) found.push({ label, url: path });
-      });
-
-      return found;
-    }
-
-    function stripKnownLinks(text){
-      // CHANGE: tar bort råa länksträngar i svar (så UI inte blir “textlänkar + knappar”)
-      let t = String(text || "");
-      t = t.replace(/https?:\/\/[^\s)]+\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
-      t = t.replace(/\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
-      // städa upp dubbla tomrader efter borttag
-      t = t.replace(/\n{3,}/g, "\n\n").trim();
-      return t || "—";
-    }
-
     function addMessage(role, text) {
       const wrapper = document.createElement("div");
       wrapper.className = `proofy-msg ${role}`;
@@ -141,21 +96,98 @@
       return wrapper;
     }
 
+    function normalizeUrl(u) {
+      const s = String(u || "").trim();
+      if (!s) return "";
+      try {
+        const abs = new URL(s, location.origin);
+        if (abs.origin === location.origin) return abs.pathname + abs.search + abs.hash;
+        return abs.href;
+      } catch {
+        return s;
+      }
+    }
+
+    // CHANGE: små, säkra hjälpare för kopiering (för noteringar)
+    async function copyTextToClipboard(text) {
+      const t = String(text || "").trim();
+      if (!t) return false;
+
+      try {
+        await navigator.clipboard.writeText(t);
+        return true;
+      } catch {
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = t;
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          ta.style.top = "0";
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          return !!ok;
+        } catch {
+          return false;
+        }
+      }
+    }
+
+    // CHANGE: CTA kan vara länk ELLER “prompt-action” (utan backendändring)
     function addCtas(wrapper, ctas) {
       if (!Array.isArray(ctas) || !ctas.length) return;
       const row = document.createElement("div");
       row.className = "proofy-ctas";
+
       ctas.slice(0, 3).forEach((c) => {
-        if (!c?.label || !c?.url) return;
-        const a = document.createElement("a");
-        a.className = "proofy-cta";
-        a.href = normalizeUrl(c.url); // CHANGE: normalisera url
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.textContent = c.label;
-        row.appendChild(a);
+        if (!c?.label) return;
+
+        // Prompt-action (skickar ett färdigt meddelande)
+        if (c.action === "prompt" && c.prompt) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "proofy-cta";
+          b.textContent = c.label;
+          b.onclick = () => {
+            input.value = String(c.prompt || "");
+            input.focus();
+          };
+          row.appendChild(b);
+          return;
+        }
+
+        // Vanlig länk-CTA
+        if (c.url) {
+          const a = document.createElement("a");
+          a.className = "proofy-cta";
+          a.href = normalizeUrl(c.url);
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = c.label;
+          row.appendChild(a);
+        }
       });
+
       if (row.childElementCount) wrapper.appendChild(row);
+    }
+
+    // CHANGE: om svaret innehåller “Vill du:” (valrader), håll texten men UI-knappar driver handling
+    function stripKnownLinks(text) {
+      let t = String(text || "");
+      t = t.replace(/https?:\/\/[^\s)]+\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
+      t = t.replace(/\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
+      t = t.replace(/\n{3,}/g, "\n\n").trim();
+      return t || "—";
+    }
+
+    function extractCopyableNote(text) {
+      // CHANGE: om assistenten svarar med en notering (flera rader), låt användaren kopiera den
+      const t = String(text || "").trim();
+      const lines = t.split("\n").filter(Boolean);
+      if (lines.length >= 4) return t; // enkel tumregel: “notering” brukar vara flera rader
+      return null;
     }
 
     async function send(text) {
@@ -173,7 +205,6 @@
       input.disabled = true;
 
       try {
-        // Cloudflare Pages Function endpoint
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -189,33 +220,37 @@
             ? data.answer.trim()
             : `Kunde inte läsa svaret. Status ${res.status}. Mejla kontakt@proofy.se.`;
 
-        // CHANGE: gör länkar till knappar: plocka ut kända länkar ur text och lägg som CTAs
-        const guessed = guessCtasFromText(rawAnswer);
-        const cleanedAnswer = stripKnownLinks(rawAnswer);
+        const answer = stripKnownLinks(rawAnswer);
 
-        loading.querySelector(".proofy-bubble").textContent = cleanedAnswer;
+        loading.querySelector(".proofy-bubble").textContent = answer;
 
-        // CTAs: backend-ctas först, sedan “guessed” om de saknas
+        // CTA: behåll backend-ctas
         const baseCtas = Array.isArray(data?.ctas) ? data.ctas : [];
-        const merged = [];
-        const seen = new Set();
+        addCtas(loading, baseCtas);
 
-        [...baseCtas, ...guessed].forEach((c) => {
-          if (!c?.label || !c?.url) return;
-          const key = `${c.label}::${normalizeUrl(c.url)}`;
-          if (seen.has(key)) return;
-          seen.add(key);
-          merged.push({ label: c.label, url: normalizeUrl(c.url) });
-        });
+        // CHANGE: om detta ser ut som en notering, erbjud “Kopiera notering” som knapp (lokalt i widgeten)
+        const maybeNote = extractCopyableNote(answer);
+        if (maybeNote) {
+          const row = document.createElement("div");
+          row.className = "proofy-ctas";
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "proofy-cta";
+          b.textContent = "Kopiera notering";
+          b.onclick = async () => {
+            const ok = await copyTextToClipboard(maybeNote);
+            b.textContent = ok ? "Kopierad ✓" : "Kunde inte kopiera";
+            setTimeout(() => { b.textContent = "Kopiera notering"; }, 1400);
+          };
+          row.appendChild(b);
+          loading.appendChild(row);
+        }
 
-        addCtas(loading, merged);
-
-        chatHistory.push({ role: "assistant", content: cleanedAnswer });
+        chatHistory.push({ role: "assistant", content: answer });
       } catch (e) {
         loading.querySelector(".proofy-bubble").textContent =
           "Tekniskt fel just nu. Mejla kontakt@proofy.se så hjälper vi dig.";
       } finally {
-        // CHANGE: re-enable
         sendBtn.disabled = false;
         input.disabled = false;
         if (isOpen) input.focus();
@@ -224,22 +259,36 @@
 
     sendBtn.onclick = () => send(input.value);
     input.addEventListener("keydown", (e) => {
-      // CHANGE: Enter skickar, Shift+Enter ger ny rad (mer professionellt)
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         send(input.value);
       }
     });
 
-    // CHANGE: mer revisorsnära välkomsttext + tydligare val (kort)
+    // CHANGE: revisorsoptimal start: kort + 3 knappar + 1 “notering”-knapp som fyller prompt
     const hello = addMessage(
       "assistant",
-      "Hej! Vad vill du göra just nu? Beskriv kort – så föreslår jag nästa steg."
+      "Hej! Vad vill du göra just nu? Välj ett alternativ eller skriv kort vad ärendet gäller."
     );
+
     addCtas(hello, [
       { label: "Skapa Verifierings-ID", url: "/register.html" },
       { label: "Verifiera underlag", url: "/verify.html" },
-      { label: "Om Proofy", url: "/index.html" },
+      {
+        label: "Skapa verifieringsnotering",
+        action: "prompt",
+        // CHANGE: strukturerad prompt som ger “5/5” notering även om fakta saknas
+        prompt:
+          "Skapa en kort verifieringsnotering för revisionsfilen. Jag vill kunna klistra in den direkt.\n" +
+          "Uppgifter (fyll i det du kan, annars använd tydliga platshållare i hakparentes):\n" +
+          "- Verifierings-ID: [Verifierings-ID]\n" +
+          "- Underlag/filnamn: [filnamn]\n" +
+          "- Resultat: [Oförändrat underlag / Avvikelse]\n" +
+          "- Registreringsstatus: [Registrerad / Ej registrerad / Okänt]\n" +
+          "- Registreringstid (om känd): [datum/tid]\n" +
+          "- Verifiering genomförd: [datum/tid]\n" +
+          "Krav: neutral byråton, max 10 rader, inkludera avgränsning (Proofy avser filversion, ej innehållets riktighet).",
+      },
     ]);
   }
 
