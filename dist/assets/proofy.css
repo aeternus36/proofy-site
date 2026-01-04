@@ -92,38 +92,64 @@ header{
 }
 .brand:hover{ text-decoration:none; }
 
-/* Logo – stabilt monogram som alltid syns (revisorsvänligt) */
-.logo{
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  flex: 0 0 auto;
+/* =========================================================
+   PROOFY LOGO (audit-first / revisorvänlig)
+   - Ser ut som ett verifieringsmärke/sigil
+   - Låg visuell stress (ingen "neon")
+   - Tydlig i små storlekar
+   - Fail-safe: kan inte "försvinna" p.g.a. annan CSS
+   ========================================================= */
+.brand .logo{
+  /* fail-safe display */
+  display:inline-block !important;
+  flex: 0 0 auto !important;
 
-  /* lugn, professionell gradient */
-  background: linear-gradient(135deg, rgba(110,168,255,.80), rgba(124,241,198,.62));
-  border: 1px solid rgba(255,255,255,.18);
-  box-shadow: 0 8px 22px rgba(0,0,0,.28);
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 10px !important;
+  position: relative !important;
 
-  /* VIKTIGT: gör rutan till en layout-box så monogram alltid renderas */
-  display: grid;
-  place-items: center;
+  /* lugn, professionell ton (lite gradient men dämpad) */
+  background: linear-gradient(135deg, rgba(110,168,255,.72), rgba(124,241,198,.52)) !important;
 
-  /* för säkerhets skull */
-  overflow: hidden;
+  /* “sigill”-kant */
+  border: 1px solid rgba(255,255,255,.22) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,.30) !important;
+
+  /* säkerställ att pseudo-element syns */
+  overflow: hidden !important;
 }
 
-.logo::after{
-  content: "P";
-  display:block;
+/* inre ring (sigill-känsla) */
+.brand .logo::before{
+  content:"" !important;
+  position:absolute !important;
+  inset: 5px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(8,16,30,.22) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.20) inset !important;
+  pointer-events:none !important;
+}
 
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  font-weight: 950;
-  font-size: 15px;
-  letter-spacing: -0.6px;
+/* P + liten checkmark (verifiering) */
+.brand .logo::after{
+  content: "P✓" !important;
+  position:absolute !important;
+  inset:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
 
-  color: rgba(8,16,30,.92);
-  text-shadow: 0 1px 0 rgba(255,255,255,.30);
-  line-height: 1;
+  font-weight: 950 !important;
+  font-size: 13.5px !important;
+  letter-spacing: -0.6px !important;
+
+  /* mörk text för “print”-känsla */
+  color: rgba(8,16,30,.90) !important;
+
+  /* subtil ljus kant – hjälper på mörk header */
+  text-shadow: 0 1px 0 rgba(255,255,255,.28) !important;
+  pointer-events:none !important;
 }
 
 .navActions{
@@ -187,7 +213,7 @@ h2{
   background: rgba(255,255,255,.04);
   border-radius: 22px;
   box-shadow: var(--shadow);
-  overflow: hidden;
+  overflow: hidden; /* viktigt: hindra spill */
 }
 
 .card.content{
@@ -367,45 +393,12 @@ footer{
 
   .grid2{ grid-template-columns: 1fr; }
 
-  /* tightare brand på mobil */
   .brand{ gap: 9px; font-size: 15.5px; }
-  .logo{ width: 27px; height: 27px; }
-  .logo::after{ font-size: 14.5px; }
-}
-
-/* =========================================================
-   FORCE Proofy logo appearance (last-wins)
-   Om någon annan CSS råkar skriva över .logo så vinner detta.
-   ========================================================= */
-.brand .logo{
-  width: 28px !important;
-  height: 28px !important;
-  border-radius: 10px !important;
-
-  background: linear-gradient(135deg, rgba(110,168,255,.80), rgba(124,241,198,.62)) !important;
-  border: 1px solid rgba(255,255,255,.18) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,.28) !important;
-
-  display: grid !important;
-  place-items: center !important;
-  overflow: hidden !important;
-}
-
-.brand .logo::after{
-  content: "P" !important;
-  display:block !important;
-
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial !important;
-  font-weight: 950 !important;
-  font-size: 15px !important;
-  letter-spacing: -0.6px !important;
-
-  color: rgba(8,16,30,.92) !important;
-  text-shadow: 0 1px 0 rgba(255,255,255,.30) !important;
-  line-height: 1 !important;
-}
-
-@media (max-width: 920px){
-  .brand .logo{ width: 27px !important; height: 27px !important; }
-  .brand .logo::after{ font-size: 14.5px !important; }
+  .brand .logo{
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .brand .logo::after{
+    font-size: 13px !important;
+  }
 }
