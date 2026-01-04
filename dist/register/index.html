@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="sv">
 <head>
@@ -132,7 +131,6 @@
 
           <div class="hr"></div>
 
-          <!-- Empty state -->
           <div id="emptyState"
                style="
                  border:1px solid rgba(255,255,255,.10);
@@ -386,7 +384,7 @@
   </div>
 </footer>
 
-<!-- QR-lib (måste finnas och vara JS, inte HTML/404) -->
+<!-- QR-lib: måste vara riktig JS-fil (inte HTML/404). -->
 <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
 <script>
@@ -650,7 +648,8 @@
 
   function calcQrSize(targetEl){
     const container = targetEl?.parentElement; // qrTap/manualQrTap
-    const maxByLayout = container ? (container.clientWidth - 24) : 280;
+    const w = container ? container.clientWidth : 0;
+    const maxByLayout = (w && w > 0) ? (w - 24) : 280;
     let size = Math.max(240, Math.min(360, maxByLayout || 280));
     size = Math.floor(size / 4) * 4;
     return size;
@@ -668,18 +667,21 @@
     }
 
     if (typeof window.QRCode !== "function") {
-      targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
+      targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas (QRCode saknas).</div>`;
+      console.error("QRCode saknas. typeof window.QRCode =", typeof window.QRCode);
       return;
     }
 
     const size = calcQrSize(targetEl);
 
-    // qrcodejs: correctLevel ligger på QRCode.CorrectLevel
-    const correctLevel = (window.QRCode && window.QRCode.CorrectLevel)
-      ? window.QRCode.CorrectLevel.H
-      : undefined;
+    // Vissa libs använder QRCode.CorrectLevel, andra window.QRCodeCorrectLevel
+    const correctLevel =
+      (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H) ? window.QRCode.CorrectLevel.H :
+      (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H) ? window.QRCodeCorrectLevel.H :
+      undefined;
 
-    try{
+    // 1) Försök: options-objekt
+    try {
       new window.QRCode(targetEl, {
         text: payload,
         width: size,
@@ -688,10 +690,27 @@
         colorLight: "#ffffff",
         correctLevel
       });
-    } catch (e){
-      console.error("QR render failed:", e);
-      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
-      return;
+    } catch (e1) {
+      // 2) Försök: skapa instans och makeCode()
+      try {
+        targetEl.innerHTML = "";
+        const qr = new window.QRCode(targetEl, {
+          width: size,
+          height: size,
+          correctLevel
+        });
+        if (qr && typeof qr.makeCode === "function") {
+          qr.makeCode(payload);
+        } else {
+          // 3) Sista försök: klassisk signatur (el, text)
+          targetEl.innerHTML = "";
+          new window.QRCode(targetEl, payload);
+        }
+      } catch (e2) {
+        console.error("QR render failed:", e1, e2);
+        targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+        return;
+      }
     }
 
     // Säkerställ att något faktiskt renderades
@@ -699,9 +718,9 @@
       const node = targetEl.querySelector("canvas, img, svg, table");
       if (!node) {
         targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+        console.error("QR render: inget canvas/img/svg/table skapades. Innehåll:", targetEl.innerHTML);
         return;
       }
-      // Undvik “randig/moiré” rendering när browser skalar
       node.style.display = "block";
       node.style.imageRendering = "pixelated";
     }, 0);
@@ -857,7 +876,7 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      // Gör wrapper synlig först, rendera sen (så storlek finns)
+      // Visa wrapper -> rendera (så vi får width/height)
       if (qrTap) qrTap.style.display = "inline-block";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
@@ -1017,8 +1036,10 @@
 })();
 </script>
 
-<!-- Dessa får gärna vara kvar, men om de ger SyntaxError pga 404/HTML måste de fixas på servern -->
-<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
-<script src="/chat-widget.js?v=2026-01-03a" defer></script>
+<!--
+  LÄGG TILLBAKA när de servas som riktiga JS-filer (inte HTML/404):
+  <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
+  <script src="/chat-widget.js?v=2026-01-03a" defer></script>
+-->
 </body>
 </html>
