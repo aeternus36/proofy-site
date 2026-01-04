@@ -6,37 +6,37 @@
 */
 
 (() => {
-  function qs(sel, root = document){ return root.querySelector(sel); }
   function qsa(sel, root = document){ return Array.from(root.querySelectorAll(sel)); }
 
   function init(){
-    // CHANGE: mer tolerant selector + stöd för flera headers (om sidan har fler än en nav)
-    const candidates = qsa('details#mnav.mnav, details.mnav');
-    if (!candidates.length) return; // inget att göra
+    const menus = qsa('details#mnav.mnav, details.mnav');
+    if (!menus.length) return;
 
-    candidates.forEach((mnav) => {
-      // Stäng på länk-klick
+    // Stäng på länk-klick (lokalt per meny)
+    menus.forEach((mnav) => {
       qsa('.mnavMenu a', mnav).forEach(a => {
         a.addEventListener('click', () => { mnav.open = false; });
       });
+    });
 
-      // Stäng på ESC
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') mnav.open = false;
-      });
+    // CHANGE: globala listeners registreras bara en gång
+    const closeAll = () => menus.forEach(m => { m.open = false; });
 
-      // Stäng när man klickar utanför
-      document.addEventListener('click', (e) => {
-        if (!mnav.open) return;
-        const target = e.target;
-        if (target instanceof Node && !mnav.contains(target)) {
-          mnav.open = false;
-        }
-      });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAll();
+    });
+
+    document.addEventListener('click', (e) => {
+      // stäng bara om någon är öppen och man klickar utanför alla
+      if (!menus.some(m => m.open)) return;
+      const target = e.target;
+      if (!(target instanceof Node)) return;
+      if (menus.some(m => m.contains(target))) return;
+      closeAll();
     });
   }
 
-  // CHANGE: defensivt – undvik att kasta fel i udda miljöer (t.ex. om document saknas)
+  // CHANGE: defensivt – nav-toggle ska aldrig kunna bryta resten av sidan
   try {
     if (typeof document === 'undefined') return;
 
@@ -46,6 +46,6 @@
       init();
     }
   } catch {
-    // tyst fail: nav-toggle ska aldrig kunna bryta resten av sidan
+    // tyst fail
   }
 })();
