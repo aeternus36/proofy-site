@@ -83,6 +83,51 @@
       if (e.key === "Escape" && isOpen) toggle(false);
     });
 
+    // CHANGE: normalisera interna länkar så de blir “knappar” istället för råa länkar i text
+    function normalizeUrl(u){
+      const s = String(u || "").trim();
+      if (!s) return "";
+      try {
+        // tillåt absoluta proofy-länkar men gör dem interna
+        const abs = new URL(s, location.origin);
+        if (abs.origin === location.origin) return abs.pathname + abs.search + abs.hash;
+        return abs.href;
+      } catch {
+        // redan en path
+        return s;
+      }
+    }
+
+    function guessCtasFromText(text){
+      const t = String(text || "");
+      const found = [];
+
+      // endast de sidor vi vill stödja i chatten
+      const map = [
+        { path: "/register.html", label: "Skapa Verifierings-ID" },
+        { path: "/verify.html", label: "Verifiera underlag" },
+        { path: "/index.html", label: "Om Proofy" },
+      ];
+
+      map.forEach(({ path, label }) => {
+        // matcha både absoluta och relativa förekomster
+        const re = new RegExp(`(?:https?:\\/\\/[^\\s]+)?${path.replace(".", "\\.")}(?:\\?[^\\s]*)?`, "i");
+        if (re.test(t)) found.push({ label, url: path });
+      });
+
+      return found;
+    }
+
+    function stripKnownLinks(text){
+      // CHANGE: tar bort råa länksträngar i svar (så UI inte blir “textlänkar + knappar”)
+      let t = String(text || "");
+      t = t.replace(/https?:\/\/[^\s)]+\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
+      t = t.replace(/\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
+      // städa upp dubbla tomrader efter borttag
+      t = t.replace(/\n{3,}/g, "\n\n").trim();
+      return t || "—";
+    }
+
     function addMessage(role, text) {
       const wrapper = document.createElement("div");
       wrapper.className = `proofy-msg ${role}`;
@@ -104,7 +149,7 @@
         if (!c?.label || !c?.url) return;
         const a = document.createElement("a");
         a.className = "proofy-cta";
-        a.href = c.url;
+        a.href = normalizeUrl(c.url); // CHANGE: normalisera url
         a.target = "_blank";
         a.rel = "noopener noreferrer";
         a.textContent = c.label;
@@ -139,15 +184,33 @@
         let data = null;
         try { data = JSON.parse(rawText); } catch {}
 
-        const answer =
+        const rawAnswer =
           (data && typeof data.answer === "string" && data.answer.trim())
             ? data.answer.trim()
             : `Kunde inte läsa svaret. Status ${res.status}. Mejla kontakt@proofy.se.`;
 
-        loading.querySelector(".proofy-bubble").textContent = answer;
-        addCtas(loading, data?.ctas);
+        // CHANGE: gör länkar till knappar: plocka ut kända länkar ur text och lägg som CTAs
+        const guessed = guessCtasFromText(rawAnswer);
+        const cleanedAnswer = stripKnownLinks(rawAnswer);
 
-        chatHistory.push({ role: "assistant", content: answer });
+        loading.querySelector(".proofy-bubble").textContent = cleanedAnswer;
+
+        // CTAs: backend-ctas först, sedan “guessed” om de saknas
+        const baseCtas = Array.isArray(data?.ctas) ? data.ctas : [];
+        const merged = [];
+        const seen = new Set();
+
+        [...baseCtas, ...guessed].forEach((c) => {
+          if (!c?.label || !c?.url) return;
+          const key = `${c.label}::${normalizeUrl(c.url)}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          merged.push({ label: c.label, url: normalizeUrl(c.url) });
+        });
+
+        addCtas(loading, merged);
+
+        chatHistory.push({ role: "assistant", content: cleanedAnswer });
       } catch (e) {
         loading.querySelector(".proofy-bubble").textContent =
           "Tekniskt fel just nu. Mejla kontakt@proofy.se så hjälper vi dig.";
@@ -168,8 +231,16 @@
       }
     });
 
-    // CHANGE: mer revisorsnära välkomsttext
-    addMessage("assistant", "Hej! Beskriv kort vad du vill göra: skapa Verifierings-ID, verifiera ett underlag eller fråga om spårbarhet i revisionsfilen.");
+    // CHANGE: mer revisorsnära välkomsttext + tydligare val (kort)
+    const hello = addMessage(
+      "assistant",
+      "Hej! Vad vill du göra just nu? Beskriv kort – så föreslår jag nästa steg."
+    );
+    addCtas(hello, [
+      { label: "Skapa Verifierings-ID", url: "/register.html" },
+      { label: "Verifiera underlag", url: "/verify.html" },
+      { label: "Om Proofy", url: "/index.html" },
+    ]);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
