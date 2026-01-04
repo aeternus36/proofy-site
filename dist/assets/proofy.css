@@ -1,4 +1,7 @@
-/* /assets/proofy.css */
+/* /assets/proofy.css
+   Proofy – revisionsvänlig, lugn och professionell UI
+   FULL FIL – säker att ersätta rakt av
+*/
 
 /* ---------- Base / reset ---------- */
 :root{
@@ -10,8 +13,8 @@
   --muted: rgba(169,183,211,.92);
   --muted2: rgba(234,240,255,.72);
 
-  --blue: rgba(110,168,255,.90);
-  --mint: rgba(124,241,198,.70);
+  --blue: rgba(110,168,255,.95);
+  --mint: rgba(124,241,198,.85);
   --shadow: 0 18px 60px rgba(0,0,0,.45);
 }
 
@@ -25,6 +28,10 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   line-height:1.55;
 }
+
+img{ max-width:100%; height:auto; }
+a{ color: rgba(180,210,255,.98); text-decoration:none; }
+a:hover{ text-decoration:underline; }
 
 /* ---------- Layout ---------- */
 .wrap{
@@ -44,7 +51,8 @@ header{
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
-.nav{
+.nav,
+.navBar{
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -56,37 +64,25 @@ header{
   display:flex;
   align-items:center;
   gap:10px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing:.2px;
-  color:var(--text);
+  color: var(--text);
   text-decoration:none;
+  font-size:16px;
 }
 
-/* =====================================================
-   PROOFY LOGO – REVISOR-OPTIMERAD & TEKNISKT KORREKT
-   ===================================================== */
-
-/* VIKTIGT: .logo är en <span> → måste vara inline-block */
+/* ---------- LOGO (base) ---------- */
 .logo{
-  display:inline-block !important;
   width:28px;
   height:28px;
   border-radius:9px;
   position:relative;
   flex:0 0 auto;
-
-  /* lugn, professionell gradient */
-  background: linear-gradient(
-    135deg,
-    rgba(110,168,255,.85),
-    rgba(124,241,198,.65)
-  );
-
+  background: linear-gradient(135deg, rgba(110,168,255,.80), rgba(124,241,198,.62));
   border:1px solid rgba(255,255,255,.18);
-  box-shadow: 0 6px 18px rgba(0,0,0,.28);
+  box-shadow:0 8px 22px rgba(0,0,0,.28);
 }
 
-/* Monogram: tydligt även i små storlekar */
 .logo::after{
   content:"P";
   position:absolute;
@@ -94,72 +90,48 @@ header{
   display:flex;
   align-items:center;
   justify-content:center;
-
   font-weight:950;
   font-size:15px;
   letter-spacing:-0.6px;
-
   color:#0b1220;
-  text-shadow: 0 1px 0 rgba(255,255,255,.35);
+  text-shadow:0 1px 0 rgba(255,255,255,.35);
 }
 
-/* ---------- Nav actions ---------- */
 .navActions{
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
   align-items:center;
+  flex-wrap:wrap;
 }
 
 /* ---------- Typography ---------- */
-.badge{
-  display:inline-flex;
-  align-items:center;
-  padding:8px 12px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.05);
-  font-size:13px;
-  font-weight:800;
-  color:var(--muted2);
-}
-
 .pageTitle{
-  margin:18px 0 10px;
-  font-size:clamp(30px,4.3vw,52px);
+  margin: 18px 0 10px;
+  font-size: clamp(30px, 4.3vw, 52px);
   line-height:1.05;
   letter-spacing:-0.9px;
 }
 
 .lead{
+  margin:0;
   max-width:78ch;
   font-size:18px;
-  color:rgba(234,240,255,.86);
+  color: rgba(234,240,255,.86);
 }
 
 .small{ font-size:13px; color:var(--muted); }
-.meta{ font-size:13px; color:var(--muted); font-weight:800; }
-
-.ok{ color:rgba(124,241,198,.95); font-weight:950; }
-.err{ color:rgba(255,160,160,.96); font-weight:950; }
 
 /* ---------- Components ---------- */
 .card{
   border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.04);
+  background: rgba(255,255,255,.04);
   border-radius:22px;
   box-shadow:var(--shadow);
+  overflow:hidden;
 }
 
 .card.content{ padding:18px; }
 
-.hr{
-  height:1px;
-  background:rgba(255,255,255,.10);
-  margin:14px 0;
-}
-
-/* Buttons */
 .btn{
   display:inline-flex;
   align-items:center;
@@ -167,48 +139,16 @@ header{
   padding:12px 14px;
   border-radius:16px;
   border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.04);
+  background: rgba(255,255,255,.04);
   color:var(--text);
   font-weight:900;
   cursor:pointer;
 }
 
-.btn:hover{
-  background:rgba(255,255,255,.07);
-}
-
 .btn.primary{
   border:none;
   color:#08101e;
-  background: linear-gradient(135deg,var(--blue),var(--mint));
-}
-
-.btn.soft{
-  background: rgba(110,168,255,.10);
-  border-color: rgba(110,168,255,.25);
-}
-
-/* ---------- Utilities ---------- */
-.grid2{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-}
-
-.actions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.pill{
-  display:inline-flex;
-  padding:7px 10px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.04);
-  font-size:12.5px;
-  font-weight:900;
+  background: linear-gradient(135deg, var(--blue), var(--mint));
 }
 
 /* ---------- Inputs ---------- */
@@ -217,39 +157,53 @@ input,textarea{
   padding:12px;
   border-radius:16px;
   border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.18);
+  background: rgba(0,0,0,.18);
   color:var(--text);
-}
-
-input:focus,textarea:focus{
-  border-color:rgba(110,168,255,.45);
-  box-shadow:0 0 0 3px rgba(110,168,255,.12);
 }
 
 /* ---------- Footer ---------- */
 footer{
   padding:28px 0 50px;
   border-top:1px solid rgba(255,255,255,.06);
-  background:rgba(0,0,0,.12);
-}
-
-.foot{
-  display:flex;
-  justify-content:space-between;
-  gap:16px;
-  flex-wrap:wrap;
+  background: rgba(0,0,0,.12);
 }
 
 /* ---------- Responsive ---------- */
 @media (max-width:920px){
-  main{ padding:26px 0 46px; }
-  .grid2{ grid-template-columns:1fr; }
+  .brand{ font-size:15.5px; }
+  .logo{ width:27px; height:27px; }
+  .logo::after{ font-size:14.5px; }
+}
 
-  .logo{
-    width:27px;
-    height:27px;
-  }
-  .logo::after{
-    font-size:14.5px;
+/* =========================================================
+   HARD-FORCE LOGO (LAST WINS – KRITISK)
+   Fixar span-inline / display:none / width:0-problem
+   ========================================================= */
+.brand .logo,
+a.brand .logo,
+header .brand .logo{
+  display:inline-block !important;
+  width:28px !important;
+  height:28px !important;
+  min-width:28px !important;
+  min-height:28px !important;
+  position:relative !important;
+  flex:0 0 auto !important;
+}
+
+.brand .logo::after,
+a.brand .logo::after,
+header .brand .logo::after{
+  display:flex !important;
+}
+
+@media (max-width:920px){
+  .brand .logo,
+  a.brand .logo,
+  header .brand .logo{
+    width:27px !important;
+    height:27px !important;
+    min-width:27px !important;
+    min-height:27px !important;
   }
 }
