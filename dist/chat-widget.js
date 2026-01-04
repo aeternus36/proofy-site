@@ -1,10 +1,17 @@
 (() => {
   function init() {
+    // CHANGE: undvik dubbel-init om scriptet råkar laddas flera gånger
+    if (window.__proofyChatWidgetInit) return;
+    window.__proofyChatWidgetInit = true;
+
     const chatHistory = [];
     let isOpen = false;
 
-    const style = document.createElement("style");
-    style.textContent = `
+    // CHANGE: injicera CSS bara en gång
+    if (!document.getElementById("proofy-chat-style")) {
+      const style = document.createElement("style");
+      style.id = "proofy-chat-style"; // CHANGE: id för dedupe
+      style.textContent = `
       .proofy-chat-btn{position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 16px;border-radius:999px;border:none;cursor:pointer;background:linear-gradient(135deg,#6ee7b7,#3b82f6);color:#0b1020;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.25);}
       .proofy-panel{position:fixed;bottom:86px;right:20px;z-index:9999;width:min(380px, calc(100vw - 40px));height:min(560px, calc(100vh - 140px));background:rgba(10,16,32,.92);border:1px solid rgba(255,255,255,.10);border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45);backdrop-filter: blur(10px);display:none;font-family:system-ui;color:#eaf1ff;}
       .proofy-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);}
@@ -23,17 +30,25 @@
       .proofy-footer{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);}
       .proofy-input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);color:#eaf1ff;outline:none;}
       .proofy-send{padding:10px 14px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(135deg,#6ee7b7,#3b82f6);color:#0b1020;font-weight:900;}
-    `;
-    document.head.appendChild(style);
+      `;
+      document.head.appendChild(style);
+    }
 
-    const button = document.createElement("button");
-    button.className = "proofy-chat-btn";
-    button.innerText = "Fråga oss";
-    document.body.appendChild(button);
+    // CHANGE: skapa knapp bara om den inte redan finns
+    let button = document.querySelector(".proofy-chat-btn");
+    if (!button) {
+      button = document.createElement("button");
+      button.className = "proofy-chat-btn";
+      button.innerText = "Fråga oss";
+      document.body.appendChild(button);
+    }
 
-    const panel = document.createElement("div");
-    panel.className = "proofy-panel";
-    panel.innerHTML = `
+    // CHANGE: skapa panel bara om den inte redan finns
+    let panel = document.querySelector(".proofy-panel");
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.className = "proofy-panel";
+      panel.innerHTML = `
       <div class="proofy-header">
         <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
         <button class="proofy-x" aria-label="Stäng">✕</button>
@@ -44,12 +59,16 @@
         <button class="proofy-send">Skicka</button>
       </div>
     `;
-    document.body.appendChild(panel);
+      document.body.appendChild(panel);
+    }
 
     const msgRoot = panel.querySelector("#proofy-messages");
     const input = panel.querySelector(".proofy-input");
     const sendBtn = panel.querySelector(".proofy-send");
     const closeBtn = panel.querySelector(".proofy-x");
+
+    // CHANGE: defensivt – om markup saknas, avbryt tyst
+    if (!msgRoot || !input || !sendBtn || !closeBtn) return;
 
     function toggle(open) {
       isOpen = open ?? !isOpen;
@@ -58,6 +77,11 @@
     }
     button.onclick = () => toggle(true);
     closeBtn.onclick = () => toggle(false);
+
+    // CHANGE: stäng på ESC när panelen är öppen
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && isOpen) toggle(false);
+    });
 
     function addMessage(role, text) {
       const wrapper = document.createElement("div");
@@ -99,6 +123,10 @@
 
       const loading = addMessage("assistant", "…");
 
+      // CHANGE: disable under request så man inte kan spamma/skicka dubbelt
+      sendBtn.disabled = true;
+      input.disabled = true;
+
       try {
         // Cloudflare Pages Function endpoint
         const res = await fetch("/api/chat", {
@@ -123,15 +151,25 @@
       } catch (e) {
         loading.querySelector(".proofy-bubble").textContent =
           "Tekniskt fel just nu. Mejla kontakt@proofy.se så hjälper vi dig.";
+      } finally {
+        // CHANGE: re-enable
+        sendBtn.disabled = false;
+        input.disabled = false;
+        if (isOpen) input.focus();
       }
     }
 
     sendBtn.onclick = () => send(input.value);
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") send(input.value);
+      // CHANGE: Enter skickar, Shift+Enter ger ny rad (mer professionellt)
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        send(input.value);
+      }
     });
 
-    addMessage("assistant", "Hej. Vad vill du verifiera (revision, bokslut, tvist eller spårbarhet)?");
+    // CHANGE: mer revisorsnära välkomsttext
+    addMessage("assistant", "Hej! Beskriv kort vad du vill göra: skapa Verifierings-ID, verifiera ett underlag eller fråga om spårbarhet i revisionsfilen.");
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
