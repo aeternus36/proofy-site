@@ -1,4 +1,8 @@
 /* /assets/proofy.css */
+/* =========================================================
+   Proofy – audit-grade UI
+   Fokus: förtroende, läsbarhet, stabilitet (revisorer)
+========================================================= */
 
 /* ---------- Base / reset ---------- */
 :root{
@@ -10,8 +14,10 @@
   --muted: rgba(169,183,211,.92);
   --muted2: rgba(234,240,255,.72);
 
-  --blue: rgba(110,168,255,.95);
-  --mint: rgba(124,241,198,.85);
+  /* Lite mer “audit” än neon */
+  --blue: rgba(110,168,255,.55);
+  --mint: rgba(124,241,198,.38);
+
   --shadow: 0 18px 60px rgba(0,0,0,.45);
 }
 
@@ -22,7 +28,7 @@ body{
   margin:0;
   background: var(--bg);
   color:var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   line-height:1.55;
 }
 
@@ -30,19 +36,14 @@ img{ max-width:100%; height:auto; }
 a{ color: rgba(180,210,255,.98); text-decoration:none; }
 a:hover{ text-decoration:underline; }
 
+/* ---------- Skip link ---------- */
 .skip{
   position:absolute;
   left:-9999px;
-  top:auto;
-  width:1px;
-  height:1px;
-  overflow:hidden;
 }
 .skip:focus{
   left:12px;
   top:12px;
-  width:auto;
-  height:auto;
   padding:10px 12px;
   border-radius:12px;
   background: rgba(255,255,255,.10);
@@ -70,15 +71,17 @@ header{
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
-/* Stöd BOTH .nav och .navBar */
-.nav,
-.navBar{
+.nav{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:14px;
   padding: 14px 0;
 }
+
+/* =========================================================
+   BRAND / LOGO — TRUST SEAL (AUDIT-GRADE)
+========================================================= */
 
 .brand{
   display:flex;
@@ -88,33 +91,43 @@ header{
   letter-spacing: .2px;
   color: var(--text);
   text-decoration:none;
-  font-size: 16px; /* CHANGE: lite tydligare varumärkestext */
+  font-size: 16px;
 }
-.brand:hover{ text-decoration:none; }
 
-/* Logo “audit-friendly” */
+/* LOGO – always visible */
 .logo{
-  display:inline-block;           /* ✅ FIX: span behöver detta för att få width/height */
-  vertical-align: middle;         /* ✅ snyggare align om den hamnar inline någonstans */
+  display:inline-block;
+  vertical-align: middle;
   width: 28px;
   height: 28px;
   border-radius: 10px;
   position: relative;
   flex: 0 0 auto;
 
-  /* mjukare/mer professionell gradient */
-  background: linear-gradient(135deg, rgba(110,168,255,.80), rgba(124,241,198,.62));
+  /* “stamp / seal” look */
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,.18), transparent 55%),
+    linear-gradient(135deg, var(--blue), var(--mint));
 
-  /* tydligare kant, mindre “neon” */
-  border: 1px solid rgba(255,255,255,.18);
-
-  /* lugnare skugga */
-  box-shadow: 0 8px 22px rgba(0,0,0,.28);
+  border: 1px solid rgba(255,255,255,.22);
+  box-shadow:
+    0 6px 18px rgba(0,0,0,.28),
+    0 1px 0 rgba(255,255,255,.06) inset;
 }
 
-/* monogram för igenkänning */
+/* inner ring (sigill-känsla) */
+.logo::before{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  pointer-events:none;
+}
+
+/* monogram */
 .logo::after{
-  content: "P";
+  content:"P";
   position:absolute;
   inset:0;
   display:flex;
@@ -124,28 +137,26 @@ header{
   font-size: 15px;
   letter-spacing: -0.6px;
   color: rgba(8,16,30,.92);
-  text-shadow: 0 1px 0 rgba(255,255,255,.30);
+  text-shadow: 0 1px 0 rgba(255,255,255,.35);
 }
 
+/* ---------- Nav actions ---------- */
 .navActions{
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
   align-items:center;
 }
 
 /* ---------- Typography ---------- */
 .badge{
   display:inline-flex;
-  align-items:center;
-  gap:8px;
   padding: 9px 12px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.05);
-  color: var(--muted2);
   font-weight: 800;
   font-size: 13px;
+  color: var(--muted2);
 }
 
 .pageTitle{
@@ -156,253 +167,150 @@ header{
 }
 
 .lead{
-  margin: 0;
   max-width: 78ch;
   font-size: 18px;
   color: rgba(234,240,255,.86);
 }
 
-h2{
-  margin: 0 0 10px;
-  font-size: 22px;
-  letter-spacing: -.2px;
-}
-
-.small{
+.small, .meta{
   font-size: 13px;
-  color: rgba(169,183,211,.92);
-}
-
-.meta{
-  font-size: 13px;
-  color: rgba(169,183,211,.92);
+  color: var(--muted);
   font-weight: 800;
 }
 
-.ok{ color: rgba(124,241,198,.95); font-weight: 950; }
-.err{ color: rgba(255,160,160,.96); font-weight: 950; }
-
-/* ---------- Components ---------- */
+/* ---------- Cards ---------- */
 .card{
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.04);
   border-radius: 22px;
   box-shadow: var(--shadow);
-  overflow: hidden; /* viktigt: hindra spill */
 }
 
-.card.content{
-  padding: 18px;
-}
+.card.content{ padding:18px; }
 
 .hr{
   height:1px;
   background: rgba(255,255,255,.10);
-  margin: 14px 0;
+  margin:14px 0;
 }
 
-/* Buttons */
+/* ---------- Buttons ---------- */
 .btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.04);
-  color: rgba(234,240,255,.92);
-  text-decoration:none;
-  font-weight: 900;
+  font-weight:900;
+  color: var(--text);
   line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
+  cursor:pointer;
   user-select:none;
 }
 .btn:hover{
-  text-decoration:none;
   background: rgba(255,255,255,.07);
   border-color: rgba(255,255,255,.16);
+  text-decoration:none;
 }
 .btn:active{ transform: translateY(1px); }
 
 .btn.primary{
-  border: none;
-  color: #08101e;
-  background: linear-gradient(135deg, var(--blue), var(--mint));
+  border:none;
+  background: linear-gradient(135deg, rgba(110,168,255,.75), rgba(124,241,198,.65));
+  color:#:#08101e;
 }
-.btn.primary:hover{ filter: brightness(1.02); }
 
 .btn.soft{
   background: rgba(110,168,255,.10);
   border-color: rgba(110,168,255,.25);
 }
 
-.btn.ghost{
-  background: transparent;
-  border-color: rgba(255,255,255,.12);
-}
-
-/* ---------- common layout helpers ---------- */
-.grid2{
-  display:grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 14px;
-}
-
-.actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap: wrap;
-}
-
-.pill{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  color: rgba(234,240,255,.86);
-  font-weight: 900;
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-
-/* Monospace fields (IDs/links) */
-.mono{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: rgba(234,240,255,.92);
-
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  white-space: normal;
-  max-width: 100%;
-}
-
-/* Drop zone */
-.drop{
-  border: 1px dashed rgba(255,255,255,.20);
-  background: rgba(255,255,255,.03);
-  border-radius: 14px;
-  padding: 12px 14px;
-  color: rgba(234,240,255,.82);
-}
-.drop.drag{
-  border-color: rgba(110,168,255,.45);
-  background: rgba(110,168,255,.10);
-}
-
-/* QR block layout */
-.qrWrap{
-  display:flex;
-  gap: 14px;
-  align-items:flex-start;
-  flex-wrap: wrap;
-}
-
-/* Target element that holds the QR canvas (do NOT scale canvas with CSS) */
-.qrBox{
-  max-width: 100%;
-}
-
-/* IMPORTANT: Never CSS-scale the QR canvas */
-.qrBox canvas{
-  display:block;
-  width: auto !important;
-  height: auto !important;
-  max-width: none !important;
-  max-height: none !important;
-  transform: none !important;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
-
-/* Inputs */
+/* ---------- Inputs ---------- */
 input, textarea{
   width:100%;
-  padding: 12px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
   background: rgba(0,0,0,.18);
-  color: rgba(234,240,255,.92);
-  outline: none;
+  color: var(--text);
+  outline:none;
 }
+
 input::placeholder, textarea::placeholder{ color: rgba(169,183,211,.62); }
+
 input:focus, textarea:focus{
   border-color: rgba(110,168,255,.45);
   box-shadow: 0 0 0 3px rgba(110,168,255,.12);
 }
 
-/* Footer */
+/* ---------- Footer ---------- */
 footer{
-  padding: 28px 0 50px;
-  border-top: 1px solid rgba(255,255,255,.06);
+  padding:28px 0 50px;
+  border-top:1px solid rgba(255,255,255,.06);
   background: rgba(0,0,0,.12);
 }
 
 .foot{
   display:flex;
   justify-content:space-between;
-  gap: 16px;
-  align-items:flex-start;
+  gap:16px;
   flex-wrap:wrap;
 }
 
-.links{
-  display:flex;
-  gap: 12px;
-  flex-wrap:wrap;
+.links a{
+  color: rgba(234,240,255,.78);
 }
-.links a{ color: rgba(234,240,255,.78); }
-.links a:hover{ color: rgba(234,240,255,.92); }
+.links a:hover{
+  color: rgba(234,240,255,.92);
+}
 
 /* ---------- Responsive ---------- */
-@media (max-width: 920px){
-  main{ padding: 26px 0 46px; }
-  .pageTitle{ letter-spacing: -0.6px; }
-  .lead{ font-size: 17px; }
-
-  .grid2{ grid-template-columns: 1fr; }
-
-  /* tightare brand på mobil */
-  .brand{ gap: 9px; font-size: 15.5px; }
-  .logo{ width: 27px; height: 27px; }
-  .logo::after{ font-size: 14.5px; }
+@media (max-width:920px){
+  .brand{ font-size:15.5px; gap:9px; }
+  .logo{ width:27px; height:27px; }
+  .logo::after{ font-size:14.5px; }
 }
 
 /* =========================================================
-   FORCE Proofy logo appearance (last-wins)
-   Om någon annan CSS råkar skriva över .logo så vinner detta.
+   HARDEN: last-wins override for logo (prevents header.css
+   or other CSS from accidentally hiding it)
    ========================================================= */
 .brand .logo{
-  display:inline-block !important;  /* ✅ FIX: även force-blocket måste ha display */
-  vertical-align: middle !important;
-  width: 28px !important;
-  height: 28px !important;
-  border-radius: 10px !important;
-  position: relative !important;
-  background: linear-gradient(135deg, rgba(110,168,255,.80), rgba(124,241,198,.62)) !important;
-  border: 1px solid rgba(255,255,255,.18) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,.28) !important;
+  display:inline-block !important;
+  width:28px !important;
+  height:28px !important;
+  border-radius:10px !important;
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,.18), transparent 55%),
+    linear-gradient(135deg, var(--blue), var(--mint)) !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  box-shadow:
+    0 6px 18px rgba(0,0,0,.28),
+    0 1px 0 rgba(255,255,255,.06) inset !important;
+}
+.brand .logo::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:4px !important;
+  border-radius:8px !important;
+  border:1px solid rgba(255,255,255,.12) !important;
 }
 .brand .logo::after{
-  content: "P" !important;
+  content:"P" !important;
   position:absolute !important;
   inset:0 !important;
   display:flex !important;
   align-items:center !important;
   justify-content:center !important;
-  font-weight: 950 !important;
-  font-size: 15px !important;
-  letter-spacing: -0.6px !important;
+  font-weight:950 !important;
+  font-size:15px !important;
+  letter-spacing:-0.6px !important;
   color: rgba(8,16,30,.92) !important;
-  text-shadow: 0 1px 0 rgba(255,255,255,.30) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.35) !important;
 }
-@media (max-width: 920px){
-  .brand .logo{ width: 27px !important; height: 27px !important; }
-  .brand .logo::after{ font-size: 14.5px !important; }
+@media (max-width:920px){
+  .brand .logo{ width:27px !important; height:27px !important; }
+  .brand .logo::after{ font-size:14.5px !important; }
 }
