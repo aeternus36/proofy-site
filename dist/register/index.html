@@ -655,7 +655,7 @@
     return size;
   }
 
-  function waitForQRCode(timeoutMs = 1200){
+  function waitForQRCode(timeoutMs = 1500){
     return new Promise((resolve) => {
       const start = Date.now();
       const tick = () => {
@@ -667,11 +667,9 @@
     });
   }
 
+  // ✅ FIXAD renderQr: robust success-check + ingen onödig overwrite
   async function renderQr(targetEl, text){
-    if (!targetEl) {
-      console.warn("renderQr: targetEl saknas (null). Finns #qrBox/#manualQrBox i DOM?)");
-      return;
-    }
+    if (!targetEl) return;
 
     const payload = String(text || "").trim();
     targetEl.innerHTML = "";
@@ -681,8 +679,8 @@
       return;
     }
 
-    const ok = await waitForQRCode(1200);
-    if (!ok) {
+    const libOk = await waitForQRCode(1500);
+    if (!libOk) {
       targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
       return;
     }
@@ -708,16 +706,33 @@
       return;
     }
 
-    // Säkerställ att något faktiskt renderades
-    setTimeout(() => {
+    // ✅ Success-check som funkar med qrcodejs (table/img/canvas)
+    const hasRendered = () => {
       const node = targetEl.querySelector("canvas, img, svg, table");
-      if (!node) {
-        targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
-        return;
-      }
-      node.style.display = "block";
-      node.style.imageRendering = "pixelated";
-    }, 0);
+      if (node) return node;
+      // fallback: ibland hinner DOM inte upp, men children kan ändå finnas
+      if (targetEl.children && targetEl.children.length > 0) return targetEl.children[0];
+      return null;
+    };
+
+    const finalize = (delay) => {
+      setTimeout(() => {
+        const node = hasRendered();
+        if (!node) {
+          // skriv bara fel om den verkligen är tom
+          if (!targetEl.textContent || targetEl.textContent.trim() === "") {
+            targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+          }
+          return;
+        }
+        node.style.display = "block";
+        node.style.imageRendering = "pixelated";
+      }, delay);
+    };
+
+    // kör 2 försök (snabb + backup)
+    finalize(80);
+    finalize(250);
   }
 
   function buildNote(run){
