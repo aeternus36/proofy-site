@@ -1,4 +1,3 @@
-
 /* /assets/proofy.css */
 
 /* ---------- Base / reset ---------- */
@@ -95,6 +94,8 @@ header{
 
 /* Logo “audit-friendly” */
 .logo{
+  display:inline-block;           /* ✅ FIX: span behöver detta för att få width/height */
+  vertical-align: middle;         /* ✅ snyggare align om den hamnar inline någonstans */
   width: 28px;
   height: 28px;
   border-radius: 10px;
@@ -378,6 +379,8 @@ footer{
    Om någon annan CSS råkar skriva över .logo så vinner detta.
    ========================================================= */
 .brand .logo{
+  display:inline-block !important;  /* ✅ FIX: även force-blocket måste ha display */
+  vertical-align: middle !important;
   width: 28px !important;
   height: 28px !important;
   border-radius: 10px !important;
