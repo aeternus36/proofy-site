@@ -215,7 +215,7 @@
               </div>
 
               <div class="actions" style="margin-top:12px; flex-wrap:wrap; gap:10px;">
-                <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
+                <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna registreringskvitto</a><!-- CHANGE: "intyg" → "registreringskvitto" (revisorsspråk, matchar register.html) -->
                 <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
                 <span id="copySummaryPill" class="pill" style="display:none;"> </span>
               </div>
@@ -907,6 +907,7 @@
 })();
 </script>
 
+<!-- CHANGE: Riskflagga: dessa två scripts kan bryta sidan om de råkar serveras som HTML/404 (du nämnde detta i register.html). Minsta säkra fix är att lägga dem bakom 'defer' (redan) och ev. tillfälligt kommentera om du ser console error "Unexpected token <". -->
 <script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
 <script src="/chat-widget.js?v=2025-12-24a" defer></script>
 </body>
