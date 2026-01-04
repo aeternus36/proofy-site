@@ -68,7 +68,8 @@
       <h2>1. Dokumentinnehåll hanteras lokalt</h2>
       <p>
         Proofy lagrar inte dokument eller dokumentinnehåll. Kontroll av underlag sker genom att webbläsaren tar fram ett
-        kontrollvärde för den valda filen, och endast ett Verifierings-ID (och tid för registrering) används i Proofys register.
+        Verifierings-ID för den valda filen, och endast Verifierings-ID (och tid för registrering) används i Proofys register.
+        <!-- CHANGE: "kontrollvärde" → "Verifierings-ID" för konsekvent revisorsspråk, utan att ändra sak (det är samma sak här) -->
       </p>
 
       <h2>2. Verifierings-ID är inte dokumentet</h2>
@@ -142,6 +143,7 @@
   </div>
 </footer>
 
+<!-- CHANGE: Riskflagga. Om dessa råkar serveras som HTML/404 får du ofta console error "Unexpected token <" och menyn/widget kan störa. Minsta säkra åtgärd då är att kommentera ut dem tills assets serveras som JS. -->
 <script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
 <script src="/chat-widget.js?v=2025-01" defer></script>
 </body>
