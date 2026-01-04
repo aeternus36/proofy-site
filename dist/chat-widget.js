@@ -108,7 +108,6 @@
       }
     }
 
-    // CHANGE: små, säkra hjälpare för kopiering (för noteringar)
     async function copyTextToClipboard(text) {
       const t = String(text || "").trim();
       if (!t) return false;
@@ -141,10 +140,10 @@
       const row = document.createElement("div");
       row.className = "proofy-ctas";
 
+      // CHANGE: max 3 knappar alltid (mindre rörigt för revisorer)
       ctas.slice(0, 3).forEach((c) => {
         if (!c?.label) return;
 
-        // Prompt-action (skickar ett färdigt meddelande)
         if (c.action === "prompt" && c.prompt) {
           const b = document.createElement("button");
           b.type = "button";
@@ -158,7 +157,6 @@
           return;
         }
 
-        // Vanlig länk-CTA
         if (c.url) {
           const a = document.createElement("a");
           a.className = "proofy-cta";
@@ -173,7 +171,6 @@
       if (row.childElementCount) wrapper.appendChild(row);
     }
 
-    // CHANGE: om svaret innehåller “Vill du:” (valrader), håll texten men UI-knappar driver handling
     function stripKnownLinks(text) {
       let t = String(text || "");
       t = t.replace(/https?:\/\/[^\s)]+\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
@@ -183,11 +180,11 @@
     }
 
     function extractCopyableNote(text) {
-      // CHANGE: om assistenten svarar med en notering (flera rader), låt användaren kopiera den
+      // CHANGE: visa “Kopiera notering” endast när det tydligt är en notering (minimerar brus)
       const t = String(text || "").trim();
-      const lines = t.split("\n").filter(Boolean);
-      if (lines.length >= 4) return t; // enkel tumregel: “notering” brukar vara flera rader
-      return null;
+      if (!t) return null;
+      if (!/^PROOFY\s*–\s*Verifieringsnotering/i.test(t)) return null;
+      return t;
     }
 
     async function send(text) {
@@ -200,7 +197,6 @@
 
       const loading = addMessage("assistant", "…");
 
-      // CHANGE: disable under request så man inte kan spamma/skicka dubbelt
       sendBtn.disabled = true;
       input.disabled = true;
 
@@ -224,11 +220,9 @@
 
         loading.querySelector(".proofy-bubble").textContent = answer;
 
-        // CTA: behåll backend-ctas
         const baseCtas = Array.isArray(data?.ctas) ? data.ctas : [];
         addCtas(loading, baseCtas);
 
-        // CHANGE: om detta ser ut som en notering, erbjud “Kopiera notering” som knapp (lokalt i widgeten)
         const maybeNote = extractCopyableNote(answer);
         if (maybeNote) {
           const row = document.createElement("div");
@@ -265,10 +259,10 @@
       }
     });
 
-    // CHANGE: revisorsoptimal start: kort + 3 knappar + 1 “notering”-knapp som fyller prompt
+    // CHANGE: start: exakt 3 val (minimerar rörighet)
     const hello = addMessage(
       "assistant",
-      "Hej! Vad vill du göra just nu? Välj ett alternativ eller skriv kort vad ärendet gäller."
+      "Hej! Välj ett alternativ, eller skriv kort vad du vill göra i ärendet."
     );
 
     addCtas(hello, [
@@ -277,17 +271,18 @@
       {
         label: "Skapa verifieringsnotering",
         action: "prompt",
-        // CHANGE: strukturerad prompt som ger “5/5” notering även om fakta saknas
+        // CHANGE: kräver rubrik så kopieraknappen triggar säkert och konsekvent
         prompt:
-          "Skapa en kort verifieringsnotering för revisionsfilen. Jag vill kunna klistra in den direkt.\n" +
-          "Uppgifter (fyll i det du kan, annars använd tydliga platshållare i hakparentes):\n" +
+          "Skapa en klistra-in-notering för revisionsfilen.\n" +
+          "Krav: börja med rubriken 'PROOFY – Verifieringsnotering'. Neutral byråton. Max 10 rader.\n" +
+          "Fyll i med platshållare om fakta saknas:\n" +
           "- Verifierings-ID: [Verifierings-ID]\n" +
           "- Underlag/filnamn: [filnamn]\n" +
           "- Resultat: [Oförändrat underlag / Avvikelse]\n" +
           "- Registreringsstatus: [Registrerad / Ej registrerad / Okänt]\n" +
           "- Registreringstid (om känd): [datum/tid]\n" +
           "- Verifiering genomförd: [datum/tid]\n" +
-          "Krav: neutral byråton, max 10 rader, inkludera avgränsning (Proofy avser filversion, ej innehållets riktighet).",
+          "Avsluta med avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet.",
       },
     ]);
   }
