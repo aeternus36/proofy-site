@@ -648,14 +648,15 @@
   }
 
   function calcQrSize(targetEl){
-    const container = targetEl?.parentElement; // qrTap/manualQrTap
-    const maxByLayout = container ? (container.clientWidth - 24) : 280;
+    const container = targetEl?.parentElement;
+    const w = container ? container.clientWidth : 0;
+    const maxByLayout = (w && w > 0) ? (w - 24) : 280;
     let size = Math.max(240, Math.min(360, maxByLayout || 280));
     size = Math.floor(size / 4) * 4;
     return size;
   }
 
-  function waitForQRCode(timeoutMs = 1500){
+  function waitForQRCode(timeoutMs = 2000){
     return new Promise((resolve) => {
       const start = Date.now();
       const tick = () => {
@@ -667,7 +668,7 @@
     });
   }
 
-  // ✅ FIXAD renderQr: robust success-check + ingen onödig overwrite
+  // ✅ NY renderQr: väntar på att QR faktiskt renderas (MutationObserver)
   async function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -679,12 +680,17 @@
       return;
     }
 
-    const libOk = await waitForQRCode(1500);
-    if (!libOk) {
+    // Visa “laddar…” istället för att fel-flagga direkt
+    targetEl.innerHTML = `<div class="meta">Laddar QR…</div>`;
+
+    const ok = await waitForQRCode(2000);
+    if (!ok) {
       targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
       return;
     }
 
+    // Rensa och skapa QR
+    targetEl.innerHTML = "";
     const size = calcQrSize(targetEl);
 
     const correctLevel = (window.QRCode && window.QRCode.CorrectLevel)
@@ -706,33 +712,36 @@
       return;
     }
 
-    // ✅ Success-check som funkar med qrcodejs (table/img/canvas)
-    const hasRendered = () => {
-      const node = targetEl.querySelector("canvas, img, svg, table");
-      if (node) return node;
-      // fallback: ibland hinner DOM inte upp, men children kan ändå finnas
-      if (targetEl.children && targetEl.children.length > 0) return targetEl.children[0];
-      return null;
-    };
+    // Vänta på att biblioteket faktiskt stoppar in canvas/img/table
+    const findNode = () => targetEl.querySelector("canvas, img, svg, table");
 
-    const finalize = (delay) => {
-      setTimeout(() => {
-        const node = hasRendered();
-        if (!node) {
-          // skriv bara fel om den verkligen är tom
-          if (!targetEl.textContent || targetEl.textContent.trim() === "") {
-            targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
-          }
-          return;
+    const existing = findNode();
+    if (existing) {
+      existing.style.display = "block";
+      existing.style.imageRendering = "pixelated";
+      return;
+    }
+
+    await new Promise((resolve) => {
+      const timeout = setTimeout(resolve, 2500);
+      const obs = new MutationObserver(() => {
+        const node = findNode();
+        if (node) {
+          clearTimeout(timeout);
+          obs.disconnect();
+          node.style.display = "block";
+          node.style.imageRendering = "pixelated";
+          resolve();
         }
-        node.style.display = "block";
-        node.style.imageRendering = "pixelated";
-      }, delay);
-    };
+      });
+      obs.observe(targetEl, { childList: true, subtree: true });
+    });
 
-    // kör 2 försök (snabb + backup)
-    finalize(80);
-    finalize(250);
+    // Om inget kom efter väntan: visa fel
+    const node = findNode();
+    if (!node) {
+      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+    }
   }
 
   function buildNote(run){
@@ -885,7 +894,6 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
-      // Gör wrapper synlig först, rendera sen
       if (qrTap) qrTap.style.display = "inline-block";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
