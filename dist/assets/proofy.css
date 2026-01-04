@@ -88,15 +88,45 @@ header{
   letter-spacing: .2px;
   color: var(--text);
   text-decoration:none;
+  font-size: 16px; /* CHANGE: lite tydligare varumärkestext */
 }
 .brand:hover{ text-decoration:none; }
 
+/* CHANGE: Logo “audit-friendly”
+   - mindre “flashig”
+   - tydlig igenkänning i liten storlek (monogram)
+   - mjukare skugga, tydlig kant
+*/
 .logo{
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-  box-shadow: 0 12px 34px rgba(0,0,0,.35);
+  position: relative;
+  flex: 0 0 auto;
+
+  /* mjukare/mer professionell gradient */
+  background: linear-gradient(135deg, rgba(110,168,255,.80), rgba(124,241,198,.62));
+
+  /* tydligare kant, mindre “neon” */
+  border: 1px solid rgba(255,255,255,.18);
+
+  /* lugnare skugga */
+  box-shadow: 0 8px 22px rgba(0,0,0,.28);
+}
+
+/* monogram för igenkänning */
+.logo::after{
+  content: "P";
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 950;
+  font-size: 15px;
+  letter-spacing: -0.6px;
+  color: rgba(8,16,30,.92);
+  text-shadow: 0 1px 0 rgba(255,255,255,.30);
 }
 
 .navActions{
@@ -339,4 +369,9 @@ footer{
   .lead{ font-size: 17px; }
 
   .grid2{ grid-template-columns: 1fr; }
+
+  /* CHANGE: lite tightare brand på mobil */
+  .brand{ gap: 9px; font-size: 15.5px; }
+  .logo{ width: 27px; height: 27px; }
+  .logo::after{ font-size: 14.5px; }
 }
