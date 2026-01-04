@@ -4,13 +4,16 @@ export async function onRequest({ request, env }) {
     "Cache-Control": "no-store",
   };
 
+  // CHANGE: CORS helper (minimerar duplicerad kod och minskar risk för avvikande headers)
+  const corsOrigin = request.headers.get("Origin") || "*"; // CHANGE: konservativt - behåll beteendet
+
   // CORS/preflight — nödvändigt om widgeten skickar JSON-header (vanligt)
   if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: {
         ...jsonHeaders,
-        "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+        "Access-Control-Allow-Origin": corsOrigin,
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Max-Age": "86400",
@@ -24,7 +27,7 @@ export async function onRequest({ request, env }) {
       status: 405,
       headers: {
         ...jsonHeaders,
-        "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+        "Access-Control-Allow-Origin": corsOrigin,
       },
     });
   }
@@ -42,7 +45,7 @@ export async function onRequest({ request, env }) {
           status: 500,
           headers: {
             ...jsonHeaders,
-            "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+            "Access-Control-Allow-Origin": corsOrigin,
           },
         }
       );
@@ -52,20 +55,25 @@ export async function onRequest({ request, env }) {
     const messages = Array.isArray(body.messages) ? body.messages : [];
 
     // behåll senaste 20, tillåt endast user/assistant, trimma content
-    const cleaned = messages.slice(-20).map((m) => ({
-      role: m?.role === "assistant" ? "assistant" : "user",
-      content: String(m?.content ?? "").slice(0, 4000),
-    }));
+    const cleaned = messages
+      .slice(-20)
+      .map((m) => ({
+        role: m?.role === "assistant" ? "assistant" : "user",
+        content: String(m?.content ?? "").slice(0, 4000),
+      }))
+      // CHANGE: filtrera bort tomma meddelanden för stabilare prompt + mindre tokenkostnad
+      .filter((m) => m.content.trim().length > 0);
 
     const system = {
       role: "system",
       content:
-        "Du är Proofy Assist. Svara på svenska, kort och tydligt. " +
-        "Hjälp med demo, pilot, säkerhet och hur filverifiering fungerar. " +
-        "Håll en professionell ton. " +
-        "Om användaren frågar om priser, svara att Proofy är gratis att testa och eventuell prissättning meddelas av teamet vid behov. " +
-        "Undvik att nämna sidor som inte finns – föreslå bara '/register.html', '/verify.html' eller '/index.html'. " +
-        "Om något är oklart, föreslå nästa steg eller be användaren kontakta kontakt@proofy.se.",
+        // CHANGE: mer revisors-/byråspråk + tydligare avgränsning utan att ändra funktionalitet
+        "Du är Proofy Assist för revisorer och redovisningskonsulter. Svara på svenska, kort och tydligt. " +
+        "Förklara praktiskt hur Proofy används i revisionsfil/arbetsprogram: skapa Verifierings-ID för referensunderlag och verifiera att en filversion är oförändrad. " +
+        "Använd ord som Verifierings-ID, referensunderlag, registreringstid och spårbarhet. Undvik blockchain/tx/hash-termer om användaren inte uttryckligen ber om tekniska detaljer. " +
+        "Håll professionell ton. Om användaren frågar om priser: svara att Proofy är gratis att testa och att ev. prissättning tas vid pilot/byråupplägg. " +
+        "Föreslå bara dessa sidor: '/register.html', '/verify.html' eller '/index.html'. " +
+        "Om något är oklart: föreslå nästa steg eller hänvisa till kontakt@proofy.se.",
     };
 
     const payload = {
@@ -86,17 +94,19 @@ export async function onRequest({ request, env }) {
     const j = await r.json().catch(() => ({}));
 
     if (!r.ok) {
+      // CHANGE: bubbla upp mer felinfo (utan att läcka hemligheter) för felsökning
       return new Response(
         JSON.stringify({
           ok: false,
           error: "OpenAI request failed",
           status: r.status,
+          detail: j?.error?.message || undefined,
         }),
         {
           status: 500,
           headers: {
             ...jsonHeaders,
-            "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+            "Access-Control-Allow-Origin": corsOrigin,
           },
         }
       );
@@ -115,7 +125,7 @@ export async function onRequest({ request, env }) {
     return new Response(JSON.stringify({ ok: true, answer, ctas }), {
       headers: {
         ...jsonHeaders,
-        "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+        "Access-Control-Allow-Origin": corsOrigin,
       },
     });
   } catch (e) {
@@ -123,7 +133,7 @@ export async function onRequest({ request, env }) {
       status: 500,
       headers: {
         ...jsonHeaders,
-        "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+        "Access-Control-Allow-Origin": corsOrigin,
       },
     });
   }
