@@ -12,6 +12,7 @@
 .brand{
   display:flex;
   align-items:center;
+  allowing: normal;
   gap:10px;
   font-weight: 950;
   letter-spacing: .2px;
@@ -23,8 +24,15 @@
 
 /* Span.logo i din HTML */
 .logo{
+  /* ✅ FIX: span är inline som default => width/height syns inte.
+     inline-block gör att loggan alltid renderas. */
+  display:inline-block;
+
   width: 28px;
   height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+
   border-radius: 10px;
   position: relative;
   flex: 0 0 auto;
@@ -40,6 +48,9 @@
 
   /* mjuk skugga (inte "glow") */
   box-shadow: 0 8px 22px rgba(0,0,0,.28);
+
+  /* extra robusthet: om någon css sätter line-height */
+  line-height: 0;
 }
 
 /* monogram för igenkänning i liten storlek */
@@ -55,12 +66,20 @@
   letter-spacing: -0.6px;
   color: rgba(8,16,30,.92);
   text-shadow: 0 1px 0 rgba(255,255,255,.30);
+
+  /* om line-height/align spökar */
+  line-height: 1;
 }
 
 /* Lite tightare på mobil */
 @media (max-width: 920px){
   .brand{ gap: 9px; font-size: 15.5px; }
-  .logo{ width: 27px; height: 27px; }
+  .logo{
+    width: 27px;
+    height: 27px;
+    min-width: 27px;
+    min-height: 27px;
+  }
   .logo::after{ font-size: 14.5px; }
 }
 
