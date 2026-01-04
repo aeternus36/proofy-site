@@ -7,8 +7,8 @@
   <meta name="description" content="Skapa ett Verifierings-ID för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-04a" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-04a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 </head>
 
 <body>
@@ -229,8 +229,12 @@
                          cursor:pointer;
                          max-width: 100%;
                        ">
-                    <div id="qrBox" class="qrBox" aria-label="QR-kod"
-                         style="line-height:0; display:block;"></div>
+                    <div id="qrBox"
+                         aria-label="QR-kod"
+                         style="
+                           display:block;
+                           background:#ffffff;
+                         "></div>
                   </div>
 
                   <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
@@ -340,8 +344,7 @@
                        cursor:pointer;
                        max-width: 100%;
                      ">
-                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"
-                       style="line-height:0; display:block;"></div>
+                  <div id="manualQrBox" style="display:block; background:#ffffff;"></div>
                 </div>
               </div>
               <div style="min-width:240px; flex:1;">
@@ -387,7 +390,7 @@
 </footer>
 
 <!-- QR-lib -->
-<script src="/assets/qr.min.js?v=2026-01-04a"></script>
+<script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
 <script>
 (() => {
@@ -635,7 +638,7 @@
     });
   }
 
-  // Robust QR render (qrcodejs kan ge canvas/img/table, andra libs kan ge svg)
+  // ✅ Robust QR-render: accepterar canvas/img/table/svg och undviker “moire/stripes”
   function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -652,20 +655,13 @@
       return;
     }
 
-    const wrap = targetEl.parentElement;
-    const available = wrap ? Math.max(220, wrap.clientWidth - 24) : 280;
-    let size = Math.max(220, Math.min(360, available));
-    size = Math.floor(size);
+    // Räkna fram en “bra” storlek
+    const wrap = targetEl.parentElement; // qrTap/manualQrTap
+    const maxByLayout = wrap ? Math.max(220, wrap.clientWidth - 24) : 280;
+    const size = Math.min(360, Math.floor(maxByLayout));
 
-    const level =
-      (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
-        ? window.QRCodeCorrectLevel.H
-        : (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H)
-          ? window.QRCode.CorrectLevel.H
-          : undefined;
-
+    // Mounta i en inner-container så vi kan inspektera vad libben skapade
     const mount = document.createElement("div");
-    mount.style.lineHeight = "0";
     targetEl.appendChild(mount);
 
     try {
@@ -673,9 +669,9 @@
         text: payload,
         width: size,
         height: size,
-        colorDark: "#0b1220",
-        colorLight: "#ffffff",
-        correctLevel: level
+        correctLevel: (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H !== undefined)
+          ? window.QRCodeCorrectLevel.H
+          : undefined
       });
     } catch (e1) {
       try {
@@ -688,39 +684,35 @@
       }
     }
 
-    // qrcodejs ritar ofta sync – men vi väntar 0ms så DOM hinner uppdatera
-    setTimeout(() => {
-      const node = mount.querySelector("canvas, img, svg, table");
-      if (!node) {
-        targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
-        return;
-      }
+    // qrcode-libs kan rita som canvas, img, table eller svg.
+    const node = mount.querySelector("canvas, img, table, svg");
+    if (!node) {
+      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+      return;
+    }
 
-      // Förhindra moiré/”randig” look: tvinga 1:1 rendering där det går
-      if (node.tagName === "CANVAS") {
-        node.style.width = node.width + "px";
-        node.style.height = node.height + "px";
-        node.style.imageRendering = "pixelated";
-        node.style.display = "block";
-      } else if (node.tagName === "IMG") {
-        node.style.width = size + "px";
-        node.style.height = size + "px";
-        node.style.imageRendering = "pixelated";
-        node.style.display = "block";
-      } else if (node.tagName === "TABLE") {
-        node.style.borderCollapse = "collapse";
-        node.style.width = size + "px";
-        node.style.height = size + "px";
-        node.style.display = "block";
-        const tds = node.querySelectorAll("td");
-        tds.forEach(td => {
-          td.style.padding = "0";
-          td.style.margin = "0";
-        });
-      } else {
-        node.style.display = "block";
-      }
-    }, 0);
+    // Tvinga 1:1 visning (minskar randighet)
+    if (node.tagName === "CANVAS") {
+      node.style.width = node.width + "px";
+      node.style.height = node.height + "px";
+      node.style.imageRendering = "pixelated";
+      node.style.display = "block";
+    } else if (node.tagName === "IMG") {
+      node.style.width = size + "px";
+      node.style.height = size + "px";
+      node.style.imageRendering = "pixelated";
+      node.style.display = "block";
+    } else if (node.tagName === "TABLE") {
+      node.style.borderCollapse = "collapse";
+      node.style.display = "block";
+      node.querySelectorAll("td").forEach(td => {
+        td.style.padding = "0";
+        td.style.width = "4px";
+        td.style.height = "4px";
+      });
+    } else {
+      node.style.display = "block";
+    }
   }
 
   function buildNote(run){
@@ -886,7 +878,9 @@
       receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
       receiptBtn.style.display = "inline-flex";
 
+      // QR: visa wrapper + rendera
       if (qrTap) qrTap.style.display = "inline-block";
+      // rita efter layout
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
       applyCopyHover(idOut, copyIdIconBtn, true);
@@ -1045,7 +1039,7 @@
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2026-01-04a" defer></script>
-<script src="/chat-widget.js?v=2026-01-04a" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
+<script src="/chat-widget.js?v=2026-01-03a" defer></script>
 </body>
 </html>
