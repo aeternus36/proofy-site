@@ -667,7 +667,6 @@
     });
   }
 
-  // NY helper: vänta tills libben faktiskt lagt in canvas/img/table etc
   function waitForQrNode(targetEl, timeoutMs = 3000){
     return new Promise((resolve) => {
       const start = Date.now();
@@ -681,7 +680,6 @@
     });
   }
 
-  // ✅ ÄNDRAD: robust render som funkar både med “constructor-render” och libs som kräver makeCode()
   async function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -701,12 +699,10 @@
 
     const size = calcQrSize(targetEl);
 
-    // håll plats så rutan inte “ser tom ut” vid race
     targetEl.style.minWidth = size + "px";
     targetEl.style.minHeight = size + "px";
 
     try {
-      // skapa instans (utan text först)
       const qr = new window.QRCode(targetEl, {
         width: size,
         height: size,
@@ -715,14 +711,12 @@
         correctLevel: (window.QRCode?.CorrectLevel?.H ?? undefined)
       });
 
-      // om libben kräver makeCode()
       if (qr && typeof qr.makeCode === "function") {
         qr.makeCode(payload);
       } else if (qr && typeof qr.make === "function" && typeof qr.addData === "function") {
         qr.addData(payload);
         qr.make();
       } else {
-        // fallback: vissa libs tar text i constructor
         targetEl.innerHTML = "";
         new window.QRCode(targetEl, {
           text: payload,
@@ -1060,9 +1054,9 @@
 })();
 </script>
 
-<!-- Lägg tillbaka när du är 100% säker att de serveras som JS och inte HTML/404 -->
-<!-- <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script> -->
-<!-- <script src="/chat-widget.js?v=2026-01-03a" defer></script> -->
+<!-- ✅ Aktiverat igen: behövs för mobilmenyn + chatten -->
+<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
+<script src="/chat-widget.js?v=2026-01-03a" defer></script>
 
 </body>
 </html>
