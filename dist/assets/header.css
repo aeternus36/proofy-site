@@ -2,77 +2,51 @@
    Mobilmeny (native <details>) – stabil och enkel
 */
 
-/* =========================================================
-   BRAND / LOGO (audit-grade, TRUST SEAL v2)
-   - tydlig i liten storlek
-   - mer premium/sigill
-   - konsekvent på alla sidor
-========================================================= */
+/* =========================
+   BRAND / LOGO — AUDIT-GRADE
+========================= */
 
 .brand{
   display:flex;
   align-items:center;
   gap:10px;
-  font-weight: 950;
-  letter-spacing: .2px;
+  font-weight:950;
+  letter-spacing:.2px;
   color: rgba(234,240,255,.92);
   text-decoration:none;
-  font-size: 16px;
+  font-size:16px;
 }
-.brand:hover{ text-decoration:none; }
 
-/* LOGO – span MUST be inline-block */
+/* KRITISKT: span måste vara inline-block */
 .logo{
-  display:inline-block; /* KRITISKT */
-  width: 28px;
-  height: 28px;
-  min-width:28px;
-  min-height:28px;
-  border-radius: 10px;
-  position: relative;
-  flex: 0 0 auto;
-  vertical-align: middle;
+  display:inline-block;
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  position:relative;
+  flex:0 0 auto;
 
-  /* Premium “seal”: lite mer djup + signal “verified” */
+  /* sigill / trust-stämpel */
   background:
-    /* diskret highlight */
-    radial-gradient(120% 120% at 28% 22%, rgba(255,255,255,.20), transparent 58%),
-    /* verifierings-prick nere till höger */
-    radial-gradient(10px 10px at 78% 78%, rgba(124,241,198,.55), transparent 58%),
-    /* basgradient */
-    linear-gradient(135deg, rgba(110,168,255,.78), rgba(124,241,198,.46));
+    radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,.18), transparent 55%),
+    linear-gradient(135deg, rgba(110,168,255,.80), rgba(124,241,198,.62));
 
-  border: 1px solid rgba(255,255,255,.20);
-
-  /* lugn, proffsig skugga (inte glow) */
+  border:1px solid rgba(255,255,255,.22);
   box-shadow:
-    0 8px 22px rgba(0,0,0,.30),
+    0 6px 18px rgba(0,0,0,.28),
     0 1px 0 rgba(255,255,255,.06) inset;
 }
 
-/* inner ring (sigill-känsla) + micro-texture */
+/* inner ring */
 .logo::before{
   content:"";
   position:absolute;
-  inset:3.5px;
-  border-radius: 8px;
-
-  background:
-    /* subtil ring som ger “stamp” */
-    radial-gradient(circle at 50% 50%,
-      transparent 58%,
-      rgba(255,255,255,.18) 59%,
-      rgba(255,255,255,.10) 69%,
-      transparent 70%
-    ),
-    /* diskret “grain” */
-    linear-gradient(180deg, rgba(255,255,255,.06), transparent 40%);
-
-  border: 1px solid rgba(255,255,255,.10);
-  pointer-events:none;
+  inset:4px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.12);
 }
 
-/* monogram – lite mer “engraved” */
+/* monogram */
 .logo::after{
   content:"P";
   position:absolute;
@@ -80,78 +54,57 @@
   display:flex;
   align-items:center;
   justify-content:center;
-  font-weight: 950;
-  font-size: 15px;
-  letter-spacing: -0.6px;
+  font-weight:950;
+  font-size:15px;
+  letter-spacing:-0.6px;
   color: rgba(8,16,30,.92);
-
-  /* gör att bokstaven känns “stämplad” */
-  text-shadow:
-    0 1px 0 rgba(255,255,255,.35),
-    0 -1px 0 rgba(0,0,0,.12);
+  text-shadow: 0 1px 0 rgba(255,255,255,.35);
 }
 
-/* Mobile tweak */
-@media (max-width: 920px){
-  .brand{ gap: 9px; font-size: 15.5px; }
-  .logo{ width: 27px; height: 27px; min-width:27px; min-height:27px; }
-  .logo::after{ font-size: 14.5px; }
+/* Mobiljustering */
+@media (max-width:920px){
+  .brand{ font-size:15.5px; gap:9px; }
+  .logo{ width:27px; height:27px; }
+  .logo::after{ font-size:14.5px; }
 }
 
-/* ABSOLUT last-wins (förhindrar CSS-krockar) */
-header .brand .logo{ display:inline-block !important; }
-header .brand .logo::after{ display:flex !important; }
-
-
-/* =========================================================
+/* =========================
    MOBILMENY
-========================================================= */
+========================= */
 
 .mnav{
-  display:none; /* visas på mobil */
-  position: relative;
-  flex: 0 0 auto;
-  margin-left: auto;
+  display:none;
+  position:relative;
+  margin-left:auto;
 }
 
 .mnavSummary{
-  list-style: none;
+  list-style:none;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width: 48px;
-  height: 44px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
+  width:48px;
+  height:44px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
-  color: rgba(234,240,255,.92);
-  cursor:pointer;
-  user-select:none;
 }
+
 .mnavSummary::-webkit-details-marker{ display:none; }
 
-.mnavSummary:hover{
-  background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.18);
-}
-
 .mnavIcon{
-  width: 22px;
-  height: 2px;
+  width:22px;
+  height:2px;
   background: rgba(234,240,255,.92);
-  border-radius: 999px;
-  position: relative;
-  display:block;
+  position:relative;
 }
 .mnavIcon::before,
 .mnavIcon::after{
   content:"";
   position:absolute;
-  left:0;
-  width: 22px;
-  height: 2px;
+  width:22px;
+  height:2px;
   background: rgba(234,240,255,.92);
-  border-radius: 999px;
 }
 .mnavIcon::before{ top:-7px; }
 .mnavIcon::after{ top:7px; }
@@ -159,101 +112,17 @@ header .brand .logo::after{ display:flex !important; }
 .mnavMenu{
   position:absolute;
   right:0;
-  top: calc(100% + 10px);
-  width: min(86vw, 360px);
+  top:calc(100% + 10px);
+  width:min(86vw,360px);
   padding:12px;
   border-radius:18px;
-  border:1px solid rgba(255,255,255,.10);
   background: rgba(11,18,32,.96);
-  backdrop-filter: blur(10px) saturate(140%);
-  box-shadow: 0 18px 60px rgba(0,0,0,.45);
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  z-index:2000;
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:0 18px 60px rgba(0,0,0,.45);
 }
 
-.mnavLink{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-  text-decoration:none;
-  font-weight: 900;
-  font-size: 16px;
-  color: rgba(234,240,255,.92);
-}
-.mnavLink:hover{
-  background: rgba(255,255,255,.07);
-  border-color: rgba(255,255,255,.14);
-}
-.mnavLinkPrimary{
-  border: none;
-  color: #08101e;
-  background: linear-gradient(135deg, rgba(110,168,255,.95), rgba(124,241,198,.85));
-}
-
-.mnavMeta{
-  margin-top: 6px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,.10);
-  display:flex;
-  flex-direction:column;
-  gap: 8px;
-}
-
-.mnavNote{
-  color: rgba(169,183,211,.92);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.mnavMail{
-  display:inline-flex;
-  align-items:center;
-  justify-content:flex-start;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  text-decoration:none;
-  font-weight: 900;
-  color: rgba(234,240,255,.92);
-}
-
-/* ------- Responsive rules ------- */
-@media (max-width: 920px){
-  #navActionsDesktop{ display:none !important; }
+/* Responsive */
+@media (max-width:920px){
   .mnav{ display:block; }
-  .nav{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:14px;
-  }
-}
-
-@media (min-width: 921px){
-  .mnav{ display:none !important; }
-}
-
-/* Policy/sekundära länkar i mobilmenyn */
-.mnavMeta .mnavLink{
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255,255,255,.03);
-  font-weight: 900;
-  font-size: 14.5px;
-  border-color: rgba(255,255,255,.08);
-}
-.mnavMeta .mnavLink:hover{
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.12);
-}
-.mnavMeta .mnavLink[aria-current="page"]{
-  border-color: rgba(110,168,255,.45);
-  box-shadow: 0 0 0 1px rgba(110,168,255,.18) inset;
+  #navActionsDesktop{ display:none!important; }
 }
