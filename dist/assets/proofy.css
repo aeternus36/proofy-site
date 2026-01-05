@@ -1,8 +1,4 @@
 /* /assets/proofy.css */
-/* =========================================================
-   Proofy – audit-grade UI
-   Fokus: förtroende, läsbarhet, stabilitet (revisorer)
-========================================================= */
 
 /* ---------- Base / reset ---------- */
 :root{
@@ -14,8 +10,8 @@
   --muted: rgba(169,183,211,.92);
   --muted2: rgba(234,240,255,.72);
 
-  --blue: rgba(110,168,255,.55);
-  --mint: rgba(124,241,198,.38);
+  --blue: rgba(110,168,255,.95);
+  --mint: rgba(124,241,198,.85);
   --shadow: 0 18px 60px rgba(0,0,0,.45);
 }
 
@@ -26,7 +22,7 @@ body{
   margin:0;
   background: var(--bg);
   color:var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
   line-height:1.55;
 }
 
@@ -34,14 +30,19 @@ img{ max-width:100%; height:auto; }
 a{ color: rgba(180,210,255,.98); text-decoration:none; }
 a:hover{ text-decoration:underline; }
 
-/* ---------- Skip link ---------- */
 .skip{
   position:absolute;
   left:-9999px;
+  top:auto;
+  width:1px;
+  height:1px;
+  overflow:hidden;
 }
 .skip:focus{
   left:12px;
   top:12px;
+  width:auto;
+  height:auto;
   padding:10px 12px;
   border-radius:12px;
   background: rgba(255,255,255,.10);
@@ -69,7 +70,9 @@ header{
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
-.nav{
+/* Stöd BOTH .nav och .navBar */
+.nav,
+.navBar{
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -77,7 +80,10 @@ header{
   padding: 14px 0;
 }
 
-/* ---------- Brand text (logo stylas i header.css) ---------- */
+/* OBS:
+   BRAND/LOGO definieras i header.css (laddas efter proofy.css)
+   så den blir konsekvent och “last-wins”.
+*/
 .brand{
   display:flex;
   align-items:center;
@@ -86,26 +92,28 @@ header{
   letter-spacing: .2px;
   color: var(--text);
   text-decoration:none;
-  font-size: 16px;
 }
+.brand:hover{ text-decoration:none; }
 
-/* ---------- Nav actions ---------- */
 .navActions{
   display:flex;
   gap:10px;
+  flex-wrap:wrap;
   align-items:center;
 }
 
 /* ---------- Typography ---------- */
 .badge{
   display:inline-flex;
+  align-items:center;
+  gap:8px;
   padding: 9px 12px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.05);
+  color: var(--muted2);
   font-weight: 800;
   font-size: 13px;
-  color: var(--muted2);
 }
 
 .pageTitle{
@@ -116,83 +124,215 @@ header{
 }
 
 .lead{
+  margin: 0;
   max-width: 78ch;
   font-size: 18px;
   color: rgba(234,240,255,.86);
 }
 
-.small, .meta{
+h2{
+  margin: 0 0 10px;
+  font-size: 22px;
+  letter-spacing: -.2px;
+}
+
+.small{
   font-size: 13px;
-  color: var(--muted);
+  color: rgba(169,183,211,.92);
+}
+
+.meta{
+  font-size: 13px;
+  color: rgba(169,183,211,.92);
   font-weight: 800;
 }
 
-/* ---------- Cards ---------- */
+.ok{ color: rgba(124,241,198,.95); font-weight: 950; }
+.err{ color: rgba(255,160,160,.96); font-weight: 950; }
+
+/* ---------- Components ---------- */
 .card{
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.04);
   border-radius: 22px;
   box-shadow: var(--shadow);
+  overflow: hidden; /* viktigt: hindra spill */
 }
 
-.card.content{ padding:18px; }
+.card.content{
+  padding: 18px;
+}
 
 .hr{
   height:1px;
   background: rgba(255,255,255,.10);
-  margin:14px 0;
+  margin: 14px 0;
 }
 
-/* ---------- Buttons ---------- */
+/* Buttons */
 .btn{
-  padding:12px 14px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.12);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.04);
-  font-weight:900;
-  color: var(--text);
+  color: rgba(234,240,255,.92);
+  text-decoration:none;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select:none;
 }
+.btn:hover{
+  text-decoration:none;
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.16);
+}
+.btn:active{ transform: translateY(1px); }
 
 .btn.primary{
-  border:none;
-  background: linear-gradient(135deg, rgba(110,168,255,.75), rgba(124,241,198,.65));
-  color:#08101e;
+  border: none;
+  color: #08101e;
+  background: linear-gradient(135deg, var(--blue), var(--mint));
+}
+.btn.primary:hover{ filter: brightness(1.02); }
+
+.btn.soft{
+  background: rgba(110,168,255,.10);
+  border-color: rgba(110,168,255,.25);
 }
 
-/* ---------- Inputs ---------- */
+.btn.ghost{
+  background: transparent;
+  border-color: rgba(255,255,255,.12);
+}
+
+/* ---------- Layout helpers ---------- */
+.grid2{
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap: wrap;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(234,240,255,.86);
+  font-weight: 900;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/* Monospace fields (IDs/links) */
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: rgba(234,240,255,.92);
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  max-width: 100%;
+}
+
+/* Drop zone */
+.drop{
+  border: 1px dashed rgba(255,255,255,.20);
+  background: rgba(255,255,255,.03);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: rgba(234,240,255,.82);
+}
+.drop.drag{
+  border-color: rgba(110,168,255,.45);
+  background: rgba(110,168,255,.10);
+}
+
+/* QR block layout */
+.qrWrap{
+  display:flex;
+  gap: 14px;
+  align-items:flex-start;
+  flex-wrap: wrap;
+}
+
+/* Target element that holds the QR canvas (do NOT scale canvas with CSS) */
+.qrBox{
+  max-width: 100%;
+}
+
+/* IMPORTANT: Never CSS-scale the QR canvas */
+.qrBox canvas{
+  display:block;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  transform: none !important;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Inputs */
 input, textarea{
   width:100%;
-  padding:12px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.12);
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12);
   background: rgba(0,0,0,.18);
-  color: var(--text);
+  color: rgba(234,240,255,.92);
+  outline: none;
 }
-
+input::placeholder, textarea::placeholder{ color: rgba(169,183,211,.62); }
 input:focus, textarea:focus{
   border-color: rgba(110,168,255,.45);
   box-shadow: 0 0 0 3px rgba(110,168,255,.12);
 }
 
-/* ---------- Footer ---------- */
+/* Footer */
 footer{
-  padding:28px 0 50px;
-  border-top:1px solid rgba(255,255,255,.06);
+  padding: 28px 0 50px;
+  border-top: 1px solid rgba(255,255,255,.06);
   background: rgba(0,0,0,.12);
 }
 
 .foot{
   display:flex;
   justify-content:space-between;
-  gap:16px;
+  gap: 16px;
+  align-items:flex-start;
   flex-wrap:wrap;
 }
 
-.links a{
-  color: rgba(234,240,255,.78);
+.links{
+  display:flex;
+  gap: 12px;
+  flex-wrap:wrap;
 }
+.links a{ color: rgba(234,240,255,.78); }
+.links a:hover{ color: rgba(234,240,255,.92); }
 
 /* ---------- Responsive ---------- */
-@media (max-width:920px){
-  .brand{ font-size:15.5px; gap:9px; }
+@media (max-width: 920px){
+  main{ padding: 26px 0 46px; }
+  .pageTitle{ letter-spacing: -0.6px; }
+  .lead{ font-size: 17px; }
+
+  .grid2{ grid-template-columns: 1fr; }
 }
