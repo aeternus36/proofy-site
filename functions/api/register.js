@@ -1,24 +1,35 @@
-import { createPublicClient, createWalletClient, http, isHex } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  isHex,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
+/**
+ * ABI som matchar ditt Solidity-kontrakt "Proofy" exakt.
+ */
 const PROOFY_ABI = [
   {
     type: "function",
-    name: "getProof",
-    stateMutability: "view",
-    inputs: [{ name: "hash", type: "bytes32" }],
+    name: "registerIfMissing",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "refId", type: "bytes32" }],
     outputs: [
-      { name: "timestamp", type: "uint256" },
-      { name: "submitter", type: "address" },
+      { name: "created", type: "bool" },
+      { name: "ts", type: "uint64" },
     ],
   },
   {
     type: "function",
-    name: "register",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "hash", type: "bytes32" }],
-    outputs: [],
+    name: "get",
+    stateMutability: "view",
+    inputs: [{ name: "refId", type: "bytes32" }],
+    outputs: [
+      { name: "ok", type: "bool" },
+      { name: "ts", type: "uint64" },
+    ],
   },
 ];
 
@@ -46,12 +57,12 @@ function corsPreflight(origin) {
   });
 }
 
-function isValidBytes32Hex(hash) {
+function isValidBytes32Hex(value) {
   return (
-    typeof hash === "string" &&
-    hash.startsWith("0x") &&
-    hash.length === 66 &&
-    isHex(hash)
+    typeof value === "string" &&
+    value.startsWith("0x") &&
+    value.length === 66 &&
+    isHex(value)
   );
 }
 
@@ -71,50 +82,13 @@ function normalizePrivateKey(pk) {
   return trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
 }
 
-function toSafeTimestamp(timestampBig) {
-  const tsBig = BigInt(timestampBig ?? 0n);
-  const exists = tsBig !== 0n;
-
-  if (!exists) return { exists: false, timestamp: 0 };
-
-  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
-  const timestamp = tsBig <= maxSafe ? Number(tsBig) : tsBig.toString();
-  return { exists: true, timestamp };
-}
-
-async function readProof({ publicClient, contractAddress, hash }) {
-  const proof = await publicClient.readContract({
-    address: contractAddress,
-    abi: PROOFY_ABI,
-    functionName: "getProof",
-    args: [hash],
-  });
-
-  const timestampBig = proof?.[0] ?? 0n;
-  const submitter = proof?.[1];
-
-  const { exists, timestamp } = toSafeTimestamp(timestampBig);
-
-  return {
-    exists,
-    timestamp,
-    submitter: isValidAddressHex(submitter) ? submitter : null,
-  };
-}
-
-async function readProofWithRetry({
-  publicClient,
-  contractAddress,
-  hash,
-  retries = 3,
-  delayMs = 800,
-}) {
-  for (let i = 0; i < retries; i++) {
-    const proof = await readProof({ publicClient, contractAddress, hash });
-    if (proof.exists && proof.timestamp && proof.timestamp !== 0) return proof;
-    await new Promise((r) => setTimeout(r, delayMs));
-  }
-  return readProof({ publicClient, contractAddress, hash });
+function isValidPrivateKeyHex(pk) {
+  return (
+    typeof pk === "string" &&
+    pk.startsWith("0x") &&
+    pk.length === 66 &&
+    isHex(pk)
+  );
 }
 
 function sanitizeError(e) {
@@ -123,6 +97,28 @@ function sanitizeError(e) {
     (e && typeof e === "object" && "message" in e && e.message) ||
     "Unexpected error";
   return String(msg).slice(0, 400);
+}
+
+function toSafeUint64(ts) {
+  // uint64 -> alltid safe som Number (max ~1.8e19, men timestamps är små)
+  const v = BigInt(ts ?? 0n);
+  if (v <= 0n) return 0;
+  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+  return v <= maxSafe ? Number(v) : Number(maxSafe);
+}
+
+async function readGet({ publicClient, contractAddress, hash }) {
+  const [ok, ts] = await publicClient.readContract({
+    address: contractAddress,
+    abi: PROOFY_ABI,
+    functionName: "get",
+    args: [hash],
+  });
+
+  const timestamp = toSafeUint64(ts);
+  const exists = Boolean(ok) && timestamp !== 0;
+
+  return { exists, timestamp };
 }
 
 export async function onRequest({ request, env }) {
@@ -147,18 +143,26 @@ export async function onRequest({ request, env }) {
     return json(400, { ok: false, error: "Invalid hash format" }, origin);
   }
 
-  const rpcUrl = env.AMOY_RPC_URL;
-  const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
+  const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
+  const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
   const privateKey = normalizePrivateKey(env.PROOFY_PRIVATE_KEY);
 
   if (!rpcUrl || !contractAddress || !privateKey) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
   if (!isValidAddressHex(contractAddress)) {
-    return json(500, { ok: false, error: "Server misconfiguration (bad contract address)" }, origin);
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration (bad contract address)" },
+      origin
+    );
   }
-  if (!isValidBytes32Hex(privateKey)) {
-    return json(500, { ok: false, error: "Server misconfiguration (bad private key)" }, origin);
+  if (!isValidPrivateKeyHex(privateKey)) {
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration (bad private key)" },
+      origin
+    );
   }
 
   // Timeout för determinism
@@ -167,82 +171,59 @@ export async function onRequest({ request, env }) {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const transport = http(rpcUrl, { fetchOptions: { signal: controller.signal } });
+    const transport = http(rpcUrl, {
+      fetchOptions: { signal: controller.signal },
+      // (Valfritt) mindre aggressiv polling för Amoy
+      // batch: true,
+    });
 
     const publicClient = createPublicClient({
       chain: polygonAmoy,
       transport,
     });
 
-    // Already registered?
-    const pre = await readProof({ publicClient, contractAddress, hash });
-    if (pre.exists && pre.timestamp && pre.timestamp !== 0) {
-      return json(
-        200,
-        {
-          ok: true,
-          exists: true,
-          alreadyExists: true,
-          timestamp: pre.timestamp,
-          submitter: pre.submitter,
-          txHash: null,
-        },
-        origin
-      );
-    }
-
-    // Not registered -> write
     const account = privateKeyToAccount(privateKey);
+
     const walletClient = createWalletClient({
       account,
       chain: polygonAmoy,
       transport,
     });
 
-    // ✅ Fix för "gas required exceeds allowance (...)":
-    // estimera gas och lägg buffer, annars fallback.
-    let gasLimit = 200_000n;
-    try {
-      const est = await publicClient.estimateContractGas({
-        address: contractAddress,
-        abi: PROOFY_ABI,
-        functionName: "register",
-        args: [hash],
-        account: account.address,
-      });
-      // +30% buffer
-      gasLimit = (est * 130n) / 100n;
-      // safety floor
-      if (gasLimit < 120_000n) gasLimit = 120_000n;
-    } catch {
-      // keep fallback
-    }
-
-    const txHash = await walletClient.writeContract({
+    // 1) Simulera för att få korrekt request (gas/args/calldata)
+    //    + få en tidig, tydlig revert om något är fel.
+    const sim = await publicClient.simulateContract({
+      account,
       address: contractAddress,
       abi: PROOFY_ABI,
-      functionName: "register",
+      functionName: "registerIfMissing",
       args: [hash],
-      gas: gasLimit,
     });
 
+    // 2) Skicka transaktionen
+    const txHash = await walletClient.writeContract(sim.request);
+
+    // 3) Vänta på kvitto (1 conf) så UI slipper "false fail"
     await publicClient.waitForTransactionReceipt({
       hash: txHash,
       confirmations: 1,
     });
 
-    const post = await readProofWithRetry({
-      publicClient,
-      contractAddress,
-      hash,
-      retries: 3,
-      delayMs: 800,
-    });
+    // 4) Läs efteråt för determinism (timestamp till UI)
+    const post = await readGet({ publicClient, contractAddress, hash });
 
-    if (!post.exists || !post.timestamp || post.timestamp === 0) {
+    if (!post.exists || post.timestamp === 0) {
+      // Extremt ovanligt: tx gick igenom men vi kan inte läsa direkt.
+      // UI bör visa "registrerat men kunde inte bekräftas ännu" om du vill.
       return json(
-        500,
-        { ok: false, error: "Registration completed but not readable" },
+        200,
+        {
+          ok: true,
+          status: "pending_readback",
+          exists: false,
+          timestamp: 0,
+          txHash,
+        },
         origin
       );
     }
@@ -251,12 +232,13 @@ export async function onRequest({ request, env }) {
       200,
       {
         ok: true,
+        status: "registered",
         exists: true,
-        alreadyExists: false,
+        // Om den redan fanns kommer registerIfMissing returnera created=false,
+        // men vi läser inte returvärdet här eftersom writeContract inte returnerar det.
+        // Om du vill visa created: true/false krävs antingen event-parsing eller ett pre-read.
         timestamp: post.timestamp,
-        submitter: post.submitter,
         txHash,
-        gasUsedHint: gasLimit.toString(),
       },
       origin
     );
@@ -264,14 +246,31 @@ export async function onRequest({ request, env }) {
     if (e && typeof e === "object" && e.name === "AbortError") {
       return json(
         504,
-        { ok: false, error: "Upstream timeout", detail: `Timeout after ${timeoutMs}ms` },
+        {
+          ok: false,
+          error: "Upstream timeout",
+          detail: `Timeout after ${timeoutMs}ms`,
+        },
         origin
       );
     }
 
+    // För revisor-trygg UX: returnera "tillfälligt" för vanliga RPC/gas-problem
+    const detail = sanitizeError(e);
+    const isProbablyTemporary =
+      /timeout|temporarily|rate|limit|429|503|gateway|rpc|network|nonce/i.test(
+        detail
+      );
+
     return json(
-      500,
-      { ok: false, error: "Register failed", detail: sanitizeError(e) },
+      isProbablyTemporary ? 503 : 500,
+      {
+        ok: false,
+        error: isProbablyTemporary
+          ? "Temporary unavailable"
+          : "Register failed",
+        detail,
+      },
       origin
     );
   } finally {
