@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Skapa Verifierings-ID</title>
-  <meta name="description" content="Skapa ett Verifierings-ID (kontroll-ID) för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
+  <title>Proofy – Registrera underlag</title>
+  <meta name="description" content="Registrera en referens för en filversion lokalt i webbläsaren. Underlaget lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
   <meta name="robots" content="noindex" />
 
@@ -12,7 +12,6 @@
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
-    /* Minimal a11y-failsafe (om global .sr-only saknas) */
     .sr-only{
       position:absolute !important;
       width:1px !important;
@@ -25,7 +24,6 @@
       border:0 !important;
     }
 
-    /* UX: minska visuellt brus i actions */
     .actionsRow{
       display:flex;
       flex-wrap:wrap;
@@ -40,15 +38,12 @@
       flex-wrap:wrap;
     }
 
-    /* Döljer bakåtkomp-knappar */
     #copyIdBtn, #copyLinkBtn { display:none !important; }
 
-    /* Gör status-pill mindre “knappig” */
     #statusPill, #manualPill { margin-left:0 !important; }
 
     .hintline{ margin-top:6px; opacity:.9; }
 
-    /* Aktiv flik i topmeny: ej klickbar (minskar “varför finns knappen?”) */
     .navActions .btn.isCurrent{
       pointer-events:none;
       opacity:1;
@@ -56,17 +51,17 @@
       background: rgba(255,255,255,.05);
     }
 
-    /* Primär nästa-steg-CTA (visas först efter att länk finns) */
     #nextStepBtn { display:none; }
 
-    /* “Skapa” blir sekundär efter första körning */
     .btn.softSecondary{
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.12);
     }
 
-    /* Manual: förenkla – bygg sker automatiskt */
     #manualBuildBtn { display:none !important; }
+
+    .miniSteps p{ margin:0 0 8px; }
+    .miniSteps p:last-child{ margin-bottom:0; }
   </style>
 </head>
 
@@ -82,8 +77,7 @@
       </a>
 
       <div class="navActions" id="navActionsDesktop">
-        <!-- ✅ Aktiv flik utan onödig klickbarhet -->
-        <a class="btn isCurrent" aria-current="page">Skapa Verifierings-ID</a>
+        <a class="btn isCurrent" aria-current="page">Registrera underlag</a>
         <a class="btn soft" href="/verify.html">Verifiera underlag</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
@@ -95,7 +89,7 @@
         </summary>
 
         <nav class="mnavMenu" aria-label="Meny">
-          <a class="mnavLink" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/register.html" aria-current="page">Registrera underlag</a>
           <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
@@ -119,18 +113,26 @@
   <div class="wrap">
     <div class="badge">Verifiering · revision · granskning</div>
 
-    <h1 class="pageTitle">Skapa Verifierings-ID</h1>
+    <h1 class="pageTitle">Registrera underlag</h1>
 
     <p class="lead">
-      Skapa ett Verifierings-ID <span class="meta">(kontroll-ID)</span> för den filversion som ska vara <b>referens</b> i ärendet.
+      Välj filversionen som ska vara <b>referens</b> i ärendet.
+      Proofy skapar en referens (ett digitalt fingeravtryck) <b>lokalt i din webbläsare</b>.
       <strong>Underlaget lämnar aldrig din dator.</strong>
     </p>
 
     <div class="card content" style="margin-top:14px;">
-      <div class="grid2">
+      <div class="miniSteps" style="border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03); border-radius: 16px; padding: 12px 14px;">
+        <div style="font-weight:950; margin-bottom:6px;">Så fungerar det</div>
+        <p class="small">1) <b>Registrera</b> när en version fastställs</p>
+        <p class="small">2) <b>Spara referensen</b> i ärendet</p>
+        <p class="small">3) <b>Verifiera vid behov</b> – t.ex. vid kvalitetskontroll eller efterhandsfråga</p>
+      </div>
+
+      <div class="grid2" style="margin-top:14px;">
 
         <!-- LEFT -->
-        <section aria-label="Skapa via fil">
+        <section aria-label="Registrera via fil">
           <div style="font-weight:950; font-size:16px;">1. Välj referensunderlag</div>
 
           <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:10px; cursor:pointer;">
@@ -155,33 +157,30 @@
           </div>
 
           <div class="actions" style="margin-top:14px;">
-            <!-- ✅ Efter lyckad registrering blir "Gå till verifiering" primär -->
             <div class="actionsRow" aria-label="Åtgärder">
               <a class="btn primary" id="nextStepBtn" href="/verify.html">Gå till verifiering</a>
 
-              <!-- Skapa blir primär innan vi har ID, sekundär efter -->
-              <button class="btn primary" id="createBtn" disabled>Skapa Verifierings-ID</button>
+              <button class="btn primary" id="createBtn" disabled>Registrera referens</button>
 
-              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna registreringskvitto</a>
+              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna verifieringsintyg</a>
             </div>
 
             <div class="actionsMetaRow">
               <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Välj underlag</span>
             </div>
 
-            <!-- Bakåtkomp i DOM -->
-            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
+            <button class="btn" id="copyIdBtn" disabled>Kopiera referens</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
           </div>
 
           <div id="localIdBox" style="display:none; margin-top:12px;">
-            <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span> – för notering i ärendet</div>
+            <div class="meta">Referens för ärendet</div>
 
             <div id="localIdOut"
                  class="mono"
                  tabindex="0"
                  role="button"
-                 aria-label="Verifierings-ID (klicka för att kopiera)"
+                 aria-label="Referens (klicka för att kopiera)"
                  title="Klicka för att kopiera"
                  style="
                    margin-top:8px;
@@ -199,16 +198,21 @@
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
             Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).<br />
-            <b>Obs:</b> Ny export/omskanning/konvertering kan ge annan filversion även om dokumentet “ser likadant ut”.
+            <b>Obs:</b> Ny export/omskanning/konvertering kan ge en annan filversion även om dokumentet “ser likadant ut”.
+          </p>
+
+          <div class="hr" style="margin-top:14px;"></div>
+          <p class="small" style="margin:0;">
+            Proofy verifierar att ett digitalt underlag inte har ändrats efter registreringstidpunkten.
+            Proofy verifierar inte vem som har skapat dokumentet, dokumentets innehåll eller dess juridiska giltighet.
           </p>
         </section>
 
         <!-- RIGHT -->
-        <section aria-label="Registreringsrapport">
-          <div style="font-weight:950; font-size:16px;">2. Registreringsrapport</div>
+        <section aria-label="Sammanställning">
+          <div style="font-weight:950; font-size:16px;">2. Sammanställning</div>
           <div class="hr"></div>
 
-          <!-- Empty state -->
           <div id="emptyState"
                style="
                  border:1px solid rgba(255,255,255,.10);
@@ -216,12 +220,14 @@
                  border-radius: 16px;
                  padding: 12px 14px;
                ">
-            <div style="font-weight:950; margin-bottom:6px;">Så används det i en byråprocess</div>
+            <div style="font-weight:950; margin-bottom:6px;">Praktisk notering i ärendet</div>
             <div class="small">
-              1) Välj filversionen som ska vara <b>referens</b>.<br/>
-              2) Proofy skapar ett Verifierings-ID lokalt (<b>ingen uppladdning</b>).<br/>
-              3) Du får en delbar länk + QR för kollega/klient/akt.<br/><br/>
-              <b>QR är för skanning med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att skanna sin egen skärm med kameran.
+              När referensen är skapad kan du:
+              <br/>• kopiera referensen till ärendet
+              <br/>• dela en verifieringslänk (t.ex. till kollega/klient)
+              <br/>• spara ett verifieringsintyg (utskrift/PDF)
+              <br/><br/>
+              <b>QR är för skanning med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att skanna sin egen skärm.
             </div>
           </div>
 
@@ -234,11 +240,11 @@
             </div>
 
             <div style="margin-top:12px;">
-              <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span></div>
+              <div class="meta">Referens för ärendet</div>
               <div class="small hintline">Klicka i fältet för att kopiera.</div>
 
               <div style="position:relative; margin-top:6px;">
-                <button type="button" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID" title="Kopiera"
+                <button type="button" id="copyIdIconBtn" aria-label="Kopiera referens" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
@@ -248,7 +254,7 @@
                      tabindex="0"
                      role="button"
                      title="Klicka för att kopiera"
-                     aria-label="Verifierings-ID (klicka för att kopiera)"
+                     aria-label="Referens (klicka för att kopiera)"
                      style="
                        padding:10px 12px;
                        border-radius:12px;
@@ -262,7 +268,7 @@
                 <span id="copyIdPill2" class="pill" style="display:none; margin-top:8px;"></span>
               </div>
 
-              <div class="meta" style="margin-top:12px;">Delbar verifieringslänk</div>
+              <div class="meta" style="margin-top:12px;">Verifieringslänk</div>
               <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
 
               <div style="position:relative; margin-top:6px;">
@@ -277,7 +283,7 @@
                    target="_blank"
                    rel="noopener"
                    title="Tryck för att öppna · Långtryck för att kopiera"
-                   aria-label="Delbar verifieringslänk"
+                   aria-label="Verifieringslänk"
                    style="
                      display:block;
                      padding:10px 12px;
@@ -294,15 +300,15 @@
               </div>
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
-                <b>Obs:</b> Om registreringen skulle misslyckas kan ni fortfarande använda ID och länk internt.
-                Försök igen, eller mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och ange Verifierings-ID.
+                Om bekräftelsen dröjer kan du ändå spara referensen och länken i ärendet och kontrollera status senare.
+                Du kan också mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och ange referensen.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
 
               <div class="qrWrap" style="margin-top:12px;">
                 <div>
-                  <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
+                  <div class="meta" style="margin-bottom:8px;">QR-kod</div>
 
                   <div id="qrTap"
                        role="button"
@@ -323,7 +329,7 @@
 
                   <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
                     Skanna QR med <b>en annan enhet</b> (t.ex. klient/kollega).
-                    Klick på QR kopierar länken till urklipp.
+                    Klick på QR kopierar länken.
                   </div>
                 </div>
 
@@ -335,25 +341,25 @@
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
 
                   <div class="actions" style="margin-top:12px;">
-                    <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera registreringsnotering</button>
+                    <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering för ärendet</button>
                     <span id="copyNotePill" class="pill" style="display:none;"></span>
                   </div>
 
                   <details style="margin-top:12px;">
-                    <summary>Tekniska detaljer (valfritt)</summary>
+                    <summary>Detaljer (valfritt)</summary>
                     <p class="small" style="margin:10px 0 8px; opacity:.95;">
                       Behövs normalt inte i ärendet, men kan hjälpa vid felsökning.
                     </p>
 
                     <div class="hr"></div>
 
-                    <div class="meta">Registreringsreferens (valfritt)</div>
+                    <div class="meta">Referens för bekräftelse (valfritt)</div>
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Teknisk identitet (valfritt)</div>
+                    <div class="meta" style="margin-top:10px;">Identifiering (valfritt)</div>
                     <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Felsvar (om något)</div>
+                    <div class="meta" style="margin-top:10px;">Meddelande (om något)</div>
                     <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
                   </details>
                 </div>
@@ -362,7 +368,7 @@
           </div>
 
           <div id="errorBox" style="display:none; margin-top:12px;" role="status" aria-live="polite" aria-atomic="true">
-            <div class="err">Tillfälligt tekniskt problem</div>
+            <div class="err">Tillfälligt problem</div>
             <div id="errorMsg" class="mono" style="margin-top:8px;"></div>
           </div>
         </section>
@@ -370,36 +376,32 @@
       </div>
     </div>
 
-    <!-- Manual -->
     <section style="margin-top:14px;">
       <div class="card content">
-        <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
+        <h2 style="margin:0 0 8px; font-size:18px;">Har du redan en referens?</h2>
         <p class="meta" style="margin:0 0 10px;">
-          Klistra in ett Verifierings-ID så skapar vi delbar länk och QR direkt.
+          Klistra in en referens så skapar vi verifieringslänk och QR direkt.
         </p>
 
         <div class="grid2">
           <div>
-            <label class="meta" for="manualId">Verifierings-ID</label>
+            <label class="meta" for="manualId">Referens</label>
             <input id="manualId" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:8px" />
 
             <div class="actions" style="margin-top:12px;">
               <div class="actionsRow">
-                <!-- Bygger automatiskt vid input -->
-                <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
-
                 <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
                 <a class="btn primary" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
               </div>
 
               <div class="actionsMetaRow">
-                <span id="manualPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Klistra in ID</span>
+                <span id="manualPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Klistra in referens</span>
               </div>
             </div>
           </div>
 
           <div>
-            <div class="meta">Delbar verifieringslänk</div>
+            <div class="meta">Verifieringslänk</div>
 
             <a id="manualLinkOut"
                class="mono"
@@ -421,12 +423,12 @@
 
             <div class="qrWrap" style="margin-top:12px;">
               <div>
-                <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
+                <div class="meta" style="margin-bottom:8px;">QR-kod</div>
 
                 <div id="manualQrTap"
                      role="button"
                      tabindex="0"
-                     aria-label="QR-kod manuell (klicka för att kopiera verifieringslänk)"
+                     aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
                      title="Klicka för att kopiera verifieringslänk"
                      style="
                        display:none;
@@ -437,12 +439,12 @@
                        cursor:pointer;
                        max-width: 100%;
                      ">
-                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
+                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod"></div>
                 </div>
               </div>
               <div style="min-width:240px; flex:1;">
                 <div class="small" style="margin-top:0;">
-                  Bra när du fått ett ID i en notering och vill dela en länk snabbt.
+                  Bra när du fått en referens i en notering och vill dela en länk snabbt.
                 </div>
               </div>
             </div>
@@ -466,7 +468,8 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+          Proofy tillhandahåller teknisk verifiering av om ett digitalt underlag är oförändrat efter en viss tidpunkt.
+          Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -555,20 +558,16 @@
   function setBusy(v){
     busy = v;
 
-    // Skapa
     createBtn.disabled = !currentFile || busy;
 
-    // Bakåtkomp
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
 
-    // Nästa steg CTA: bara när vi har länk och inte busy
     if (nextStepBtn){
       if (currentLink && !busy){
         nextStepBtn.href = currentLink;
         nextStepBtn.style.display = "inline-flex";
 
-        // Skapa blir sekundär när vi redan har resultat (mindre “ska jag klicka igen?”)
         createBtn.classList.remove("primary");
         createBtn.classList.add("softSecondary");
       } else {
@@ -746,7 +745,7 @@
     const doCopy = async () => {
       const link = getLink();
       if (!link || link === "—") return;
-      await copyWithFeedback({ text: link, pillEl, okText: "Länk kopierad ✅" });
+      await copyWithFeedback({ text: link, pillEl, okText: "Länk kopierad ✓" });
     };
     qrTapEl.onclick = (e) => { e.preventDefault(); doCopy(); };
     qrTapEl.onkeydown = (e) => {
@@ -794,13 +793,13 @@
     targetEl.innerHTML = "";
 
     if (!payload || payload === "—") {
-      targetEl.innerHTML = `<div class="meta">Ingen länk att koda.</div>`;
+      targetEl.innerHTML = `<div class="meta">Ingen länk att visa.</div>`;
       return;
     }
 
     const ok = await waitForQRCode(2000);
     if (!ok) {
-      targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
+      targetEl.innerHTML = `<div class="meta">QR kunde inte visas just nu.</div>`;
       return;
     }
 
@@ -833,13 +832,13 @@
       }
     } catch (e){
       console.error("QR render failed:", e);
-      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+      targetEl.innerHTML = `<div class="meta">QR kunde inte visas.</div>`;
       return;
     }
 
     const node = await waitForQrNode(targetEl, 3000);
     if (!node) {
-      targetEl.innerHTML = `<div class="meta">QR skapades inte. Testa uppdatera sidan.</div>`;
+      targetEl.innerHTML = `<div class="meta">QR kunde inte skapas. Testa att uppdatera sidan.</div>`;
       return;
     }
 
@@ -852,13 +851,13 @@
   function buildNote(run){
     if (!run) return "—";
     const lines = [];
-    lines.push("PROOFY – Registreringsnotering");
+    lines.push("PROOFY – Notering");
     lines.push("");
-    lines.push(`Verifierings-ID: ${run.id || "—"}`);
-    lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
+    lines.push(`Referens: ${run.id || "—"}`);
+    lines.push(`Verifieringslänk: ${run.link || "—"}`);
     lines.push(`Status: ${run.statusLine || "—"}`);
     if (run.timeSe) lines.push(`Tidpunkt: ${run.timeSe}`);
-    if (run.txHash) lines.push(`Registreringsreferens: ${run.txHash}`);
+    if (run.txHash) lines.push(`Referens för bekräftelse: ${run.txHash}`);
     lines.push("");
     lines.push(`Noterat: ${new Date().toLocaleString("sv-SE")}`);
     return lines.join("\n");
@@ -878,8 +877,7 @@
     if (receiptBtn) receiptBtn.style.display = "none";
     if (nextStepBtn) nextStepBtn.style.display = "none";
 
-    // Återställ skapa-knapptext
-    if (createBtn) createBtn.textContent = "Skapa Verifierings-ID";
+    if (createBtn) createBtn.textContent = "Registrera referens";
 
     if (!currentFile){
       fileInfo.textContent = "Inget underlag valt.";
@@ -893,7 +891,7 @@
 
     fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
 
-    setPill("Redo att skapa");
+    setPill("Redo");
     setBusy(false);
   }
 
@@ -918,24 +916,24 @@
 
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
-      await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
+      await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Kopierad ✓" });
     });
     localIdOut.addEventListener("keydown", async (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
+        await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Kopierad ✓" });
       }
     });
   }
 
   if (idOut){
     idOut.addEventListener("click", async () => {
-      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
+      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2, okText:"Kopierad ✓" });
     });
     idOut.addEventListener("keydown", async (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
+        await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2, okText:"Kopierad ✓" });
       }
     });
   }
@@ -944,7 +942,7 @@
     copyIdIconBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
+      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2, okText:"Kopierad ✓" });
     });
   }
 
@@ -952,32 +950,31 @@
     copyLinkIconBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill });
+      await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill, okText:"Länk kopierad ✓" });
     });
   }
 
   if (copyNoteBtn){
     copyNoteBtn.addEventListener("click", async () => {
       if (!lastRun) return;
-      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill });
+      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✓" });
     });
   }
 
-  // Bakåtkomp (gömda knappar)
   copyIdBtn.addEventListener("click", async () => {
     if (!currentId) return;
     setPill("Kopierar…");
     const ok = await copyTextToClipboard(currentId);
-    setPill(ok ? "ID kopierat ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
+    setPill(ok ? "Kopierad ✓" : "Kunde inte kopiera");
+    setTimeout(() => setPill(currentFile ? "Redo" : "Välj underlag"), 1400);
   });
 
   copyLinkBtn.addEventListener("click", async () => {
     if (!currentLink) return;
     setPill("Kopierar…");
     const ok = await copyTextToClipboard(currentLink);
-    setPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
+    setPill(ok ? "Kopierad ✓" : "Kunde inte kopiera");
+    setTimeout(() => setPill(currentFile ? "Redo" : "Välj underlag"), 1400);
   });
 
   createBtn.addEventListener("click", async () => {
@@ -986,13 +983,13 @@
     const myOp = ++opId;
     setBusy(true);
     resetReport();
-    setPill("Skapar ID lokalt…");
+    setPill("Skapar referens…");
 
     try{
       const id = await sha256Hex(currentFile);
       if (myOp !== opId) return;
 
-      if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt Verifierings-ID.");
+      if (!isIdFormat(id)) throw new Error("Det gick inte att skapa en giltig referens.");
 
       currentId = id;
       currentLink = buildVerifyLink(id);
@@ -1012,7 +1009,6 @@
         receiptBtn.style.display = "inline-flex";
       }
 
-      // ✅ Knapptext efter första körning (sekundär handling)
       createBtn.textContent = "Registrera en ny fil";
 
       if (qrTap) qrTap.style.display = "inline-block";
@@ -1022,21 +1018,20 @@
       applyCopyHover(linkOut, copyLinkIconBtn, true);
 
       attachLongPressCopy(linkOut, () => currentLink, async () => {
-        await copyWithFeedback({ text: currentLink, pillEl: copyLinkPill, okText: "Länk kopierad ✅" });
+        await copyWithFeedback({ text: currentLink, pillEl: copyLinkPill, okText: "Länk kopierad ✓" });
       });
 
       attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
-      // ✅ Visa nästa-steg CTA direkt när länk finns (även om register-API tar tid)
       setBusy(true);
-      setBusy(false); // triggar nextStepBtn-visning via currentLink
+      setBusy(false);
 
-      setPill("Registrerar…");
-      regStatusOut.textContent = "Registrerar…";
+      setPill("Bekräftar…");
+      regStatusOut.textContent = "Bekräftar…";
       timeOut.textContent = "—";
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
-      headline.textContent = "⏳ Registrering pågår…";
+      headline.textContent = "⏳ Bekräftelse pågår…";
 
       const controller = new AbortController();
       const t = setTimeout(() => controller.abort(), 30000);
@@ -1057,18 +1052,22 @@
       if (myOp !== opId) return;
 
       if (!res.ok || data?.ok === false){
-        const detail = data?.detail ? ` | ${data.detail}` : "";
-        throw new Error((data?.error || `Registreringen misslyckades (HTTP ${res.status}).`) + detail);
+        // Viktigt: vi skrämmer inte användaren. Referens/länk är redan korrekt.
+        const msg =
+          "Bekräftelsen kunde inte slutföras just nu. " +
+          "Spara referensen och länken i ärendet och kontrollera status senare.";
+        throw new Error(msg);
       }
 
       const already = !!data.alreadyExists;
+
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
       headline.innerHTML = already
-        ? `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`
-        : `<span class="ok">✅ Registrerad</span> <span class="meta">(referens sparad)</span>`;
+        ? `<span class="ok">✅ Bekräftad</span> <span class="meta">(redan fanns registrerad)</span>`
+        : `<span class="ok">✅ Bekräftad</span> <span class="meta">(referens registrerad)</span>`;
 
-      regStatusOut.textContent = already ? "Redan registrerad" : "Registrerad";
+      regStatusOut.textContent = "Bekräftad";
 
       if (data.timestamp){
         timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
@@ -1085,42 +1084,44 @@
       lastRun = {
         id,
         link: currentLink,
-        statusLine: already ? "Redan registrerad" : "Registrerad",
+        statusLine: "Bekräftad",
         timeSe: data.timestamp ? new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE") : null,
         txHash: data.txHash || null
       };
 
-      setPill("Klart ✅");
+      setPill("Klart ✓");
       setBusy(false);
     } catch (e){
       console.error(e);
       if (myOp !== opId) return;
 
       errorBox.style.display = "block";
-      errorMsg.textContent = (e?.name === "AbortError")
-        ? "Timeout: registreringen tog för lång tid (30s). ID och länk är ändå klara – du kan gå vidare till verifiering."
-        : (e?.message || "Registreringstjänsten kunde inte nås just nu. ID och länk är ändå klara – du kan gå vidare till verifiering.");
+      const friendly =
+        (e?.name === "AbortError")
+          ? "Bekräftelsen tar längre tid än vanligt. Spara referensen och verifieringslänken i ärendet och kontrollera status senare."
+          : (e?.message || "Bekräftelsen kunde inte slutföras just nu. Spara referensen och länken i ärendet och kontrollera status senare.");
+
+      errorMsg.textContent = friendly;
 
       if (currentId && currentLink){
         resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Fel (men ID/länk är klar)";
+        regStatusOut.textContent = "Avvaktar bekräftelse";
         timeOut.textContent = "—";
-        headline.style.borderColor = "rgba(255,80,80,.20)";
-        headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(ID/länk kan ändå användas)</span>`;
+        headline.style.borderColor = "rgba(255,200,80,.22)";
+        headline.style.background = "rgba(255,200,80,.06)";
+        headline.innerHTML = `<span style="font-weight:900;">⏳ Avvaktar bekräftelse</span> <span class="meta">(du kan gå vidare)</span>`;
         debugOut.textContent = errorMsg.textContent;
 
         if (qrTap) qrTap.style.display = "inline-block";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
         attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
-        // ✅ Visa nästa steg även vid register-fel
         setBusy(false);
       }
 
-      setPill("Fel");
+      setPill("Klart (avvaktar)"); /* viktigt: inte "Fel" */
       setBusy(false);
     }
   });
@@ -1136,7 +1137,7 @@
       manualVerifyBtn.href = "/verify.html";
       manualVerifyBtn.style.pointerEvents = "none";
       manualVerifyBtn.style.opacity = ".55";
-      setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
+      setManualPill(clean ? "Ogiltig referens" : "Klistra in referens");
       return null;
     }
 
@@ -1151,26 +1152,25 @@
     manualVerifyBtn.href = link;
     manualVerifyBtn.style.pointerEvents = "auto";
     manualVerifyBtn.style.opacity = "1";
-    setManualPill("Redo ✅");
+    setManualPill("Redo ✓");
 
     attachLongPressCopy(manualLinkOut, () => link, async () => {
-      setManualPill("Länk kopierad ✅");
-      setTimeout(() => setManualPill("Redo ✅"), 1200);
+      setManualPill("Länk kopierad ✓");
+      setTimeout(() => setManualPill("Redo ✓"), 1200);
     });
 
     attachQrCopy(manualQrTap, () => link, manualPill);
     return link;
   }
 
-  // ✅ Manual bygger automatiskt: ingen extra knapp behövs
   manualId.addEventListener("input", () => setManualState(manualId.value));
 
   manualCopyLinkBtn.addEventListener("click", async () => {
     const link = setManualState(manualId.value);
     if (!link) return;
     const ok = await copyTextToClipboard(link);
-    setManualPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
-    setTimeout(() => setManualPill("Redo ✅"), 1200);
+    setManualPill(ok ? "Länk kopierad ✓" : "Kunde inte kopiera");
+    setTimeout(() => setManualPill("Redo ✓"), 1200);
   });
 
   resetReport();
