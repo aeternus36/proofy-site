@@ -97,7 +97,7 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om ett underlag är samma filversion som den som tidigare fastställdes.
+      Kontrollera om underlaget är samma filversion som den som tidigare fastställdes.
       <strong>Underlaget lämnar aldrig din dator.</strong>
     </p>
 
@@ -126,7 +126,7 @@
             </div>
           </div>
 
-          <!-- ✅ Ersätter Öppna länk / Dela / Kopiera länk med ett proffsigt "delningsfält" -->
+          <!-- ✅ Delningsfält -->
           <div style="margin-top:12px;">
             <div class="meta">Delbar verifieringslänk (för kollega/klient)</div>
             <div class="small" style="margin-top:6px; opacity:.9;">Klicka i fältet för att kopiera.</div>
@@ -210,8 +210,8 @@
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            <b>Tips:</b> Ny export/omskanning/konvertering kan ge annan filversion även om dokumentet “ser likadant ut”.
-            Proofy jämför filens <b>tekniska kontrollsumma</b>.
+            <b>Tips:</b> Om underlaget har exporterats om, skannats om eller sparats på nytt kan det räknas som en annan filversion
+            även om det “ser likadant ut”. Proofy jämför filens <b>digitala fingeravtryck</b>.
           </p>
         </section>
 
@@ -260,11 +260,11 @@
                 <span id="copyIdPill" class="pill" style="margin-top:8px;"> </span>
               </div>
 
-              <div class="meta" style="margin-top:12px;">Underlagets tekniska kontrollsumma</div>
+              <div class="meta" style="margin-top:12px;">Underlagets digitala fingeravtryck</div>
               <div class="small" style="margin-top:6px; opacity:.9;">Klicka i fältet för att kopiera.</div>
 
               <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
-                <button type="button" id="copyFileHashIconBtn" aria-label="Kopiera kontrollsumma" title="Kopiera"
+                <button type="button" id="copyFileHashIconBtn" aria-label="Kopiera fingeravtryck" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
@@ -274,7 +274,7 @@
                      tabindex="0"
                      role="button"
                      title="Klicka för att kopiera"
-                     aria-label="Underlagets kontrollsumma (klicka för att kopiera)"
+                     aria-label="Underlagets fingeravtryck (klicka för att kopiera)"
                      style="
                        padding:8px 10px;
                        border-radius:12px;
@@ -341,7 +341,7 @@
               </details>
 
               <div class="meta" style="margin-top:12px; opacity:.85;">
-                Not: Proofy verifierar filversion (identisk/avvikande), inte dokumentets sakliga riktighet.
+                Not: Proofy visar om filversionen är samma eller inte. Det säger inget om innehållets saklighet.
               </div>
             </div>
           </div>
@@ -385,7 +385,6 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const mainEl = $("main") || document.querySelector("main");
 
   const hashInput = $("hashInput");
   const pasteIdBtn = $("pasteIdBtn");
@@ -442,107 +441,6 @@
   let busy = false;
   let opId = 0;
   let lastRun = null;
-
-  // ---- Robusthet: retry/backoff + timeout för /api/verify ----
-  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-  function isRetryableStatus(status){
-    return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
-  }
-
-  async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 12000){
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), timeoutMs);
-    try{
-      const res = await fetch(url, { ...options, signal: controller.signal });
-      const data = await res.json().catch(() => ({}));
-      return { res, data };
-    } finally {
-      clearTimeout(t);
-    }
-  }
-
-  async function safeVerifyLookup(hash){
-    // För verifiering: vi vill vara snabba, men robusta.
-    // Först GET (cache-friendly), fallback POST, med retry vid tillfälliga fel.
-    const attempts = 3;
-    const baseDelay = 450;
-
-    const tryGet = async () => {
-      return await fetchJsonWithTimeout(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" }, 10000);
-    };
-
-    const tryPost = async () => {
-      return await fetchJsonWithTimeout(`/api/verify`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ hash })
-      }, 12000);
-    };
-
-    // 1) GET-försök med retry
-    for (let i = 0; i < attempts; i++){
-      try{
-        const { res, data } = await tryGet();
-        if (res.ok && typeof data?.exists === "boolean") return { ok:true, data, via:"GET" };
-        if (res.ok && typeof data?.exists !== "boolean") {
-          // server svarade men formatet är inte som väntat -> vi försöker POST direkt
-          break;
-        }
-        if (i < attempts - 1 && isRetryableStatus(res.status)) {
-          const jitter = Math.floor(Math.random() * 160);
-          await sleep(baseDelay * (i + 1) + jitter);
-          continue;
-        }
-        break;
-      } catch (e){
-        if (e?.name === "AbortError") {
-          if (i < attempts - 1) continue;
-          break;
-        }
-        // nätfel: försök igen kort
-        if (i < attempts - 1) {
-          const jitter = Math.floor(Math.random() * 160);
-          await sleep(baseDelay * (i + 1) + jitter);
-          continue;
-        }
-        break;
-      }
-    }
-
-    // 2) POST-fallback med retry
-    for (let i = 0; i < attempts; i++){
-      try{
-        const { res, data } = await tryPost();
-        if (res.ok) return { ok:true, data, via:"POST" };
-        if (i < attempts - 1 && isRetryableStatus(res.status)) {
-          const jitter = Math.floor(Math.random() * 160);
-          await sleep(baseDelay * (i + 1) + jitter);
-          continue;
-        }
-        return { ok:false, error: data?.error || `HTTP ${res.status}` };
-      } catch (e){
-        if (e?.name === "AbortError") {
-          if (i < attempts - 1) continue;
-          return { ok:false, error:"Timeout" };
-        }
-        if (i < attempts - 1) {
-          const jitter = Math.floor(Math.random() * 160);
-          await sleep(baseDelay * (i + 1) + jitter);
-          continue;
-        }
-        return { ok:false, error:"Nätverksfel" };
-      }
-    }
-
-    return { ok:false, error:"Kunde inte kontrollera" };
-  }
-
-  function setAriaBusy(v){
-    try{
-      if (mainEl) mainEl.setAttribute("aria-busy", v ? "true" : "false");
-    } catch {}
-  }
 
   function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
@@ -632,8 +530,6 @@
   }
 
   async function sha256Hex(file){
-    // ger UI en chans att måla "Verifierar…" innan vi gör tung I/O
-    await Promise.resolve();
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
     return "0x" + bytesToHex(new Uint8Array(dig));
@@ -680,17 +576,62 @@
     }
   }
 
+  // ✅ För fast verifieringstid (Date)
+  function fmtSeDate(d){
+    try{
+      return new Intl.DateTimeFormat("sv-SE", {
+        timeZone:"Europe/Stockholm",
+        year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit"
+      }).format(d) + " (Europe/Stockholm)";
+    } catch {
+      return "—";
+    }
+  }
+
+  function fmtUtcDate(d){
+    try{
+      return isoUtcNoMs(d);
+    } catch {
+      return "—";
+    }
+  }
+
+  async function fetchVerify(hash){
+    try{
+      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
+    } catch {}
+
+    const r2 = await fetch(`/api/verify`, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hash })
+    });
+    const j2 = await r2.json().catch(() => ({}));
+    if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
+    return { ok:true, data:j2 };
+  }
+
   function buildSummaryText(run){
     if (!run) return "—";
 
     const lines = [];
     lines.push("PROOFY – Verifieringsnotering");
     lines.push("");
+
+    lines.push(`Verifiering genomförd: ${run.verifySe || "—"}`);
+    if (run.verifyUtc) lines.push(`Verifiering genomförd (UTC): ${run.verifyUtc}`);
+    lines.push("");
+
     lines.push(`Verifierings-ID: ${run.refHash || "—"}`);
     if (run.fileName) lines.push(`Underlag: ${run.fileName}`);
     if (run.fileSizeMb != null) lines.push(`Filstorlek: ${run.fileSizeMb} MB`);
-    lines.push(`Resultat: ${run.match ? "OFÖRÄNDRAT UNDERLAG (överensstämmer med referensen)" : "AVVIKELSE (annan filversion än referensen)"}`);
+
+    lines.push(`Resultat: ${run.match ? "OFÖRÄNDRAT (samma filversion som referensen)" : "AVVIKELSE (annan filversion än referensen)"}`);
     lines.push("");
+
     if (run.exists === true) {
       lines.push("Registreringsstatus: Registrerad");
       if (run.regSe) lines.push(`Registreringstid (SE): ${run.regSe}`);
@@ -698,10 +639,9 @@
     } else if (run.exists === false) {
       lines.push("Registreringsstatus: Ej registrerad");
     } else {
-      lines.push("Registreringsstatus: Kunde inte kontrolleras (tillfälligt tekniskt fel)");
+      lines.push("Registreringsstatus: Kunde inte kontrolleras (tillfälligt tekniskt problem)");
     }
-    lines.push("");
-    lines.push(`Tidpunkt för verifiering: ${new Date().toLocaleString("sv-SE")}`);
+
     return lines.join("\n");
   }
 
@@ -788,7 +728,8 @@
       exists: run.exists, // true/false/null
       regSe: run.regSe || "",
       regUtc: run.regUtc || "",
-      verifySe: new Date().toLocaleString("sv-SE")
+      verifySe: run.verifySe || "",
+      verifyUtc: run.verifyUtc || ""
     };
     return `__PROOFY_NOTE__ ${JSON.stringify(payload)}`;
   }
@@ -827,7 +768,10 @@
     errorMsg.textContent = "";
     if (openCertBtn) openCertBtn.style.display = "none";
 
-    if (reportMeta) reportMeta.style.display = "none";
+    if (reportMeta) {
+      reportMeta.style.display = "none";
+      reportMeta.textContent = "Rapport";
+    }
 
     if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
     if (copyIdPill) copyIdPill.style.display = "none";
@@ -859,7 +803,6 @@
 
   function setBusy(v){
     busy = v;
-    setAriaBusy(v);
     verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
     setVerifyBtnTone(!verifyBtn.disabled);
   }
@@ -905,7 +848,7 @@
     if (!id){
       showAlert(
         "⚠️ Ange Verifierings-ID för att kunna verifiera",
-        "Klistra in ID (format: 0x + 64 tecken) eller öppna verifieringslänken du fått.",
+        "Klistra in ID eller öppna verifieringslänken du fått.",
         "err"
       );
       setStatus("Ange Verifierings-ID");
@@ -915,8 +858,8 @@
 
     if (!okId){
       showAlert(
-        "⚠️ Ogiltigt Verifierings-ID",
-        "Kontrollera att ID börjar med 0x och innehåller exakt 64 tecken (0–9, a–f).",
+        "⚠️ Verifierings-ID verkar inte stämma",
+        "Kontrollera att du kopierat hela ID:t. Det brukar börja med 0x och vara en lång rad.",
         "err"
       );
       setStatus("Åtgärd krävs");
@@ -955,6 +898,7 @@
     setIdInUrl(urlId);
   }
 
+  // Clipboard read
   async function readClipboardText(){
     try{
       if (navigator.clipboard && navigator.clipboard.readText) {
@@ -981,7 +925,7 @@
         setIdInUrl(candidate);
         showPill(idPill, "Klistrat ✓");
       } else {
-        showPill(idPill, "Klistrat (kontrollera format)");
+        showPill(idPill, "Klistrat (kontrollera att det är hela ID:t)");
       }
 
       updateValidationUI();
@@ -1045,7 +989,7 @@
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
 
-  // dropzone
+  // dropzone (klick/tangentbord -> öppna filväljaren)
   if (dropZone){
     dropZone.addEventListener("click", () => fileInput.click());
     dropZone.addEventListener("keydown", (e) => {
@@ -1138,8 +1082,8 @@
     const refHash = hashInput.value.trim();
     if (!isValidId(refHash)) {
       showAlert(
-        "⚠️ Verifiering kan inte starta – ogiltigt Verifierings-ID",
-        "Kontrollera ID (0x + 64 tecken).",
+        "⚠️ Verifiering kan inte starta",
+        "Verifierings-ID saknas eller verkar inte stämma. Kontrollera att du kopierat hela ID:t.",
         "err"
       );
       setStatus("Åtgärd krävs");
@@ -1156,24 +1100,30 @@
       return;
     }
 
+    // ✅ FAST verifieringstidpunkt (sätts en gång och återanvänds)
+    const verifiedAt = new Date();
+    const verifySeFixed = fmtSeDate(verifiedAt);
+    const verifyUtcFixed = fmtUtcDate(verifiedAt);
+
     setStatus("Verifierar…");
     setBusy(true);
 
     const myOp = ++opId;
 
     try{
-      // 1) Hash lokalt
       const fileHash = await sha256Hex(currentFile);
       if (myOp !== opId) return;
 
       const match = (fileHash.toLowerCase() === refHash.toLowerCase());
 
-      // 2) Registreringsstatus (robust)
-      const verifyRes = await safeVerifyLookup(refHash);
+      const verifyRes = await fetchVerify(refHash);
       if (myOp !== opId) return;
 
       resultBox.style.display = "block";
-      if (reportMeta) reportMeta.style.display = "block";
+      if (reportMeta) {
+        reportMeta.style.display = "block";
+        reportMeta.textContent = `Verifiering genomförd: ${verifySeFixed}`;
+      }
 
       outHash.textContent = refHash;
       outFileHash.textContent = fileHash;
@@ -1184,7 +1134,7 @@
       if (match) {
         resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
         resultHeadline.style.background = "rgba(80,255,180,.06)";
-        resultHeadline.innerHTML = `<span class="ok">✅ Oförändrat underlag</span> <span class="meta">(överensstämmer med referensen)</span>`;
+        resultHeadline.innerHTML = `<span class="ok">✅ Oförändrat underlag</span> <span class="meta">(samma filversion som referensen)</span>`;
       } else {
         resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
         resultHeadline.style.background = "rgba(255,80,80,.06)";
@@ -1194,31 +1144,30 @@
       setExplainTone(match);
 
       if (match) {
-        outExplainTitle.textContent = "Underlaget överensstämmer med referensen.";
+        outExplainTitle.textContent = "Underlaget stämmer med referensen.";
         outExplainBody.textContent =
-          "Detta innebär att filen är identisk med referensen (samma filversion). Det säger inget om innehållets riktighet – endast att filversionen inte har ändrats.";
+          "Det betyder att det är samma filversion som tidigare fastställdes. Detta säger inget om innehållets saklighet – bara att filversionen är densamma.";
       } else {
-        outExplainTitle.textContent = "Underlaget avviker från referensen.";
+        outExplainTitle.textContent = "Underlaget stämmer inte med referensen.";
         outExplainBody.textContent =
-          "Detta innebär att filen inte är identisk med referensen. Vanliga orsaker: ny export, omskanning, konvertering eller att fel fil valts.";
+          "Det betyder att det är en annan filversion än den som fastställdes. Vanliga orsaker är ny export, ny skanning, konvertering eller att fel fil valts.";
       }
 
-      // exists måste vara true/false/null (inte Boolean()!)
       let exists = null;
       let ts = null;
 
       if (!verifyRes.ok) {
-        outRegStatus.textContent = "Kunde inte kontrollera registreringsstatus (tillfälligt tekniskt problem).";
+        outRegStatus.textContent = "Kunde inte kontrollera registreringsstatus just nu.";
         outRegSe.textContent = "—";
         outRegUtc.textContent = "—";
       } else {
         const data = verifyRes.data || {};
-        exists = (typeof data.exists === "boolean") ? data.exists : null;
+        exists = Boolean(data.exists);
         ts = data.timestamp ? Number(data.timestamp) : null;
 
-        outRegStatus.textContent = (exists === true) ? "Registrerad" : (exists === false ? "Ej registrerad" : "Kunde inte kontrolleras");
-        outRegSe.textContent = (exists === true && ts) ? fmtSe(ts) : "—";
-        outRegUtc.textContent = (exists === true && ts) ? fmtUtc(ts) : "—";
+        outRegStatus.textContent = exists ? "Registrerad" : "Ej registrerad";
+        outRegSe.textContent = (exists && ts) ? fmtSe(ts) : "—";
+        outRegUtc.textContent = (exists && ts) ? fmtUtc(ts) : "—";
       }
 
       if (openCertBtn) {
@@ -1230,10 +1179,14 @@
         refHash,
         match,
         exists,
-        regSe: (exists === true && ts) ? fmtSe(ts) : null,
-        regUtc: (exists === true && ts) ? fmtUtc(ts) : null,
+        regSe: (exists && ts) ? fmtSe(ts) : null,
+        regUtc: (exists && ts) ? fmtUtc(ts) : null,
         fileName: currentFile?.name || "",
-        fileSizeMb: currentFile ? (currentFile.size/1024/1024).toFixed(2) : null
+        fileSizeMb: currentFile ? (currentFile.size/1024/1024).toFixed(2) : null,
+
+        // ✅ Fast verifieringstid
+        verifySe: verifySeFixed,
+        verifyUtc: verifyUtcFixed
       };
 
       const summaryText = buildSummaryText(lastRun);
@@ -1247,15 +1200,10 @@
 
       setStatus("Verifiering klar");
       setBusy(false);
-
     } catch (e){
       if (myOp !== opId) return;
-
       errorBox.style.display = "block";
-      errorMsg.textContent = (e?.name === "AbortError")
-        ? "Timeout: verifieringen tog för lång tid. Försök igen."
-        : (e?.message || "Tekniskt fel.");
-
+      errorMsg.textContent = e?.message || "Tekniskt fel.";
       setStatus("Åtgärd krävs");
       setBusy(false);
     }
