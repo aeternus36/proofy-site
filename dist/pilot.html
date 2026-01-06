@@ -89,23 +89,13 @@
     </div>
 
     <div class="card content" style="margin-top:14px;">
-      <h2>Rekommenderad rutin</h2>
-      <ol style="margin:10px 0 0; padding-left:18px;">
-        <li>Registrera underlag som är särskilt viktiga (bokslut, rapporter, avtal).</li>
-        <li>Spara verifierings-ID i ärendet/noteringar.</li>
-        <li>Vid granskning: verifiera underlaget och visa match/ingen match.</li>
-      </ol>
-
-      <div class="hr"></div>
-
-      <!-- NYTT: Pris & betalning -->
       <h2>Pris & betalning</h2>
 
       <div class="grid3" style="margin-top:12px;">
         <div class="tile">
           <b>Pilot (30 dagar)</b>
           <span class="small">
-            <b>4 900 kr/mån</b> exkl. moms per byrå under pilotperioden.
+            <b>4 900 kr</b> exkl. moms (pilotperiod).
           </span>
         </div>
         <div class="tile">
@@ -117,16 +107,24 @@
         <div class="tile">
           <b>Efter pilot</b>
           <span class="small">
-            Fortsättning sker på offert/avtal (ingen automatisk bindning via webbformuläret).
+            Fortsättning sker på offert/avtal (ingen automatisk bindning via webben).
           </span>
         </div>
       </div>
 
       <p class="small" style="margin-top:12px; margin-bottom:0;">
-        <b>Viktigt:</b> Webbverktygen kan ligga öppna för test, men <b>pilot/produktion för byrå</b> körs enligt överenskomna villkor
-        (t.ex. supportnivå, användning och ev. begränsningar). Vill ni att registrering/verifiering ska kräva inlogg/pilot-nyckel senare,
-        så löser vi det i nästa steg.
+        <b>Demo vs pilot:</b> Verktygen på webbplatsen kan användas för test.
+        Pilot innebär överenskomna villkor för byråanvändning (t.ex. supportnivå och rimliga begränsningar mot missbruk).
       </p>
+
+      <div class="hr"></div>
+
+      <h2>Rekommenderad rutin</h2>
+      <ol style="margin:10px 0 0; padding-left:18px;">
+        <li>Registrera underlag som är särskilt viktiga (bokslut, rapporter, avtal).</li>
+        <li>Spara verifierings-ID i ärendet/noteringar.</li>
+        <li>Vid granskning: verifiera underlaget och visa match/ingen match.</li>
+      </ol>
 
       <div class="hr"></div>
 
@@ -200,9 +198,9 @@
     <div class="foot">
       <div>
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
+        <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -287,7 +285,6 @@
 
   async function refreshToken(){
     try{
-      // proofy_ts = klientens tid (för extra sanity-check server-side)
       const now = Date.now();
       if (tsEl) tsEl.value = String(now);
 
@@ -295,7 +292,6 @@
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || data.ok !== true || !data.token){
-        // Om token inte går att hämta vill vi ge tydlig status (men inte blocka sidan helt)
         setStatus("Kunde inte initiera formulär (token). Ladda om sidan och försök igen.", "err");
         return false;
       }
@@ -330,7 +326,6 @@
       return;
     }
 
-    // Säkerställ token precis vid submit (kan ha gått ut)
     const okToken = await refreshToken();
     if (!okToken){
       disableForm(false);
@@ -366,7 +361,6 @@
 
       setStatus("Skickat ✅ Vi återkommer inom 1–2 arbetsdagar.", "ok");
       form.reset();
-      // Redirect till tack-sidan (som på kontakten)
       setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
 
     } catch (err){
@@ -375,7 +369,6 @@
     }
   });
 
-  // Första tokenförsök vid laddning (visar inget “Redo”)
   refreshToken();
 })();
 </script>
