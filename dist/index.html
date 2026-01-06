@@ -100,8 +100,13 @@
         <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
       </div>
 
+      <!-- NYTT: Prisrad (B2B-optimalt: tydligt, kort, faktura) -->
+      <p class="small" style="margin-top:10px; margin-bottom:0;">
+        Pilot 30 dagar: <b>4 900 kr</b> exkl. moms · Faktura · Ingen bindning efter pilot.
+      </p>
+
       <p class="small" style="margin-top:8px; margin-bottom:0;">
-        Testa i verkliga ärenden. Fast månadspris. Ingen bindning efter pilot.
+        Testa i verkliga ärenden. Fast upplägg. Tydliga ramar.
       </p>
 
       <div class="hr"></div>
@@ -192,12 +197,10 @@
         </p>
 
         <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
-          <!-- Honeypot (gamla) -->
           <p style="display:none;">
             <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
           </p>
 
-          <!-- Honeypot (nya) - extra anti-autofill -->
           <input
             type="text"
             name="company_website"
@@ -209,7 +212,6 @@
             style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
           />
 
-          <!-- Anti-spam token + timestamp (sätts vid tokenhämtning) -->
           <input type="hidden" id="proofy_token" name="proofy_token" value="" />
           <input type="hidden" id="proofy_ts" name="proofy_ts" value="" />
 
@@ -276,7 +278,7 @@
     <div class="foot">
       <div>
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
+        <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
           Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
         </div>
@@ -367,7 +369,7 @@
       const data = await res.json();
       if (data && data.ok === true && data.token) {
         if (t) t.value = data.token;
-        if (ts) ts.value = String(Date.now()); // <-- sätts HÄR (sidans token-start)
+        if (ts) ts.value = String(Date.now());
         return true;
       }
       return false;
@@ -376,7 +378,6 @@
     }
   }
 
-  // Init token direkt
   initAntiSpamToken().then(ok => {
     if (!ok) setStatus("Kunde inte initiera formulärsäkerhet. Ladda om sidan och försök igen.", "err");
   });
@@ -385,13 +386,11 @@
     e.preventDefault();
     clearFieldHints();
 
-    // NOLLSTÄLL honeypots precis innan vi läser FormData (hindrar autofill-spöken)
     const hpNewEl = form.querySelector("input[name='company_website']");
     const hpOldEl = form.querySelector("input[name='bot-field']");
     if (hpNewEl) hpNewEl.value = "";
     if (hpOldEl) hpOldEl.value = "";
 
-    // Säkerställ token finns, annars hämta igen
     const tokenEl = document.getElementById("proofy_token");
     if (!tokenEl || !String(tokenEl.value || "").trim()) {
       const ok = await initAntiSpamToken();
