@@ -10,6 +10,21 @@
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
+
+  <style>
+    /* Minimal a11y-failsafe (om global .sr-only saknas) */
+    .sr-only{
+      position:absolute !important;
+      width:1px !important;
+      height:1px !important;
+      padding:0 !important;
+      margin:-1px !important;
+      overflow:hidden !important;
+      clip:rect(0,0,0,0) !important;
+      white-space:nowrap !important;
+      border:0 !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -48,7 +63,6 @@
             <a class="mnavLink" href="/terms.html">Villkor</a>
             <a class="mnavLink" href="/cookies.html">Cookies</a>
 
-            <!-- Viktigt: produkt-claim här (inte “policy-lista”) -->
             <div class="mnavNote">Verifiering · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
           </div>
@@ -81,8 +95,14 @@
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
-          <div id="dropZone" class="drop" style="margin-top:10px;">
-            Dra &amp; släpp underlag här
+          <div id="dropZone"
+               class="drop"
+               role="button"
+               tabindex="0"
+               aria-label="Dra och släpp underlag här, eller tryck för att välja fil"
+               style="margin-top:10px;">
+            Dra &amp; släpp underlag här<br />
+            <span class="small" style="opacity:.9;">Tryck här för att välja fil</span>
           </div>
 
           <div id="fileInfo"
@@ -92,13 +112,13 @@
           </div>
 
           <div class="actions" style="margin-top:14px;">
-            <button class="btn primary" id="createBtn" disabled>Skapa &amp; registrera</button>
+            <button class="btn primary" id="createBtn" disabled>Skapa ID &amp; registrera referens</button>
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
             <a class="btn soft" id="openVerifyBtn" href="/verify.html" style="pointer-events:none; opacity:.55;">Öppna verifiering</a>
             <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna registreringskvitto</a>
 
-            <span id="statusPill" class="pill">Välj underlag</span>
+            <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Välj underlag</span>
           </div>
 
           <div id="localIdBox" style="display:none; margin-top:12px;">
@@ -146,17 +166,20 @@
                  border-radius: 16px;
                  padding: 12px 14px;
                ">
-            <div style="font-weight:950; margin-bottom:6px;">Så fungerar det i en byråprocess</div>
+            <div style="font-weight:950; margin-bottom:6px;">Så används det i en byråprocess</div>
             <div class="small">
               1) Välj filversionen som ska vara <b>referens</b>.<br/>
-              2) Proofy skapar ett Verifierings-ID lokalt (ingen uppladdning).<br/>
-              3) Du får en delbar länk + QR för att dela till kollega/klient/akt.<br/><br/>
-              <b>QR är för att skanna med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att “scanna sin egen skärm” med kameran.
+              2) Proofy skapar ett Verifierings-ID lokalt (<b>ingen uppladdning</b>).<br/>
+              3) Du får en delbar länk + QR för kollega/klient/akt.<br/><br/>
+              <b>QR är för skanning med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att skanna sin egen skärm med kameran.
             </div>
           </div>
 
           <div id="resultBox" style="display:none; margin-top:12px;">
             <div id="headline"
+                 role="status"
+                 aria-live="polite"
+                 aria-atomic="true"
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
@@ -217,6 +240,11 @@
                 <span id="copyLinkPill" class="pill" style="display:none; margin-top:8px;"></span>
               </div>
 
+              <p class="small" style="margin:10px 0 0; opacity:.95;">
+                <b>Obs:</b> Om registreringen skulle misslyckas kan ni fortfarande använda ID och länk internt.
+                Försök igen, eller mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och ange Verifierings-ID.
+              </p>
+
               <div class="hr" style="margin-top:14px;"></div>
 
               <div class="qrWrap" style="margin-top:12px;">
@@ -248,7 +276,7 @@
 
                 <div style="min-width:240px; flex:1;">
                   <div class="meta">Registreringsstatus</div>
-                  <div id="regStatusOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
                   <div class="meta" style="margin-top:10px;">Registreringstid</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
@@ -280,7 +308,7 @@
             </div>
           </div>
 
-          <div id="errorBox" style="display:none; margin-top:12px;">
+          <div id="errorBox" style="display:none; margin-top:12px;" role="status" aria-live="polite" aria-atomic="true">
             <div class="err">Tillfälligt tekniskt problem</div>
             <div id="errorMsg" class="mono" style="margin-top:8px;"></div>
           </div>
@@ -306,7 +334,7 @@
               <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
               <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
               <a class="btn soft" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
-              <span id="manualPill" class="pill">Klistra in ID</span>
+              <span id="manualPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Klistra in ID</span>
             </div>
           </div>
 
@@ -366,9 +394,6 @@
       </div>
     </section>
 
-    <p class="meta" style="margin-top:14px">
-      Proofy lagrar inte dokument. Verifiering bygger på att jämföra filversioner mot en registrerad referens.
-    </p>
   </div>
 </main>
 
@@ -786,14 +811,26 @@
       return;
     }
 
+    const sizeMb = (currentFile.size/1024/1024);
+    const niceSize = (sizeMb < 10) ? sizeMb.toFixed(2) : sizeMb.toFixed(1);
+
     fileInfo.textContent =
-      `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`;
+      `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
 
     setPill("Redo att skapa");
     setBusy(false);
   }
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
+
+  // Dropzone: klick/tangentbord öppnar filväljaren
+  dropZone.addEventListener("click", () => fileInput.click());
+  dropZone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
 
   dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
@@ -982,8 +1019,8 @@
 
       errorBox.style.display = "block";
       errorMsg.textContent = (e?.name === "AbortError")
-        ? "Timeout: registreringen tog för lång tid (30s). Försök igen."
-        : (e?.message || "Registreringstjänsten kunde inte nås just nu.");
+        ? "Timeout: registreringen tog för lång tid (30s). Försök igen, eller mejla kontakt@proofy.se och ange Verifierings-ID."
+        : (e?.message || "Registreringstjänsten kunde inte nås just nu. Försök igen, eller mejla kontakt@proofy.se och ange Verifierings-ID.");
 
       if (currentId && currentLink){
         resultBox.style.display = "block";
@@ -994,7 +1031,7 @@
         timeOut.textContent = "—";
         headline.style.borderColor = "rgba(255,80,80,.20)";
         headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(ID/länk kan ändå delas)</span>`;
+        headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(ID/länk kan ändå användas)</span>`;
         debugOut.textContent = errorMsg.textContent;
 
         if (qrTap) qrTap.style.display = "inline-block";
