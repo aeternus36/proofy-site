@@ -247,7 +247,12 @@
         </div>
 
         <p class="small" style="margin:10px 0 0;">
+          <b>Obs:</b> Formuläret skickar endast kontaktuppgifter och ev. beskrivning – <b>inga filer</b>.
+        </p>
+
+        <p class="small" style="margin:10px 0 0;">
           <b>Nästa steg:</b> Efter skickat förslag återkommer vi med uppstartsförslag och bekräftar startdatum samt fakturauppgifter.
+          Om ni vill snabba på: mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och skriv <b>“Pilot”</b> i ämnesraden.
         </p>
       </form>
 
@@ -360,14 +365,14 @@
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || data.ok !== true || !data.token){
-        setStatus("Kunde inte initiera formuläret. Ladda om sidan och försök igen.", "err");
+        setStatus("Kunde inte initiera formuläret. Ladda om sidan och försök igen. Alternativt: mejla kontakt@proofy.se (ämne: Pilot).", "err");
         return false;
       }
 
       if (tokenEl) tokenEl.value = String(data.token);
       return true;
     } catch (e){
-      setStatus("Kunde inte initiera formuläret. Kontrollera nätet och försök igen.", "err");
+      setStatus("Kunde inte initiera formuläret. Kontrollera nätet och försök igen. Alternativt: mejla kontakt@proofy.se (ämne: Pilot).", "err");
       return false;
     }
   }
@@ -390,7 +395,7 @@
     const hpOld = fdCheck.get("bot-field");
     const hpNew = fdCheck.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
-      setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).", "err");
       disableForm(false);
       return;
     }
@@ -422,11 +427,11 @@
 
       if (!res.ok || data.ok !== true || data.sent !== true){
         if (data.ignored === true){
-          setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
+          setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).", "err");
           disableForm(false);
           return;
         }
-        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
+        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).`;
         setStatus(msg, "err");
         disableForm(false);
         return;
@@ -437,7 +442,7 @@
       setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
 
     } catch (err){
-      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
+      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).", "err");
       disableForm(false);
     }
   });
