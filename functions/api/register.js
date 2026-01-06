@@ -1,26 +1,21 @@
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  isHex,
-} from "viem";
+import { createPublicClient, createWalletClient, http, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
 /**
- * ABI som matchar ditt Solidity-kontrakt "Proofy" exakt.
+ * Proofy /api/register
+ * - Tar emot { hash: "0x" + 64 hex }
+ * - Läser först (gratis) om den redan finns: get(bytes32) -> (bool ok, uint64 ts)
+ * - Om saknas: skriver registerIfMissing(bytes32)
+ * - Väntar på kvitto (1 conf) för att minimera "false fail"
+ * - Läser igen och returnerar timestamp
+ *
+ * Revisionsvänligt:
+ * - Inga filer hanteras, endast hash.
+ * - Om redan registrerad => behandlas som "OK", inte fel.
  */
+
 const PROOFY_ABI = [
-  {
-    type: "function",
-    name: "registerIfMissing",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "refId", type: "bytes32" }],
-    outputs: [
-      { name: "created", type: "bool" },
-      { name: "ts", type: "uint64" },
-    ],
-  },
   {
     type: "function",
     name: "get",
@@ -31,13 +26,23 @@ const PROOFY_ABI = [
       { name: "ts", type: "uint64" },
     ],
   },
+  {
+    type: "function",
+    name: "registerIfMissing",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "refId", type: "bytes32" }],
+    outputs: [
+      { name: "created", type: "bool" },
+      { name: "ts", type: "uint64" },
+    ],
+  },
 ];
 
 function json(status, obj, origin) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
   if (origin) headers["Access-Control-Allow-Origin"] = origin;
   return new Response(JSON.stringify(obj), { status, headers });
@@ -52,7 +57,7 @@ function corsPreflight(origin) {
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Max-Age": "86400",
-      "Vary": "Origin",
+      Vary: "Origin",
     },
   });
 }
@@ -100,9 +105,9 @@ function sanitizeError(e) {
 }
 
 function toSafeUint64(ts) {
-  // uint64 -> alltid safe som Number (max ~1.8e19, men timestamps är små)
   const v = BigInt(ts ?? 0n);
   if (v <= 0n) return 0;
+  // Timestamps ryms alltid i Number i praktiken, men vi är defensiva.
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
   return v <= maxSafe ? Number(v) : Number(maxSafe);
 }
@@ -117,7 +122,6 @@ async function readGet({ publicClient, contractAddress, hash }) {
 
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
-
   return { exists, timestamp };
 }
 
@@ -171,27 +175,41 @@ export async function onRequest({ request, env }) {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const transport = http(rpcUrl, {
-      fetchOptions: { signal: controller.signal },
-      // (Valfritt) mindre aggressiv polling för Amoy
-      // batch: true,
-    });
+    const transport = http(rpcUrl, { fetchOptions: { signal: controller.signal } });
 
     const publicClient = createPublicClient({
       chain: polygonAmoy,
       transport,
     });
 
-    const account = privateKeyToAccount(privateKey);
+    // 1) Pre-read: redan registrerad?
+    const pre = await readGet({ publicClient, contractAddress, hash });
+    if (pre.exists) {
+      return json(
+        200,
+        {
+          ok: true,
+          status: "already_registered",
+          exists: true,
+          timestamp: pre.timestamp,
+          txHash: null,
+        },
+        origin
+      );
+    }
 
+    // 2) Not registered -> write (idempotent i kontraktet också)
+    const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
       chain: polygonAmoy,
       transport,
     });
 
-    // 1) Simulera för att få korrekt request (gas/args/calldata)
-    //    + få en tidig, tydlig revert om något är fel.
+    // simulateContract ger:
+    // - korrekt calldata
+    // - bättre fel om revert
+    // - ofta bättre gas-parametrar än manuell estimate + buffer
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
@@ -200,21 +218,19 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
-    // 2) Skicka transaktionen
     const txHash = await walletClient.writeContract(sim.request);
 
-    // 3) Vänta på kvitto (1 conf) så UI slipper "false fail"
     await publicClient.waitForTransactionReceipt({
       hash: txHash,
       confirmations: 1,
     });
 
-    // 4) Läs efteråt för determinism (timestamp till UI)
+    // 3) Post-read: hämta timestamp till UI
     const post = await readGet({ publicClient, contractAddress, hash });
 
     if (!post.exists || post.timestamp === 0) {
-      // Extremt ovanligt: tx gick igenom men vi kan inte läsa direkt.
-      // UI bör visa "registrerat men kunde inte bekräftas ännu" om du vill.
+      // Tx gick igenom, men RPC kan vara seg att indexera state ibland.
+      // Returnera "pending_readback" istället för "misslyckades".
       return json(
         200,
         {
@@ -234,9 +250,6 @@ export async function onRequest({ request, env }) {
         ok: true,
         status: "registered",
         exists: true,
-        // Om den redan fanns kommer registerIfMissing returnera created=false,
-        // men vi läser inte returvärdet här eftersom writeContract inte returnerar det.
-        // Om du vill visa created: true/false krävs antingen event-parsing eller ett pre-read.
         timestamp: post.timestamp,
         txHash,
       },
@@ -255,10 +268,9 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // För revisor-trygg UX: returnera "tillfälligt" för vanliga RPC/gas-problem
     const detail = sanitizeError(e);
     const isProbablyTemporary =
-      /timeout|temporarily|rate|limit|429|503|gateway|rpc|network|nonce/i.test(
+      /timeout|temporarily|rate|limit|429|503|gateway|rpc|network|nonce|underpriced|insufficient funds/i.test(
         detail
       );
 
@@ -266,9 +278,7 @@ export async function onRequest({ request, env }) {
       isProbablyTemporary ? 503 : 500,
       {
         ok: false,
-        error: isProbablyTemporary
-          ? "Temporary unavailable"
-          : "Register failed",
+        error: isProbablyTemporary ? "Temporary unavailable" : "Register failed",
         detail,
       },
       origin
