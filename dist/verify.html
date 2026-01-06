@@ -385,6 +385,7 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
+  const mainEl = $("main") || document.querySelector("main");
 
   const hashInput = $("hashInput");
   const pasteIdBtn = $("pasteIdBtn");
@@ -441,6 +442,107 @@
   let busy = false;
   let opId = 0;
   let lastRun = null;
+
+  // ---- Robusthet: retry/backoff + timeout för /api/verify ----
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  function isRetryableStatus(status){
+    return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
+  }
+
+  async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 12000){
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+    try{
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async function safeVerifyLookup(hash){
+    // För verifiering: vi vill vara snabba, men robusta.
+    // Först GET (cache-friendly), fallback POST, med retry vid tillfälliga fel.
+    const attempts = 3;
+    const baseDelay = 450;
+
+    const tryGet = async () => {
+      return await fetchJsonWithTimeout(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" }, 10000);
+    };
+
+    const tryPost = async () => {
+      return await fetchJsonWithTimeout(`/api/verify`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ hash })
+      }, 12000);
+    };
+
+    // 1) GET-försök med retry
+    for (let i = 0; i < attempts; i++){
+      try{
+        const { res, data } = await tryGet();
+        if (res.ok && typeof data?.exists === "boolean") return { ok:true, data, via:"GET" };
+        if (res.ok && typeof data?.exists !== "boolean") {
+          // server svarade men formatet är inte som väntat -> vi försöker POST direkt
+          break;
+        }
+        if (i < attempts - 1 && isRetryableStatus(res.status)) {
+          const jitter = Math.floor(Math.random() * 160);
+          await sleep(baseDelay * (i + 1) + jitter);
+          continue;
+        }
+        break;
+      } catch (e){
+        if (e?.name === "AbortError") {
+          if (i < attempts - 1) continue;
+          break;
+        }
+        // nätfel: försök igen kort
+        if (i < attempts - 1) {
+          const jitter = Math.floor(Math.random() * 160);
+          await sleep(baseDelay * (i + 1) + jitter);
+          continue;
+        }
+        break;
+      }
+    }
+
+    // 2) POST-fallback med retry
+    for (let i = 0; i < attempts; i++){
+      try{
+        const { res, data } = await tryPost();
+        if (res.ok) return { ok:true, data, via:"POST" };
+        if (i < attempts - 1 && isRetryableStatus(res.status)) {
+          const jitter = Math.floor(Math.random() * 160);
+          await sleep(baseDelay * (i + 1) + jitter);
+          continue;
+        }
+        return { ok:false, error: data?.error || `HTTP ${res.status}` };
+      } catch (e){
+        if (e?.name === "AbortError") {
+          if (i < attempts - 1) continue;
+          return { ok:false, error:"Timeout" };
+        }
+        if (i < attempts - 1) {
+          const jitter = Math.floor(Math.random() * 160);
+          await sleep(baseDelay * (i + 1) + jitter);
+          continue;
+        }
+        return { ok:false, error:"Nätverksfel" };
+      }
+    }
+
+    return { ok:false, error:"Kunde inte kontrollera" };
+  }
+
+  function setAriaBusy(v){
+    try{
+      if (mainEl) mainEl.setAttribute("aria-busy", v ? "true" : "false");
+    } catch {}
+  }
 
   function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
@@ -530,6 +632,8 @@
   }
 
   async function sha256Hex(file){
+    // ger UI en chans att måla "Verifierar…" innan vi gör tung I/O
+    await Promise.resolve();
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
     return "0x" + bytesToHex(new Uint8Array(dig));
@@ -574,23 +678,6 @@
     } catch {
       return "—";
     }
-  }
-
-  async function fetchVerify(hash){
-    try{
-      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
-      const j = await r.json().catch(() => ({}));
-      if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
-    } catch {}
-
-    const r2 = await fetch(`/api/verify`, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash })
-    });
-    const j2 = await r2.json().catch(() => ({}));
-    if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
-    return { ok:true, data:j2 };
   }
 
   function buildSummaryText(run){
@@ -772,6 +859,7 @@
 
   function setBusy(v){
     busy = v;
+    setAriaBusy(v);
     verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
     setVerifyBtnTone(!verifyBtn.disabled);
   }
@@ -803,7 +891,6 @@
     const id = (hashInput.value || "").trim();
     const okId = isValidId(id);
 
-    // steg 3: enable/disable rensa
     if (clearIdBtn) clearIdBtn.disabled = !id;
 
     updateSelfLinkUI();
@@ -868,7 +955,6 @@
     setIdInUrl(urlId);
   }
 
-  // Clipboard read
   async function readClipboardText(){
     try{
       if (navigator.clipboard && navigator.clipboard.readText) {
@@ -959,7 +1045,7 @@
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
 
-  // dropzone (klick/tangentbord -> öppna filväljaren)
+  // dropzone
   if (dropZone){
     dropZone.addEventListener("click", () => fileInput.click());
     dropZone.addEventListener("keydown", (e) => {
@@ -1076,12 +1162,14 @@
     const myOp = ++opId;
 
     try{
+      // 1) Hash lokalt
       const fileHash = await sha256Hex(currentFile);
       if (myOp !== opId) return;
 
       const match = (fileHash.toLowerCase() === refHash.toLowerCase());
 
-      const verifyRes = await fetchVerify(refHash);
+      // 2) Registreringsstatus (robust)
+      const verifyRes = await safeVerifyLookup(refHash);
       if (myOp !== opId) return;
 
       resultBox.style.display = "block";
@@ -1115,6 +1203,7 @@
           "Detta innebär att filen inte är identisk med referensen. Vanliga orsaker: ny export, omskanning, konvertering eller att fel fil valts.";
       }
 
+      // exists måste vara true/false/null (inte Boolean()!)
       let exists = null;
       let ts = null;
 
@@ -1124,12 +1213,12 @@
         outRegUtc.textContent = "—";
       } else {
         const data = verifyRes.data || {};
-        exists = Boolean(data.exists);
+        exists = (typeof data.exists === "boolean") ? data.exists : null;
         ts = data.timestamp ? Number(data.timestamp) : null;
 
-        outRegStatus.textContent = exists ? "Registrerad" : "Ej registrerad";
-        outRegSe.textContent = (exists && ts) ? fmtSe(ts) : "—";
-        outRegUtc.textContent = (exists && ts) ? fmtUtc(ts) : "—";
+        outRegStatus.textContent = (exists === true) ? "Registrerad" : (exists === false ? "Ej registrerad" : "Kunde inte kontrolleras");
+        outRegSe.textContent = (exists === true && ts) ? fmtSe(ts) : "—";
+        outRegUtc.textContent = (exists === true && ts) ? fmtUtc(ts) : "—";
       }
 
       if (openCertBtn) {
@@ -1141,8 +1230,8 @@
         refHash,
         match,
         exists,
-        regSe: (exists && ts) ? fmtSe(ts) : null,
-        regUtc: (exists && ts) ? fmtUtc(ts) : null,
+        regSe: (exists === true && ts) ? fmtSe(ts) : null,
+        regUtc: (exists === true && ts) ? fmtUtc(ts) : null,
         fileName: currentFile?.name || "",
         fileSizeMb: currentFile ? (currentFile.size/1024/1024).toFixed(2) : null
       };
@@ -1158,10 +1247,15 @@
 
       setStatus("Verifiering klar");
       setBusy(false);
+
     } catch (e){
       if (myOp !== opId) return;
+
       errorBox.style.display = "block";
-      errorMsg.textContent = e?.message || "Tekniskt fel.";
+      errorMsg.textContent = (e?.name === "AbortError")
+        ? "Timeout: verifieringen tog för lång tid. Försök igen."
+        : (e?.message || "Tekniskt fel.");
+
       setStatus("Åtgärd krävs");
       setBusy(false);
     }
