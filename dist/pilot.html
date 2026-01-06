@@ -33,6 +33,19 @@
       padding: 12px 14px;
     }
     .tile b{ display:block; margin-bottom:6px; }
+
+    /* Minimal a11y-failsafe (om global .sr-only saknas) */
+    .sr-only{
+      position:absolute !important;
+      width:1px !important;
+      height:1px !important;
+      padding:0 !important;
+      margin:-1px !important;
+      overflow:hidden !important;
+      clip:rect(0,0,0,0) !important;
+      white-space:nowrap !important;
+      border:0 !important;
+    }
   </style>
 </head>
 
@@ -136,11 +149,6 @@
         </div>
       </div>
 
-      <p class="small" style="margin-top:12px; margin-bottom:0;">
-        <b>Demo vs pilot:</b> Verktygen på webbplatsen kan användas för test.
-        Pilot innebär överenskomna villkor för byråanvändning (t.ex. supportnivå och rimliga begränsningar mot missbruk).
-      </p>
-
       <div class="hr"></div>
 
       <h2>Användning &amp; avgränsning</h2>
@@ -165,7 +173,28 @@
 
       <h2>Starta pilot</h2>
 
-      <form name="pilot" id="pilotForm" action="/api/pilot" method="POST" novalidate>
+      <div class="grid3" style="margin-top:12px;">
+        <div class="tile">
+          <b>Integritet</b>
+          <span class="small">
+            Hash beräknas lokalt i webbläsaren. <b>Inga filer laddas upp</b> när ni registrerar/verifierar.
+          </span>
+        </div>
+        <div class="tile">
+          <b>Dokumentation</b>
+          <span class="small">
+            Läs mer: <a href="/security.html">Säkerhet</a> och <a href="/privacy.html">Integritet</a>.
+          </span>
+        </div>
+        <div class="tile">
+          <b>Supportväg</b>
+          <span class="small">
+            Mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> om ni har frågor inför start.
+          </span>
+        </div>
+      </div>
+
+      <form name="pilot" id="pilotForm" action="/api/pilot" method="POST" novalidate style="margin-top:14px;">
         <!-- Honeypot (gamla) -->
         <p style="display:none;">
           <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
@@ -193,7 +222,7 @@
           </div>
           <div>
             <label class="label" for="p-email">E-post <span class="req">*</span></label>
-            <input id="p-email" name="email" type="email" required data-required="true" autocomplete="email" />
+            <input id="p-email" name="email" type="email" required data-required="true" autocomplete="email" inputmode="email" />
           </div>
           <div>
             <label class="label" for="p-company">Byrå/Företag <span class="req">*</span></label>
@@ -201,7 +230,7 @@
           </div>
           <div>
             <label class="label" for="p-role">Roll</label>
-            <input id="p-role" name="role" type="text" />
+            <input id="p-role" name="role" type="text" autocomplete="organization-title" placeholder="t.ex. revisor, redovisningskonsult, partner" />
           </div>
         </div>
 
@@ -214,8 +243,12 @@
         <div class="formActions">
           <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
           <span class="small">Vi återkommer normalt inom 1–2 arbetsdagar.</span>
-          <span id="pilotStatus" class="pill" style="margin-left:12px;" aria-live="polite"></span>
+          <span id="pilotStatus" class="pill" style="margin-left:12px;" aria-live="polite" aria-atomic="true" role="status"></span>
         </div>
+
+        <p class="small" style="margin:10px 0 0;">
+          <b>Nästa steg:</b> Efter skickat förslag återkommer vi med uppstartsförslag och bekräftar startdatum samt fakturauppgifter.
+        </p>
       </form>
 
       <div class="hr"></div>
@@ -327,14 +360,14 @@
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || data.ok !== true || !data.token){
-        setStatus("Kunde inte initiera formulär (token). Ladda om sidan och försök igen.", "err");
+        setStatus("Kunde inte initiera formuläret. Ladda om sidan och försök igen.", "err");
         return false;
       }
 
       if (tokenEl) tokenEl.value = String(data.token);
       return true;
     } catch (e){
-      setStatus("Kunde inte initiera formulär (token). Kontrollera nätet och försök igen.", "err");
+      setStatus("Kunde inte initiera formuläret. Kontrollera nätet och försök igen.", "err");
       return false;
     }
   }
@@ -343,9 +376,10 @@
     e.preventDefault();
     clearFieldHints();
 
-    const fd = new FormData(form);
+    // Validera först på användarens input
+    const fdCheck = new FormData(form);
 
-    const missing = firstMissingRequiredFromFormData(fd);
+    const missing = firstMissingRequiredFromFormData(fdCheck);
     if (missing){
       hintField(missing);
       missing.focus();
@@ -353,14 +387,15 @@
       return;
     }
 
-    const hpOld = fd.get("bot-field");
-    const hpNew = fd.get("company_website");
+    const hpOld = fdCheck.get("bot-field");
+    const hpNew = fdCheck.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
       setStatus("Kunde inte skickas. Testa igen (tips: öppna i inkognito/privat läge).", "err");
       disableForm(false);
       return;
     }
 
+    // Hämta nytt token/ts och säkerställ att det faktiskt skickas
     const okToken = await refreshToken();
     if (!okToken){
       disableForm(false);
@@ -370,6 +405,9 @@
     try{
       disableForm(true);
       setStatus("Skickar…", "wait");
+
+      // ✅ Skapa FormData EFTER att token/ts uppdaterats
+      const fd = new FormData(form);
 
       const body = new URLSearchParams();
       for (const [k, v] of fd.entries()) body.append(k, String(v));
