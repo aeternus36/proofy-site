@@ -112,6 +112,7 @@
           </div>
 
           <div class="actions" style="margin-top:14px;">
+            <!-- Progressive disclosure: dessa visas/döljs via JS för att minska rörighet i tomt läge -->
             <button class="btn primary" id="createBtn" disabled>Skapa ID &amp; registrera referens</button>
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
@@ -493,11 +494,56 @@
     p.textContent = text;
   }
 
+  /**
+   * Progressive disclosure (minskar rörighet i tomt läge)
+   * - Ingen fil: dölj alla åtgärdsknappar (filval sker ovan)
+   * - Fil vald: visa endast "Skapa…"
+   * - ID klart: visa kopiera/länk/öppna/kvittolänk
+   */
+  function updatePrimaryActionsVisibility(){
+    const hasFile = !!currentFile;
+    const hasId = !!currentId;
+    const hasLink = !!currentLink;
+
+    if (!hasFile){
+      // Tomt läge: visa inte åtgärdsknappar (endast status)
+      if (createBtn) createBtn.style.display = "none";
+      if (copyIdBtn) copyIdBtn.style.display = "none";
+      if (copyLinkBtn) copyLinkBtn.style.display = "none";
+      if (openVerifyBtn) openVerifyBtn.style.display = "none";
+      if (receiptBtn) receiptBtn.style.display = "none";
+      return;
+    }
+
+    // Fil vald: visa Skapa-knappen
+    if (createBtn) createBtn.style.display = "inline-flex";
+
+    // Före ID: dölj sekundära åtgärder
+    if (!hasId || !hasLink){
+      if (copyIdBtn) copyIdBtn.style.display = "none";
+      if (copyLinkBtn) copyLinkBtn.style.display = "none";
+      if (openVerifyBtn) openVerifyBtn.style.display = "none";
+      if (receiptBtn) receiptBtn.style.display = "none";
+      return;
+    }
+
+    // ID klart: visa sekundära åtgärder
+    if (copyIdBtn) copyIdBtn.style.display = "inline-flex";
+    if (copyLinkBtn) copyLinkBtn.style.display = "inline-flex";
+    if (openVerifyBtn) openVerifyBtn.style.display = "inline-flex";
+    // receiptBtn styrs även i resetReport()/success, men vi tillåter att den kan visas här
+    if (receiptBtn && receiptBtn.getAttribute("href") && receiptBtn.getAttribute("href") !== "#"){
+      receiptBtn.style.display = "inline-flex";
+    }
+  }
+
   function setBusy(v){
     busy = v;
-    createBtn.disabled = !currentFile || busy;
-    copyIdBtn.disabled = !currentId || busy;
-    copyLinkBtn.disabled = !currentLink || busy;
+
+    // Enabled/disabled (logik)
+    if (createBtn) createBtn.disabled = !currentFile || busy;
+    if (copyIdBtn) copyIdBtn.disabled = !currentId || busy;
+    if (copyLinkBtn) copyLinkBtn.disabled = !currentLink || busy;
 
     if (openVerifyBtn){
       if (currentLink && !busy){
@@ -510,6 +556,9 @@
         openVerifyBtn.style.opacity = ".55";
       }
     }
+
+    // Visibility (progressive)
+    updatePrimaryActionsVisibility();
   }
 
   function resetReport(){
@@ -807,6 +856,7 @@
     if (!currentFile){
       fileInfo.textContent = "Inget underlag valt.";
       setPill("Välj underlag");
+      updatePrimaryActionsVisibility();
       setBusy(false);
       return;
     }
@@ -818,6 +868,7 @@
       `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
 
     setPill("Redo att skapa");
+    updatePrimaryActionsVisibility();
     setBusy(false);
   }
 
@@ -920,6 +971,9 @@
 
       currentId = id;
       currentLink = buildVerifyLink(id);
+
+      // När ID finns: visa relevanta knappar
+      updatePrimaryActionsVisibility();
 
       if (emptyState) emptyState.style.display = "none";
 
@@ -1037,6 +1091,9 @@
         if (qrTap) qrTap.style.display = "inline-block";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
         attachQrCopy(qrTap, () => currentLink, copyLinkPill);
+
+        // Se till att relevanta knappar syns även vid fel (ID/länk finns)
+        updatePrimaryActionsVisibility();
       }
 
       setPill("Fel");
