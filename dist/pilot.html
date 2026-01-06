@@ -46,6 +46,24 @@
       white-space:nowrap !important;
       border:0 !important;
     }
+
+    /* Inline-fel (failsafe om globala saknas) */
+    .fieldError{
+      margin-top:6px;
+      font-size: 12.5px;
+      line-height: 1.35;
+      color: rgba(255, 170, 170, .95);
+      display:none;
+    }
+    .fieldError[data-show="1"]{ display:block; }
+
+    /* Hjälptext */
+    .fieldHint{
+      margin-top:6px;
+      font-size: 12.5px;
+      line-height: 1.35;
+      color: rgba(234,240,255,.76);
+    }
   </style>
 </head>
 
@@ -63,7 +81,8 @@
       <div class="navActions" id="navActionsDesktop">
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
-        <a class="btn primary" href="/#kontakt">Boka kort demo</a>
+        <!-- På pilotsidan: låt formuläret vara primär CTA. -->
+        <a class="btn soft" href="/#kontakt">Boka kort demo</a>
       </div>
 
       <details class="mnav" id="mnav">
@@ -94,33 +113,31 @@
 
 <main id="main">
   <div class="wrap">
-    <div class="badge">Pilot för redovisningsbyråer</div>
+    <div class="badge">Pilot för revisions- och redovisningsbyråer</div>
 
-    <h1 class="pageTitle">Starta en pilot på 30 dagar</h1>
+    <h1 class="pageTitle">Starta pilot på 30 dagar</h1>
 
     <p class="lead">
-      Pilot är snabbaste sättet att se om Proofy passar er rutin.
-      Ni testar i verkliga ärenden, med låg friktion och tydliga ramar.
+      Ett enkelt sätt att utvärdera Proofy i verkliga ärenden – med tydliga ramar, support och faktura.
     </p>
 
     <div class="grid3" style="margin-top:14px;">
       <div class="tile">
         <b>Ingår</b>
         <span class="small">
-          Registrering + verifiering, verifierings-ID samt support under piloten.
+          Registrering + verifiering, Verifierings-ID samt support under pilotperioden.
         </span>
       </div>
       <div class="tile">
         <b>Upplägg</b>
         <span class="small">
-          Vi sätter en enkel rutin: när ni registrerar, var ni sparar ID,
-          och hur ni verifierar.
+          Vi sätter en rutin: när ni registrerar, var ni sparar ID och hur ni verifierar i granskning.
         </span>
       </div>
       <div class="tile">
         <b>Tryggt</b>
         <span class="small">
-          Fast månadspris, faktura, ingen bindning efter pilot om ni inte vill fortsätta.
+          Fast pris, faktura. Ingen fortsättning utan separat offert/avtal efter pilot om ni inte vill.
         </span>
       </div>
     </div>
@@ -151,22 +168,11 @@
 
       <div class="hr"></div>
 
-      <h2>Användning &amp; avgränsning</h2>
-      <p class="small" style="margin-top:10px;">
-        Verktygen på proofy.se kan användas för test och utvärdering. Pilot innebär överenskomna villkor för professionell
-        användning i byråprocess, inklusive support och tydliga ramar för användning.
-      </p>
-      <p class="small" style="margin-top:10px; margin-bottom:0;">
-        Proofy är ett tekniskt verifieringsverktyg och ersätter inte professionellt omdöme, internkontroller eller juridisk bedömning.
-      </p>
-
-      <div class="hr"></div>
-
-      <h2>Rekommenderad rutin</h2>
+      <h2>Rekommenderad rutin i byrån</h2>
       <ol style="margin:10px 0 0; padding-left:18px;">
-        <li>Registrera underlag som är särskilt viktiga (bokslut, rapporter, avtal).</li>
-        <li>Spara verifierings-ID i ärendet/noteringar.</li>
-        <li>Vid granskning: verifiera underlaget och visa match/ingen match.</li>
+        <li>Registrera särskilt viktiga underlag (bokslut, rapporter, avtal).</li>
+        <li>Spara Verifierings-ID i ärendet/registreringsnotering.</li>
+        <li>Vid granskning: verifiera underlaget och dokumentera match/ingen match.</li>
       </ol>
 
       <div class="hr"></div>
@@ -177,7 +183,7 @@
         <div class="tile">
           <b>Integritet</b>
           <span class="small">
-            <b>Dokumentet lämnar aldrig datorn.</b> Proofy skapar endast ett tekniskt <b>verifieringsvärde (kontrollsumma)</b> lokalt, så att ni kan kontrollera om ett underlag är oförändrat – <b>inga filer laddas upp</b>.
+            <b>Underlag lämnar aldrig datorn.</b> Proofy beräknar ett <b>kontrollvärde</b> lokalt (Verifierings-ID) så att ni kan kontrollera om en filversion är oförändrad – <b>inga filer laddas upp</b>.
           </span>
         </div>
         <div class="tile">
@@ -218,26 +224,69 @@
         <div class="formGrid">
           <div>
             <label class="label" for="p-name">Namn <span class="req">*</span></label>
-            <input id="p-name" name="name" type="text" required data-required="true" autocomplete="name" />
+            <input
+              id="p-name"
+              name="name"
+              type="text"
+              required
+              data-required="true"
+              autocomplete="name"
+              aria-describedby="p-name-err"
+            />
+            <div id="p-name-err" class="fieldError" data-show="0">Fyll i namn.</div>
           </div>
+
           <div>
             <label class="label" for="p-email">E-post <span class="req">*</span></label>
-            <input id="p-email" name="email" type="email" required data-required="true" autocomplete="email" inputmode="email" />
+            <input
+              id="p-email"
+              name="email"
+              type="email"
+              required
+              data-required="true"
+              autocomplete="email"
+              inputmode="email"
+              aria-describedby="p-email-err"
+            />
+            <div id="p-email-err" class="fieldError" data-show="0">Fyll i en giltig e-postadress.</div>
           </div>
+
           <div>
             <label class="label" for="p-company">Byrå/Företag <span class="req">*</span></label>
-            <input id="p-company" name="company" type="text" required data-required="true" autocomplete="organization" />
+            <input
+              id="p-company"
+              name="company"
+              type="text"
+              required
+              data-required="true"
+              autocomplete="organization"
+              aria-describedby="p-company-err"
+            />
+            <div id="p-company-err" class="fieldError" data-show="0">Fyll i byrå/företag.</div>
           </div>
+
           <div>
             <label class="label" for="p-role">Roll</label>
-            <input id="p-role" name="role" type="text" autocomplete="organization-title" placeholder="t.ex. revisor, redovisningskonsult, partner" />
+            <input
+              id="p-role"
+              name="role"
+              type="text"
+              autocomplete="organization-title"
+              placeholder="t.ex. revisor, redovisningskonsult, partner"
+            />
+            <div class="fieldHint">Valfritt – hjälper oss att anpassa uppstarten.</div>
           </div>
         </div>
 
         <div style="margin-top:12px;">
-          <label class="label" for="p-message">Kort om ert case (valfritt)</label>
-          <textarea id="p-message" name="message" rows="5"
-            placeholder="Beskriv kort vilka underlag ni vill kunna verifiera (t.ex. bokslut, kundunderlag, avtal) och var i er process behovet uppstår. Ange gärna önskat startdatum eller tider för en kort genomgång."></textarea>
+          <label class="label" for="p-message">Kort om ert behov (valfritt)</label>
+          <textarea
+            id="p-message"
+            name="message"
+            rows="5"
+            placeholder="Vilka underlag vill ni kunna verifiera (t.ex. bokslut, rapporter, avtal) och var i processen uppstår behovet? Ange gärna önskat startdatum eller tider för en kort genomgång."
+          ></textarea>
+          <div class="fieldHint">Tips: skriv gärna 1–2 exempelärenden – det räcker.</div>
         </div>
 
         <div class="formActions">
@@ -247,14 +296,23 @@
         </div>
 
         <p class="small" style="margin:10px 0 0;">
-          <b>Obs:</b> Formuläret skickar endast kontaktuppgifter och ev. beskrivning – <b>inga filer</b>.
+          <b>Det här skickas:</b> kontaktuppgifter och ev. beskrivning.<br />
+          <b>Det här skickas inte:</b> inga filer/underlag.
         </p>
 
         <p class="small" style="margin:10px 0 0;">
-          <b>Nästa steg:</b> Efter skickat förslag återkommer vi med uppstartsförslag och bekräftar startdatum samt fakturauppgifter.
+          <b>Nästa steg:</b> Vi återkommer med uppstartsförslag och bekräftar startdatum samt fakturauppgifter.
           Om ni vill snabba på: mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och skriv <b>“Pilot”</b> i ämnesraden.
         </p>
       </form>
+
+      <div class="hr"></div>
+
+      <h2>Användning &amp; avgränsning</h2>
+      <p class="small" style="margin-top:10px;">
+        Pilot innebär överenskomna villkor för professionell användning i byråprocess, inklusive support och tydliga ramar för användning.
+        Proofy är ett tekniskt verifieringsverktyg och ersätter inte professionellt omdöme, internkontroller eller juridisk bedömning.
+      </p>
 
       <div class="hr"></div>
 
@@ -297,6 +355,18 @@
   const tokenEl = document.getElementById("proofy_token");
   const tsEl = document.getElementById("proofy_ts");
 
+  const fields = {
+    name: document.getElementById("p-name"),
+    email: document.getElementById("p-email"),
+    company: document.getElementById("p-company"),
+  };
+
+  const errors = {
+    name: document.getElementById("p-name-err"),
+    email: document.getElementById("p-email-err"),
+    company: document.getElementById("p-company-err"),
+  };
+
   function setStatus(text, tone){
     if (!statusEl) return;
 
@@ -322,8 +392,8 @@
 
   function disableForm(disabled){
     if (submitBtn) submitBtn.disabled = disabled;
-    const fields = form.querySelectorAll("input, textarea, select, button");
-    fields.forEach(el => {
+    const all = form.querySelectorAll("input, textarea, select, button");
+    all.forEach(el => {
       if (el === submitBtn) return;
       el.disabled = disabled;
     });
@@ -335,25 +405,51 @@
       el.style.outline = "";
       el.style.outlineOffset = "";
       el.setAttribute("data-proofy-hint", "0");
+      el.removeAttribute("aria-invalid");
+    });
+
+    Object.values(errors).forEach(errEl => {
+      if (!errEl) return;
+      errEl.setAttribute("data-show", "0");
     });
   }
 
-  function hintField(el){
+  function hintField(el, errEl){
     if (!el) return;
     el.style.outline = "2px solid rgba(255,80,80,.6)";
     el.style.outlineOffset = "2px";
     el.setAttribute("data-proofy-hint", "1");
+    el.setAttribute("aria-invalid", "true");
+    if (errEl) errEl.setAttribute("data-show", "1");
   }
 
-  function firstMissingRequiredFromFormData(fd){
-    const required = form.querySelectorAll("[data-required='true']");
-    for (const el of required) {
-      const name = el.getAttribute("name");
-      if (!name) continue;
-      const v = fd.get(name);
-      if (!String(v || "").trim()) return el;
+  function isValidEmail(v){
+    const s = String(v || "").trim();
+    // enkel, praktisk validering
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  }
+
+  function validate(){
+    const name = String(fields.name?.value || "").trim();
+    const email = String(fields.email?.value || "").trim();
+    const company = String(fields.company?.value || "").trim();
+
+    let firstBad = null;
+
+    if (!name){
+      hintField(fields.name, errors.name);
+      firstBad = firstBad || fields.name;
     }
-    return null;
+    if (!email || !isValidEmail(email)){
+      hintField(fields.email, errors.email);
+      firstBad = firstBad || fields.email;
+    }
+    if (!company){
+      hintField(fields.company, errors.company);
+      firstBad = firstBad || fields.company;
+    }
+
+    return { ok: !firstBad, firstBad };
   }
 
   async function refreshToken(){
@@ -381,17 +477,15 @@
     e.preventDefault();
     clearFieldHints();
 
-    // Validera först på användarens input
-    const fdCheck = new FormData(form);
-
-    const missing = firstMissingRequiredFromFormData(fdCheck);
-    if (missing){
-      hintField(missing);
-      missing.focus();
-      setStatus("Kontrollera att namn, e-post och byrå/företag är ifyllda.", "err");
+    const v = validate();
+    if (!v.ok){
+      v.firstBad?.focus();
+      setStatus("Kontrollera att namn, e-post och byrå/företag är korrekt ifyllda.", "err");
       return;
     }
 
+    // Honeypots
+    const fdCheck = new FormData(form);
     const hpOld = fdCheck.get("bot-field");
     const hpNew = fdCheck.get("company_website");
     if (String(hpOld || "").trim() || String(hpNew || "").trim()){
@@ -445,6 +539,22 @@
       setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).", "err");
       disableForm(false);
     }
+  });
+
+  // Lätt “live”-validering efter att användaren börjat interagera
+  ["blur", "input"].forEach(evt => {
+    Object.values(fields).forEach(el => {
+      if (!el) return;
+      el.addEventListener(evt, () => {
+        // Visa inte allt aggressivt på första tecken – men rensa fel när det blir rätt
+        const wasInvalid = el.getAttribute("aria-invalid") === "true";
+        if (!wasInvalid && evt === "input") return;
+
+        clearFieldHints();
+        validate(); // sätter om felen korrekt
+        // Om allt är ok: låt status-pill vara orörd
+      });
+    });
   });
 
   refreshToken();
