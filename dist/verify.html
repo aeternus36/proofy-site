@@ -97,6 +97,11 @@
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
+          <!-- ✅ STEG 2: Drag & drop-zon (samma UX som register.html) -->
+          <div id="dropZone" class="drop" style="margin-top:10px;">
+            Dra &amp; släpp underlag här
+          </div>
+
           <div id="fileInfo"
                class="meta"
                style="margin-top:10px; padding:10px 12px; border-radius:12px; border:1px dashed rgba(255,255,255,.25); background:rgba(255,255,255,.04);">
@@ -288,6 +293,7 @@
 
   const hashInput = $("hashInput");
   const fileInput = $("fileInput");
+  const dropZone = $("dropZone"); // ✅ STEG 2
   const fileInfo = $("fileInfo");
   const verifyBtn = $("verifyBtn");
   const statusPill = $("statusPill");
@@ -356,13 +362,36 @@
     }, 1400);
   }
 
-  async function tryCopy(text){
+  // ✅ STEG 2: robust kopiering (clipboard + fallback)
+  async function copyTextToClipboard(text){
+    const t = String(text || "").trim();
+    if (!t || t === "—") return false;
+
     try{
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(t);
       return true;
     } catch {
-      return false;
+      try{
+        const ta = document.createElement("textarea");
+        ta.value = t;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch {
+        return false;
+      }
     }
+  }
+
+  async function tryCopy(text){
+    // ✅ STEG 2: använd robust kopiering
+    return await copyTextToClipboard(text);
   }
 
   async function shareOrFallback(link){
@@ -647,18 +676,15 @@
 
     pillEl.style.display = "inline-block";
     pillEl.textContent = "Kopierar…";
-    try {
-      await navigator.clipboard.writeText(t);
-      pillEl.textContent = "Kopierad ✓";
+    const ok = await copyTextToClipboard(t); // ✅ STEG 2: robust kopiering
+    pillEl.textContent = ok ? "Kopierad ✓" : "Kunde inte kopiera";
+    if (ok){
       setTimeout(() => {
         pillEl.style.display = "none";
         pillEl.textContent = "";
       }, 1400);
-      return true;
-    } catch {
-      pillEl.textContent = "Kunde inte kopiera";
-      return false;
     }
+    return ok;
   }
 
   // Skapa en kort “kommando-payload” som chatten kan tolka, och skicka direkt
@@ -742,6 +768,15 @@
     setBusy(false);
   }
 
+  // ✅ STEG 2: gemensam fil-setter (för både välj-fil och drag-drop)
+  function setFile(file){
+    currentFile = file || null;
+    fileInfo.textContent = currentFile
+      ? `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
+      : "Inget underlag valt.";
+    updateValidationUI();
+  }
+
   // init URL
   const urlId = getIdFromUrl();
   if (isValidId(urlId)) {
@@ -774,12 +809,20 @@
   });
 
   fileInput.addEventListener("change", () => {
-    currentFile = fileInput.files?.[0] || null;
-    fileInfo.textContent = currentFile
-      ? `Valt underlag: ${currentFile.name} (${(currentFile.size/1024/1024).toFixed(2)} MB)`
-      : "Inget underlag valt.";
-    updateValidationUI();
+    setFile(fileInput.files?.[0] || null); // ✅ STEG 2
   });
+
+  // ✅ STEG 2: drag & drop (som register.html)
+  if (dropZone){
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("drag");
+      const f = e.dataTransfer?.files?.[0];
+      if (f) setFile(f);
+    });
+  }
 
   if (outHash) {
     outHash.addEventListener("click", async () => {
