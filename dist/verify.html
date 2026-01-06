@@ -40,14 +40,15 @@
           <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
-          <!-- NYTT: policy-länkar även i mobilmenyn -->
+          <!-- policy-länkar även i mobilmenyn -->
           <div class="mnavMeta">
             <a class="mnavLink" href="/security.html">Säkerhet</a>
             <a class="mnavLink" href="/privacy.html">Integritet</a>
             <a class="mnavLink" href="/terms.html">Villkor</a>
             <a class="mnavLink" href="/cookies.html">Cookies</a>
 
-            <div class="mnavNote">Säkerhet · integritet · villkor · cookies</div>
+            <!-- Viktigt: “note” ska signalera produkt/nytta, inte policies -->
+            <div class="mnavNote">Verifiering · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
           </div>
         </nav>
@@ -224,7 +225,6 @@
                 <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna registreringskvitto</a>
                 <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
 
-                <!-- Nytt: skapa notering via chatten (skickar direkt, utan att lägga “prompt” i rutan) -->
                 <button class="btn soft" id="sendNoteToChatBtn" type="button" style="display:none;">
                   Skapa verifieringsnotering i chatten
                 </button>
@@ -834,7 +834,6 @@
       if (!lastRun) return;
       const ok = openChatWithNote(lastRun);
       if (!ok) {
-        // fallback: om widget saknas, kopiera i stället
         const txt = buildSummaryText(lastRun);
         copyWithPill({ text: txt, pillEl: copySummaryPill });
       }
