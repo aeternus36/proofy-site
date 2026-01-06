@@ -3,16 +3,21 @@ import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
 /**
- * Proofy /api/register
- * - Tar emot { hash: "0x" + 64 hex }
- * - Läser först (gratis) om den redan finns: get(bytes32) -> (bool ok, uint64 ts)
- * - Om saknas: skriver registerIfMissing(bytes32)
- * - Väntar på kvitto (1 conf) för att minimera "false fail"
- * - Läser igen och returnerar timestamp
+ * Proofy /api/register (Amoy)
+ * Fokus:
+ * - Stabil registrering (idempotent + pre-read)
+ * - Minimera onödiga "misslyckades" i UI
+ * - Sänka onödigt höga avgifter på Amoy genom explicita fee-tak
  *
- * Revisionsvänligt:
- * - Inga filer hanteras, endast hash.
- * - Om redan registrerad => behandlas som "OK", inte fel.
+ * Förväntade env:
+ * - AMOY_RPC_URL
+ * - PROOFY_CONTRACT_ADDRESS
+ * - PROOFY_PRIVATE_KEY (32 bytes hex, med eller utan 0x)
+ * - REGISTER_TIMEOUT_MS (optional, default 25000)
+ *
+ * Valfria env för fee-tak (rekommenderas på Amoy):
+ * - MAX_FEE_GWEI (default 30)
+ * - MAX_PRIORITY_FEE_GWEI (default 1)
  */
 
 const PROOFY_ABI = [
@@ -107,7 +112,6 @@ function sanitizeError(e) {
 function toSafeUint64(ts) {
   const v = BigInt(ts ?? 0n);
   if (v <= 0n) return 0;
-  // Timestamps ryms alltid i Number i praktiken, men vi är defensiva.
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
   return v <= maxSafe ? Number(v) : Number(maxSafe);
 }
@@ -123,6 +127,12 @@ async function readGet({ publicClient, contractAddress, hash }) {
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
   return { exists, timestamp };
+}
+
+function gweiToWeiBigInt(gwei) {
+  // tar Number eller string
+  const n = BigInt(String(gwei));
+  return n * 10n ** 9n;
 }
 
 export async function onRequest({ request, env }) {
@@ -169,6 +179,18 @@ export async function onRequest({ request, env }) {
     );
   }
 
+  // Fee-tak (Amoy): default 30 gwei maxFee, 1 gwei priority
+  const maxFeeGwei = Number(env.MAX_FEE_GWEI || 30);
+  const maxPriorityFeeGwei = Number(env.MAX_PRIORITY_FEE_GWEI || 1);
+
+  // Fallback om env är trasig
+  const maxFeePerGas =
+    Number.isFinite(maxFeeGwei) && maxFeeGwei > 0 ? gweiToWeiBigInt(maxFeeGwei) : 30n * 10n ** 9n;
+  const maxPriorityFeePerGas =
+    Number.isFinite(maxPriorityFeeGwei) && maxPriorityFeeGwei >= 0
+      ? gweiToWeiBigInt(maxPriorityFeeGwei)
+      : 1n * 10n ** 9n;
+
   // Timeout för determinism
   const controller = new AbortController();
   const timeoutMs = Number(env.REGISTER_TIMEOUT_MS || 25_000);
@@ -198,7 +220,7 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // 2) Not registered -> write (idempotent i kontraktet också)
+    // 2) Write: idempotent även om pre-read missar (RPC-lagg)
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -206,10 +228,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // simulateContract ger:
-    // - korrekt calldata
-    // - bättre fel om revert
-    // - ofta bättre gas-parametrar än manuell estimate + buffer
+    // simulateContract => korrekt calldata + bättre fel
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
@@ -218,19 +237,22 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
-    const txHash = await walletClient.writeContract(sim.request);
+    // Sätt uttryckliga fee-tak för att undvika orimliga avgifter på Amoy
+    const txHash = await walletClient.writeContract({
+      ...sim.request,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+    });
 
     await publicClient.waitForTransactionReceipt({
       hash: txHash,
       confirmations: 1,
     });
 
-    // 3) Post-read: hämta timestamp till UI
+    // 3) Post-read: timestamp till UI
     const post = await readGet({ publicClient, contractAddress, hash });
 
     if (!post.exists || post.timestamp === 0) {
-      // Tx gick igenom, men RPC kan vara seg att indexera state ibland.
-      // Returnera "pending_readback" istället för "misslyckades".
       return json(
         200,
         {
@@ -252,6 +274,10 @@ export async function onRequest({ request, env }) {
         exists: true,
         timestamp: post.timestamp,
         txHash,
+        feeCaps: {
+          maxFeeGwei,
+          maxPriorityFeeGwei,
+        },
       },
       origin
     );
@@ -269,6 +295,8 @@ export async function onRequest({ request, env }) {
     }
 
     const detail = sanitizeError(e);
+
+    // Klassificera vanliga, tillfälliga driftfel som 503 (för UX: "försök igen")
     const isProbablyTemporary =
       /timeout|temporarily|rate|limit|429|503|gateway|rpc|network|nonce|underpriced|insufficient funds/i.test(
         detail
