@@ -82,7 +82,6 @@
       </a>
 
       <div class="navActions" id="navActionsDesktop">
-        <!-- ✅ Aktiv flik utan onödig klickbarhet -->
         <a class="btn isCurrent" aria-current="page">Skapa Verifierings-ID</a>
         <a class="btn soft" href="/verify.html">Verifiera underlag</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
@@ -155,13 +154,9 @@
           </div>
 
           <div class="actions" style="margin-top:14px;">
-            <!-- ✅ Efter lyckad registrering blir "Gå till verifiering" primär -->
             <div class="actionsRow" aria-label="Åtgärder">
               <a class="btn primary" id="nextStepBtn" href="/verify.html">Gå till verifiering</a>
-
-              <!-- Skapa blir primär innan vi har ID, sekundär efter -->
               <button class="btn primary" id="createBtn" disabled>Skapa Verifierings-ID</button>
-
               <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna registreringskvitto</a>
             </div>
 
@@ -199,7 +194,7 @@
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
             Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).<br />
-            <b>Obs:</b> Ny export/omskanning/konvertering kan ge annan filversion även om dokumentet “ser likadant ut”.
+            <b>Obs:</b> Ny export/omskanning/konvertering kan ge en annan filversion även om dokumentet “ser likadant ut”.
           </p>
         </section>
 
@@ -208,7 +203,6 @@
           <div style="font-weight:950; font-size:16px;">2. Registreringsrapport</div>
           <div class="hr"></div>
 
-          <!-- Empty state -->
           <div id="emptyState"
                style="
                  border:1px solid rgba(255,255,255,.10);
@@ -220,7 +214,7 @@
             <div class="small">
               1) Välj filversionen som ska vara <b>referens</b>.<br/>
               2) Proofy skapar ett Verifierings-ID lokalt (<b>ingen uppladdning</b>).<br/>
-              3) Du får en delbar länk + QR för kollega/klient/akt.<br/><br/>
+              3) Dela länk/QR till kollega, klient eller ärendeakt för senare kontroll.<br/><br/>
               <b>QR är för skanning med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att skanna sin egen skärm med kameran.
             </div>
           </div>
@@ -294,8 +288,8 @@
               </div>
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
-                <b>Obs:</b> Om registreringen skulle misslyckas kan ni fortfarande använda ID och länk internt.
-                Försök igen, eller mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och ange Verifierings-ID.
+                <b>Obs:</b> Om registreringen inte går igenom just nu kan ni ändå använda ID och länk i ärendet.
+                Försök igen senare, eller mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och ange Verifierings-ID.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
@@ -385,7 +379,6 @@
 
             <div class="actions" style="margin-top:12px;">
               <div class="actionsRow">
-                <!-- Bygger automatiskt vid input -->
                 <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
 
                 <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
@@ -451,7 +444,7 @@
 
         <div class="hr"></div>
         <p class="small" style="margin:0;">
-          Proofy lagrar inte dokument. Verifiering bygger på att jämföra filversioner mot en registrerad referens.
+          Proofy lagrar inte dokument. Verifiering bygger på att jämföra filversioner mot en tidigare fastställd referens.
         </p>
       </div>
     </section>
@@ -540,11 +533,9 @@
   let opId = 0;
   let lastRun = null;
 
-  // --- Robusthet: enkel retry/backoff för tillfälliga fel ---
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   function isRetryableStatus(status){
-    // typiska tillfälliga lägen
     return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
   }
 
@@ -554,20 +545,21 @@
     try{
       const res = await fetch(url, { ...options, signal: controller.signal });
       const data = await res.json().catch(() => ({}));
-      return { res, data };
+      return { res, data, aborted:false };
+    } catch (e){
+      const aborted = (e && e.name === "AbortError");
+      return { res: null, data: {}, aborted };
     } finally {
       clearTimeout(t);
     }
   }
 
   async function safeRegisterRequest(hash){
-    // För revisor-trygg UX: vi försöker ett par gånger vid tillfälliga fel.
-    // Vi visar inte "rött" i onödan om läget sannolikt är tillfälligt.
     const attempts = 3;
     const baseDelay = 650;
 
     for (let i = 0; i < attempts; i++){
-      const { res, data } = await fetchJsonWithTimeout(
+      const { res, data, aborted } = await fetchJsonWithTimeout(
         "/api/register",
         {
           method: "POST",
@@ -577,25 +569,29 @@
         25000
       );
 
-      if (res.ok && data && data.ok !== false) {
-        return { ok: true, res, data, attempt: i + 1 };
-      }
-
-      const status = res.status || 0;
-      const retryable = isRetryableStatus(status);
-      const aborted = (data && data.error === "Upstream timeout") || false;
-
-      if (i < attempts - 1 && (retryable || aborted)) {
-        // backoff + jitter
+      if (aborted && i < attempts - 1) {
         const jitter = Math.floor(Math.random() * 180);
         await sleep(baseDelay * (i + 1) + jitter);
         continue;
       }
 
-      return { ok: false, res, data, attempt: i + 1 };
+      if (res && res.ok && data && data.ok !== false) {
+        return { ok: true, res, data, attempt: i + 1 };
+      }
+
+      const status = res?.status || 0;
+      const retryable = isRetryableStatus(status);
+
+      if (i < attempts - 1 && retryable) {
+        const jitter = Math.floor(Math.random() * 180);
+        await sleep(baseDelay * (i + 1) + jitter);
+        continue;
+      }
+
+      return { ok: false, res, data, attempt: i + 1, aborted };
     }
 
-    return { ok: false, res: { ok:false, status: 0 }, data: {}, attempt: attempts };
+    return { ok: false, res: null, data: {}, attempt: attempts, aborted:false };
   }
 
   function setAriaBusy(v){
@@ -622,14 +618,10 @@
     busy = v;
     setAriaBusy(v);
 
-    // Skapa
     createBtn.disabled = !currentFile || busy;
-
-    // Bakåtkomp
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
 
-    // Nästa steg CTA: bara när vi har länk och inte busy
     if (nextStepBtn){
       if (currentLink && !busy){
         nextStepBtn.href = currentLink;
@@ -686,7 +678,6 @@
   }
 
   async function sha256Hex(file){
-    // WebCrypto är asynkront; vi ger UI en chans att måla innan vi startar.
     await sleep(0);
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
@@ -699,6 +690,18 @@
 
   function buildVerifyLink(hash){
     return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
+  }
+
+  function nowSe(){
+    try{
+      return new Intl.DateTimeFormat("sv-SE", {
+        timeZone:"Europe/Stockholm",
+        year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit"
+      }).format(new Date()) + " (Europe/Stockholm)";
+    } catch {
+      return new Date().toLocaleString("sv-SE");
+    }
   }
 
   async function copyTextToClipboard(text){
@@ -924,11 +927,12 @@
     lines.push("");
     lines.push(`Verifierings-ID: ${run.id || "—"}`);
     lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
+    if (run.createdSe) lines.push(`Skapad: ${run.createdSe}`);
     lines.push(`Status: ${run.statusLine || "—"}`);
-    if (run.timeSe) lines.push(`Tidpunkt: ${run.timeSe}`);
+    if (run.timeSe) lines.push(`Registrerad: ${run.timeSe}`);
     if (run.txHash) lines.push(`Registreringsreferens: ${run.txHash}`);
     lines.push("");
-    lines.push(`Noterat: ${new Date().toLocaleString("sv-SE")}`);
+    lines.push(`Noterad: ${nowSe()}`);
     return lines.join("\n");
   }
 
@@ -1030,7 +1034,6 @@
     });
   }
 
-  // Bakåtkomp (gömda knappar)
   copyIdBtn.addEventListener("click", async () => {
     if (!currentId) return;
     setPill("Kopierar…");
@@ -1053,9 +1056,11 @@
     const myOp = ++opId;
     setBusy(true);
     resetReport();
-    setPill("Skapar ID lokalt…");
+    setPill("Skapar Verifierings-ID…");
 
     try{
+      const createdSe = nowSe();
+
       const id = await sha256Hex(currentFile);
       if (myOp !== opId) return;
 
@@ -1093,7 +1098,6 @@
 
       attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
-      // Visa nästa steg direkt när länk finns
       setBusy(true);
       setBusy(false);
 
@@ -1104,7 +1108,6 @@
       headline.style.background = "rgba(255,255,255,.05)";
       headline.textContent = "⏳ Registrering pågår…";
 
-      // --- Stabil registrering: retry + backoff vid tillfälliga fel ---
       const reg = await safeRegisterRequest(id);
       if (myOp !== opId) return;
 
@@ -1112,14 +1115,10 @@
         const res = reg.res;
         const data = reg.data || {};
         const detail = data?.detail ? ` | ${data.detail}` : "";
-
-        // Vid tillfälliga fel vill vi inte överdramatisera – men fortfarande vara ärliga.
-        // Vi behåller din UI, men vi undviker onödigt "misslyckades" om det verkar tillfälligt.
-        const retryable = isRetryableStatus(res?.status || 0);
-        const msg =
-          (data?.error || `Registreringen misslyckades (HTTP ${res?.status || "?"}).`) + detail;
-
-        throw Object.assign(new Error(msg), { _proofy_retryable: retryable, _proofy_status: res?.status || 0 });
+        const status = res?.status || 0;
+        const retryable = isRetryableStatus(status) || !!reg.aborted;
+        const msg = (data?.error || `Registreringen kunde inte slutföras just nu (HTTP ${status || "?"}).`) + detail;
+        throw Object.assign(new Error(msg), { _proofy_retryable: retryable });
       }
 
       const data = reg.data || {};
@@ -1129,12 +1128,14 @@
       headline.style.background = "rgba(80,255,180,.06)";
       headline.innerHTML = already
         ? `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`
-        : `<span class="ok">✅ Registrerad</span> <span class="meta">(referens sparad)</span>`;
+        : `<span class="ok">✅ Registrerad</span> <span class="meta">(referens fastställd)</span>`;
 
       regStatusOut.textContent = already ? "Redan registrerad" : "Registrerad";
 
+      let registeredSe = null;
       if (data.timestamp){
-        timeOut.textContent = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
+        registeredSe = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
+        timeOut.textContent = registeredSe;
       } else {
         timeOut.textContent = "—";
       }
@@ -1148,8 +1149,9 @@
       lastRun = {
         id,
         link: currentLink,
+        createdSe,
         statusLine: already ? "Redan registrerad" : "Registrerad",
-        timeSe: data.timestamp ? new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE") : null,
+        timeSe: registeredSe,
         txHash: data.txHash || null
       };
 
@@ -1162,45 +1164,44 @@
 
       errorBox.style.display = "block";
 
-      // Samma synliga texter som du hade, men:
-      // - vi håller det lugnt
-      // - vi särskiljer timeout/tillfälligt läge utan att skapa onödig oro
-      const isAbort = (e?.name === "AbortError");
       const retryable = !!e?._proofy_retryable;
 
-      if (isAbort){
-        errorMsg.textContent =
-          "Timeout: registreringen tog för lång tid (30s). ID och länk är ändå klara – du kan gå vidare till verifiering.";
-      } else if (retryable){
-        errorMsg.textContent =
-          "Tillfälligt tekniskt problem. ID och länk är ändå klara – du kan gå vidare till verifiering och försöka registrera igen senare.";
-      } else {
-        errorMsg.textContent =
-          (e?.message || "Registreringstjänsten kunde inte nås just nu. ID och länk är ändå klara – du kan gå vidare till verifiering.");
-      }
+      errorMsg.textContent = retryable
+        ? "Tillfälligt tekniskt problem. ID och länk är ändå klara – du kan gå vidare till verifiering och registrera senare."
+        : (e?.message || "Registreringen kunde inte slutföras just nu. ID och länk är ändå klara – du kan gå vidare till verifiering.");
 
       if (currentId && currentLink){
         resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Fel (men ID/länk är klar)";
+        regStatusOut.textContent = "Ej registrerad just nu (ID/länk är klar)";
         timeOut.textContent = "—";
 
         headline.style.borderColor = "rgba(255,80,80,.20)";
         headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Registrering misslyckades</span> <span class="meta">(ID/länk kan ändå användas)</span>`;
+        headline.innerHTML = `<span class="err">⚠️ Registrering kunde inte slutföras</span> <span class="meta">(ID/länk kan ändå användas)</span>`;
 
-        // tekniskt fel hamnar i "Tekniska detaljer" som du redan har
         debugOut.textContent = errorMsg.textContent;
 
         if (qrTap) qrTap.style.display = "inline-block";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
         attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
+        // Notering ska fortfarande vara användbar även om registreringen inte gick igenom
+        if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
+        lastRun = lastRun || {
+          id: currentId,
+          link: currentLink,
+          createdSe: nowSe(),
+          statusLine: "Ej registrerad just nu",
+          timeSe: null,
+          txHash: null
+        };
+
         setBusy(false);
       }
 
-      setPill("Fel");
+      setPill("Klart (ID/länk är klar)");
       setBusy(false);
     }
   });
