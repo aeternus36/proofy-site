@@ -112,11 +112,13 @@
           </div>
 
           <div class="actions" style="margin-top:14px;">
-            <!-- Progressive disclosure: dessa visas/döljs via JS för att minska rörighet i tomt läge -->
             <button class="btn primary" id="createBtn" disabled>Skapa ID &amp; registrera referens</button>
-            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
-            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
-            <a class="btn soft" id="openVerifyBtn" href="/verify.html" style="pointer-events:none; opacity:.55;">Öppna verifiering</a>
+
+            <!-- Döljs som knappar (kopiering finns via klick i fälten/ikon), men behålls i DOM för minimal ändring -->
+            <button class="btn" id="copyIdBtn" disabled style="display:none;">Kopiera ID</button>
+            <button class="btn" id="copyLinkBtn" disabled style="display:none;">Kopiera länk</button>
+
+            <a class="btn soft" id="openVerifyBtn" href="/verify.html" style="pointer-events:none; opacity:.55; display:none;">Öppna verifiering</a>
             <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna registreringskvitto</a>
 
             <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Välj underlag</span>
@@ -185,7 +187,7 @@
             </div>
 
             <div style="margin-top:12px;">
-              <div class="meta">Verifierings-ID</div>
+              <div class="meta">Verifierings-ID <span class="small" style="opacity:.85;">(klicka för att kopiera)</span></div>
               <div style="position:relative; margin-top:6px;">
                 <button type="button" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
@@ -211,7 +213,7 @@
                 <span id="copyIdPill2" class="pill" style="display:none; margin-top:8px;"></span>
               </div>
 
-              <div class="meta" style="margin-top:12px;">Delbar verifieringslänk</div>
+              <div class="meta" style="margin-top:12px;">Delbar verifieringslänk <span class="small" style="opacity:.85;">(klicka för att kopiera)</span></div>
 
               <div style="position:relative; margin-top:6px;">
                 <button type="button" id="copyLinkIconBtn" aria-label="Kopiera länk" title="Kopiera"
@@ -283,6 +285,7 @@
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
 
                   <div class="actions" style="margin-top:12px;">
+                    <!-- Detta är revisorns “default action” -->
                     <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera registreringsnotering</button>
                     <span id="copyNotePill" class="pill" style="display:none;"></span>
                   </div>
@@ -295,10 +298,10 @@
 
                     <div class="hr"></div>
 
-                    <div class="meta">Teknisk referens (tx)</div>
+                    <div class="meta">Teknisk referens (internt)</div>
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Teknisk identitet</div>
+                    <div class="meta" style="margin-top:10px;">Systemidentitet (internt)</div>
                     <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Felsvar (om något)</div>
@@ -494,56 +497,35 @@
     p.textContent = text;
   }
 
-  /**
-   * Progressive disclosure (minskar rörighet i tomt läge)
-   * - Ingen fil: dölj alla åtgärdsknappar (filval sker ovan)
-   * - Fil vald: visa endast "Skapa…"
-   * - ID klart: visa kopiera/länk/öppna/kvittolänk
-   */
-  function updatePrimaryActionsVisibility(){
+  function updateActionsVisibility(){
     const hasFile = !!currentFile;
     const hasId = !!currentId;
     const hasLink = !!currentLink;
 
+    // Tomt läge: bara filval i UI, inga “åtgärdsknappar”
     if (!hasFile){
-      // Tomt läge: visa inte åtgärdsknappar (endast status)
       if (createBtn) createBtn.style.display = "none";
-      if (copyIdBtn) copyIdBtn.style.display = "none";
-      if (copyLinkBtn) copyLinkBtn.style.display = "none";
       if (openVerifyBtn) openVerifyBtn.style.display = "none";
       if (receiptBtn) receiptBtn.style.display = "none";
       return;
     }
 
-    // Fil vald: visa Skapa-knappen
+    // Fil vald: visa endast skapa-knappen
     if (createBtn) createBtn.style.display = "inline-flex";
-
-    // Före ID: dölj sekundära åtgärder
     if (!hasId || !hasLink){
-      if (copyIdBtn) copyIdBtn.style.display = "none";
-      if (copyLinkBtn) copyLinkBtn.style.display = "none";
       if (openVerifyBtn) openVerifyBtn.style.display = "none";
       if (receiptBtn) receiptBtn.style.display = "none";
       return;
     }
 
-    // ID klart: visa sekundära åtgärder
-    if (copyIdBtn) copyIdBtn.style.display = "inline-flex";
-    if (copyLinkBtn) copyLinkBtn.style.display = "inline-flex";
+    // ID + länk finns: visa endast “nästa steg”
     if (openVerifyBtn) openVerifyBtn.style.display = "inline-flex";
-    // receiptBtn styrs även i resetReport()/success, men vi tillåter att den kan visas här
-    if (receiptBtn && receiptBtn.getAttribute("href") && receiptBtn.getAttribute("href") !== "#"){
-      receiptBtn.style.display = "inline-flex";
-    }
+    if (receiptBtn) receiptBtn.style.display = "inline-flex";
   }
 
   function setBusy(v){
     busy = v;
-
-    // Enabled/disabled (logik)
     if (createBtn) createBtn.disabled = !currentFile || busy;
-    if (copyIdBtn) copyIdBtn.disabled = !currentId || busy;
-    if (copyLinkBtn) copyLinkBtn.disabled = !currentLink || busy;
 
     if (openVerifyBtn){
       if (currentLink && !busy){
@@ -557,8 +539,7 @@
       }
     }
 
-    // Visibility (progressive)
-    updatePrimaryActionsVisibility();
+    updateActionsVisibility();
   }
 
   function resetReport(){
@@ -836,7 +817,7 @@
     lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
     lines.push(`Status: ${run.statusLine || "—"}`);
     if (run.timeSe) lines.push(`Registreringstid: ${run.timeSe}`);
-    if (run.txHash) lines.push(`Tx: ${run.txHash}`);
+    if (run.txHash) lines.push(`Teknisk referens (internt): ${run.txHash}`);
     lines.push("");
     lines.push(`Tidpunkt: ${new Date().toLocaleString("sv-SE")}`);
     return lines.join("\n");
@@ -856,7 +837,7 @@
     if (!currentFile){
       fileInfo.textContent = "Inget underlag valt.";
       setPill("Välj underlag");
-      updatePrimaryActionsVisibility();
+      updateActionsVisibility();
       setBusy(false);
       return;
     }
@@ -868,7 +849,7 @@
       `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
 
     setPill("Redo att skapa");
-    updatePrimaryActionsVisibility();
+    updateActionsVisibility();
     setBusy(false);
   }
 
@@ -935,25 +916,9 @@
   if (copyNoteBtn){
     copyNoteBtn.addEventListener("click", async () => {
       if (!lastRun) return;
-      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill });
+      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText: "Notering kopierad ✅" });
     });
   }
-
-  copyIdBtn.addEventListener("click", async () => {
-    if (!currentId) return;
-    setPill("Kopierar…");
-    const ok = await copyTextToClipboard(currentId);
-    setPill(ok ? "ID kopierat ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
-  });
-
-  copyLinkBtn.addEventListener("click", async () => {
-    if (!currentLink) return;
-    setPill("Kopierar…");
-    const ok = await copyTextToClipboard(currentLink);
-    setPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
-  });
 
   createBtn.addEventListener("click", async () => {
     if (!currentFile || busy) return;
@@ -971,9 +936,7 @@
 
       currentId = id;
       currentLink = buildVerifyLink(id);
-
-      // När ID finns: visa relevanta knappar
-      updatePrimaryActionsVisibility();
+      updateActionsVisibility();
 
       if (emptyState) emptyState.style.display = "none";
 
@@ -1092,8 +1055,7 @@
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
         attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
-        // Se till att relevanta knappar syns även vid fel (ID/länk finns)
-        updatePrimaryActionsVisibility();
+        updateActionsVisibility();
       }
 
       setPill("Fel");
@@ -1151,6 +1113,7 @@
 
   resetReport();
   setFile(null);
+  updateActionsVisibility();
   setBusy(false);
   setManualState("");
 })();
