@@ -1,16 +1,39 @@
 import { createPublicClient, http, isHex } from "viem";
 import { polygonAmoy } from "viem/chains";
 
+/**
+ * Proofy /api/verify
+ * - Tar emot hash via GET (?hash=... eller ?id=...) eller POST { hash: ... }
+ * - Läser från ditt Proofy-kontrakt: get(bytes32) -> (bool ok, uint64 ts)
+ * - Returnerar revisionsvänligt: exists + timestamp (om finns)
+ *
+ * OBS: Denna fil matchar ditt Solidity-kontrakt (INTE getProof()).
+ */
+
 const PROOFY_ABI = [
   {
     type: "function",
-    name: "getProof",
+    name: "get",
     stateMutability: "view",
-    inputs: [{ name: "hash", type: "bytes32" }],
+    inputs: [{ name: "refId", type: "bytes32" }],
     outputs: [
-      { name: "timestamp", type: "uint256" },
-      { name: "submitter", type: "address" },
+      { name: "ok", type: "bool" },
+      { name: "ts", type: "uint64" },
     ],
+  },
+  {
+    type: "function",
+    name: "registeredAt",
+    stateMutability: "view",
+    inputs: [{ name: "refId", type: "bytes32" }],
+    outputs: [{ name: "ts", type: "uint64" }],
+  },
+  {
+    type: "function",
+    name: "exists",
+    stateMutability: "view",
+    inputs: [{ name: "refId", type: "bytes32" }],
+    outputs: [{ name: "ok", type: "bool" }],
   },
 ];
 
@@ -18,6 +41,7 @@ function json(status, obj, origin) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
+    Vary: "Origin",
   };
 
   // Conservative default: allow same-origin. If no Origin header (Postman/server), allow.
@@ -35,6 +59,7 @@ function corsPreflight(origin) {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Max-Age": "86400",
+      Vary: "Origin",
     },
   });
 }
@@ -48,24 +73,26 @@ function isValidBytes32Hex(hash) {
   );
 }
 
-async function readProof({ publicClient, contractAddress, hash }) {
-  const proof = await publicClient.readContract({
+function toSafeUint64(ts) {
+  const v = BigInt(ts ?? 0n);
+  if (v <= 0n) return 0;
+
+  // uint64 timestamps är i praktiken alltid < MAX_SAFE_INTEGER, men vi är defensiva.
+  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+  return v <= maxSafe ? Number(v) : Number(maxSafe);
+}
+
+async function readGet({ publicClient, contractAddress, hash }) {
+  // Primär väg: get() ger både exists + timestamp.
+  const [ok, ts] = await publicClient.readContract({
     address: contractAddress,
     abi: PROOFY_ABI,
-    functionName: "getProof",
+    functionName: "get",
     args: [hash],
   });
 
-  const timestampBig = proof?.[0] ?? 0n;
-  const exists = BigInt(timestampBig) !== 0n;
-
-  // return timestamp as Number when safe, else string (but frontend expects number -> we only emit when safe)
-  const tsBig = BigInt(timestampBig);
-  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
-
-  const timestamp =
-    exists && tsBig <= maxSafe ? Number(tsBig) : exists ? tsBig.toString() : 0;
-
+  const timestamp = toSafeUint64(ts);
+  const exists = Boolean(ok) && timestamp !== 0;
   return { exists, timestamp };
 }
 
@@ -84,19 +111,20 @@ export async function onRequest({ request, env }) {
   let hash = "";
   if (request.method === "GET") {
     const url = new URL(request.url);
-    hash = (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
+    hash = String(
+      (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim()
+    );
   } else {
     const body = await request.json().catch(() => ({}));
     hash = String(body?.hash || "").trim();
   }
 
   if (!isValidBytes32Hex(hash)) {
-    // Keep error messages UI-safe (no blockchain jargon in frontend; but this is API)
     return json(400, { error: "Invalid hash format", exists: false }, origin);
   }
 
-  const rpcUrl = env.AMOY_RPC_URL;
-  const contractAddress = env.PROOFY_CONTRACT_ADDRESS;
+  const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
+  const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
 
   if (!rpcUrl || !contractAddress) {
     return json(500, { error: "Server misconfiguration" }, origin);
@@ -108,15 +136,14 @@ export async function onRequest({ request, env }) {
       transport: http(rpcUrl),
     });
 
-    const proof = await readProof({ publicClient, contractAddress, hash });
+    const proof = await readGet({ publicClient, contractAddress, hash });
 
-    // Frontend expects boolean + (optional) numeric timestamp.
-    // If timestamp comes back as string (unlikely), still return it; certificate/verify pages treat it carefully.
     if (proof.exists) {
       return json(200, { exists: true, timestamp: proof.timestamp }, origin);
     }
     return json(200, { exists: false }, origin);
   } catch (e) {
-    return json(500, { error: "Verify failed" }, origin);
+    // Håll API-svaret stabilt: frontend kan visa "kunde inte kontrolleras just nu".
+    return json(503, { error: "Verify temporarily unavailable" }, origin);
   }
 }
