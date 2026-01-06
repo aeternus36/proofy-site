@@ -41,14 +41,15 @@
           <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
-          <!-- NYTT: policy-länkar även i mobilmenyn -->
+          <!-- Policy-länkar även i mobilmenyn -->
           <div class="mnavMeta">
             <a class="mnavLink" href="/security.html">Säkerhet</a>
             <a class="mnavLink" href="/privacy.html">Integritet</a>
             <a class="mnavLink" href="/terms.html">Villkor</a>
             <a class="mnavLink" href="/cookies.html">Cookies</a>
 
-            <div class="mnavNote">Säkerhet · integritet · villkor · cookies</div>
+            <!-- Viktigt: produkt-claim här (inte “policy-lista”) -->
+            <div class="mnavNote">Verifiering · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
           </div>
         </nav>
@@ -95,7 +96,7 @@
             <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
             <a class="btn soft" id="openVerifyBtn" href="/verify.html" style="pointer-events:none; opacity:.55;">Öppna verifiering</a>
-            <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna registreringskvitto</a><!-- CHANGE: "intyg" → "registreringskvitto" (revisorsspråk) -->
+            <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna registreringskvitto</a>
 
             <span id="statusPill" class="pill">Välj underlag</span>
           </div>
@@ -655,7 +656,7 @@
   }
 
   function calcQrSize(targetEl){
-    const container = targetEl?.parentElement; // qrTap/manualQrTap
+    const container = targetEl?.parentElement;
     const maxByLayout = container ? (container.clientWidth - 24) : 280;
     let size = Math.max(240, Math.min(360, maxByLayout || 280));
     size = Math.floor(size / 4) * 4;
@@ -1061,7 +1062,7 @@
 })();
 </script>
 
-<!-- ✅ Aktiverat igen: behövs för mobilmenyn + chatten -->
+<!-- ✅ Behövs för mobilmenyn + chatten -->
 <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
 <script src="/chat-widget.js?v=2026-01-03a" defer></script>
 
