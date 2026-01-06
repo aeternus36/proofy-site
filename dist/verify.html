@@ -47,7 +47,6 @@
             <a class="mnavLink" href="/terms.html">Villkor</a>
             <a class="mnavLink" href="/cookies.html">Cookies</a>
 
-            <!-- Viktigt: “note” ska signalera produkt/nytta, inte policies -->
             <div class="mnavNote">Verifiering · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
           </div>
@@ -81,6 +80,13 @@
             ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
+          <!-- ✅ STEG 3: Snabb-ID (urklipp + rensa) -->
+          <div class="actions" style="margin-top:10px; flex-wrap:wrap; gap:10px;">
+            <button class="btn" id="pasteIdBtn" type="button">Klistra in från urklipp</button>
+            <button class="btn soft" id="clearIdBtn" type="button" disabled>Rensa ID</button>
+            <span id="idPill" class="pill" style="display:none;"></span>
+          </div>
+
           <div class="actions" style="margin-top:10px; flex-wrap:wrap; gap:10px;">
             <a class="btn soft" id="openLinkBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna länk</a>
             <button class="btn" id="shareLinkBtn" type="button" disabled>Dela</button>
@@ -97,7 +103,7 @@
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
-          <!-- ✅ STEG 2: Drag & drop-zon (samma UX som register.html) -->
+          <!-- Drag & drop-zon -->
           <div id="dropZone" class="drop" style="margin-top:10px;">
             Dra &amp; släpp underlag här
           </div>
@@ -234,6 +240,9 @@
                   Skapa verifieringsnotering i chatten
                 </button>
 
+                <!-- ✅ STEG 3: Ladda ner rapport -->
+                <button class="btn" id="downloadReportBtn" type="button" style="display:none;">Ladda ner rapport (.txt)</button>
+
                 <span id="copySummaryPill" class="pill" style="display:none;"> </span>
               </div>
 
@@ -292,8 +301,12 @@
   const $ = (id) => document.getElementById(id);
 
   const hashInput = $("hashInput");
+  const pasteIdBtn = $("pasteIdBtn");         // ✅ steg 3
+  const clearIdBtn = $("clearIdBtn");         // ✅ steg 3
+  const idPill = $("idPill");                 // ✅ steg 3
+
   const fileInput = $("fileInput");
-  const dropZone = $("dropZone"); // ✅ STEG 2
+  const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
   const verifyBtn = $("verifyBtn");
   const statusPill = $("statusPill");
@@ -328,6 +341,7 @@
   const summaryOut = $("summaryOut");
 
   const sendNoteToChatBtn = $("sendNoteToChatBtn");
+  const downloadReportBtn = $("downloadReportBtn"); // ✅ steg 3
 
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
@@ -362,7 +376,17 @@
     }, 1400);
   }
 
-  // ✅ STEG 2: robust kopiering (clipboard + fallback)
+  function showIdPill(text){
+    if (!idPill) return;
+    idPill.style.display = "inline-block";
+    idPill.textContent = text || "";
+    setTimeout(() => {
+      idPill.style.display = "none";
+      idPill.textContent = "";
+    }, 1400);
+  }
+
+  // robust kopiering (clipboard + fallback)
   async function copyTextToClipboard(text){
     const t = String(text || "").trim();
     if (!t || t === "—") return false;
@@ -390,7 +414,6 @@
   }
 
   async function tryCopy(text){
-    // ✅ STEG 2: använd robust kopiering
     return await copyTextToClipboard(text);
   }
 
@@ -497,6 +520,7 @@
     resetCopyPill(copySummaryPill);
 
     if (sendNoteToChatBtn) sendNoteToChatBtn.style.display = "none";
+    if (downloadReportBtn) downloadReportBtn.style.display = "none"; // ✅ steg 3
 
     if (summaryOut) summaryOut.textContent = "—";
     lastRun = null;
@@ -676,7 +700,7 @@
 
     pillEl.style.display = "inline-block";
     pillEl.textContent = "Kopierar…";
-    const ok = await copyTextToClipboard(t); // ✅ STEG 2: robust kopiering
+    const ok = await copyTextToClipboard(t);
     pillEl.textContent = ok ? "Kopierad ✓" : "Kunde inte kopiera";
     if (ok){
       setTimeout(() => {
@@ -727,6 +751,9 @@
 
     updateLinkActions();
 
+    // steg 3: enable/disable rensa-knapp
+    if (clearIdBtn) clearIdBtn.disabled = !id;
+
     if (!id && !currentFile){
       hideAlert();
       setStatus("Förbered verifiering");
@@ -768,7 +795,7 @@
     setBusy(false);
   }
 
-  // ✅ STEG 2: gemensam fil-setter (för både välj-fil och drag-drop)
+  // gemensam fil-setter
   function setFile(file){
     currentFile = file || null;
     fileInfo.textContent = currentFile
@@ -782,6 +809,51 @@
   if (isValidId(urlId)) {
     hashInput.value = urlId;
     setIdInUrl(urlId);
+  }
+
+  // ✅ steg 3: urklipp → ID
+  async function readClipboardText(){
+    try{
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        return await navigator.clipboard.readText();
+      }
+    } catch {}
+    return "";
+  }
+
+  if (pasteIdBtn){
+    pasteIdBtn.addEventListener("click", async () => {
+      const txt = (await readClipboardText()).trim();
+      if (!txt){
+        showIdPill("Inget i urklipp");
+        return;
+      }
+
+      // plocka gärna ut ett 0x... ur text (om användaren kopierat en hel notering)
+      const m = txt.match(/0x[0-9a-fA-F]{64}/);
+      const candidate = (m ? m[0] : txt).trim();
+
+      hashInput.value = candidate;
+      if (isValidId(candidate)) {
+        setIdInUrl(candidate);
+        showIdPill("Klistrat ✓");
+      } else {
+        showIdPill("Klistrat (kontrollera format)");
+      }
+      updateValidationUI();
+      hashInput.focus();
+      hashInput.setSelectionRange(hashInput.value.length, hashInput.value.length);
+    });
+  }
+
+  if (clearIdBtn){
+    clearIdBtn.addEventListener("click", () => {
+      hashInput.value = "";
+      setIdInUrl("");
+      showIdPill("Rensat");
+      updateValidationUI();
+      hashInput.focus();
+    });
   }
 
   // bind share/copy actions
@@ -809,10 +881,10 @@
   });
 
   fileInput.addEventListener("change", () => {
-    setFile(fileInput.files?.[0] || null); // ✅ STEG 2
+    setFile(fileInput.files?.[0] || null);
   });
 
-  // ✅ STEG 2: drag & drop (som register.html)
+  // drag & drop
   if (dropZone){
     dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
     dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
@@ -880,6 +952,29 @@
         const txt = buildSummaryText(lastRun);
         copyWithPill({ text: txt, pillEl: copySummaryPill });
       }
+    });
+  }
+
+  // ✅ steg 3: ladda ner rapport
+  function downloadTextFile(filename, text){
+    const blob = new Blob([String(text || "")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1200);
+  }
+
+  if (downloadReportBtn){
+    downloadReportBtn.addEventListener("click", () => {
+      if (!lastRun) return;
+      const txt = buildSummaryText(lastRun);
+      const safeId = String(lastRun.refHash || "proofy").slice(0, 12);
+      const fn = `proofy-verifiering-${safeId}.txt`;
+      downloadTextFile(fn, txt);
     });
   }
 
@@ -992,6 +1087,7 @@
 
       if (copySummaryBtn) copySummaryBtn.style.display = "inline-flex";
       if (sendNoteToChatBtn) sendNoteToChatBtn.style.display = "inline-flex";
+      if (downloadReportBtn) downloadReportBtn.style.display = "inline-flex"; // ✅ steg 3
 
       hideAlert();
 
