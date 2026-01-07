@@ -193,7 +193,7 @@
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            Alla filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).<br />
+            De flesta vanliga filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).<br />
             <b>Obs:</b> Ny export/omskanning/konvertering kan ge en annan filversion även om dokumentet “ser likadant ut”.
           </p>
         </section>
@@ -288,7 +288,8 @@
               </div>
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
-                <b>Obs:</b> Om registreringen inte går igenom just nu kan ni ändå använda ID och länk i ärendet.
+                <b>Obs:</b> Om registreringen inte går igenom just nu är Verifierings-ID och verifieringslänk ändå skapade.
+                För senare kontroll mot Proofys register behöver registreringen gå igenom.
                 Försök igen senare, eller mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och ange Verifierings-ID.
               </p>
 
@@ -334,7 +335,7 @@
                   </div>
 
                   <details style="margin-top:12px;">
-                    <summary>Tekniska detaljer (valfritt)</summary>
+                    <summary>Underlag för felsökning (valfritt)</summary>
                     <p class="small" style="margin:10px 0 8px; opacity:.95;">
                       Behövs normalt inte i ärendet, men kan hjälpa vid felsökning.
                     </p>
@@ -344,10 +345,10 @@
                     <div class="meta">Registreringsreferens (valfritt)</div>
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Teknisk identitet (valfritt)</div>
+                    <div class="meta" style="margin-top:10px;">Identifierare för support (valfritt)</div>
                     <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Felsvar (om något)</div>
+                    <div class="meta" style="margin-top:10px;">Meddelande vid problem (om något)</div>
                     <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
                   </details>
                 </div>
@@ -871,7 +872,7 @@
 
     const ok = await waitForQRCode(2000);
     if (!ok) {
-      targetEl.innerHTML = `<div class="meta">QR-biblioteket kunde inte laddas.</div>`;
+      targetEl.innerHTML = `<div class="meta">QR kunde inte laddas.</div>`;
       return;
     }
 
@@ -904,13 +905,13 @@
       }
     } catch (e){
       console.error("QR render failed:", e);
-      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte renderas.</div>`;
+      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte visas.</div>`;
       return;
     }
 
     const node = await waitForQrNode(targetEl, 3000);
     if (!node) {
-      targetEl.innerHTML = `<div class="meta">QR skapades inte. Testa uppdatera sidan.</div>`;
+      targetEl.innerHTML = `<div class="meta">QR kunde inte visas. Testa uppdatera sidan.</div>`;
       return;
     }
 
@@ -929,7 +930,7 @@
     lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
     if (run.createdSe) lines.push(`Skapad: ${run.createdSe}`);
     lines.push(`Status: ${run.statusLine || "—"}`);
-    if (run.timeSe) lines.push(`Registrerad: ${run.timeSe}`);
+    if (run.timeSe) lines.push(`Registrerad hos Proofy: ${run.timeSe}`);
     if (run.txHash) lines.push(`Registreringsreferens: ${run.txHash}`);
     lines.push("");
     lines.push(`Noterad: ${nowSe()}`);
@@ -1114,10 +1115,11 @@
       if (!reg.ok){
         const res = reg.res;
         const data = reg.data || {};
-        const detail = data?.detail ? ` | ${data.detail}` : "";
         const status = res?.status || 0;
         const retryable = isRetryableStatus(status) || !!reg.aborted;
-        const msg = (data?.error || `Registreringen kunde inte slutföras just nu (HTTP ${status || "?"}).`) + detail;
+
+        const msg = "Registreringen kunde inte slutföras just nu. Försök igen senare eller kontakta Proofy och ange Verifierings-ID.";
+
         throw Object.assign(new Error(msg), { _proofy_retryable: retryable });
       }
 
@@ -1127,10 +1129,10 @@
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
       headline.innerHTML = already
-        ? `<span class="ok">✅ Redan registrerad</span> <span class="meta">(du kan använda samma ID)</span>`
-        : `<span class="ok">✅ Registrerad</span> <span class="meta">(referens fastställd)</span>`;
+        ? `<span class="ok">✅ Redan registrerad hos Proofy</span> <span class="meta">(samma ID kan användas)</span>`
+        : `<span class="ok">✅ Registrerad hos Proofy</span> <span class="meta">(redo för senare kontroll)</span>`;
 
-      regStatusOut.textContent = already ? "Redan registrerad" : "Registrerad";
+      regStatusOut.textContent = already ? "Redan registrerad hos Proofy" : "Registrerad hos Proofy";
 
       let registeredSe = null;
       if (data.timestamp){
@@ -1150,7 +1152,7 @@
         id,
         link: currentLink,
         createdSe,
-        statusLine: already ? "Redan registrerad" : "Registrerad",
+        statusLine: already ? "Redan registrerad hos Proofy" : "Registrerad hos Proofy",
         timeSe: registeredSe,
         txHash: data.txHash || null
       };
@@ -1167,19 +1169,19 @@
       const retryable = !!e?._proofy_retryable;
 
       errorMsg.textContent = retryable
-        ? "Tillfälligt tekniskt problem. ID och länk är ändå klara – du kan gå vidare till verifiering och registrera senare."
-        : (e?.message || "Registreringen kunde inte slutföras just nu. ID och länk är ändå klara – du kan gå vidare till verifiering.");
+        ? "Tillfälligt tekniskt problem. Verifierings-ID och verifieringslänk är skapade. För senare kontroll mot Proofys register behöver registreringen gå igenom. Försök igen senare eller kontakta Proofy."
+        : (e?.message || "Registreringen kunde inte slutföras just nu. Verifierings-ID och verifieringslänk är skapade. För senare kontroll mot Proofys register behöver registreringen gå igenom.");
 
       if (currentId && currentLink){
         resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Ej registrerad just nu (ID/länk är klar)";
+        regStatusOut.textContent = "Ej registrerad hos Proofy just nu (ID/länk är skapade)";
         timeOut.textContent = "—";
 
         headline.style.borderColor = "rgba(255,80,80,.20)";
         headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Registrering kunde inte slutföras</span> <span class="meta">(ID/länk kan ändå användas)</span>`;
+        headline.innerHTML = `<span class="err">⚠️ Registreringen kunde inte slutföras</span> <span class="meta">(ID/länk är skapade)</span>`;
 
         debugOut.textContent = errorMsg.textContent;
 
@@ -1193,7 +1195,7 @@
           id: currentId,
           link: currentLink,
           createdSe: nowSe(),
-          statusLine: "Ej registrerad just nu",
+          statusLine: "Ej registrerad hos Proofy just nu",
           timeSe: null,
           txHash: null
         };
@@ -1201,7 +1203,7 @@
         setBusy(false);
       }
 
-      setPill("Klart (ID/länk är klar)");
+      setPill("Klart (ID/länk är skapade)");
       setBusy(false);
     }
   });
