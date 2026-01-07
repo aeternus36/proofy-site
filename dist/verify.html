@@ -8,12 +8,10 @@
   <meta name="theme-color" content="#0b1220" />
   <meta name="robots" content="noindex" />
 
-  <!-- ✅ Synka med register/pilot så layout inte byter stil -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
-    /* Minimal a11y-failsafe (om global .sr-only saknas) */
     .sr-only{
       position:absolute !important;
       width:1px !important;
@@ -26,10 +24,8 @@
       border:0 !important;
     }
 
-    /* Minska "knapp-bomb": visa statuspills bara vid behov */
     #idPill, #selfLinkPill, #statusPill, #copyIdPill, #copyFileHashPill, #copySummaryPill { display:none; }
 
-    /* Lite tydligare action-rader */
     .actionsRow{
       display:flex;
       flex-wrap:wrap;
@@ -114,7 +110,6 @@
             ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
-          <!-- ✅ FÄRRE KLICKS: bara två hjälpknappar här -->
           <div class="actions" style="margin-top:10px;">
             <div class="actionsRow">
               <button class="btn" id="pasteIdBtn" type="button">Klistra in från urklipp</button>
@@ -126,7 +121,6 @@
             </div>
           </div>
 
-          <!-- ✅ Delningsfält -->
           <div style="margin-top:12px;">
             <div class="meta">Delbar verifieringslänk (för kollega/klient)</div>
             <div class="small" style="margin-top:6px; opacity:.9;">Klicka i fältet för att kopiera.</div>
@@ -163,7 +157,6 @@
               <span id="selfLinkPill" class="pill" style="margin-top:8px;" aria-live="polite" aria-atomic="true" role="status"></span>
             </div>
 
-            <!-- Visas bara om webbläsaren stödjer "Dela" -->
             <div class="actions" style="margin-top:10px;">
               <div class="actionsRow">
                 <button class="btn" id="shareSelfLinkBtn" type="button" style="display:none;">Dela</button>
@@ -180,7 +173,6 @@
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
-          <!-- Drag & drop-zon (klickbar + tangentbord) -->
           <div id="dropZone" class="drop" role="button" tabindex="0"
                aria-label="Dra och släpp underlag här, eller tryck för att välja fil"
                style="margin-top:10px;">
@@ -211,7 +203,7 @@
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
             <b>Tips:</b> Om underlaget har exporterats om, skannats om eller sparats på nytt kan det räknas som en annan filversion
-            även om det “ser likadant ut”. Proofy jämför filens <b>digitala fingeravtryck</b>.
+            även om det “ser likadant ut”. Proofy jämför filversionens <b>kontrollvärde</b>.
           </p>
         </section>
 
@@ -260,11 +252,11 @@
                 <span id="copyIdPill" class="pill" style="margin-top:8px;"> </span>
               </div>
 
-              <div class="meta" style="margin-top:12px;">Underlagets digitala fingeravtryck</div>
+              <div class="meta" style="margin-top:12px;">Underlagets kontrollvärde</div>
               <div class="small" style="margin-top:6px; opacity:.9;">Klicka i fältet för att kopiera.</div>
 
               <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
-                <button type="button" id="copyFileHashIconBtn" aria-label="Kopiera fingeravtryck" title="Kopiera"
+                <button type="button" id="copyFileHashIconBtn" aria-label="Kopiera kontrollvärde" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
@@ -274,7 +266,7 @@
                      tabindex="0"
                      role="button"
                      title="Klicka för att kopiera"
-                     aria-label="Underlagets fingeravtryck (klicka för att kopiera)"
+                     aria-label="Underlagets kontrollvärde (klicka för att kopiera)"
                      style="
                        padding:8px 10px;
                        border-radius:12px;
@@ -321,7 +313,7 @@
 
               <div class="actions" style="margin-top:12px;">
                 <div class="actionsRow">
-                  <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna registreringskvitto</a>
+                  <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna verifieringsintyg</a>
                   <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
                   <button class="btn soft" id="sendNoteToChatBtn" type="button" style="display:none;">Skapa notering i chatten</button>
                   <button class="btn" id="downloadReportBtn" type="button" style="display:none;">Ladda ner rapport (.txt)</button>
@@ -460,7 +452,6 @@
     }, ms);
   }
 
-  // robust kopiering (clipboard + fallback)
   async function copyTextToClipboard(text){
     const t = String(text || "").trim();
     if (!t || t === "—") return false;
@@ -529,7 +520,7 @@
     return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
   }
 
-  async function sha256Hex(file){
+  async function makeControlValue(file){
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
     return "0x" + bytesToHex(new Uint8Array(dig));
@@ -540,15 +531,25 @@
     return (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
   }
 
-  function setIdInUrl(id){
+  function getCheckedFromUrl(){
     const url = new URL(location.href);
-    if (id) {
-      url.searchParams.set("hash", id);
+    return (url.searchParams.get("checked") || "").trim();
+  }
+
+  function setParamsInUrl({ hash, checked }){
+    const url = new URL(location.href);
+
+    if (hash) {
+      url.searchParams.set("hash", hash);
       url.searchParams.delete("id");
     } else {
       url.searchParams.delete("hash");
       url.searchParams.delete("id");
     }
+
+    if (checked) url.searchParams.set("checked", String(checked));
+    else url.searchParams.delete("checked");
+
     history.replaceState({}, "", url.toString());
   }
 
@@ -556,42 +557,21 @@
     return d.toISOString().replace("T"," ").replace(/\.\d{3}Z$/, " UTC");
   }
 
-  function fmtSe(ts){
+  function fmtSeEpoch(epoch){
     try{
       return new Intl.DateTimeFormat("sv-SE", {
         timeZone:"Europe/Stockholm",
         year:"numeric", month:"2-digit", day:"2-digit",
         hour:"2-digit", minute:"2-digit", second:"2-digit"
-      }).format(new Date(Number(ts) * 1000)) + " (Europe/Stockholm)";
+      }).format(new Date(Number(epoch) * 1000)) + " (Europe/Stockholm)";
     } catch {
       return "—";
     }
   }
 
-  function fmtUtc(ts){
+  function fmtUtcEpoch(epoch){
     try{
-      return isoUtcNoMs(new Date(Number(ts) * 1000));
-    } catch {
-      return "—";
-    }
-  }
-
-  // ✅ För fast verifieringstid (Date)
-  function fmtSeDate(d){
-    try{
-      return new Intl.DateTimeFormat("sv-SE", {
-        timeZone:"Europe/Stockholm",
-        year:"numeric", month:"2-digit", day:"2-digit",
-        hour:"2-digit", minute:"2-digit", second:"2-digit"
-      }).format(d) + " (Europe/Stockholm)";
-    } catch {
-      return "—";
-    }
-  }
-
-  function fmtUtcDate(d){
-    try{
-      return isoUtcNoMs(d);
+      return isoUtcNoMs(new Date(Number(epoch) * 1000));
     } catch {
       return "—";
     }
@@ -628,6 +608,7 @@
     lines.push(`Verifierings-ID: ${run.refHash || "—"}`);
     if (run.fileName) lines.push(`Underlag: ${run.fileName}`);
     if (run.fileSizeMb != null) lines.push(`Filstorlek: ${run.fileSizeMb} MB`);
+    lines.push("");
 
     lines.push(`Resultat: ${run.match ? "OFÖRÄNDRAT (samma filversion som referensen)" : "AVVIKELSE (annan filversion än referensen)"}`);
     lines.push("");
@@ -725,7 +706,7 @@
       fileName: run.fileName || "",
       fileSizeMb: run.fileSizeMb != null ? String(run.fileSizeMb) : "",
       match: Boolean(run.match),
-      exists: run.exists, // true/false/null
+      exists: run.exists,
       regSe: run.regSe || "",
       regUtc: run.regUtc || "",
       verifySe: run.verifySe || "",
@@ -811,7 +792,6 @@
     const id = (hashInput.value || "").trim();
     const ok = isValidId(id);
 
-    // share-knapp bara om supported och ok ID
     if (shareSelfLinkBtn){
       const canShare = !!navigator.share;
       shareSelfLinkBtn.style.display = (canShare && ok) ? "inline-flex" : "none";
@@ -895,10 +875,9 @@
   const urlId = getIdFromUrl();
   if (isValidId(urlId)) {
     hashInput.value = urlId;
-    setIdInUrl(urlId);
+    setParamsInUrl({ hash: urlId, checked: getCheckedFromUrl() || "" });
   }
 
-  // Clipboard read
   async function readClipboardText(){
     try{
       if (navigator.clipboard && navigator.clipboard.readText) {
@@ -922,7 +901,7 @@
       hashInput.value = candidate;
 
       if (isValidId(candidate)) {
-        setIdInUrl(candidate);
+        setParamsInUrl({ hash: candidate, checked: getCheckedFromUrl() || "" });
         showPill(idPill, "Klistrat ✓");
       } else {
         showPill(idPill, "Klistrat (kontrollera att det är hela ID:t)");
@@ -937,14 +916,13 @@
   if (clearIdBtn){
     clearIdBtn.addEventListener("click", () => {
       hashInput.value = "";
-      setIdInUrl("");
+      setParamsInUrl({ hash: "", checked: "" });
       showPill(idPill, "Rensat");
       updateValidationUI();
       hashInput.focus();
     });
   }
 
-  // selfLink copy actions
   if (selfLinkOut){
     selfLinkOut.addEventListener("click", async () => {
       await copyWithPill({ text: selfLinkOut.textContent, pillEl: selfLinkPill, okText:"Länk kopierad ✅" });
@@ -983,13 +961,12 @@
 
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
-    if (isValidId(v)) setIdInUrl(v);
+    if (isValidId(v)) setParamsInUrl({ hash: v, checked: getCheckedFromUrl() || "" });
     updateValidationUI();
   });
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
 
-  // dropzone (klick/tangentbord -> öppna filväljaren)
   if (dropZone){
     dropZone.addEventListener("click", () => fileInput.click());
     dropZone.addEventListener("keydown", (e) => {
@@ -1006,7 +983,6 @@
     });
   }
 
-  // copy actions in result
   if (outHash) {
     outHash.addEventListener("click", async () => {
       await copyWithPill({ text: outHash.textContent, pillEl: copyIdPill });
@@ -1100,10 +1076,12 @@
       return;
     }
 
-    // ✅ FAST verifieringstidpunkt (sätts en gång och återanvänds)
-    const verifiedAt = new Date();
-    const verifySeFixed = fmtSeDate(verifiedAt);
-    const verifyUtcFixed = fmtUtcDate(verifiedAt);
+    // ✅ FAST kontrolltidpunkt (sparas i URL som checked=epoch)
+    const checkedEpoch = Math.floor(Date.now() / 1000);
+    setParamsInUrl({ hash: refHash, checked: checkedEpoch });
+
+    const verifySeFixed = fmtSeEpoch(checkedEpoch);
+    const verifyUtcFixed = fmtUtcEpoch(checkedEpoch);
 
     setStatus("Verifierar…");
     setBusy(true);
@@ -1111,7 +1089,7 @@
     const myOp = ++opId;
 
     try{
-      const fileHash = await sha256Hex(currentFile);
+      const fileHash = await makeControlValue(currentFile);
       if (myOp !== opId) return;
 
       const match = (fileHash.toLowerCase() === refHash.toLowerCase());
@@ -1166,11 +1144,12 @@
         ts = data.timestamp ? Number(data.timestamp) : null;
 
         outRegStatus.textContent = exists ? "Registrerad" : "Ej registrerad";
-        outRegSe.textContent = (exists && ts) ? fmtSe(ts) : "—";
-        outRegUtc.textContent = (exists && ts) ? fmtUtc(ts) : "—";
+        outRegSe.textContent = (exists && ts) ? fmtSeEpoch(ts) : "—";
+        outRegUtc.textContent = (exists && ts) ? fmtUtcEpoch(ts) : "—";
       }
 
       if (openCertBtn) {
+        // Intyg har egen fast kontrolltidpunkt; vi låter intyget hantera sin "checked"
         openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refHash)}`;
         openCertBtn.style.display = "inline-flex";
       }
@@ -1179,8 +1158,8 @@
         refHash,
         match,
         exists,
-        regSe: (exists && ts) ? fmtSe(ts) : null,
-        regUtc: (exists && ts) ? fmtUtc(ts) : null,
+        regSe: (exists && ts) ? fmtSeEpoch(ts) : null,
+        regUtc: (exists && ts) ? fmtUtcEpoch(ts) : null,
         fileName: currentFile?.name || "",
         fileSizeMb: currentFile ? (currentFile.size/1024/1024).toFixed(2) : null,
 
@@ -1209,7 +1188,6 @@
     }
   });
 
-  // init: bind file picker label
   const fileLabel = document.querySelector("label[for='fileInput']");
   if (fileLabel) fileLabel.addEventListener("click", () => fileInput.click());
 
@@ -1217,6 +1195,13 @@
   resetUI();
   setFile(null);
   updateValidationUI();
+
+  // Om sidan öppnas med checked=... (t.ex. kopierad URL) så kan vi visa tidpunkten när resultat finns.
+  // Vi visar den inte innan verifiering körts, men vi bevarar parametern.
+  const initialChecked = Number(getCheckedFromUrl());
+  if (Number.isFinite(initialChecked) && initialChecked > 0) {
+    // behåll den i URL (ingen extra åtgärd här)
+  }
 })();
 </script>
 
