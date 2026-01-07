@@ -19,15 +19,40 @@
   <meta name="twitter:title" content="Proofy – Verifiera filversioner för redovisningsbyråer" />
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01f" />
-  <link rel="stylesheet" href="/assets/header.css?v=2025-flat2" />
+  <!-- ✅ Synka CSS-versioner med övriga sidor så navbar/hamburgare blir identisk -->
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
     html, body { background: #0b1220 !important; }
     body { background-image: none !important; }
     main::before{ content:none !important; }
     main{ background: transparent !important; }
+
+    /* Dölj status-pill tills vi faktiskt visar något */
     #demoStatus { display:none; }
+
+    /* Failsafe om global .sr-only saknas */
+    .sr-only{
+      position:absolute !important;
+      width:1px !important;
+      height:1px !important;
+      padding:0 !important;
+      margin:-1px !important;
+      overflow:hidden !important;
+      clip:rect(0,0,0,0) !important;
+      white-space:nowrap !important;
+      border:0 !important;
+    }
+
+    /* Liten förtydliganderuta (juridisk/revisionston, utan “tech-språk”) */
+    .noteBox{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.05);
+    }
   </style>
 
   <script type="application/ld+json">
@@ -59,6 +84,7 @@
         <a class="btn primary" href="#kontakt">Boka kort demo</a>
       </div>
 
+      <!-- ✅ Mobil hamburgarmeny (details) -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
@@ -71,6 +97,12 @@
           <a class="mnavLink mnavLinkPrimary" href="#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
+            <!-- Policy-länkar i mobilmenyn (konsekvent med övriga sidor) -->
+            <a class="mnavLink" href="/security.html">Säkerhet</a>
+            <a class="mnavLink" href="/privacy.html">Integritet</a>
+            <a class="mnavLink" href="/terms.html">Villkor</a>
+            <a class="mnavLink" href="/cookies.html">Cookies</a>
+
             <div class="mnavNote">För byråer · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
           </div>
@@ -100,7 +132,6 @@
         <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
       </div>
 
-      <!-- NYTT: Prisrad (B2B-optimalt: tydligt, kort, faktura) -->
       <p class="small" style="margin-top:10px; margin-bottom:0;">
         Pilot 30 dagar: <b>4 900 kr</b> exkl. moms · Faktura · Ingen bindning efter pilot.
       </p>
@@ -122,9 +153,13 @@
         (t.ex. vid kvalitetskontroll, fråga från kund eller efterhandsgranskning).
       </p>
 
-      <p class="small" style="margin-top:12px;">
-        Proofy är ett tekniskt verifieringsunderlag. Inte e-signering, inte filarkiv och inte juridisk rådgivning.
-      </p>
+      <div class="noteBox">
+        <div class="small" style="margin:0;">
+          <b>Avgränsning (viktigt i revision/granskning):</b> Proofy visar om filversionen är densamma som referensen.
+          Tjänsten avgör inte innehållets saklighet, ersätter inte professionellt omdöme och utgör inte juridisk rådgivning.
+          Proofy är inte e-signering och inte ett filarkiv.
+        </div>
+      </div>
     </div>
 
     <section id="nytta" style="margin-top:28px;">
@@ -451,7 +486,8 @@
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2025-flat2" defer></script>
-<script src="/chat-widget.js?v=2025-01f" defer></script>
+<!-- ✅ Synka dessa också -->
+<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
+<script src="/chat-widget.js?v=2026-01-03a" defer></script>
 </body>
 </html>
