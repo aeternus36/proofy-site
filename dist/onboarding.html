@@ -4,14 +4,46 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Onboarding – Proofy</title>
-  <meta name="description" content="Onboarding och arbetsinstruktion för användning av Proofy i revisions- och redovisningsbyråers verksamhet." />
+  <meta name="description" content="Onboarding och arbetsinstruktion för professionell användning av Proofy i revision, redovisning och granskning." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/onboarding.html" />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- Samma styles som övriga sidor -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-07" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-07" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-07a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-07a" />
+
+  <style>
+    .kicker { opacity:.88; }
+    .toc a { text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .callout{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin-top: 12px;
+    }
+    .callout b{ display:block; margin-bottom:6px; }
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 900px){
+      .grid2{ grid-template-columns: 1fr; }
+    }
+    .chipRow{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      font-size: 12.5px;
+      color: rgba(234,240,255,.90);
+    }
+    .hrTight{ margin: 12px 0; }
+  </style>
 </head>
 
 <body>
@@ -25,14 +57,13 @@
         <span>Proofy</span>
       </a>
 
-      <!-- Desktop navigation -->
       <div class="navActions" id="navActionsDesktop">
         <a class="btn" href="/production.html">Production</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn soft" href="/pilot.html">Pilot</a>
       </div>
 
-      <!-- Mobile navigation (hamburgare) -->
       <details class="mnav" id="mnav">
         <summary class="mnavSummary" aria-label="Öppna meny">
           <span class="mnavIcon" aria-hidden="true"></span>
@@ -42,11 +73,13 @@
           <a class="mnavLink" href="/production.html">Production</a>
           <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/pilot.html">Pilot</a>
 
           <div class="mnavMeta">
             <a class="mnavLink" href="/security.html">Säkerhet</a>
             <a class="mnavLink" href="/privacy.html">Integritet</a>
             <a class="mnavLink" href="/terms.html">Villkor</a>
+            <a class="mnavLink" href="/cookies.html">Cookies</a>
 
             <div class="mnavNote">Onboarding · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
@@ -61,107 +94,181 @@
   <div class="wrap" style="max-width:920px">
     <div class="badge">Onboarding · professionell användning · B2B</div>
 
-    <h1 class="pageTitle">Onboarding – användning av Proofy i byråprocess</h1>
+    <h1 class="pageTitle">Onboarding och arbetsinstruktion</h1>
 
     <p class="lead">
-      Denna sida beskriver hur Proofy används i praktiken inom revisions- och
-      redovisningsverksamhet. Texten är avsedd att fungera som
-      <b>intern arbetsinstruktion</b> och kan även bifogas vid
-      <b>kvalitetskontroll eller extern granskning</b>.
+      Denna sida beskriver hur Proofy används i praktiken inom <b>revision, redovisning och granskning</b>.
+      Texten är avsedd som <b>intern arbetsinstruktion</b> och kan även hänvisas till vid
+      <b>kvalitetskontroll</b> eller <b>extern granskning</b>.
     </p>
 
-    <div class="card content">
-      <h2>1. Tjänstens syfte</h2>
+    <div class="chipRow">
+      <span class="chip">🔒 Inga dokument lagras</span>
+      <span class="chip">🧾 Verifierings-ID i ärendet</span>
+      <span class="chip">📌 Avsedd för efterhandskontroll</span>
+      <span class="chip">⚖️ Tydliga avgränsningar</span>
+    </div>
+
+    <div class="card content" style="margin-top:14px;">
+      <h2 class="kicker">Översikt</h2>
+
+      <div class="toc small" style="margin-top:10px;">
+        <div><a href="#syfte">1. Syfte och bevisvärde</a></div>
+        <div><a href="#nar">2. När Proofy används</a></div>
+        <div><a href="#rutin">3. Rekommenderad rutin (3 steg)</a></div>
+        <div><a href="#dokumentation">4. Dokumentation i ärendet</a></div>
+        <div><a href="#roller">5. Roller och ansvar</a></div>
+        <div><a href="#avgransning">6. Avgränsningar</a></div>
+        <div><a href="#qc">7. QC-checklista</a></div>
+        <div><a href="#support">8. Support och frågor</a></div>
+      </div>
+    </div>
+
+    <div class="card content" id="syfte" style="margin-top:14px;">
+      <h2>1. Syfte och bevisvärde</h2>
       <p>
-        Proofy används för att tekniskt verifiera om ett digitalt underlag
-        (en fil) är <b>oförändrat jämfört med en tidigare fastställd version</b>.
-        Tjänsten möjliggör spårbarhet och efterhandskontroll i ärenden där
-        versionstillhörighet behöver kunna styrkas.
+        Proofy används för att tekniskt kontrollera om ett digitalt underlag (en fil)
+        är <b>oförändrat jämfört med en tidigare fastställd filversion</b>.
+        Resultatet används som <b>verifieringsnotering</b> i ärendet, vid intern kvalitetskontroll eller vid efterhandsfrågor.
       </p>
-      <p class="small">
-        Proofy gör ingen bedömning av dokumentets innehåll, riktighet,
-        fullständighet eller juridiska giltighet.
-      </p>
+
+      <div class="callout">
+        <b>Viktigt</b>
+        Proofy visar om en filversion <b>överensstämmer</b> eller <b>inte överensstämmer</b> med en referens.
+        Det är inte en bedömning av innehållets riktighet, fullständighet eller juridiska giltighet.
+      </div>
     </div>
 
-    <div class="card content" style="margin-top:14px;">
+    <div class="card content" id="nar" style="margin-top:14px;">
       <h2>2. När Proofy normalt används</h2>
-      <ul>
-        <li>Vid fastställande av bokslut, rapporter eller sammanställningar</li>
-        <li>Vid beslut eller avtal som sparas digitalt</li>
-        <li>Vid intern kvalitetskontroll eller byrågranskning</li>
-        <li>Vid efterhandsfrågor från kund, revisor eller extern part</li>
-      </ul>
-    </div>
+      <div class="grid2" style="margin-top:10px;">
+        <div class="callout" style="margin-top:0;">
+          <b>Fastställande</b>
+          När ett underlag ska ligga till grund för beslut, rapportering eller fortsatt arbete
+          (t.ex. bokslut, rapport, beslut, avtal, styrkande underlag).
+        </div>
+        <div class="callout" style="margin-top:0;">
+          <b>Efterhandskontroll</b>
+          När någon senare frågar: “är det samma version som då?”,
+          t.ex. vid intern QC, kundfråga, byrågranskning eller extern granskning.
+        </div>
+      </div>
 
-    <div class="card content" style="margin-top:14px;">
-      <h2>3. Rekommenderad arbetsrutin</h2>
-      <ol style="padding-left:18px;">
-        <li>
-          <b>Fastställ version</b><br/>
-          När ett underlag är färdigt och ska ligga till grund för fortsatt arbete
-          skapas ett Verifierings-ID via Proofy.
-        </li>
-        <li>
-          <b>Dokumentera i ärendet</b><br/>
-          Verifierings-ID sparas i ärendedokumentation, revisionsfil eller
-          byråns interna system enligt gällande rutiner.
-        </li>
-        <li>
-          <b>Verifiera vid behov</b><br/>
-          Vid senare kontroll verifieras aktuell fil mot Verifierings-ID och
-          resultatet dokumenteras (överensstämmer / överensstämmer inte).
-        </li>
-      </ol>
-    </div>
-
-    <div class="card content" style="margin-top:14px;">
-      <h2>4. Dokumentationsexempel</h2>
-      <p class="small">
-        Exempel på notering i ärendet:
-      </p>
-      <blockquote class="small">
-        ”Underlaget verifierades via Proofy den [datum].
-        Resultatet visar att filen överensstämmer / inte överensstämmer
-        med tidigare fastställd version.”
-      </blockquote>
-      <p class="small">
-        Formuleringen anpassas efter byråns dokumentationsstandard.
+      <p class="small" style="margin-top:10px;">
+        Om ett dokument exporteras om, skannas om eller sparas på nytt kan det räknas som en annan filversion även om det “ser likadant ut”.
       </p>
     </div>
 
-    <div class="card content" style="margin-top:14px;">
+    <div class="card content" id="rutin" style="margin-top:14px;">
+      <h2>3. Rekommenderad rutin (3 steg)</h2>
+
+      <div class="callout" style="margin-top:10px;">
+        <b>Steg 1 – Fastställ filversion</b>
+        När underlaget är klart: skapa ett <b>Verifierings-ID</b> och ange vad som fastställts (t.ex. “Bokslut 2025-12-31 – version A”).
+      </div>
+
+      <div class="callout">
+        <b>Steg 2 – Dokumentera i ärendet</b>
+        Spara Verifierings-ID i ärendedokumentation/revisionsfil enligt byråns standard.
+        Rekommendation: dokumentera även <b>datum</b> för när fastställandet skedde.
+      </div>
+
+      <div class="callout">
+        <b>Steg 3 – Verifiera vid behov</b>
+        Vid senare kontroll: verifiera aktuell fil mot Verifierings-ID.
+        Dokumentera resultatet: <b>överensstämmer</b> / <b>inte överensstämmer</b> samt kontrolltidpunkt.
+      </div>
+
+      <div class="hr hrTight"></div>
+
+      <p class="small">
+        I praktiken innebär detta att Proofy används som ett <b>tekniskt spårbarhetsstöd</b> i processer där filversioner cirkulerar mellan system och personer.
+      </p>
+    </div>
+
+    <div class="card content" id="dokumentation" style="margin-top:14px;">
+      <h2>4. Dokumentation i ärendet</h2>
+
+      <div class="grid2" style="margin-top:10px;">
+        <div class="callout" style="margin-top:0;">
+          <b>Exempel – notering vid fastställande</b>
+          <div class="small">
+            “Verifierings-ID skapat och sparat i ärendet avseende fastställd filversion.
+            Underlag: [benämning]. Datum: [datum].”
+          </div>
+        </div>
+
+        <div class="callout" style="margin-top:0;">
+          <b>Exempel – notering vid efterhandskontroll</b>
+          <div class="small">
+            “Verifiering genomförd [datum/tid]. Resultat: filversionen överensstämmer / överensstämmer inte med tidigare fastställd version (Verifierings-ID: …).”
+          </div>
+        </div>
+      </div>
+
+      <p class="small" style="margin-top:10px;">
+        Dokumentationsformulering anpassas efter byråns mallar och gällande standard för revisionsdokumentation/kvalitetskontroll.
+      </p>
+    </div>
+
+    <div class="card content" id="roller" style="margin-top:14px;">
       <h2>5. Roller och ansvar</h2>
       <ul>
-        <li><b>Byrån</b> ansvarar för professionell bedömning och dokumentation</li>
-        <li><b>Användaren</b> ansvarar för korrekt hantering av Verifierings-ID</li>
-        <li><b>Proofy</b> ansvarar för att verifieringstjänsten fungerar tekniskt enligt avtal</li>
+        <li><b>Byrån/Kunden</b> ansvarar för professionell bedömning, urval av underlag och dokumentation i ärendet.</li>
+        <li><b>Användaren</b> ansvarar för att rätt filversion registreras/verifieras och att Verifierings-ID hanteras enligt interna rutiner.</li>
+        <li><b>Proofy</b> ansvarar för att tjänsten tekniskt kan registrera och kontrollera Verifierings-ID enligt avtal och publicerade villkor.</li>
       </ul>
+
+      <div class="callout">
+        <b>Hantering av länkar och åtkomst</b>
+        Verifierings-ID och eventuella verifieringslänkar ska hanteras som ärendeuppgift enligt byråns rutiner.
+        Endast behöriga ska ha tillgång, särskilt om identifiering kan uppstå via ärendedokumentation.
+      </div>
     </div>
 
-    <div class="card content" style="margin-top:14px;">
+    <div class="card content" id="avgransning" style="margin-top:14px;">
       <h2>6. Avgränsningar</h2>
       <ul>
-        <li>Proofy är inte arkivering</li>
-        <li>Proofy är inte e-signering</li>
-        <li>Proofy är inte juridisk rådgivning</li>
-        <li>Proofy ersätter inte professionellt omdöme</li>
+        <li>Proofy är <b>inte</b> arkivering eller filförvaring.</li>
+        <li>Proofy är <b>inte</b> e-signering eller signeringstjänst.</li>
+        <li>Proofy är <b>inte</b> juridisk rådgivning och bedömer inte rättslig giltighet.</li>
+        <li>Proofy bedömer <b>inte</b> innehållets riktighet, fullständighet eller lämplighet.</li>
       </ul>
-    </div>
 
-    <div class="card content" style="margin-top:14px;">
-      <h2>7. Support och granskning</h2>
-      <p>
-        Vid frågor om användning, rutiner eller dokumentation:
-      </p>
-      <p><b>kontakt@proofy.se</b></p>
       <p class="small">
-        Denna sida kan bifogas vid intern kvalitetskontroll eller extern granskning
-        som beskrivning av hur Proofy används i byråns process.
+        Proofy är ett tekniskt komplement för spårbarhet och efterhandskontroll av filversioner.
       </p>
     </div>
 
-    <p class="meta" style="margin-top:20px;">
+    <div class="card content" id="qc" style="margin-top:14px;">
+      <h2>7. QC-checklista (kort)</h2>
+      <ol style="padding-left:18px;">
+        <li>Är det tydligt <b>vilket underlag</b> som fastställts (benämning/ärendereferens)?</li>
+        <li>Finns Verifierings-ID dokumenterat i ärendet på rätt plats?</li>
+        <li>Vid efterhandskontroll: är kontrolltidpunkt dokumenterad och resultatet tydligt?</li>
+        <li>Vid avvikelse: finns notering om möjlig orsak (ny export/skanning/annan fil) och åtgärd?</li>
+      </ol>
+
+      <div class="callout">
+        <b>Tips</b>
+        Om ni behöver en A4-bilaga till revisionsfil/QC: använd <a href="/qc-bilaga-a4.html">QC-bilaga (A4)</a>.
+      </div>
+    </div>
+
+    <div class="card content" id="support" style="margin-top:14px;">
+      <h2>8. Support och frågor</h2>
+      <p>
+        Frågor om onboarding, rutiner, dokumentationsformulering eller användning:
+      </p>
+      <p><b><a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></b></p>
+
+      <div class="hr hrTight"></div>
+      <p class="small">
+        Relaterade sidor: <a href="/security.html">Säkerhet</a> · <a href="/privacy.html">Integritet</a> · <a href="/terms.html">Villkor</a>
+      </p>
+    </div>
+
+    <p class="meta" style="margin:24px 0;">
       Senast uppdaterad: 2026-01-07
     </p>
   </div>
@@ -171,12 +278,11 @@
   <div class="wrap">
     <div class="foot">
       <div>
-        <div style="font-weight:800;">Proofy</div>
-        <div class="small">© 2026 Proofy</div>
-        <div class="small" style="max-width:92ch;">
+        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
+        <div class="small" style="margin-top:8px; max-width:92ch;">
           Proofy tillhandahåller teknisk verifiering av filer.
-          Tjänsten utgör inte juridisk rådgivning och avgör inte
-          dokumentets rättsliga giltighet.
+          Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -184,11 +290,13 @@
         <a href="/privacy.html">Integritet</a>
         <a href="/terms.html">Villkor</a>
         <a href="/cookies.html">Cookies</a>
+        <a href="/#kontakt">Kontakt</a>
       </div>
     </div>
   </div>
 </footer>
 
-<script src="/assets/header-toggle.js?v=2026-01-07" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-07a" defer></script>
+<script src="/chat-widget.js?v=2026-01-07a" defer></script>
 </body>
 </html>
