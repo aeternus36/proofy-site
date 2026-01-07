@@ -3,78 +3,77 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Production – Proofy</title>
-  <meta name="description" content="Production: Proofys löpande tjänst för byråer. Standardiserad rutin, åtkomst per organisation och verifieringsnoteringar – utan att lagra filinnehåll." />
+  <title>Proofy – Verifiera filversioner för redovisningsbyråer</title>
+  <meta name="description" content="Proofy hjälper redovisningsbyråer att visa att ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://proofy.se/production.html" />
+  <link rel="canonical" href="https://proofy.se/" />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- ✅ Synka med övriga sidor så UI (inkl. hamburgare) blir identiskt -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Proofy" />
+  <meta property="og:title" content="Proofy – Verifiera filversioner för redovisningsbyråer" />
+  <meta property="og:description" content="Verifiera om ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
+  <meta property="og:url" content="https://proofy.se/" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Proofy – Verifiera filversioner för redovisningsbyråer" />
+  <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
+
+  <!-- ✅ Synka med övriga sidor så navbar/hamburgare blir identisk -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
-    /* Failsafe ifall grid/tile-stilar ändras i proofy.css */
-    .grid3{
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-    @media (max-width: 900px){
-      .grid3{ grid-template-columns: 1fr; }
-    }
-    .tile{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      border-radius: 16px;
-      padding: 12px 14px;
-    }
-    .tile b{ display:block; margin-bottom:6px; }
+    html, body { background: #0b1220 !important; }
+    body { background-image: none !important; }
+    main::before{ content:none !important; }
+    main{ background: transparent !important; }
+    #demoStatus { display:none; }
 
-    /* Dölj status-pill tills vi faktiskt har något att säga */
-    #prodStatus { display:none; }
-
-    /* Minimal a11y-failsafe */
-    .sr-only{
-      position:absolute !important;
-      width:1px !important;
-      height:1px !important;
-      padding:0 !important;
-      margin:-1px !important;
-      overflow:hidden !important;
-      clip:rect(0,0,0,0) !important;
-      white-space:nowrap !important;
-      border:0 !important;
-    }
-
-    .fieldError{
-      margin-top:6px;
-      font-size: 12.5px;
-      line-height: 1.35;
-      color: rgba(255, 170, 170, .95);
-      display:none;
-    }
-    .fieldError[data-show="1"]{ display:block; }
-
-    .fieldHint{
-      margin-top:6px;
-      font-size: 12.5px;
-      line-height: 1.35;
-      color: rgba(234,240,255,.76);
-    }
-
-    /* Snyggare “hero” utan att byta global stil */
-    .heroBox{
-      padding:18px;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-    }
-    .heroBadges{
+    /* Små, trygga “revisionsrutor” – påverkar inte global design */
+    .trustRow{
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       margin-top:12px;
+    }
+    .trustTag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.04);
+      font-size:13px;
+      line-height:1.2;
+      color: rgba(234,240,255,.90);
+      white-space:nowrap;
+    }
+    .miniNote{
+      margin-top:12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      padding:12px 14px;
+    }
+    .miniNote .meta{ opacity:.85; }
+    .copyBox{
+      margin-top:8px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.03);
+      padding:10px 12px;
+      cursor:pointer;
+      user-select:text;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+      font-size:13px;
+      line-height:1.35;
+    }
+    .pillInline{
+      display:none;
+      margin-top:8px;
     }
   </style>
 
@@ -90,7 +89,7 @@
 </head>
 
 <body>
-<a class="skip" href="#main">Hoppa till innehåll</a>
+<a class="skip" href="#top">Hoppa till innehåll</a>
 
 <header>
   <div class="wrap">
@@ -101,9 +100,11 @@
       </a>
 
       <div class="navActions" id="navActionsDesktop">
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
-        <a class="btn" href="/pilot.html">Starta pilot</a>
+        <!-- ✅ Tydlig väg för “löpande tjänst”, utan att lova för mycket -->
+        <a class="btn" href="/production.html">Löpande tjänst</a>
         <a class="btn primary" href="#kontakt">Boka kort demo</a>
       </div>
 
@@ -113,9 +114,10 @@
         </summary>
 
         <nav class="mnavMenu" aria-label="Meny">
+          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
-          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+          <a class="mnavLink" href="/production.html">Löpande tjänst</a>
           <a class="mnavLink mnavLinkPrimary" href="#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
@@ -124,7 +126,7 @@
             <a class="mnavLink" href="/terms.html">Villkor</a>
             <a class="mnavLink" href="/cookies.html">Cookies</a>
 
-            <div class="mnavNote">Production · revision · granskning</div>
+            <div class="mnavNote">För byråer · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
           </div>
         </nav>
@@ -133,248 +135,151 @@
   </div>
 </header>
 
-<main id="main">
+<main id="top">
   <div class="wrap">
-    <div class="badge">Production · professionell användning · B2B</div>
+    <div class="badge">För redovisningsbyråer · revision · granskning</div>
 
-    <h1 class="pageTitle">Production: löpande Proofy-tjänst för byråer</h1>
+    <h1 class="pageTitle">Visa att underlag är oförändrat – när det faktiskt prövas i efterhand.</h1>
 
     <p class="lead">
-      När en filversion fastställs i ett ärende behöver ni kunna visa – i efterhand – att samma filversion ligger till grund för
-      bokslut, beslut eller granskning. Production är upplägget för <b>löpande användning i byråprocess</b> med tydliga rutiner,
-      organisationstillgång och dokumenterbara verifieringsnoteringar.
-      <b>Inget filinnehåll lagras.</b>
+      När ett bokslut, avtal eller beslut ifrågasätts senare behöver du kunna visa att filen du hänvisar till är
+      <strong>samma filversion som referensen</strong> – även om den har flyttats mellan system, personer och lagringsplatser.
+      Proofy gör det möjligt <strong>utan att lagra filinnehåll</strong>.
     </p>
 
-    <div class="heroBox" style="margin-top:14px;">
-      <div class="heroCtas" style="margin-top:10px;">
+    <div class="card" style="padding:18px; margin-top:14px;">
+      <div class="heroCtas" style="margin-top:12px;">
         <a class="btn primary" href="#kontakt">Boka kort demo</a>
-        <a class="btn soft" href="/pilot.html">Starta pilot (30 dagar)</a>
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
       </div>
 
-      <div class="heroBadges">
-        <span class="badge">🔒 Inget filinnehåll lagras</span>
-        <span class="badge">🧾 Verifierings-ID i ärendet</span>
-        <span class="badge">📌 Rutin & dokumentation</span>
+      <p class="small" style="margin-top:10px; margin-bottom:0;">
+        Pilot 30 dagar: <b>4 900 kr</b> exkl. moms · Faktura · Ingen bindning efter pilot.
+      </p>
+
+      <p class="small" style="margin-top:8px; margin-bottom:0;">
+        Testa i verkliga ärenden. Fast upplägg. Tydliga ramar.
+      </p>
+
+      <div class="trustRow" aria-label="Trygghet och avgränsning">
+        <span class="trustTag">🔒 Inget filinnehåll lagras</span>
+        <span class="trustTag">🧾 Verifierings-ID i ärendet</span>
+        <span class="trustTag">⚡ Verifiera på sekunder</span>
+        <span class="trustTag">📌 För dokumentation vid kontroll</span>
       </div>
 
-      <p class="small" style="margin-top:12px; margin-bottom:0;">
-        <b>Juridisk avgränsning:</b> Proofy är ett tekniskt verifieringsunderlag och ersätter inte revision, yrkesmässigt omdöme eller juridisk rådgivning.
+      <div class="hr"></div>
+
+      <p class="small" style="margin-top:0; margin-bottom:0;">
+        Vanligt upplägg: ni skapar Verifierings-ID när filversionen fastställs, sparar ID i ärendet och verifierar bara vid behov
+        (t.ex. vid kvalitetskontroll, fråga från kund eller efterhandsgranskning).
+      </p>
+
+      <p class="small" style="margin-top:10px; margin-bottom:0;">
+        <b>Avgränsning:</b> Proofy är ett tekniskt verifieringsunderlag. Inte e-signering, inte filarkiv och inte juridisk rådgivning.
+      </p>
+
+      <!-- ✅ Nytt: “Efter pilot” utan att förstöra något -->
+      <p class="small" style="margin-top:10px; margin-bottom:0;">
+        <b>Efter pilot:</b> Om ni vill fortsätta går ni över till <a href="/production.html">löpande tjänst</a> enligt offert/avtal (B2B).
       </p>
     </div>
 
-    <section id="vad" style="margin-top:28px;">
-      <h2>Vad Production innehåller</h2>
-      <div class="card content">
-        <div class="grid3" style="margin-top:12px;">
-          <div class="tile">
-            <b>Organisationstillgång</b>
-            <span class="small">
-              Åtkomst och upplägg för byrån (team, rutiner och kontaktväg). Syftet är att Proofy ska vara en stabil del av er arbetsprocess.
-            </span>
-          </div>
-          <div class="tile">
-            <b>Standardiserad rutin</b>
-            <span class="small">
-              När registrering ska ske, hur Verifierings-ID sparas i ärendet och hur verifiering dokumenteras vid kvalitetskontroll eller efterhandsfråga.
-            </span>
-          </div>
-          <div class="tile">
-            <b>Dokumenterbart resultat</b>
-            <span class="small">
-              Verifieringsnotering/rapporttext som kan sparas i arbetsdokument eller granskningsfil. Tydligt “match / ingen match”.
-            </span>
-          </div>
-        </div>
-
-        <div class="hr"></div>
-
-        <h3>Så används Proofy i en byråprocess</h3>
-        <ol style="margin:10px 0 0; padding-left:18px;">
-          <li><b>Fastställ filversion</b> i ärendet (t.ex. bokslutsunderlag, beslut, avtal).</li>
-          <li><b>Skapa Verifierings-ID</b> och spara ID i ärendet (t.ex. notering/arbetsdokument).</li>
-          <li>Vid behov: <b>verifiera</b> och dokumentera resultatet (match/ingen match) samt kontrolltidpunkt.</li>
-        </ol>
-
-        <p class="small" style="margin-top:10px; margin-bottom:0;">
-          Proofy visar om filversionen är densamma. Det säger inget om innehållets saklighet eller lämplighet.
-        </p>
-      </div>
-    </section>
-
-    <section id="access" style="margin-top:28px;">
-      <h2>Åtkomst, behörighet och “riktig tjänst”</h2>
+    <section id="nytta" style="margin-top:28px;">
+      <h2>För byråer</h2>
       <div class="card content">
         <p>
-          För att Production ska fungera som en betalad tjänst behöver Proofy ha ett tydligt “kundläge” där byråer får åtkomst enligt avtal.
-          Det kan göras på två sätt:
+          Proofy är byggt för byråers vardag: många ärenden, många versioner och hög kostnad när någon ifrågasätter ett underlag i efterhand.
+          Ni får ett <strong>Verifierings-ID</strong> att spara i ärendet, som gör det enkelt att visa om filen ni kontrollerar är samma filversion som den registrerade referensen.
         </p>
 
-        <div class="grid3" style="margin-top:12px;">
+        <div class="grid3" style="margin-top:14px;">
           <div class="tile">
-            <b>Alternativ A – Avtalad åtkomst (rekommenderat nu)</b>
-            <span class="small">
-              När ni går vidare efter pilot aktiveras “Production” för byrån via avtal/offert.
-              Proofy bekräftar uppstart, faktura och supportkontakt. Åtkomst säkras med organisationens uppgifter.
-            </span>
+            <b>Varför det behövs</b>
+            <span class="small">Filer flyttas, byter namn och skickas mellan system. Proofy ger ett tekniskt sätt att visa om en fil är oförändrad jämfört med en fastställd referens.</span>
           </div>
           <div class="tile">
-            <b>Alternativ B – Inloggning & licenser</b>
-            <span class="small">
-              Byrån skapar konto och licenser kopplas till organisation och användare. Lämpligt när ni vill skala, mäta volym och hantera flera team.
-            </span>
+            <b>Vad ni får</b>
+            <span class="small">Ett Verifierings-ID i ärendet + möjlighet att verifiera filversionen på sekunder när det behövs.</span>
           </div>
           <div class="tile">
-            <b>Varför pilot/demo inte räcker</b>
-            <span class="small">
-              Pilot/demonstration är tidsbegränsat och saknar normalt de avtalade ramarna (support, rutin, organisationstillgång).
-              Production är den löpande, avtalade användningen.
-            </span>
+            <b>Vad Proofy inte är</b>
+            <span class="small">Inte arkivering, inte e-signering och inte juridisk rådgivning. Proofy är ett tekniskt komplement för spårbarhet.</span>
           </div>
         </div>
 
-        <div class="hr"></div>
+        <div class="card content" style="margin-top:18px;">
+          <h3>Så används Proofy i praktiken</h3>
 
-        <p class="small" style="margin:0;">
-          <b>Rekommendation för “5/5”:</b> Kör Alternativ A direkt (enkelt, tydligt B2B), och bygg Alternativ B när ni har 10–30 betalande byråer
-          och vet exakt vilka licensnivåer som behövs.
-        </p>
-      </div>
-    </section>
+          <p>
+            1) När ett underlag fastställs (t.ex. bokslut, rapport, beslut, avtal) skapar du ett <strong>Verifierings-ID</strong> och sparar det i ärendet.
+          </p>
 
-    <section id="pris" style="margin-top:28px;">
-      <h2>Prisbild (exempel – anpassas i offert)</h2>
-      <div class="card content">
-        <p class="small" style="margin-top:0;">
-          För att upplevas “byrå-säkert” bör pris alltid vara tydligt, fakturerbart och kopplat till ramar/support.
-          Nedan är en saklig exempelmodell – justera fritt efter er strategi.
-        </p>
+          <p>
+            2) Om underlaget behöver styrkas senare verifierar du filen på några sekunder och ser om den är <strong>oförändrad</strong> jämfört med referensen.
+          </p>
 
-        <div class="grid3" style="margin-top:12px;">
-          <div class="tile">
-            <b>Pilot (30 dagar)</b>
-            <span class="small"><b>4 900 kr</b> exkl. moms · faktura · ingen automatisk fortsättning.</span>
-          </div>
-          <div class="tile">
-            <b>Production – Bas</b>
-            <span class="small">Fast månadsavgift för byrån · support · standardiserad rutin · löpande användning.</span>
-          </div>
-          <div class="tile">
-            <b>Production – Plus</b>
-            <span class="small">För byråer med fler team/volym: utökad support, uppstartsworkshop, rutinkontroller.</span>
-          </div>
+          <p class="small" style="margin:10px 0 0;">
+            Proofy lagrar inte filinnehåll och ersätter inte juridisk bedömning – det är ett tekniskt stöd för spårbarhet och efterhandskontroll.
+          </p>
         </div>
 
-        <div class="hr"></div>
+        <!-- ✅ Nytt: kopierbar dokumentationsnotering (revisionsvänligt) -->
+        <div class="miniNote" aria-label="Notering för dokumentation">
+          <div style="font-weight:900; font-size:15px;">Notering att klistra in i ärendet (valfritt)</div>
+          <div class="meta" style="margin-top:6px;">Klicka i rutan för att kopiera. Anpassa vid behov.</div>
 
-        <p class="small" style="margin:0;">
-          <b>Viktigt (B2B):</b> Sälj inte “funktioner” – sälj <b>spårbarhet i efterhand</b>, <b>minskad risk</b> och <b>en standardiserad rutin</b>
-          som gör det enkelt att svara på frågor långt senare.
-        </p>
-      </div>
-    </section>
+          <div id="caseNote" class="copyBox" role="button" tabindex="0" aria-label="Klicka för att kopiera notering">
+PROOFY – Verifieringsnotering (ärende)
 
-    <section id="onboarding" style="margin-top:28px;">
-      <h2>Onboarding-guide (praktisk och byråvänlig)</h2>
-      <div class="card content">
-        <div class="grid3" style="margin-top:12px;">
-          <div class="tile">
-            <b>1) Välj “vad som fastställs”</b>
-            <span class="small">
-              Lista 3–5 dokumenttyper där efterhandsfrågor uppstår (t.ex. bokslutsunderlag, avtal, beslut, kundunderlag).
-            </span>
-          </div>
-          <div class="tile">
-            <b>2) Bestäm var ID sparas</b>
-            <span class="small">
-              Enhetlig plats: ärendenotering, arbetsdokument, revisionsfil eller “kontrollrad”. Viktigt: samma struktur i hela byrån.
-            </span>
-          </div>
-          <div class="tile">
-            <b>3) Bestäm när ni verifierar</b>
-            <span class="small">
-              Vid kvalitetskontroll, vid kundfråga och vid efterhandsgranskning. Verifiera bara när det behövs – men dokumentera tydligt.
-            </span>
-          </div>
-        </div>
-
-        <div class="hr"></div>
-
-        <h3>Exempel på dokumentationsnotering</h3>
-        <p class="small" style="margin:10px 0 6px;">
-          Kort, saklig och lätt att lägga i arbetsdokument:
-        </p>
-        <pre class="mono" style="white-space:pre-wrap; margin:0;">PROOFY – Verifieringsnotering
-Verifiering genomförd: [datum/tid Sverige]
 Verifierings-ID: [0x…]
-Underlag: [filnamn]
-Resultat: [OFÖRÄNDRAT / AVVIKELSE]
-Registreringsstatus: [Registrerad / Ej registrerad]</pre>
+Referens: Fastställd filversion registrerad hos Proofy.
+Kontroll: Underlaget verifieras vid behov (kvalitetskontroll/efterhandsgranskning).
+Avgränsning: Proofy visar endast om filversionen matchar referensen (inte innehållets saklighet).
+          </div>
 
-        <p class="small" style="margin-top:10px; margin-bottom:0;">
-          Rekommenderat: spara noteringen i samma plats som övrig ärendedokumentation, så att den är spårbar vid senare fråga.
-        </p>
-      </div>
-    </section>
+          <span id="notePill" class="pill pillInline" aria-live="polite" aria-atomic="true" role="status"></span>
+        </div>
 
-    <section id="faq" style="margin-top:28px;">
-      <h2>Vanliga frågor (byrå, revision, granskning)</h2>
-      <div class="card content">
-        <details>
-          <summary>Är Proofy arkivering, e-signering eller juridiskt bevis?</summary>
-          <p class="small" style="margin-top:10px;">
-            Nej. Proofy är ett tekniskt verifieringsunderlag som visar om en filversion är densamma som en tidigare fastställd referens.
-            Det ersätter inte arkivering, e-signering, revision eller juridisk bedömning.
+        <!-- ✅ Nytt: “Passar / Passar inte” – bygger förtroende -->
+        <div class="card content" style="margin-top:18px;">
+          <h3>När Proofy passar – och när det inte gör det</h3>
+          <div class="grid3" style="margin-top:12px;">
+            <div class="tile">
+              <b>Passar när</b>
+              <span class="small">Ni behöver visa att en filversion i ärendet är oförändrad jämfört med en fastställd referens – vid kontroll i efterhand.</span>
+            </div>
+            <div class="tile">
+              <b>Passar inte när</b>
+              <span class="small">Ni söker arkivering, e-signering, diarieföring eller ett system som läser/tolkar dokumentinnehåll.</span>
+            </div>
+            <div class="tile">
+              <b>Praktiskt i</b>
+              <span class="small">Bokslut, rapporter, beslut och avtal där “vilken version var det?” kan uppstå långt senare.</span>
+            </div>
+          </div>
+          <p class="small" style="margin-top:12px; margin-bottom:0;">
+            Proofy är avsett som ett tekniskt verifieringsstöd i dokumentationen. Professionell bedömning och ansvar ligger alltid i byrån/revisionen.
           </p>
-        </details>
+        </div>
 
-        <details style="margin-top:8px;">
-          <summary>Hantera ni dokument eller dokumentinnehåll?</summary>
-          <p class="small" style="margin-top:10px;">
-            Proofy lagrar inte filinnehåll. Underlaget används lokalt i webbläsaren för att ta fram Verifierings-ID.
-          </p>
-        </details>
-
-        <details style="margin-top:8px;">
-          <summary>Varför kan “samma dokument” ibland ge avvikelse?</summary>
-          <p class="small" style="margin-top:10px;">
-            Ny export, ny skanning, konvertering eller om-sparning kan innebära en annan filversion även om det ser likadant ut.
-            Proofy jämför filversion – inte visuellt innehåll.
-          </p>
-        </details>
-
-        <details style="margin-top:8px;">
-          <summary>Vilka interna kontroller ersätter Proofy?</summary>
-          <p class="small" style="margin-top:10px;">
-            Inga. Proofy är ett komplement som underlättar spårbarhet och efterhandskontroll.
-            Professionellt omdöme och byråns egna rutiner gäller alltid.
-          </p>
-        </details>
-
-        <div class="hr"></div>
-
-        <p class="small" style="margin:0;">
-          Relaterade sidor: <a href="/security.html">Säkerhet</a> · <a href="/privacy.html">Integritet</a> · <a href="/terms.html">Villkor</a> · <a href="/cookies.html">Cookies</a>
-        </p>
       </div>
     </section>
 
     <section id="kontakt" style="margin-top:28px;">
-      <h2>Kontakta oss (Production)</h2>
+      <h2>Kontakta oss</h2>
       <div class="card content">
         <p class="lead" style="font-size:16px; margin:0 0 10px;">
-          Boka en kort demo (10–15 min) eller be om offert för Production. Du får svar inom 1 arbetsdag.
+          Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
         </p>
 
-        <form class="form" id="prodForm" action="/api/contact" method="POST" novalidate>
-          <!-- Honeypot (gammal) -->
+        <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
           <p style="display:none;">
             <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
           </p>
 
-          <!-- Honeypot (ny) -->
           <input
             type="text"
             name="company_website"
@@ -386,69 +291,64 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
             style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
           />
 
-          <!-- Anti-spam tokenfält -->
           <input type="hidden" id="proofy_token" name="proofy_token" value="" />
           <input type="hidden" id="proofy_ts" name="proofy_ts" value="" />
 
           <div class="formGrid">
             <div>
-              <label class="label" for="pname">Namn <span class="req">*</span></label>
-              <input id="pname" name="name" type="text" autocomplete="name" required data-required="true" />
-              <div id="pname-err" class="fieldError" data-show="0">Fyll i namn.</div>
+              <label class="label" for="name">Namn <span class="req">*</span></label>
+              <input id="name" name="name" type="text" autocomplete="name" required data-required="true" placeholder="För- och efternamn" />
             </div>
             <div>
-              <label class="label" for="pemail">E-post <span class="req">*</span></label>
-              <input id="pemail" name="email" type="email" autocomplete="email" required data-required="true" inputmode="email" />
-              <div id="pemail-err" class="fieldError" data-show="0">Fyll i en giltig e-postadress.</div>
+              <label class="label" for="email">E-post <span class="req">*</span></label>
+              <input id="email" name="email" type="email" autocomplete="email" required data-required="true" placeholder="namn@byra.se" />
             </div>
             <div>
-              <label class="label" for="pcompany">Byrå / företag <span class="req">*</span></label>
-              <input id="pcompany" name="company" type="text" autocomplete="organization" required data-required="true" />
-              <div id="pcompany-err" class="fieldError" data-show="0">Fyll i byrå/företag.</div>
+              <label class="label" for="company">Byrå / företag</label>
+              <input id="company" name="company" type="text" autocomplete="organization" placeholder="t.ex. Exempelbyrån AB" />
             </div>
             <div>
-              <label class="label" for="pvolume">Ungefärlig volym</label>
-              <input id="pvolume" name="volume" type="text" placeholder="t.ex. 50–200 underlag/månad" />
-              <div class="fieldHint">Valfritt – hjälper oss att rekommendera upplägg.</div>
+              <label class="label" for="volume">Ungefärlig volym</label>
+              <input id="volume" name="volume" type="text" placeholder="t.ex. 50–200 underlag/månad" />
             </div>
           </div>
 
           <div style="margin-top:12px;">
-            <label class="label" for="pmsg">Kort scenario <span class="req">*</span></label>
+            <label class="label" for="message">Vad vill ni kunna styrka eller verifiera i efterhand? <span class="req">*</span></label>
             <textarea
-              id="pmsg"
+              id="message"
               name="message"
               rows="6"
               required
               data-required="true"
-              aria-describedby="pmsgHelp"
-              placeholder="Exempel: vilka underlag vill ni kunna styrka i efterhand, när uppstår frågan och vem brukar fråga (kund, intern kvalitetskontroll, efterhandsgranskning)?"
+              aria-describedby="messageHelp"
+              placeholder="Exempel: bokslutsunderlag, beslut, avtal eller kundunderlag som kan ifrågasättas senare. Skriv gärna ett kort scenario (när, varför och vem som brukar fråga)."
             ></textarea>
-            <div class="help" id="pmsgHelp">
-              Vi behandlar kontaktuppgifter för att hantera din förfrågan. Inga dokument bifogas via formuläret.
-              Läs mer i <a href="/privacy.html">Integritet</a>.
+            <div class="help" id="messageHelp">
+              Vi återkommer normalt inom 1 arbetsdag. Du kan också mejla <b>kontakt@proofy.se</b>.
             </div>
-            <div id="pmsg-err" class="fieldError" data-show="0">Fyll i en kort beskrivning.</div>
           </div>
 
           <div class="formActions">
-            <button class="btn primary" id="prodSubmitBtn" type="submit">Skicka förfrågan</button>
+            <button class="btn primary" id="demoSubmitBtn" type="submit">Skicka förfrågan</button>
             <a class="btn" href="/pilot.html">Se pilotupplägg</a>
-            <span id="prodStatus" class="pill" style="margin-left:12px;" aria-live="polite" aria-atomic="true" role="status"></span>
+            <span id="demoStatus" class="pill" style="margin-left:12px;" aria-live="polite"></span>
           </div>
 
           <div class="fineprint">
-            Genom att skicka formuläret behandlar vi dina kontaktuppgifter för att hantera din förfrågan (demo/offert).
-            Vi sparar uppgifterna endast så länge det behövs för uppföljning och dokumentation.
-            Inga filer eller underlag skickas via formuläret.
+            Genom att skicka formuläret behandlar vi dina kontaktuppgifter för att hantera din förfrågan (demo/pilot).
+            Vi sparar uppgifterna endast så länge det behövs för uppföljning och dokumentation. Läs mer i <a href="/privacy.html">Integritetspolicyn</a>.
+            Inga dokument bifogas via formuläret.
           </div>
         </form>
+
+        <div class="hr"></div>
+        <p class="small" style="margin:0;">
+          OBS: Proofy är en digital tjänst för teknisk verifiering och spårbarhet. Vi ersätter inte juridisk rådgivning eller revision.
+        </p>
       </div>
     </section>
 
-    <p class="meta" style="margin-top:14px;">
-      Proofy avgör inte om innehållet är korrekt – endast om filversionen är oförändrad jämfört med referensen.
-    </p>
   </div>
 </main>
 
@@ -459,8 +359,7 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer.
-          Tjänsten utgör inte juridisk rådgivning och avgör inte filers eller underlags rättsliga giltighet.
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -468,7 +367,7 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
         <a href="/privacy.html">Integritet</a>
         <a href="/terms.html">Villkor</a>
         <a href="/cookies.html">Cookies</a>
-        <a href="/#kontakt">Kontakt</a>
+        <a href="#kontakt">Kontakt</a>
       </div>
     </div>
   </div>
@@ -476,27 +375,69 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
 
 <script>
 (() => {
-  const form = document.getElementById("prodForm");
+  // --- Kopiera “notering” (revisionsvänligt) ---
+  const note = document.getElementById("caseNote");
+  const pill = document.getElementById("notePill");
+
+  async function copyTextToClipboard(text){
+    const t = String(text || "").trim();
+    if (!t) return false;
+    try{
+      await navigator.clipboard.writeText(t);
+      return true;
+    } catch {
+      try{
+        const ta = document.createElement("textarea");
+        ta.value = t;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  function showPill(text){
+    if (!pill) return;
+    pill.style.display = "inline-block";
+    pill.textContent = text;
+    setTimeout(() => {
+      pill.style.display = "none";
+      pill.textContent = "";
+    }, 1400);
+  }
+
+  if (note){
+    const doCopy = async () => {
+      const ok = await copyTextToClipboard(note.textContent);
+      showPill(ok ? "Kopierad ✓" : "Kunde inte kopiera");
+    };
+    note.addEventListener("click", doCopy);
+    note.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        doCopy();
+      }
+    });
+  }
+
+  // --- Befintlig demoform-logik (oförändrad funktion, bara bibehållen) ---
+  const form = document.getElementById("demoForm");
   if (!form) return;
 
-  const statusEl = document.getElementById("prodStatus");
-  const submitBtn = document.getElementById("prodSubmitBtn");
-
-  const fields = {
-    name: document.getElementById("pname"),
-    email: document.getElementById("pemail"),
-    company: document.getElementById("pcompany"),
-    message: document.getElementById("pmsg")
-  };
-  const errors = {
-    name: document.getElementById("pname-err"),
-    email: document.getElementById("pemail-err"),
-    company: document.getElementById("pcompany-err"),
-    message: document.getElementById("pmsg-err")
-  };
+  const statusEl = document.getElementById("demoStatus");
+  const submitBtn = document.getElementById("demoSubmitBtn");
 
   function setStatus(text, tone){
     if (!statusEl) return;
+
     statusEl.style.display = "inline-block";
     statusEl.textContent = text;
 
@@ -519,8 +460,8 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
 
   function disableForm(disabled){
     if (submitBtn) submitBtn.disabled = disabled;
-    const all = form.querySelectorAll("input, textarea, select, button");
-    all.forEach(el => {
+    const fields = form.querySelectorAll("input, textarea, select, button");
+    fields.forEach(el => {
       if (el === submitBtn) return;
       el.disabled = disabled;
     });
@@ -532,56 +473,25 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
       el.style.outline = "";
       el.style.outlineOffset = "";
       el.setAttribute("data-proofy-hint", "0");
-      el.removeAttribute("aria-invalid");
-    });
-    Object.values(errors).forEach(errEl => {
-      if (!errEl) return;
-      errEl.setAttribute("data-show", "0");
     });
   }
 
-  function hintField(el, errEl){
+  function hintField(el){
     if (!el) return;
     el.style.outline = "2px solid rgba(255,80,80,.6)";
     el.style.outlineOffset = "2px";
     el.setAttribute("data-proofy-hint", "1");
-    el.setAttribute("aria-invalid", "true");
-    if (errEl) errEl.setAttribute("data-show", "1");
   }
 
-  function isValidEmail(v){
-    const s = String(v || "").trim();
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-  }
-
-  function validate(){
-    clearFieldHints();
-
-    const name = String(fields.name?.value || "").trim();
-    const email = String(fields.email?.value || "").trim();
-    const company = String(fields.company?.value || "").trim();
-    const message = String(fields.message?.value || "").trim();
-
-    let firstBad = null;
-
-    if (!name){
-      hintField(fields.name, errors.name);
-      firstBad = firstBad || fields.name;
+  function firstMissingRequiredFromFormData(fd){
+    const required = form.querySelectorAll("[data-required='true']");
+    for (const el of required) {
+      const name = el.getAttribute("name");
+      if (!name) continue;
+      const v = fd.get(name);
+      if (!String(v || "").trim()) return el;
     }
-    if (!email || !isValidEmail(email)){
-      hintField(fields.email, errors.email);
-      firstBad = firstBad || fields.email;
-    }
-    if (!company){
-      hintField(fields.company, errors.company);
-      firstBad = firstBad || fields.company;
-    }
-    if (!message){
-      hintField(fields.message, errors.message);
-      firstBad = firstBad || fields.message;
-    }
-
-    return { ok: !firstBad, firstBad };
+    return null;
   }
 
   async function initAntiSpamToken(){
@@ -589,14 +499,16 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
     const ts = document.getElementById("proofy_ts");
     try {
       const res = await fetch("/api/form-token", { credentials: "same-origin", cache: "no-store" });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data && data.ok === true && data.token) {
-        if (t) t.value = String(data.token);
+      const data = await res.json();
+      if (data && data.ok === true && data.token) {
+        if (t) t.value = data.token;
         if (ts) ts.value = String(Date.now());
         return true;
       }
-    } catch {}
-    return false;
+      return false;
+    } catch {
+      return false;
+    }
   }
 
   initAntiSpamToken().then(ok => {
@@ -605,15 +517,8 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    clearFieldHints();
 
-    const v = validate();
-    if (!v.ok){
-      v.firstBad?.focus();
-      setStatus("Kontrollera att obligatoriska fält är korrekt ifyllda.", "err");
-      return;
-    }
-
-    // Honeypots
     const hpNewEl = form.querySelector("input[name='company_website']");
     const hpOldEl = form.querySelector("input[name='bot-field']");
     if (hpNewEl) hpNewEl.value = "";
@@ -628,11 +533,20 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
       }
     }
 
+    const fd = new FormData(form);
+
+    const missing = firstMissingRequiredFromFormData(fd);
+    if (missing){
+      hintField(missing);
+      missing.focus();
+      setStatus("Kontrollera att namn, e-post och beskrivning är ifyllda.", "err");
+      return;
+    }
+
     try{
       disableForm(true);
       setStatus("Skickar…", "wait");
 
-      const fd = new FormData(form);
       const body = new URLSearchParams();
       for (const [k, v] of fd.entries()) body.append(k, String(v));
 
@@ -647,7 +561,7 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
 
       if (!res.ok || data.ok !== true || data.sent !== true){
         if (data.ignored === true){
-          setStatus("Förfrågan kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
+          setStatus("Förfrågan kunde inte skickas. Ladda om sidan och försök igen, eller mejla kontakt@proofy.se.", "err");
           disableForm(false);
           return;
         }
@@ -661,22 +575,10 @@ Registreringsstatus: [Registrerad / Ej registrerad]</pre>
       form.reset();
       setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
 
-    } catch {
+    } catch (err){
       setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
       disableForm(false);
     }
-  });
-
-  // Mild live-validering
-  ["blur", "input"].forEach(evt => {
-    Object.values(fields).forEach(el => {
-      if (!el) return;
-      el.addEventListener(evt, () => {
-        const wasInvalid = el.getAttribute("aria-invalid") === "true";
-        if (!wasInvalid && evt === "input") return;
-        validate();
-      });
-    });
   });
 })();
 </script>
