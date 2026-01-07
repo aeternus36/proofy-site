@@ -3,13 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Verifieringstjänst – Produktion | Proofy</title>
-  <meta name="description" content="Proofys verifieringstjänst för produktion. Avsedd för professionell användning i skarpa ärenden inom revision, redovisning och granskning." />
-  <meta name="robots" content="noindex, follow" />
+  <title>Production – Proofy</title>
+  <meta name="description" content="Produktionsupplägg för Proofy: dokumentverifiering i byråprocess med tydliga ramar, avgränsningar och support." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://proofy.se/production.html" />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-05" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-05" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-07a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-07a" />
+
+  <style>
+    /* Små, säkra layout-failsafes */
+    .grid3{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 900px){ .grid3{ grid-template-columns: 1fr; } }
+    .tile{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      border-radius: 16px;
+      padding: 12px 14px;
+    }
+    .tile b{ display:block; margin-bottom:6px; }
+    .fine{
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: rgba(234,240,255,.78);
+    }
+  </style>
 </head>
 
 <body>
@@ -26,6 +49,8 @@
       <div class="navActions" id="navActionsDesktop">
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn" href="/production.html" aria-current="page">Production</a>
+        <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
       <details class="mnav" id="mnav">
@@ -36,13 +61,16 @@
         <nav class="mnavMenu" aria-label="Meny">
           <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/production.html" aria-current="page">Production</a>
+          <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
             <a class="mnavLink" href="/security.html">Säkerhet</a>
             <a class="mnavLink" href="/privacy.html">Integritet</a>
             <a class="mnavLink" href="/terms.html">Villkor</a>
+            <a class="mnavLink" href="/cookies.html">Cookies</a>
 
-            <div class="mnavNote">Produktion · revision · granskning</div>
+            <div class="mnavNote">Production · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
           </div>
         </nav>
@@ -52,96 +80,116 @@
 </header>
 
 <main id="main">
-  <div class="wrap" style="max-width:920px">
-    <div class="badge">Produktion · professionell användning · B2B</div>
+  <div class="wrap">
+    <div class="badge">Production · revision · granskning</div>
 
-    <h1 class="pageTitle">Verifieringstjänst – Produktion</h1>
+    <h1 class="pageTitle">Production: Proofy i löpande byråprocess</h1>
 
     <p class="lead">
-      Denna sida beskriver Proofys verifieringstjänst för <b>produktion</b>.
-      Tjänsten är avsedd för professionell användning i <b>skarpa ärenden</b>
-      inom redovisning, revision och annan granskning.
+      Production är upplägget för kontinuerlig användning i verksamheten: tydliga ramar, support och rutiner för att
+      dokumentera att ett underlag är <strong>oförändrat jämfört med en fastställd version</strong> när det prövas i efterhand.
     </p>
 
-    <div class="card content">
-      <h2>1. Användningsområde</h2>
-      <p>
-        Verifieringar som utförs inom Proofys produktionstjänst får användas som
-        <b>tekniskt verifieringsunderlag</b> i Kundens dokumentation, exempelvis i:
-      </p>
+    <div class="card content" style="margin-top:14px;">
+      <div class="grid3" style="margin-top:4px;">
+        <div class="tile">
+          <b>Syfte</b>
+          <span class="small">
+            Underlätta efterhandskontroll i ärenden genom att kunna visa om en filversion är densamma som när den fastställdes.
+          </span>
+        </div>
+        <div class="tile">
+          <b>Utfall i praktiken</b>
+          <span class="small">
+            Ett Verifierings-ID dokumenteras i ärendet. Vid behov verifieras filen och resultatet noteras i arbetsdokumentationen.
+          </span>
+        </div>
+        <div class="tile">
+          <b>Avgränsning</b>
+          <span class="small">
+            Proofy bedömer inte saklighet eller riktighet. Tjänsten visar endast om filversionen är oförändrad jämfört med referensen.
+          </span>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h2>Vad som ingår</h2>
       <ul>
-        <li>ärendeakter,</li>
-        <li>intern dokumentation,</li>
-        <li>kvalitetskontroll,</li>
-        <li>intern eller extern granskning.</li>
+        <li><b>Verifierings-ID</b> som sparas i ärendet (referens till en fastställd filversion).</li>
+        <li><b>Verifiering vid behov</b> (t.ex. intern kvalitetskontroll, fråga från kund, efterhandsgranskning).</li>
+        <li><b>Dokumentationsstöd</b> (notering/rapport som kan klistras in i revisionsfil eller arbetsdokument).</li>
+        <li><b>Support och drift</b> inom avtalade ramar.</li>
       </ul>
 
-      <p class="small">
-        Resultatet visar om ett underlag överensstämmer med ett tidigare registrerat
-        Verifierings-ID vid verifieringstillfället.
+      <p class="fine" style="margin-top:10px;">
+        Not: Production innebär ett professionellt upplägg för löpande användning. Om ni vill kan vi även anpassa ramar (volym, rutin, kontaktväg) efter er process.
+      </p>
+
+      <div class="hr"></div>
+
+      <h2>Rekommenderad rutin i byrån</h2>
+      <ol style="margin:10px 0 0; padding-left:18px;">
+        <li><b>Fastställ version:</b> när ett underlag fastställs (t.ex. bokslut, rapport, avtal, beslut) skapas ett Verifierings-ID.</li>
+        <li><b>Dokumentera i ärendet:</b> spara Verifierings-ID i ärendet/arbetsdokumentationen.</li>
+        <li><b>Verifiera vid behov:</b> när det ifrågasätts senare verifieras filen och resultatet dokumenteras (match/avvikelse).</li>
+      </ol>
+
+      <div class="hr"></div>
+
+      <h2>Tillgång &amp; betalning</h2>
+      <p>
+        Production erbjuds som B2B-upplägg med överenskomna ramar. Tillgång och villkor regleras via pilot eller separat avtal/offert.
+      </p>
+
+      <div class="grid3" style="margin-top:12px;">
+        <div class="tile">
+          <b>Väg 1: Pilot → Production</b>
+          <span class="small">
+            Starta med pilot, utvärdera i verkliga ärenden och gå vidare till produktionsupplägg om det passar.
+          </span>
+        </div>
+        <div class="tile">
+          <b>Väg 2: Direkt Production</b>
+          <span class="small">
+            För byråer som vill införa rutin direkt: vi går igenom användning, avgränsning och dokumentation.
+          </span>
+        </div>
+        <div class="tile">
+          <b>Ramar</b>
+          <span class="small">
+            Support, volym och övriga villkor fastställs i offert/avtal. Inga dokument skickas till Proofy via tjänsten.
+          </span>
+        </div>
+      </div>
+
+      <p class="fine" style="margin-top:10px;">
+        För juridiska villkor och integritet, se <a href="/terms.html">Villkor</a> och <a href="/privacy.html">Integritet</a>.
+      </p>
+
+      <div class="hr"></div>
+
+      <h2>Öppna verktygen</h2>
+      <p class="small" style="margin:0 0 10px;">
+        Verktygen används när ni behöver skapa Verifierings-ID eller verifiera ett underlag.
+      </p>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn primary" href="/#kontakt">Prata med oss (demo/production)</a>
+      </div>
+
+      <div class="hr"></div>
+
+      <p class="fine" style="margin:0;">
+        <b>Ansvarsavgränsning:</b> Proofy är ett tekniskt stöd för spårbarhet och efterhandskontroll. Tjänsten ersätter inte
+        professionellt omdöme, internkontroller, revision eller juridisk bedömning.
       </p>
     </div>
 
-    <div class="card content" style="margin-top:14px;">
-      <h2>2. Vad tjänsten gör</h2>
-      <p>
-        Tjänsten möjliggör kontroll av om en filversion är <b>oförändrad</b>
-        jämfört med en tidigare registrerad referens.
-      </p>
-      <p>
-        Kontroll sker utan att dokumentinnehåll lagras eller överförs till Proofy.
-      </p>
-    </div>
-
-    <div class="card content" style="margin-top:14px;">
-      <h2>3. Tydliga avgränsningar</h2>
-      <p>
-        Proofy är ett tekniskt verifieringsverktyg. Tjänsten är inte:
-      </p>
-      <ul>
-        <li>e-signering,</li>
-        <li>arkivering,</li>
-        <li>juridisk rådgivning,</li>
-        <li>eller en bedömning av dokumentets innehåll, riktighet eller rättsliga giltighet.</li>
-      </ul>
-
-      <p class="small">
-        All professionell bedömning och användning av verifieringsresultat
-        ansvarar Kunden själv för.
-      </p>
-    </div>
-
-    <div class="card content" style="margin-top:14px;">
-      <h2>4. Produktion kontra pilot och demo</h2>
-      <p>
-        Produktionstjänsten skiljer sig från pilot och demo.
-      </p>
-      <ul>
-        <li><b>Produktion:</b> Avsedd för skarpa ärenden och dokumentation.</li>
-        <li><b>Pilot/Demo:</b> Avsedd för utvärdering, test och onboarding.</li>
-      </ul>
-
-      <p class="small">
-        Verifieringar som utförs under pilot eller demo är inte avsedda
-        för användning i skarp dokumentation, om inte annat uttryckligen avtalats.
-      </p>
-    </div>
-
-    <div class="card content" style="margin-top:14px;">
-      <h2>5. Avtal och villkor</h2>
-      <p>
-        Användning av produktionstjänsten sker enligt gällande avtal
-        och Proofys <a href="/terms.html">allmänna villkor</a>.
-      </p>
-      <p class="small">
-        Integritets- och säkerhetsprinciper framgår av
-        <a href="/privacy.html">Integritet</a> och
-        <a href="/security.html">Säkerhet</a>.
-      </p>
-    </div>
-
-    <p class="meta" style="margin:24px 0;">
-      Detta är Proofys produktionsmiljö för verifiering.
+    <p class="meta" style="margin-top:14px;">
+      Senast uppdaterad: 2026-01-07
     </p>
   </div>
 </main>
@@ -153,21 +201,21 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk verifiering av filer.
-          Tjänsten utgör inte juridisk rådgivning och avgör inte filers eller underlags rättsliga giltighet.
+          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filers eller underlags rättsliga giltighet.
         </div>
       </div>
       <div class="links">
         <a href="/security.html">Säkerhet</a>
         <a href="/privacy.html">Integritet</a>
         <a href="/terms.html">Villkor</a>
+        <a href="/cookies.html">Cookies</a>
         <a href="/#kontakt">Kontakt</a>
       </div>
     </div>
   </div>
 </footer>
 
-<script src="/assets/header-toggle.js?v=2026-01-05" defer></script>
-<script src="/chat-widget.js?v=2026-01-05" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-07a" defer></script>
+<script src="/chat-widget.js?v=2026-01-07a" defer></script>
 </body>
 </html>
