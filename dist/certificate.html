@@ -7,8 +7,9 @@
   <meta name="description" content="Verifieringsintyg som sammanfattar om ett Verifierings-ID är registrerat och när registreringen skedde." />
   <meta name="theme-color" content="#0b1220" />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-12-22" />
-  <link rel="stylesheet" href="/assets/header.css?v=2025-12-24a" />
+  <!-- Synka med övriga sidor -->
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
     .certWrap{ max-width: 920px; margin:0 auto; padding: 0 20px; }
@@ -374,7 +375,7 @@
     <div class="foot">
       <div>
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2025 Proofy. Alla rättigheter förbehållna.</div>
+        <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
           Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
         </div>
@@ -389,7 +390,8 @@
   </div>
 </footer>
 
-<script src="/qr.min.js?v=2025-12-20"
+<!-- Samma QR-lib som register-sidan (stabilare deploy) -->
+<script src="/assets/qr.min.js?v=2026-01-03a"
   onload="window.__proofyQrLibLoaded = true"
   onerror="window.__proofyQrLibError = true"></script>
 
@@ -449,8 +451,14 @@
     problemText.textContent = "—";
   }
 
-  function isBytes32Hex(h){
+  function isValidId(h){
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h.trim());
+  }
+
+  function pickIdFromText(t){
+    const s = String(t || "").trim();
+    const m = s.match(/0x[0-9a-fA-F]{64}/);
+    return (m ? m[0] : s).trim();
   }
 
   function getHashFromUrl(){
@@ -461,6 +469,11 @@
   function getCertIdFromUrl(){
     const url = new URL(location.href);
     return (url.searchParams.get("cert") || "").trim();
+  }
+
+  function getCheckedFromUrl(){
+    const url = new URL(location.href);
+    return (url.searchParams.get("checked") || "").trim();
   }
 
   function makeCertId(){
@@ -476,8 +489,23 @@
     return `cert-${y}${m}${day}-${hh}${mm}${ss}-${rnd}`;
   }
 
-  function setHashInUrl(hash, certId){
+  // Fast kontroll-tidpunkt per intygvy.
+  // Den sätts en gång och bevaras i URL (checked=epoch).
+  function ensureCheckedEpoch(){
     const url = new URL(location.href);
+    const existing = url.searchParams.get("checked");
+    const n = Number(existing);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+
+    const epoch = Math.floor(Date.now() / 1000);
+    url.searchParams.set("checked", String(epoch));
+    history.replaceState({}, "", url.toString());
+    return epoch;
+  }
+
+  function setHashInUrl(hash, certId, checkedEpoch){
+    const url = new URL(location.href);
+
     if (hash) {
       url.searchParams.set("hash", hash);
       url.searchParams.delete("id");
@@ -485,13 +513,22 @@
       url.searchParams.delete("hash");
       url.searchParams.delete("id");
     }
+
     if (certId) url.searchParams.set("cert", certId);
+
+    if (checkedEpoch && Number.isFinite(Number(checkedEpoch))) {
+      url.searchParams.set("checked", String(Math.floor(Number(checkedEpoch))));
+    }
+
     history.replaceState({}, "", url.toString());
   }
 
-  function buildCertificateLink(hash, certId){
+  function buildCertificateLink(hash, certId, checkedEpoch){
     const base = `${location.origin}/certificate.html?hash=${encodeURIComponent(hash)}`;
-    return certId ? `${base}&cert=${encodeURIComponent(certId)}` : base;
+    const parts = [];
+    if (certId) parts.push(`cert=${encodeURIComponent(certId)}`);
+    if (checkedEpoch) parts.push(`checked=${encodeURIComponent(String(checkedEpoch))}`);
+    return parts.length ? `${base}&${parts.join("&")}` : base;
   }
 
   function buildVerifyLink(hash){
@@ -502,29 +539,31 @@
     return d.toISOString().replace("T"," ").replace(/\.\d{3}Z$/, " UTC");
   }
 
-  function fmtSe(ts){
+  function fmtSe(tsEpoch){
     try{
       return new Intl.DateTimeFormat("sv-SE", {
         timeZone:"Europe/Stockholm",
         year:"numeric", month:"2-digit", day:"2-digit",
         hour:"2-digit", minute:"2-digit", second:"2-digit"
-      }).format(new Date(Number(ts) * 1000)) + " (Europe/Stockholm)";
-    } catch {
-      return "—";
-    }
-  }
-  function fmtUtc(ts){
-    try{
-      return isoUtcNoMs(new Date(Number(ts) * 1000));
+      }).format(new Date(Number(tsEpoch) * 1000)) + " (Europe/Stockholm)";
     } catch {
       return "—";
     }
   }
 
-  function setCheckedNow(){
-    const se = new Date().toLocaleString("sv-SE", { timeZone:"Europe/Stockholm" });
-    const utc = isoUtcNoMs(new Date());
-    checkedOut.textContent = `${se} (Europe/Stockholm)\n${utc}`;
+  function fmtUtc(tsEpoch){
+    try{
+      return isoUtcNoMs(new Date(Number(tsEpoch) * 1000));
+    } catch {
+      return "—";
+    }
+  }
+
+  function setCheckedFromEpoch(epoch){
+    const se = fmtSe(epoch);
+    const utc = fmtUtc(epoch);
+    // Inga “konstiga spaces”: ren \n, och vi använder pre-wrap i CSS
+    checkedOut.textContent = `${se}\n${utc}`;
   }
 
   function updateCopyButtons(){
@@ -560,7 +599,7 @@
 
   function showQrError(){
     const msg = window.__proofyQrLibError
-      ? "QR kunde inte laddas. Kontrollera att /qr.min.js finns i deploy."
+      ? "QR kunde inte laddas. Kontrollera att /assets/qr.min.js finns i deploy."
       : "QR kunde inte laddas.";
     qrBox.innerHTML = `<div class="meta" style="padding:10px;text-align:center;">${msg}</div>`;
     qrStatus.textContent = msg;
@@ -571,11 +610,12 @@
 
     if(!canRenderQr()){
       if (window.__proofyQrLibError){ showQrError(); return; }
+
       qrBox.innerHTML = `<div class="meta" style="padding:10px;text-align:center;">Laddar QR…</div>`;
       qrStatus.textContent = "Laddar QR…";
 
       let tries = 0;
-      const maxTries = 20;
+      const maxTries = 24;
       const t = setInterval(() => {
         tries++;
         if (canRenderQr()){
@@ -599,26 +639,47 @@
   function doRender(text){
     qrBox.innerHTML = "";
     const correctLevel =
-      window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.M
-        ? window.QRCodeCorrectLevel.M
-        : undefined;
+      window.QRCode?.CorrectLevel?.M ?? window.QRCodeCorrectLevel?.M ?? undefined;
 
-    new QRCode(qrBox, { text, width:150, height:150, correctLevel });
+    // QRCode lib skiljer mellan varianter; vi kör "standard" som funkar för din qr.min.js
+    new window.QRCode(qrBox, { text, width:150, height:150, correctLevel });
   }
 
-  async function copyText(btn, text){
-    const t = (text || "").trim();
-    if(!t || t === "—") return;
+  // Robust kopiering (clipboard + fallback)
+  async function copyTextToClipboard(text){
+    const t = String(text || "").trim();
+    if (!t || t === "—") return false;
+
     try{
       await navigator.clipboard.writeText(t);
-      const old = btn.textContent;
-      btn.textContent = "Kopierad";
-      setTimeout(() => btn.textContent = old, 1200);
+      return true;
     } catch {
-      const old = btn.textContent;
-      btn.textContent = "Kunde inte kopiera";
-      setTimeout(() => btn.textContent = old, 1400);
+      try{
+        const ta = document.createElement("textarea");
+        ta.value = t;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch {
+        return false;
+      }
     }
+  }
+
+  async function copyWithBtnFeedback(btn, text){
+    const t = (text || "").trim();
+    if(!t || t === "—") return;
+    const old = btn.textContent;
+    btn.textContent = "Kopierar…";
+    const ok = await copyTextToClipboard(t);
+    btn.textContent = ok ? "Kopierad" : "Kunde inte kopiera";
+    setTimeout(() => btn.textContent = old, ok ? 1200 : 1400);
   }
 
   async function fetchVerify(hash){
@@ -671,13 +732,13 @@
     return "—";
   }
 
-  async function loadCertificate(hash, certId){
+  async function loadCertificate(hash, certId, checkedEpoch){
     const myOp = ++opId;
     hideProblem();
     setBusy(true);
-    setCheckedNow();
 
     certIdOut.textContent = certId || "—";
+    setCheckedFromEpoch(checkedEpoch);
 
     if(!hash){
       resetView();
@@ -693,7 +754,7 @@
     hashOut.textContent = hash;
 
     const verifyLink = buildVerifyLink(hash);
-    const certLink = buildCertificateLink(hash, certId);
+    const certLink = buildCertificateLink(hash, certId, checkedEpoch);
 
     certLinkOut.textContent = certLink;
     verifyLinkOut.textContent = verifyLink;
@@ -702,8 +763,8 @@
     renderQr(verifyLink);
     updateCopyButtons();
 
-    if(!isBytes32Hex(hash)){
-      setStatus("OGILTIGT VERIFIERINGS-ID", "err");
+    if(!isValidId(hash)){
+      setStatus("Ogiltigt Verifierings-ID", "err");
       resultOut.textContent = "Kan inte kontrollera (ogiltigt ID)";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
@@ -712,14 +773,14 @@
       return;
     }
 
-    setStatus("KONTROLLERAR…", "neutral");
+    setStatus("Kontrollerar…", "neutral");
 
     try{
       const res = await fetchVerify(hash);
       if (myOp !== opId) return;
 
       if(!res.ok){
-        setStatus("TEKNISKT FEL", "err");
+        setStatus("Tillfälligt tekniskt problem", "err");
         resultOut.textContent = "Kontroll kunde inte genomföras";
         tsSeOut.textContent = "—";
         tsUtcOut.textContent = "—";
@@ -734,13 +795,13 @@
       const ts = (data.timestamp !== undefined && data.timestamp !== null) ? Number(data.timestamp) : NaN;
 
       if (exists){
-        setStatus("REGISTRERAD", "ok");
+        setStatus("Registrerad", "ok");
         resultOut.textContent = "Registrerad (registrering hittades)";
         tsSeOut.textContent = Number.isFinite(ts) ? fmtSe(ts) : "—";
         tsUtcOut.textContent = Number.isFinite(ts) ? fmtUtc(ts) : "—";
         interpretation.textContent = setInterpretation("registered");
       } else {
-        setStatus("EJ REGISTRERAD", "err");
+        setStatus("Ej registrerad", "err");
         resultOut.textContent = "Inte registrerad (ingen registrering hittades)";
         tsSeOut.textContent = "—";
         tsUtcOut.textContent = "—";
@@ -750,7 +811,7 @@
       setBusy(false);
     } catch (e){
       if (myOp !== opId) return;
-      setStatus("TEKNISKT FEL", "err");
+      setStatus("Tillfälligt tekniskt problem", "err");
       resultOut.textContent = "Kontroll kunde inte genomföras";
       tsSeOut.textContent = "—";
       tsUtcOut.textContent = "—";
@@ -761,20 +822,25 @@
   }
 
   btnPrint.addEventListener("click", () => window.print());
+
+  // Uppdatera = ny kontrolltidpunkt + ny kontroll mot registret
   btnRefresh.addEventListener("click", () => {
     const hash = getHashFromUrl();
     const certId = getCertIdFromUrl() || makeCertId();
-    setHashInUrl(hash, certId);
+    const checkedEpoch = Math.floor(Date.now() / 1000);
+
+    setHashInUrl(hash, certId, checkedEpoch);
     certIdOut.textContent = certId;
-    loadCertificate(hash, certId);
+
+    loadCertificate(hash, certId, checkedEpoch);
   });
 
-  btnCopyId.addEventListener("click", () => copyText(btnCopyId, hashOut.textContent));
-  btnCopyCert.addEventListener("click", () => copyText(btnCopyCert, certLinkOut.textContent));
-  btnCopyVerify.addEventListener("click", () => copyText(btnCopyVerify, verifyLinkOut.textContent));
+  btnCopyId.addEventListener("click", () => copyWithBtnFeedback(btnCopyId, hashOut.textContent));
+  btnCopyCert.addEventListener("click", () => copyWithBtnFeedback(btnCopyCert, certLinkOut.textContent));
+  btnCopyVerify.addEventListener("click", () => copyWithBtnFeedback(btnCopyVerify, verifyLinkOut.textContent));
 
   btnOpen?.addEventListener("click", () => {
-    const hash = (hashInput.value || "").trim();
+    const hash = pickIdFromText(hashInput.value);
     if (!hash){
       openHint.textContent = "Klistra in Verifierings-ID för att öppna intyget.";
       return;
@@ -782,34 +848,42 @@
     openHint.textContent = "";
 
     const certId = getCertIdFromUrl() || makeCertId();
-    setHashInUrl(hash, certId);
+    const checkedEpoch = Math.floor(Date.now() / 1000);
+
+    setHashInUrl(hash, certId, checkedEpoch);
     certIdOut.textContent = certId;
 
-    loadCertificate(hash, certId);
+    loadCertificate(hash, certId, checkedEpoch);
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
   btnPaste?.addEventListener("click", async () => {
     try{
       const t = await navigator.clipboard.readText();
-      if (t) hashInput.value = t.trim();
-      openHint.textContent = t ? "ID insatt. Klicka “Öppna intyg”." : "Inget att klistra in.";
+      const candidate = pickIdFromText(t);
+      if (candidate) hashInput.value = candidate;
+      openHint.textContent = candidate ? "ID insatt. Klicka “Öppna intyg”." : "Inget Verifierings-ID hittades i urklipp.";
     } catch {
       openHint.textContent = "Kunde inte läsa urklipp. Klistra in manuellt.";
     }
   });
 
+  // Init
   const initialHash = getHashFromUrl();
   const initialCert = getCertIdFromUrl() || makeCertId();
 
+  // Om checked redan finns i URL behåll den, annars skapa en gång (fast för intygvyn)
+  const initialCheckedEpoch =
+    (Number(getCheckedFromUrl()) > 0 ? Math.floor(Number(getCheckedFromUrl())) : ensureCheckedEpoch());
+
   certIdOut.textContent = initialCert;
-  setHashInUrl(initialHash, initialCert);
+  setHashInUrl(initialHash, initialCert, initialCheckedEpoch);
 
   if (initialHash){
-    loadCertificate(initialHash, initialCert);
+    loadCertificate(initialHash, initialCert, initialCheckedEpoch);
   } else {
     resetView();
-    setCheckedNow();
+    setCheckedFromEpoch(initialCheckedEpoch);
     openBox.style.display = "block";
     setStatus("Saknar Verifierings-ID", "err");
     resultOut.textContent = "Kan inte kontrollera (saknar ID)";
@@ -819,7 +893,7 @@
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2025-12-24a" defer></script>
-<script src="/chat-widget.js?v=2025-01" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
+<script src="/chat-widget.js?v=2026-01-03a" defer></script>
 </body>
 </html>
