@@ -4,11 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Onboarding – Proofy</title>
-  <meta name="description" content="Onboarding-guide för Proofy i revisions- och redovisningsbyråers löpande arbete." />
+  <meta name="description" content="Onboarding och arbetsinstruktion för användning av Proofy i revisions- och redovisningsbyråers verksamhet." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/onboarding.html" />
   <meta name="theme-color" content="#0b1220" />
 
+  <!-- Samma styles som övriga sidor -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-07" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-07" />
 </head>
@@ -24,101 +25,124 @@
         <span>Proofy</span>
       </a>
 
-      <div class="navActions">
+      <!-- Desktop navigation -->
+      <div class="navActions" id="navActionsDesktop">
         <a class="btn" href="/production.html">Production</a>
-        <a class="btn" href="/verify.html">Verifiera</a>
-        <a class="btn" href="/register.html">Registrera</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
       </div>
+
+      <!-- Mobile navigation (hamburgare) -->
+      <details class="mnav" id="mnav">
+        <summary class="mnavSummary" aria-label="Öppna meny">
+          <span class="mnavIcon" aria-hidden="true"></span>
+        </summary>
+
+        <nav class="mnavMenu" aria-label="Meny">
+          <a class="mnavLink" href="/production.html">Production</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+
+          <div class="mnavMeta">
+            <a class="mnavLink" href="/security.html">Säkerhet</a>
+            <a class="mnavLink" href="/privacy.html">Integritet</a>
+            <a class="mnavLink" href="/terms.html">Villkor</a>
+
+            <div class="mnavNote">Onboarding · revision · granskning</div>
+            <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+          </div>
+        </nav>
+      </details>
     </div>
   </div>
 </header>
 
 <main id="main">
-  <div class="wrap" style="max-width:900px">
-    <div class="badge">Onboarding · revision · granskning</div>
+  <div class="wrap" style="max-width:920px">
+    <div class="badge">Onboarding · professionell användning · B2B</div>
 
-    <h1 class="pageTitle">Onboarding: Proofy i byråprocess</h1>
+    <h1 class="pageTitle">Onboarding – användning av Proofy i byråprocess</h1>
 
     <p class="lead">
-      Denna guide beskriver hur Proofy införs och används i praktiken inom
-      revisions- och redovisningsverksamhet. Guiden är avsedd att fungera som
-      intern instruktion och dokumentationsstöd.
+      Denna sida beskriver hur Proofy används i praktiken inom revisions- och
+      redovisningsverksamhet. Texten är avsedd att fungera som
+      <b>intern arbetsinstruktion</b> och kan även bifogas vid
+      <b>kvalitetskontroll eller extern granskning</b>.
     </p>
 
     <div class="card content">
-      <h2>1. Syfte med Proofy</h2>
+      <h2>1. Tjänstens syfte</h2>
       <p>
         Proofy används för att tekniskt verifiera om ett digitalt underlag
         (en fil) är <b>oförändrat jämfört med en tidigare fastställd version</b>.
-        Tjänsten stödjer efterhandskontroll och spårbarhet i ärenden.
+        Tjänsten möjliggör spårbarhet och efterhandskontroll i ärenden där
+        versionstillhörighet behöver kunna styrkas.
       </p>
       <p class="small">
-        Proofy avgör inte dokumentets riktighet, innehåll eller juridiska giltighet.
-        Tjänsten är ett tekniskt underlag, inte en bedömning.
+        Proofy gör ingen bedömning av dokumentets innehåll, riktighet,
+        fullständighet eller juridiska giltighet.
       </p>
     </div>
 
     <div class="card content" style="margin-top:14px;">
-      <h2>2. När Proofy ska användas</h2>
+      <h2>2. När Proofy normalt används</h2>
       <ul>
-        <li>Vid fastställande av bokslut eller rapporter</li>
+        <li>Vid fastställande av bokslut, rapporter eller sammanställningar</li>
         <li>Vid beslut eller avtal som sparas digitalt</li>
-        <li>Vid intern kvalitetskontroll</li>
+        <li>Vid intern kvalitetskontroll eller byrågranskning</li>
         <li>Vid efterhandsfrågor från kund, revisor eller extern part</li>
       </ul>
     </div>
 
     <div class="card content" style="margin-top:14px;">
       <h2>3. Rekommenderad arbetsrutin</h2>
-
       <ol style="padding-left:18px;">
         <li>
           <b>Fastställ version</b><br/>
-          När ett underlag är färdigt skapas ett Verifierings-ID i Proofy.
+          När ett underlag är färdigt och ska ligga till grund för fortsatt arbete
+          skapas ett Verifierings-ID via Proofy.
         </li>
         <li>
           <b>Dokumentera i ärendet</b><br/>
-          Verifierings-ID sparas i arbetsdokumentation, ärendehanteringssystem
-          eller revisionsfil.
+          Verifierings-ID sparas i ärendedokumentation, revisionsfil eller
+          byråns interna system enligt gällande rutiner.
         </li>
         <li>
           <b>Verifiera vid behov</b><br/>
-          Vid senare kontroll verifieras filen och resultatet dokumenteras
-          (match / ingen match).
+          Vid senare kontroll verifieras aktuell fil mot Verifierings-ID och
+          resultatet dokumenteras (överensstämmer / överensstämmer inte).
         </li>
       </ol>
     </div>
 
     <div class="card content" style="margin-top:14px;">
-      <h2>4. Dokumentation i ärendet</h2>
-      <p>
-        Vid verifiering rekommenderas följande notering:
-      </p>
-
-      <blockquote class="small">
-        ”Underlaget verifierades [datum] via Proofy.
-        Resultatet visar att filen överensstämmer / inte överensstämmer
-        med tidigare registrerad version.”
-      </blockquote>
-
+      <h2>4. Dokumentationsexempel</h2>
       <p class="small">
-        Noteringen kan anpassas efter byråns dokumentationsstandard.
+        Exempel på notering i ärendet:
+      </p>
+      <blockquote class="small">
+        ”Underlaget verifierades via Proofy den [datum].
+        Resultatet visar att filen överensstämmer / inte överensstämmer
+        med tidigare fastställd version.”
+      </blockquote>
+      <p class="small">
+        Formuleringen anpassas efter byråns dokumentationsstandard.
       </p>
     </div>
 
     <div class="card content" style="margin-top:14px;">
       <h2>5. Roller och ansvar</h2>
       <ul>
-        <li><b>Byrån</b> ansvarar för urval av underlag och professionell bedömning</li>
+        <li><b>Byrån</b> ansvarar för professionell bedömning och dokumentation</li>
         <li><b>Användaren</b> ansvarar för korrekt hantering av Verifierings-ID</li>
-        <li><b>Proofy</b> ansvarar för att verifieringstjänsten fungerar enligt avtal</li>
+        <li><b>Proofy</b> ansvarar för att verifieringstjänsten fungerar tekniskt enligt avtal</li>
       </ul>
     </div>
 
     <div class="card content" style="margin-top:14px;">
       <h2>6. Avgränsningar</h2>
       <ul>
-        <li>Proofy är inte arkiv</li>
+        <li>Proofy är inte arkivering</li>
         <li>Proofy är inte e-signering</li>
         <li>Proofy är inte juridisk rådgivning</li>
         <li>Proofy ersätter inte professionellt omdöme</li>
@@ -126,20 +150,18 @@
     </div>
 
     <div class="card content" style="margin-top:14px;">
-      <h2>7. Support och frågor</h2>
+      <h2>7. Support och granskning</h2>
       <p>
         Vid frågor om användning, rutiner eller dokumentation:
       </p>
-      <p>
-        <b>kontakt@proofy.se</b>
-      </p>
+      <p><b>kontakt@proofy.se</b></p>
       <p class="small">
-        Vid kvalitetskontroll eller extern granskning kan denna guide bifogas
-        som beskrivning av byråns arbetsmetod.
+        Denna sida kan bifogas vid intern kvalitetskontroll eller extern granskning
+        som beskrivning av hur Proofy används i byråns process.
       </p>
     </div>
 
-    <p class="meta" style="margin-top:18px;">
+    <p class="meta" style="margin-top:20px;">
       Senast uppdaterad: 2026-01-07
     </p>
   </div>
@@ -151,7 +173,7 @@
       <div>
         <div style="font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy</div>
-        <div class="small" style="max-width:90ch;">
+        <div class="small" style="max-width:92ch;">
           Proofy tillhandahåller teknisk verifiering av filer.
           Tjänsten utgör inte juridisk rådgivning och avgör inte
           dokumentets rättsliga giltighet.
