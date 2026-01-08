@@ -45,7 +45,6 @@
         z-index:999;
       }
 
-      /* PROOFY+ (5/5 polish): tydlig fokusram för tangentbord utan att störa mus */
       a:focus-visible, button:focus-visible, [role="button"]:focus-visible{
         outline: 2px solid rgba(110,168,255,.55);
         outline-offset: 3px;
@@ -137,8 +136,9 @@
         font-weight:900;
         border:1px solid var(--border);
         background:rgba(255,255,255,.05);
-        min-width:190px;
+        min-width:220px;
         justify-content:center;
+        text-align:center;
       }
       .dot{width:9px;height:9px;border-radius:99px;background:var(--warn)}
       .statusBadge.good .dot{background:var(--good)}
@@ -302,7 +302,6 @@
       }
     </style>
 
-    <!-- Lokal QR-lib (CSP-vänligt). Byt sökväg om ni har annan fil. -->
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
   </head>
 
@@ -336,7 +335,7 @@
             </div>
           </div>
 
-          <div id="statusBadge" class="statusBadge warn" title="Status för verifiering">
+          <div id="statusBadge" class="statusBadge warn" title="Status hos Proofy vid kontrolltillfället">
             <span class="dot" aria-hidden="true"></span>
             <span id="statusText">Kontrollerar…</span>
           </div>
@@ -375,12 +374,13 @@
               </div>
 
               <div class="val">
-                <div class="label">Resultat</div>
+                <div class="label">Status hos Proofy vid kontrolltillfället</div>
                 <div class="mono" id="resultText">—</div>
+                <div class="small" id="legalLine" style="margin-top:8px">—</div>
               </div>
 
               <div class="val">
-                <div class="label">Registreringstid hos Proofy</div>
+                <div class="label">Tidpunkt (om bekräftad)</div>
                 <div class="mono" id="regLocal">—</div>
                 <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
               </div>
@@ -388,16 +388,16 @@
 
             <div class="fine">
               <b>Revisions-/juridisk tydlighet</b><br/>
-              • Intyget visar endast om kontrollvärdet matchar en registrerad referens och i så fall <b>registreringstid</b>.<br/>
-              • Registreringstid anger när ID:t först registrerades i Proofys register – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
+              • Intyget redovisar status för kontrollvärdet i Proofys register vid kontrolltillfället.<br/>
+              • Tidpunkt anges endast när status är <b>bekräftad</b>.<br/>
+              • Tidpunkten avser när kontrollvärdet först blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
               • Intyget ersätter inte e-signering, arkivering, behörighetsloggar, processkontroller eller juridisk rådgivning.<br/>
               • Bevisvärde och relevans bedöms i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja).<br/>
-              <!-- PROOFY+ (5/5 juridik): extra precisering utan “sälj” -->
               • Intyget avser en <b>teknisk kontroll vid kontrolltillfället</b>. Utfallet kan ändras om registret uppdateras senare.
             </div>
 
             <div class="footer">
-              <div><b>Integritet:</b> Verifierings-ID skapas lokalt från filen. Vid verifiering skickas endast kontrollvärdet (hash) – inte filen.</div>
+              <div><b>Integritet:</b> Verifierings-ID skapas lokalt från filen. Vid kontroll skickas endast kontrollvärdet – inte filen.</div>
               <div style="margin-top:6px">Kontakt: <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></div>
             </div>
           </div>
@@ -455,12 +455,10 @@
 
       function nowSeconds(){ return Math.floor(Date.now()/1000); }
 
-      // PROOFY+ (UTC fix): mer revisionsvänligt format än "…Z"
       function pad2(n){ return String(n).padStart(2,"0"); }
       function fmtUtc(sec){
         if(!sec) return "—";
         const d = new Date(sec * 1000);
-        // UTC components
         const Y = d.getUTCFullYear();
         const M = pad2(d.getUTCMonth() + 1);
         const D = pad2(d.getUTCDate());
@@ -529,9 +527,7 @@
         }
 
         let level = undefined;
-        try{
-          level = window.QRCode?.CorrectLevel?.H;
-        }catch{}
+        try{ level = window.QRCode?.CorrectLevel?.H; }catch{}
         new window.QRCode(el, {
           text,
           width: 168,
@@ -542,7 +538,6 @@
         });
       }
 
-      // PROOFY+ (server correctness): no-store + cache-buster + same-origin
       async function fetchJson(url, options){
         const sep = url.includes("?") ? "&" : "?";
         const bustUrl = url + sep + "t=" + Date.now();
@@ -552,54 +547,18 @@
         return data;
       }
 
-      function parseVerifyResponse(v){
-        // Bakåtkompatibel: flera fält accepteras, men vi gör den tydlig.
-        const exists =
-          v?.exists === true ||
-          v?.registered === true ||
-          v?.found === true ||
-          v?.match === true;
-
-        const tsRaw = v?.timestamp ?? v?.ts ?? v?.registeredAt ?? v?.registered_at ?? 0;
-        const ts = Number(tsRaw) || 0;
-
-        const isRegistered = exists || ts > 0;
-        return { isRegistered, ts };
+      function safeText(v, fallback="—"){
+        const s = String(v ?? "").trim();
+        return s ? s : fallback;
       }
 
-      // localStorage pending tx (saved by register page)
-      const PENDING_KEY = "proofy.pending.v1";
-      function loadPending(){
-        try{
-          const raw = localStorage.getItem(PENDING_KEY);
-          if(!raw) return null;
-          const obj = JSON.parse(raw);
-          if(!obj || typeof obj !== "object") return null;
-          return obj;
-        }catch{ return null; }
-      }
-      function clearPending(){
-        try{ localStorage.removeItem(PENDING_KEY); }catch{}
-      }
-      function pendingForHash(hash){
-        const p = loadPending();
-        if(!p) return null;
-        if(String(p.hash||"").toLowerCase() !== String(hash||"").toLowerCase()) return null;
-        return p;
-      }
-
-      async function pollVerify(hash, tries, delayMs){
-        for(let i=1;i<=tries;i++){
-          try{
-            const v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
-            const parsed = parseVerifyResponse(v);
-            if(parsed.isRegistered) return { ok:true, parsed, raw:v };
-          }catch(e){
-            // ignorera tillfälliga fel i polling; vi fortsätter
-          }
-          await new Promise(res => setTimeout(res, delayMs));
-        }
-        return { ok:false };
+      function pickStatusPresentation(code){
+        // Kod -> UI-ton + rubrik (utan tekniska termer)
+        if (code === "CONFIRMED") return { tone:"good", badge:"Bekräftad" };
+        if (code === "SUBMITTED_UNCONFIRMED") return { tone:"warn", badge:"Inskickad – ej bekräftad" };
+        if (code === "NOT_CONFIRMED") return { tone:"bad", badge:"Ej bekräftad" };
+        if (code === "UNKNOWN") return { tone:"bad", badge:"Kunde inte kontrolleras" };
+        return { tone:"bad", badge:"Kunde inte kontrolleras" };
       }
 
       // ---------- Main ----------
@@ -630,10 +589,8 @@
         $("copyCert").onclick = () => copyText(certLink);
         $("copyVerify").onclick = () => copyText(verifyLink);
 
-        // QR ska leda till snabb kontroll (verifyLink)
         renderQR(verifyLink);
 
-        // QR click copies verifyLink
         const qrTap = $("qrcodeTap");
         const doQrCopy = async () => {
           await copyText(verifyLink);
@@ -648,23 +605,9 @@
         $("checkedLocal").textContent = fmtSe(checked);
         $("checkedUtc").textContent = fmtUtc(checked);
 
-        if (!isValidBytes32Hex(hash)){
-          setStatus("bad", "Ogiltigt ID");
-          $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
-          $("resultText").textContent = "Kunde inte verifiera: saknat/ogiltigt Verifierings-ID i URL.";
-          $("regLocal").textContent = "—";
-          $("regUtc").textContent = "—";
-          showWarn(`
-            <b>Fel:</b> Intyget saknar giltigt <span class="mono">hash</span> i URL.<br/>
-            Exempel: <span class="mono">/certificate.html?hash=0x...</span>
-          `);
-          return;
-        }
-
-        $("hashText").textContent = hash;
-
-        setStatus("warn", "Kontrollerar…");
-        $("resultText").textContent = "Kontrollerar mot Proofys register…";
+        // Reset fields
+        $("resultText").textContent = "Kontrollerar…";
+        $("legalLine").textContent = "—";
         $("regLocal").textContent = "—";
         $("regUtc").textContent = "—";
 
@@ -674,13 +617,31 @@
           $("techHint").textContent = "";
         }
 
-        // 1) First verify snapshot (server is source of truth)
+        if (!isValidBytes32Hex(hash)){
+          setStatus("bad", "Ogiltigt ID");
+          $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
+          $("resultText").textContent = "Kunde inte kontrollera: saknat/ogiltigt Verifierings-ID i URL.";
+          $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt Verifierings-ID.";
+          showWarn(`
+            <b>Fel:</b> Intyget saknar giltigt Verifierings-ID i URL.<br/>
+            Exempel: <span class="mono">/certificate.html?hash=0x...</span>
+          `);
+          return;
+        }
+
+        $("hashText").textContent = hash;
+
+        setStatus("warn", "Kontrollerar…");
+        $("resultText").textContent = "Kontrollerar status hos Proofy…";
+
+        // Source of truth: /api/verify (statusmodell)
         let v;
         try{
           v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
         }catch(e){
-          setStatus("bad", "Tillfälligt fel");
-          $("resultText").textContent = "Kunde inte kontrollera just nu (tillfälligt fel).";
+          setStatus("bad", "Kunde inte kontrolleras");
+          $("resultText").textContent = "Kunde inte kontrolleras vid kontrolltillfället.";
+          $("legalLine").textContent = "Detta är ett tekniskt fel. Ingen slutsats kan dras om bekräftelse.";
           showWarn(`
             <b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>
             Försök igen eller öppna verifieringssidan: <a class="mutedLink" href="${verifyLink}">${verifyLink}</a>
@@ -688,67 +649,71 @@
           return;
         }
 
-        const parsed = parseVerifyResponse(v);
+        const statusCode = safeText(v?.statusCode, "UNKNOWN");
+        const statusText = safeText(v?.statusText, "Kunde inte kontrolleras");
+        const legalText = safeText(v?.legalText, "");
+        const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
-        if (parsed.isRegistered){
-          setStatus("good", "Registrerad");
-          $("resultText").textContent = "Registrerad (match i Proofys register).";
-          $("regLocal").textContent = fmtSe(parsed.ts);
-          $("regUtc").textContent = fmtUtc(parsed.ts);
-          clearPending();
-          return;
+        const pres = pickStatusPresentation(statusCode);
+        setStatus(pres.tone, pres.badge);
+
+        // Intygets huvudrad: exakt servertext (så att inget UI “hittar på”)
+        $("resultText").textContent = statusText;
+
+        // Juridisk rad (exakt servertext om den finns, annars defensiv standardtext)
+        if (legalText){
+          $("legalLine").textContent = legalText;
+        } else {
+          if (statusCode === "CONFIRMED"){
+            $("legalLine").textContent = "Status är bekräftad vid kontrolltillfället.";
+          } else if (statusCode === "SUBMITTED_UNCONFIRMED"){
+            $("legalLine").textContent = "En registrering är inskickad men ännu ej bekräftad. Intyget visar inte 'bekräftad' innan bekräftelse finns.";
+          } else if (statusCode === "NOT_CONFIRMED"){
+            $("legalLine").textContent = "Ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
+          } else {
+            $("legalLine").textContent = "Status kunde inte kontrolleras vid kontrolltillfället. Ingen slutsats kan dras om bekräftelse.";
+          }
         }
 
-        // 2) Not registered -> check pending local tx (optional UX, never overrides server truth)
-        const p = pendingForHash(hash);
-
-        if (p){
-          setStatus("warn", "Väntar på bekräftelse");
-          $("resultText").textContent = "Registrering inskickad men ej bekräftad on-chain ännu.";
+        // Tidpunkt: endast om bekräftad
+        if (statusCode === "CONFIRMED" && confirmedAtUnix && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
+          $("regLocal").textContent = fmtSe(confirmedAtUnix);
+          $("regUtc").textContent = fmtUtc(confirmedAtUnix);
+        } else {
           $("regLocal").textContent = "—";
           $("regUtc").textContent = "—";
+        }
 
-          const txLine = p.txHash ? `<div style="margin-top:6px">Transaktion: <span class="mono">${p.txHash}</span></div>` : "";
+        // Extra tydlighet vid ej bekräftad status
+        if (statusCode === "SUBMITTED_UNCONFIRMED"){
+          const tx = safeText(v?.submission?.txHash, "");
+          const msgTx = tx ? `<div style="margin-top:6px">Registreringsreferens (valfri): <span class="mono">${tx}</span></div>` : "";
           showWarn(`
-            <b>Registrering inskickad.</b> Intyget visar endast <b>bekräftad</b> status från registret.<br/>
-            Om registreringen gjordes nyligen kan det ta en stund innan den syns i kontrollen.
-            ${txLine}
-          `);
-
-          // Poll verify (2 min max)
-          const polled = await pollVerify(hash, 24, 5000);
-          if (polled.ok){
-            const ts = polled.parsed.ts;
-            setStatus("good", "Registrerad");
-            $("resultText").textContent = "Registrerad (match i Proofys register).";
-            $("regLocal").textContent = fmtSe(ts);
-            $("regUtc").textContent = fmtUtc(ts);
-            clearPending();
-            hideWarn();
-            return;
-          }
-
-          // Still not confirmed
-          setStatus("bad", "Ej registrerad");
-          $("resultText").textContent = "Inte registrerad vid kontrolltillfället (ingen bekräftad registrering hittades).";
-          showWarn(`
-            <b>Ej bekräftad inom väntetid.</b><br/>
-            Det kan bero på att transaktionen inte blev inkluderad (t.ex. avvisad/ersatt/ej mined).<br/>
-            Rekommendation: uppdatera senare eller gör om registreringen för samma Verifierings-ID.
-            ${p.txHash ? `<div style="margin-top:6px">Senaste tx: <span class="mono">${p.txHash}</span></div>` : ""}
+            <b>Inskickad – ej bekräftad.</b><br/>
+            Intyget kan inte redovisa bekräftelse innan status är bekräftad.
+            ${msgTx}
           `);
           return;
         }
 
-        // 3) Not registered and no pending -> strict result
-        setStatus("bad", "Ej registrerad");
-        $("resultText").textContent = "Inte registrerad (ingen registrering hittades vid kontrolltillfället).";
-        $("regLocal").textContent = "—";
-        $("regUtc").textContent = "—";
-        showWarn(`
-          <b>Ingen registrering hittades.</b><br/>
-          Kontrollera att rätt filversion/Verifierings-ID används. Om registrering gjordes nyligen: vänta en stund och uppdatera intyget.
-        `);
+        if (statusCode === "NOT_CONFIRMED"){
+          showWarn(`
+            <b>Ej bekräftad.</b><br/>
+            Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/Verifierings-ID används och uppdatera vid behov.
+          `);
+          return;
+        }
+
+        if (statusCode === "UNKNOWN"){
+          showWarn(`
+            <b>Kunde inte kontrolleras.</b><br/>
+            Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.
+          `);
+          return;
+        }
+
+        // CONFIRMED: visa ingen varning (rent intyg)
+        hideWarn();
       }
 
       run();
