@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="sv">
   <head>
@@ -10,6 +11,7 @@
       :root{
         --bg:#070b14;
         --card:#0e1526;
+        --card2:#0b1220;
         --border:rgba(255,255,255,.08);
         --text:#eaf0ff;
         --muted:rgba(234,240,255,.72);
@@ -117,7 +119,7 @@
         line-height:1.02;
       }
       .lead{
-        max-width:860px;
+        max-width:820px;
         color:var(--muted);
         line-height:1.55;
         font-size:16px;
@@ -129,7 +131,7 @@
         font-weight:900;
         border:1px solid var(--border);
         background:rgba(255,255,255,.05);
-        min-width:210px;
+        min-width:190px;
         justify-content:center;
       }
       .dot{width:9px;height:9px;border-radius:99px;background:var(--warn)}
@@ -284,29 +286,17 @@
         line-height:1.55;
       }
 
-      .txBox{
-        margin-top:10px;
-        border:1px solid rgba(67,108,255,.25);
-        background:rgba(67,108,255,.08);
-        border-radius:16px;
-        padding:12px;
-        display:none;
-      }
-      .txBox.show{display:block}
-      .txTitle{font-weight:900; margin-bottom:6px}
-      .txHint{color:rgba(234,240,255,.78); font-size:13px; line-height:1.5}
-
       @media print{
-        header, .actions, #warnBox, #txBox { display:none !important; }
+        header, .actions, #warnBox { display:none !important; }
         body{ background:#fff !important; color:#000 !important; }
         .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
         .pill, .statusBadge, .val { border-color:#ddd !important; background:#fff !important; }
-        .lead, .note, .fine, .small, .footer, .txHint { color:#111 !important; }
+        .lead, .note, .fine, .small, .footer { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
       }
     </style>
 
-    <!-- Lokal QR-lib (om den finns). Filen kan saknas eller exportera annat globalt => vi har robust fallback i JS. -->
+    <!-- Lokal QR-lib (CSP-vänligt). Byt sökväg om ni har annan fil. -->
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
   </head>
 
@@ -319,9 +309,9 @@
         <div>Proofy</div>
       </a>
       <nav aria-label="Navigering">
-        <a class="navbtn" href="/pilot">Starta pilot</a>
-        <a class="navbtn" href="/verify">Verifiera underlag</a>
-        <a class="navbtn" href="/register">Skapa Verifierings-ID</a>
+        <a class="navbtn" href="/pilot.html">Starta pilot</a>
+        <a class="navbtn" href="/verify.html">Verifiera underlag</a>
+        <a class="navbtn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="navbtn primary" href="/#kontakt">Boka kort demo</a>
       </nav>
     </header>
@@ -335,8 +325,8 @@
             <h1>Verifieringsintyg</h1>
             <div class="lead">
               Detta intyg är ett <b>tekniskt underlag</b> som sammanfattar utfallet av en kontroll av ett
-              <b>Verifierings-ID</b> (kontrollvärde kopplat till en specifik filversion) mot Proofys register
-              vid angiven kontrolltid. Proofy lagrar <b>inte</b> dokumentinnehåll i registret.
+              <b>Verifierings-ID</b> (kontrollvärde för en specifik filversion) mot Proofys register vid angiven kontrolltid.
+              Proofy lagrar <b>inte</b> dokumentinnehåll i registret.
             </div>
           </div>
 
@@ -353,11 +343,6 @@
         </div>
 
         <div id="warnBox" class="warnBox" role="status" aria-live="polite" aria-atomic="true"></div>
-
-        <div id="txBox" class="txBox" role="status" aria-live="polite" aria-atomic="true">
-          <div class="txTitle">Registrering pågår</div>
-          <div class="txHint" id="txHint">—</div>
-        </div>
 
         <div class="grid">
           <div class="card">
@@ -396,18 +381,15 @@
             </div>
 
             <div class="fine">
-              <b>Revisions-/juridisk tydlighet (svensk praxis)</b><br/>
-              • Intyget visar endast om angivet kontrollvärde (Verifierings-ID) återfinns i Proofys register och i så fall <b>registreringstid</b>.<br/>
-              • Registreringstid anger <b>när kontrollvärdet registrerades</b> – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
-              • Intyget är <b>inte</b> e-signering, <b>inte</b> arkivering, och ersätter <b>inte</b> behörighetsloggar, processkontroller eller juridisk rådgivning.<br/>
-              • Bevisvärde bedöms i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja och kompletterande kontroller).
+              <b>Revisions-/juridisk tydlighet</b><br/>
+              • Intyget visar endast om kontrollvärdet matchar en registrerad referens och i så fall <b>registreringstid</b>.<br/>
+              • Registreringstid anger när ID:t först registrerades i Proofys register – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
+              • Intyget ersätter inte e-signering, arkivering, behörighetsloggar, processkontroller eller juridisk rådgivning.<br/>
+              • Bevisvärde och relevans bedöms i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja).
             </div>
 
             <div class="footer">
-              <div><b>Integritet:</b> Verifierings-ID skapas lokalt från filen. Vid kontroll skickas endast kontrollvärdet (hash) – inte filen.</div>
-              <div style="margin-top:6px">
-                <b>Avgifter:</b> Om registrering görs via Proofys servernyckel kan nätverksavgift betalas av Proofy (ingen Metamask-debitering).
-              </div>
+              <div><b>Integritet:</b> Verifierings-ID skapas lokalt från filen. Vid verifiering skickas endast kontrollvärdet (hash) – inte filen.</div>
               <div style="margin-top:6px">Kontakt: <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></div>
             </div>
           </div>
@@ -462,30 +444,25 @@
       function isValidBytes32Hex(s){
         return typeof s === "string" && /^0x[0-9a-fA-F]{64}$/.test(s.trim());
       }
-      function isValidTxHex(s){
-        return typeof s === "string" && /^0x[0-9a-fA-F]{64}$/.test(s.trim());
-      }
 
       function nowSeconds(){ return Math.floor(Date.now()/1000); }
 
       function fmtUtc(sec){
         if(!sec) return "—";
-        const iso = new Date(sec*1000).toISOString(); // 2026-01-08T13:04:41.000Z
-        return iso.replace(".000Z","Z").replace("T"," ") + " (UTC)";
+        return new Date(sec*1000).toISOString().replace(".000Z","Z");
       }
 
       function fmtSe(sec){
         if(!sec) return "—";
         try{
           const dt = new Date(sec*1000);
-          const s = new Intl.DateTimeFormat("sv-SE", {
+          return new Intl.DateTimeFormat("sv-SE", {
             timeZone:"Europe/Stockholm",
             year:"numeric", month:"2-digit", day:"2-digit",
             hour:"2-digit", minute:"2-digit", second:"2-digit"
-          }).format(dt);
-          return s + " (Europe/Stockholm)";
+          }).format(dt) + " (Europe/Stockholm)";
         }catch{
-          return new Date(sec*1000).toLocaleString("sv-SE") + " (lokal tid)";
+          return new Date(sec*1000).toLocaleString("sv-SE") + " (lokal)";
         }
       }
 
@@ -504,17 +481,6 @@
       function hideWarn(){
         const box = $("warnBox");
         box.innerHTML = "";
-        box.classList.remove("show");
-      }
-
-      function showTx(html){
-        const box = $("txBox");
-        $("txHint").innerHTML = html;
-        box.classList.add("show");
-      }
-      function hideTx(){
-        const box = $("txBox");
-        $("txHint").innerHTML = "—";
         box.classList.remove("show");
       }
 
@@ -539,38 +505,24 @@
         const el = $("qrcode");
         el.innerHTML = "";
 
-        // Always show something (avoid blank white box).
-        const fallback = () => {
-          el.innerHTML =
-            '<div style="font: 700 12px/1.35 ui-sans-serif,system-ui; color:#0b1220; padding:10px; text-align:center;">' +
-            'QR kunde inte renderas.<br/><span style="font-weight:900;">Klicka rutan</span> för att kopiera länken.' +
-            "</div>";
-        };
-
-        try{
-          // Common global for many QR libs
-          if (typeof window.QRCode === "function"){
-            new window.QRCode(el, {
-              text,
-              width: 168,
-              height: 168,
-              colorDark: "#0b1220",
-              colorLight: "#ffffff",
-              correctLevel: (window.QRCode?.CorrectLevel?.H ?? undefined)
-            });
-            // Some libs render async; keep fallback if still empty after a tick
-            setTimeout(() => { if (!el.firstChild) fallback(); }, 0);
-            return;
-          }
-
-          // If your /assets/qr.min.js exposes another global, add it here.
-          // Example (optional):
-          // if (window.qr && typeof window.qr.create === "function") { ... }
-
-          fallback();
-        }catch(e){
-          fallback();
+        if (typeof window.QRCode !== "function"){
+          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR kunde inte laddas.</div>';
+          return;
         }
+
+        // Viktigt: vissa libs behöver CorrectLevel, men vi fallbackar säkert
+        let level = undefined;
+        try{
+          level = window.QRCode?.CorrectLevel?.H;
+        }catch{}
+        new window.QRCode(el, {
+          text,
+          width: 168,
+          height: 168,
+          colorDark: "#0b1220",
+          colorLight: "#ffffff",
+          correctLevel: level
+        });
       }
 
       async function fetchJson(url, options){
@@ -581,7 +533,6 @@
       }
 
       function parseVerifyResponse(v){
-        // Robust: stöd flera backend-format
         const exists =
           v?.exists === true ||
           v?.registered === true ||
@@ -591,25 +542,52 @@
         const tsRaw = v?.timestamp ?? v?.ts ?? v?.registeredAt ?? v?.registered_at ?? 0;
         const ts = Number(tsRaw) || 0;
 
-        // Om exists saknas men timestamp finns, tolka som registrerad
         const isRegistered = exists || ts > 0;
-
         return { isRegistered, ts };
       }
 
-      function storageKeyForHash(hash){
-        return `proofy:lastTx:${hash}`;
+      // localStorage pending tx (saved by register page)
+      const PENDING_KEY = "proofy.pending.v1";
+      function loadPending(){
+        try{
+          const raw = localStorage.getItem(PENDING_KEY);
+          if(!raw) return null;
+          const obj = JSON.parse(raw);
+          if(!obj || typeof obj !== "object") return null;
+          return obj;
+        }catch{ return null; }
+      }
+      function savePending(obj){
+        try{ localStorage.setItem(PENDING_KEY, JSON.stringify(obj)); }catch{}
+      }
+      function clearPending(){
+        try{ localStorage.removeItem(PENDING_KEY); }catch{}
+      }
+      function pendingForHash(hash){
+        const p = loadPending();
+        if(!p) return null;
+        if(String(p.hash||"").toLowerCase() !== String(hash||"").toLowerCase()) return null;
+        // txHash är frivillig (men bra). Vi accepterar pending utan txHash också.
+        return p;
       }
 
-      function polygonscanTxUrl(tx){
-        // Amoy
-        return `https://amoy.polygonscan.com/tx/${tx}`;
+      async function pollVerify(hash, tries, delayMs){
+        for(let i=1;i<=tries;i++){
+          try{
+            const v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
+            const parsed = parseVerifyResponse(v);
+            if(parsed.isRegistered) return { ok:true, parsed, raw:v };
+          }catch(e){
+            // ignorera tillfälliga fel i polling; vi fortsätter
+          }
+          await new Promise(res => setTimeout(res, delayMs));
+        }
+        return { ok:false };
       }
 
       // ---------- Main ----------
       async function run(){
         hideWarn();
-        hideTx();
 
         const url = new URL(location.href);
         const hash = (url.searchParams.get("hash") || "").trim();
@@ -620,19 +598,9 @@
           return Number.isFinite(n) && n > 0 ? Math.floor(n) : nowSeconds();
         })();
 
-        // Optional: txHash in URL (certificate can display "pending" with explorer link)
-        const txParam = (url.searchParams.get("tx") || url.searchParams.get("txHash") || "").trim();
-
-        // Build links: match your deployed routes
         const certId = (url.searchParams.get("cert") || "").trim();
-
-        const certPath = location.pathname; // typically /certificate
-        const certLink =
-          `${location.origin}${certPath}?hash=${encodeURIComponent(hash)}&checked=${checked}` +
-          (certId ? `&cert=${encodeURIComponent(certId)}` : "") +
-          (isValidTxHex(txParam) ? `&tx=${encodeURIComponent(txParam)}` : "");
-
-        const verifyLink = `${location.origin}/verify?hash=${encodeURIComponent(hash)}`;
+        const certLink = `${location.origin}${location.pathname}?hash=${encodeURIComponent(hash)}&checked=${checked}${certId ? `&cert=${encodeURIComponent(certId)}` : ""}`;
+        const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
 
         $("certLink").textContent = certLink;
         $("verifyLink").textContent = verifyLink;
@@ -645,7 +613,7 @@
         $("copyCert").onclick = () => copyText(certLink);
         $("copyVerify").onclick = () => copyText(verifyLink);
 
-        // QR leads to verifyLink
+        // QR ska leda till snabb kontroll (verifyLink)
         renderQR(verifyLink);
 
         // QR click copies verifyLink
@@ -660,11 +628,9 @@
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
         };
 
-        // Times
         $("checkedLocal").textContent = fmtSe(checked);
         $("checkedUtc").textContent = fmtUtc(checked);
 
-        // Validate hash
         if (!isValidBytes32Hex(hash)){
           setStatus("bad", "Ogiltigt ID");
           $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
@@ -673,25 +639,25 @@
           $("regUtc").textContent = "—";
           showWarn(`
             <b>Fel:</b> Intyget saknar giltigt <span class="mono">hash</span> i URL.<br/>
-            Exempel: <span class="mono">/certificate?hash=0x...</span>
+            Exempel: <span class="mono">/certificate.html?hash=0x...</span>
           `);
           return;
         }
 
         $("hashText").textContent = hash;
 
-        // Persist tx if provided
-        if (isValidTxHex(txParam)){
-          try{ localStorage.setItem(storageKeyForHash(hash), txParam); }catch{}
-        }
-
         setStatus("warn", "Kontrollerar…");
         $("resultText").textContent = "Kontrollerar mot Proofys register…";
         $("regLocal").textContent = "—";
         $("regUtc").textContent = "—";
-        $("techHint").textContent = "";
 
-        // Verify
+        if (certId){
+          $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
+        } else {
+          $("techHint").textContent = "";
+        }
+
+        // 1) First verify snapshot
         let v;
         try{
           v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
@@ -712,50 +678,61 @@
           $("resultText").textContent = "Registrerad (match i Proofys register).";
           $("regLocal").textContent = fmtSe(parsed.ts);
           $("regUtc").textContent = fmtUtc(parsed.ts);
-
-          if (certId){
-            $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
-          }
-          hideTx();
+          clearPending(); // ingen pending behövs när det är bekräftat
           return;
         }
 
-        // Not registered: show stronger, audit-friendly explanation + pending if tx exists
+        // 2) Not registered -> check if we have pending tx saved for this exact hash
+        const p = pendingForHash(hash);
+
+        if (p){
+          // Visa juridiskt korrekt: "inskickad men ej bekräftad"
+          setStatus("warn", "Väntar på bekräftelse");
+          $("resultText").textContent = "Registrering inskickad men ej bekräftad on-chain ännu.";
+          $("regLocal").textContent = "—";
+          $("regUtc").textContent = "—";
+
+          const txLine = p.txHash ? `<div style="margin-top:6px">Transaktion: <span class="mono">${p.txHash}</span></div>` : "";
+          showWarn(`
+            <b>Registrering inskickad.</b> Intyget visar <b>bekräftad status</b> från registret.<br/>
+            Om registreringen gjordes nyligen kan det ta en stund innan den syns i kontrollen.
+            ${txLine}
+          `);
+
+          // Poll verify (2 min max)
+          const polled = await pollVerify(hash, 24, 5000);
+          if (polled.ok){
+            const ts = polled.parsed.ts;
+            setStatus("good", "Registrerad");
+            $("resultText").textContent = "Registrerad (match i Proofys register).";
+            $("regLocal").textContent = fmtSe(ts);
+            $("regUtc").textContent = fmtUtc(ts);
+            clearPending();
+            hideWarn();
+            return;
+          }
+
+          // Still not confirmed
+          setStatus("bad", "Ej registrerad");
+          $("resultText").textContent = "Inte registrerad vid kontrolltillfället (ingen bekräftad registrering hittades).";
+          showWarn(`
+            <b>Ej bekräftad inom väntetid.</b><br/>
+            Det kan bero på att transaktionen inte blev inkluderad (t.ex. avvisad/ersatt/ej mined).<br/>
+            Rekommendation: uppdatera senare eller gör om registreringen för samma Verifierings-ID.
+            ${p.txHash ? `<div style="margin-top:6px">Senaste tx: <span class="mono">${p.txHash}</span></div>` : ""}
+          `);
+          return;
+        }
+
+        // 3) Not registered and no pending -> show strict result
         setStatus("bad", "Ej registrerad");
         $("resultText").textContent = "Inte registrerad (ingen registrering hittades vid kontrolltillfället).";
         $("regLocal").textContent = "—";
         $("regUtc").textContent = "—";
-
-        const storedTx = (() => {
-          try{ return localStorage.getItem(storageKeyForHash(hash)) || ""; }catch{ return ""; }
-        })();
-
-        const tx = isValidTxHex(txParam) ? txParam : (isValidTxHex(storedTx) ? storedTx : "");
-
-        if (tx){
-          // Pending mode: not confirmed yet
-          setStatus("warn", "Registrering pågår");
-          showTx(`
-            Transaktion har skickats men är ännu inte bekräftad i registret.<br/>
-            <span class="mono">${tx}</span><br/>
-            <a class="mutedLink" href="${polygonscanTxUrl(tx)}" target="_blank" rel="noopener">Öppna på Amoy Polygonscan</a><br/>
-            <span style="display:inline-block;margin-top:6px">
-              Uppdatera intyget efter att transaktionen är minad. Tills dess kan utfallet vara “Ej registrerad”.
-            </span>
-          `);
-          showWarn(`
-            <b>Observera:</b> “Ej registrerad” kan vara korrekt tills registreringen är bekräftad on-chain.<br/>
-            Uppdatera intyget för nytt snapshot när transaktionen är bekräftad.
-          `);
-        } else {
-          showWarn(`
-            <b>Ingen registrering hittades.</b><br/>
-            Kontrollera att rätt filversion/Verifierings-ID används. Om registrering gjordes nyligen: vänta en stund och uppdatera intyget.<br/>
-            <span style="display:inline-block;margin-top:6px">
-              Tips: om du har en transaktionshash kan du lägga till <span class="mono">&amp;tx=0x...</span> i URL:en för pending-läge.
-            </span>
-          `);
-        }
+        showWarn(`
+          <b>Ingen registrering hittades.</b><br/>
+          Kontrollera att rätt filversion/Verifierings-ID används. Om registrering gjordes nyligen: vänta en stund och uppdatera intyget.
+        `);
       }
 
       run();
