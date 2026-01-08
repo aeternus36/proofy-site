@@ -594,12 +594,45 @@
       }
 
       function pickStatusPresentation(code){
-        // Kod -> UI-ton + badge-text (utan tekniska termer)
         if (code === "CONFIRMED") return { tone:"good", badge:"Bekräftad" };
         if (code === "SUBMITTED_UNCONFIRMED") return { tone:"warn", badge:"Inskickad – ej bekräftad" };
         if (code === "NOT_CONFIRMED") return { tone:"bad", badge:"Ej bekräftad" };
         if (code === "UNKNOWN") return { tone:"bad", badge:"Kunde inte kontrolleras" };
         return { tone:"bad", badge:"Kunde inte kontrolleras" };
+      }
+
+      function isMeaningfulTechValue(v){
+        const s = String(v ?? "").trim();
+        if (!s) return false;
+        if (s === "—") return false;
+        if (/^0+$/.test(s)) return false;
+        return true;
+      }
+
+      function updateTechBoxVisibility({ observedPoint, registrationRef }){
+        const tech = $("techDetails");
+        if (!tech) return;
+
+        const hasObserved = isMeaningfulTechValue(observedPoint);
+        const hasRef = isMeaningfulTechValue(registrationRef);
+
+        if (!hasObserved && !hasRef){
+          tech.open = false;
+          tech.style.display = "none";
+          return;
+        }
+
+        tech.style.display = "block";
+
+        // Auto-öppna om det finns info (smidigt vid felsökning),
+        // men bara när det faktiskt finns något att visa.
+        tech.open = true;
+
+        // Dölj rader som saknar innehåll, så rutan känns “ren”.
+        const observedWrap = $("observedPoint")?.closest(".val");
+        const refWrap = $("registrationRef")?.closest(".val");
+        if (observedWrap) observedWrap.style.display = hasObserved ? "block" : "none";
+        if (refWrap) refWrap.style.display = hasRef ? "block" : "none";
       }
 
       // ---------- Main ----------
@@ -653,6 +686,7 @@
         $("regUtc").textContent = "—";
         $("observedPoint").textContent = "—";
         $("registrationRef").textContent = "—";
+        updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
 
         if (certId){
           $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
@@ -685,6 +719,7 @@
           setStatus("bad", "Kunde inte kontrolleras");
           $("resultText").textContent = "Kunde inte kontrolleras vid kontrolltillfället.";
           $("legalLine").textContent = "Detta är ett tekniskt fel. Ingen slutsats kan dras om bekräftelse.";
+          updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
           showWarn(`
             <b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>
             Försök igen eller öppna verifieringssidan: <a class="mutedLink" href="${verifyLink}">${verifyLink}</a>
@@ -702,6 +737,7 @@
         const registrationRef = safeText(v?.submission?.txHash, "—");
         $("observedPoint").textContent = observedPoint;
         $("registrationRef").textContent = registrationRef;
+        updateTechBoxVisibility({ observedPoint, registrationRef });
 
         const pres = pickStatusPresentation(statusCode);
         setStatus(pres.tone, pres.badge);
@@ -728,7 +764,7 @@
         if (statusCode === "CONFIRMED" && confirmedAtUnix && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
           $("regLocal").textContent = fmtSe(confirmedAtUnix);
           $("regUtc").textContent = fmtUtc(confirmedAtUnix);
-          hideWarn(); // rent intyg
+          hideWarn();
           return;
         }
 
