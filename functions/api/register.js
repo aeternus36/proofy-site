@@ -7,7 +7,8 @@ import { polygonAmoy } from "viem/chains";
  *
  * Juridiskt krav:
  * - Får ALDRIG påstå "bekräftad/registrerad" utan att det kan styrkas via bekräftad notering.
- * - Vid inskickad men obekräftad: ska uttryckligen anges som "Ej bekräftad".
+ * - Om ingen bekräftelse finns: ska uttryckligen anges som "Ej bekräftad".
+ * - Vid tekniskt fel: ska anges som "Kunde inte kontrolleras" (inte ett negativt påstående).
  * - Register, Verify och Certificate ska använda samma statusmodell.
  *
  * Driftkrav:
@@ -104,6 +105,14 @@ function toSafeUint64(ts) {
   return v <= maxSafe ? Number(v) : Number(maxSafe);
 }
 
+function sanitizeError(e) {
+  const msg =
+    (e && typeof e === "object" && "shortMessage" in e && e.shortMessage) ||
+    (e && typeof e === "object" && "message" in e && e.message) ||
+    String(e);
+  return String(msg).slice(0, 600);
+}
+
 async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const [ok, ts] = await publicClient.readContract({
     address: contractAddress,
@@ -115,7 +124,9 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
 
+  // Bevisvärde: kontrollpunkt vid kontrolltillfället.
   const observedBlockNumber = await publicClient.getBlockNumber();
+
   return { exists, timestamp, observedBlockNumber: observedBlockNumber.toString() };
 }
 
@@ -135,6 +146,7 @@ function gweiToWeiBigInt(gwei) {
  * - NOT_CONFIRMED: ingen bekräftad notering vid kontrolltillfället
  * - UNKNOWN: kunde inte kontrolleras (tekniskt fel)
  */
+
 function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
     ok: true,
@@ -142,12 +154,10 @@ function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
     statusText: "Bekräftad",
     hash,
     confirmedAtUnix: timestamp,
-    evidence: {
-      observedBlockNumber,
-    },
+    evidence: { observedBlockNumber },
     submission: null,
     legalText:
-      "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot extern verifieringskälla vid behov.",
+      "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot offentlig verifieringskälla.",
   };
 }
 
@@ -160,6 +170,7 @@ function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
     hash,
     confirmedAtUnix: null,
     evidence: observedBlockNumber ? { observedBlockNumber } : null,
+    // submission är process-/felsökningsinfo, inte bekräftelse.
     submission: hasSubmission
       ? {
           txHash: submission.txHash,
@@ -167,7 +178,7 @@ function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
         }
       : null,
     legalText: hasSubmission
-      ? "En registrering har skickats in för behandling men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'."
+      ? "En registrering har skickats in men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'."
       : "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
   };
 }
@@ -186,13 +197,6 @@ function statusUnknown({ hash, detail }) {
     legalText:
       "Status kunde inte kontrolleras på grund av tekniskt fel. Ingen slutsats kan dras utifrån detta svar.",
   };
-}
-
-function sanitizeError(e) {
-  const msg =
-    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
-    "Register failed";
-  return String(msg).slice(0, 600);
 }
 
 export async function onRequest({ request, env }) {
@@ -214,7 +218,7 @@ export async function onRequest({ request, env }) {
 
   const hash = String(body?.hash || "").trim();
   if (!isValidBytes32Hex(hash)) {
-    return json(400, { ok: false, error: "Invalid hash format" }, origin);
+    return json(400, { ok: false, error: "Invalid hash format", statusCode: "BAD_REQUEST" }, origin);
   }
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
@@ -225,13 +229,13 @@ export async function onRequest({ request, env }) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
   if (!isValidAddressHex(contractAddress)) {
-    return json(500, { ok: false, error: "Bad contract address" }, origin);
+    return json(500, { ok: false, error: "Server misconfiguration (bad contract address)" }, origin);
   }
   if (!isValidPrivateKeyHex(privateKey)) {
-    return json(500, { ok: false, error: "Bad private key" }, origin);
+    return json(500, { ok: false, error: "Server misconfiguration (bad private key)" }, origin);
   }
 
-  // Gasgränser (driftstyrning)
+  // Gasgränser (driftstyrning) – UI ska inte behöva tekniska termer.
   const maxFeeGwei = env.MAX_FEE_GWEI ?? 300;
   const maxPriorityFeeGwei = env.MAX_PRIORITY_FEE_GWEI ?? 5;
 
@@ -246,14 +250,11 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 1) Kontroll: finns bekräftad notering?
-    const pre = await readGetWithEvidence({
-      publicClient,
-      contractAddress,
-      hash,
-    });
+    // 1) Kontroll: finns redan bekräftad notering?
+    const pre = await readGetWithEvidence({ publicClient, contractAddress, hash });
 
     if (pre.exists) {
+      // Endast denna väg får ge "Bekräftad".
       return json(200, statusConfirmed({ ...pre, hash }), origin);
     }
 
@@ -279,7 +280,7 @@ export async function onRequest({ request, env }) {
       maxPriorityFeePerGas,
     });
 
-    // 3) Returnera fortsatt "Ej bekräftad" + processinfo (submission) utan att skapa en egen status.
+    // 3) Juridiskt strikt: fortfarande "Ej bekräftad" men med processinfo.
     return json(
       200,
       statusNotConfirmed({
@@ -290,6 +291,7 @@ export async function onRequest({ request, env }) {
       origin
     );
   } catch (e) {
+    // Tekniskt fel: INTE ett negativt påstående om status.
     return json(503, statusUnknown({ hash, detail: sanitizeError(e) }), origin);
   }
 }
