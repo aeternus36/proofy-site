@@ -4,18 +4,17 @@ import { polygonAmoy } from "viem/chains";
 
 /**
  * Proofy /api/register (Amoy)
- * Fokus:
  * - Stabil registrering (idempotent + pre-read)
  * - Minimera onödiga "misslyckades" i UI
- * - Sänka onödigt höga avgifter på Amoy genom explicita fee-tak
+ * - Sänka avgifter på Amoy genom explicita fee-tak
  *
- * Förväntade env:
+ * Env:
  * - AMOY_RPC_URL
  * - PROOFY_CONTRACT_ADDRESS
  * - PROOFY_PRIVATE_KEY (32 bytes hex, med eller utan 0x)
  * - REGISTER_TIMEOUT_MS (optional, default 25000)
  *
- * Valfria env för fee-tak (rekommenderas på Amoy):
+ * Valfria env:
  * - MAX_FEE_GWEI (default 30)
  * - MAX_PRIORITY_FEE_GWEI (default 1)
  */
@@ -105,8 +104,8 @@ function sanitizeError(e) {
   const msg =
     (e && typeof e === "object" && "shortMessage" in e && e.shortMessage) ||
     (e && typeof e === "object" && "message" in e && e.message) ||
-    "Unexpected error";
-  return String(msg).slice(0, 400);
+    String(e);
+  return String(msg).slice(0, 800);
 }
 
 function toSafeUint64(ts) {
@@ -129,10 +128,13 @@ async function readGet({ publicClient, contractAddress, hash }) {
   return { exists, timestamp };
 }
 
+// Stöd både heltal och decimal (t.ex. "0.5")
 function gweiToWeiBigInt(gwei) {
-  // tar Number eller string
-  const n = BigInt(String(gwei));
-  return n * 10n ** 9n;
+  const s = String(gwei).trim();
+  const [i, d = ""] = s.split(".");
+  const int = BigInt(i || "0");
+  const dec = BigInt((d + "000000000").slice(0, 9));
+  return int * 10n ** 9n + dec;
 }
 
 export async function onRequest({ request, env }) {
@@ -162,7 +164,7 @@ export async function onRequest({ request, env }) {
   const privateKey = normalizePrivateKey(env.PROOFY_PRIVATE_KEY);
 
   if (!rpcUrl || !contractAddress || !privateKey) {
-    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
+    return json(500, { ok: false, error: "Server misconfiguration (missing env)" }, origin);
   }
   if (!isValidAddressHex(contractAddress)) {
     return json(
@@ -179,22 +181,17 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  // Fee-tak (Amoy): default 30 gwei maxFee, 1 gwei priority
-  const maxFeeGwei = Number(env.MAX_FEE_GWEI || 30);
-  const maxPriorityFeeGwei = Number(env.MAX_PRIORITY_FEE_GWEI || 1);
+  const maxFeeGwei = env.MAX_FEE_GWEI ?? 30;
+  const maxPriorityFeeGwei = env.MAX_PRIORITY_FEE_GWEI ?? 1;
 
-  // Fallback om env är trasig
-  const maxFeePerGas =
-    Number.isFinite(maxFeeGwei) && maxFeeGwei > 0 ? gweiToWeiBigInt(maxFeeGwei) : 30n * 10n ** 9n;
-  const maxPriorityFeePerGas =
-    Number.isFinite(maxPriorityFeeGwei) && maxPriorityFeeGwei >= 0
-      ? gweiToWeiBigInt(maxPriorityFeeGwei)
-      : 1n * 10n ** 9n;
+  const maxFeePerGas = gweiToWeiBigInt(maxFeeGwei);
+  const maxPriorityFeePerGas = gweiToWeiBigInt(maxPriorityFeeGwei);
 
-  // Timeout för determinism
   const controller = new AbortController();
   const timeoutMs = Number(env.REGISTER_TIMEOUT_MS || 25_000);
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let step = "init";
 
   try {
     const transport = http(rpcUrl, { fetchOptions: { signal: controller.signal } });
@@ -204,7 +201,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 1) Pre-read: redan registrerad?
+    step = "pre_read";
     const pre = await readGet({ publicClient, contractAddress, hash });
     if (pre.exists) {
       return json(
@@ -220,7 +217,7 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // 2) Write: idempotent även om pre-read missar (RPC-lagg)
+    step = "wallet_init";
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -228,7 +225,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // simulateContract => korrekt calldata + bättre fel
+    step = "simulate";
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
@@ -237,19 +234,20 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
-    // Sätt uttryckliga fee-tak för att undvika orimliga avgifter på Amoy
+    step = "write";
     const txHash = await walletClient.writeContract({
       ...sim.request,
       maxFeePerGas,
       maxPriorityFeePerGas,
     });
 
+    step = "wait_receipt";
     await publicClient.waitForTransactionReceipt({
       hash: txHash,
       confirmations: 1,
     });
 
-    // 3) Post-read: timestamp till UI
+    step = "post_read";
     const post = await readGet({ publicClient, contractAddress, hash });
 
     if (!post.exists || post.timestamp === 0) {
@@ -275,28 +273,23 @@ export async function onRequest({ request, env }) {
         timestamp: post.timestamp,
         txHash,
         feeCaps: {
-          maxFeeGwei,
-          maxPriorityFeeGwei,
+          maxFeeGwei: String(maxFeeGwei),
+          maxPriorityFeeGwei: String(maxPriorityFeeGwei),
         },
       },
       origin
     );
   } catch (e) {
+    const detail = sanitizeError(e);
+
     if (e && typeof e === "object" && e.name === "AbortError") {
       return json(
         504,
-        {
-          ok: false,
-          error: "Upstream timeout",
-          detail: `Timeout after ${timeoutMs}ms`,
-        },
+        { ok: false, error: "Upstream timeout", detail: `Timeout after ${timeoutMs}ms`, step },
         origin
       );
     }
 
-    const detail = sanitizeError(e);
-
-    // Klassificera vanliga, tillfälliga driftfel som 503 (för UX: "försök igen")
     const isProbablyTemporary =
       /timeout|temporarily|rate|limit|429|503|gateway|rpc|network|nonce|underpriced|insufficient funds/i.test(
         detail
@@ -308,6 +301,7 @@ export async function onRequest({ request, env }) {
         ok: false,
         error: isProbablyTemporary ? "Temporary unavailable" : "Register failed",
         detail,
+        step,
       },
       origin
     );
