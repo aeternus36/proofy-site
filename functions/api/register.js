@@ -5,18 +5,19 @@ import { polygonAmoy } from "viem/chains";
 /**
  * Proofy /api/register (Amoy)
  *
- * Juridiskt krav (revision):
- * - Får ALDRIG påstå "Bekräftad" utan att det kan styrkas via bekräftad notering (get + timestamp).
+ * Juridiskt krav:
+ * - Får ALDRIG påstå "bekräftad" utan att det kan styrkas via bekräftad notering.
  * - Om ingen bekräftelse finns: ska uttryckligen anges som "Ej bekräftad".
  * - Vid tekniskt fel: ska anges som "Kunde inte kontrolleras" (inte ett negativt påstående).
  *
  * Tekniskt krav:
- * - Register, Verify och Certificate ska använda samma statusmodell:
- *   CONFIRMED / NOT_CONFIRMED / UNKNOWN
- *
- * Driftkrav:
- * - Skickar in och returnerar direkt (ingen wait → mindre timeout-risk).
+ * - Skickar in och returnerar referens direkt (ingen wait → ingen timeout-risk).
  * - Idempotent via registerIfMissing.
+ *
+ * Gemensam statusmodell (Register/Verify/Certificate):
+ * - CONFIRMED
+ * - NOT_CONFIRMED
+ * - UNKNOWN
  */
 
 const PROOFY_ABI = [
@@ -127,7 +128,7 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
 
-  // Evidence: observed block number at time of check (optional, for audit traceability)
+  // Kontrollpunkt (valfri) – används bara som revisionsstöd
   const observedBlockNumber = await publicClient.getBlockNumber();
 
   return { exists, timestamp, observedBlockNumber: observedBlockNumber.toString() };
@@ -141,19 +142,6 @@ function gweiToWeiBigInt(gwei) {
   return int * 10n ** 9n + dec;
 }
 
-/**
- * Gemensam statusmodell (Register/Verify/Certificate):
- *
- * statusCode:
- * - CONFIRMED: bekräftad notering finns
- * - NOT_CONFIRMED: ingen bekräftad notering vid kontrolltillfället
- * - UNKNOWN: kunde inte kontrolleras (tekniskt fel)
- *
- * Viktigt:
- * - Endast CONFIRMED får visas som "Bekräftad" och får bära tidpunkt.
- * - "Inskickad" är processinfo och ska inte vara egen bevisstatuskod.
- */
-
 function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
     ok: true,
@@ -164,11 +152,11 @@ function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
     evidence: { observedBlockNumber },
     submission: null,
     legalText:
-      "Det finns en bekräftad notering för detta underlagsavtryck. Uppgifterna ovan kan kontrolleras mot offentlig verifieringskälla.",
+      "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot offentlig verifieringskälla.",
   };
 }
 
-function statusNotConfirmed({ hash, observedBlockNumber, submission = null, legalText }) {
+function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
   return {
     ok: true,
     statusCode: "NOT_CONFIRMED",
@@ -176,10 +164,11 @@ function statusNotConfirmed({ hash, observedBlockNumber, submission = null, lega
     hash,
     confirmedAtUnix: null,
     evidence: observedBlockNumber ? { observedBlockNumber } : null,
-    submission,
+    submission: submission || null,
     legalText:
-      legalText ||
-      "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
+      submission?.txHash
+        ? "En registrering har skickats in men ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse."
+        : "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
   };
 }
 
@@ -202,9 +191,7 @@ function statusUnknown({ hash, detail }) {
 export async function onRequest({ request, env }) {
   const origin = request.headers.get("Origin") || "";
 
-  if (request.method === "OPTIONS") {
-    return corsPreflight(origin || "*");
-  }
+  if (request.method === "OPTIONS") return corsPreflight(origin || "*");
   if (request.method !== "POST") {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
@@ -213,16 +200,12 @@ export async function onRequest({ request, env }) {
   try {
     body = await request.json();
   } catch {
-    return json(400, { ok: false, error: "Invalid JSON body", statusCode: "BAD_REQUEST" }, origin);
+    return json(400, { ok: false, error: "Invalid JSON body" }, origin);
   }
 
   const hash = String(body?.hash || "").trim();
   if (!isValidBytes32Hex(hash)) {
-    return json(
-      400,
-      { ok: false, error: "Invalid hash format", statusCode: "BAD_REQUEST" },
-      origin
-    );
+    return json(400, { ok: false, error: "Invalid hash format" }, origin);
   }
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
@@ -233,13 +216,13 @@ export async function onRequest({ request, env }) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
   if (!isValidAddressHex(contractAddress)) {
-    return json(500, { ok: false, error: "Server misconfiguration (bad contract address)" }, origin);
+    return json(500, { ok: false, error: "Bad contract address" }, origin);
   }
   if (!isValidPrivateKeyHex(privateKey)) {
-    return json(500, { ok: false, error: "Server misconfiguration (bad private key)" }, origin);
+    return json(500, { ok: false, error: "Bad private key" }, origin);
   }
 
-  // Driftstyrning (gas caps)
+  // Driftstyrning
   const maxFeeGwei = env.MAX_FEE_GWEI ?? 300;
   const maxPriorityFeeGwei = env.MAX_PRIORITY_FEE_GWEI ?? 5;
 
@@ -254,13 +237,18 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 1) Först: finns bekräftad notering?
-    const pre = await readGetWithEvidence({ publicClient, contractAddress, hash });
+    // 1) Finns redan bekräftad notering?
+    const pre = await readGetWithEvidence({
+      publicClient,
+      contractAddress,
+      hash,
+    });
+
     if (pre.exists) {
-      return json(200, statusConfirmed({ hash, timestamp: pre.timestamp, observedBlockNumber: pre.observedBlockNumber }), origin);
+      return json(200, statusConfirmed({ hash, ...pre }), origin);
     }
 
-    // 2) Ingen bekräftelse -> skicka in registrering (ingen väntan på bekräftelse)
+    // 2) Skicka in registrering (ingen väntan)
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -282,7 +270,7 @@ export async function onRequest({ request, env }) {
       maxPriorityFeePerGas,
     });
 
-    // 3) Viktigt: fortfarande EJ bekräftad (men vi kan bifoga submission som processinfo)
+    // 3) Juridiskt strikt: ej bekräftad (med inskickad-referens som processinfo)
     return json(
       200,
       statusNotConfirmed({
@@ -292,8 +280,6 @@ export async function onRequest({ request, env }) {
           txHash,
           submittedBy: account.address,
         },
-        legalText:
-          "En registrering har skickats in men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'.",
       }),
       origin
     );
