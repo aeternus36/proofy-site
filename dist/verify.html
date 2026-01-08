@@ -93,7 +93,7 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om underlaget är samma filversion som den som tidigare <b>registrerades hos Proofy som referens</b>.
+      Kontrollera om underlaget är samma filversion som den som tidigare <b>fastställdes som referens</b>.
       <strong>Kontrollen görs lokalt i din webbläsare. Proofy tar inte emot själva underlaget som fil.</strong>
     </p>
 
@@ -288,18 +288,18 @@
 
               <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
                 <div>
-                  <div class="meta">Registreringsstatus (hos Proofy)</div>
+                  <div class="meta">Status hos Proofy</div>
                   <div id="outRegStatus" class="mono" style="margin-top:6px;">—</div>
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
                   <div>
-                    <div class="meta">Registreringstid (Sverige)</div>
+                    <div class="meta">Tidpunkt (om bekräftad) – Sverige</div>
                     <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
                   </div>
 
                   <div>
-                    <div class="meta">Registreringstid (UTC)</div>
+                    <div class="meta">Tidpunkt (om bekräftad) – UTC</div>
                     <div id="outRegUtc" class="mono" style="margin-top:6px;">—</div>
                   </div>
                 </div>
@@ -313,8 +313,8 @@
 
               <div class="actions" style="margin-top:12px;">
                 <div class="actionsRow">
-                  <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna verifieringsintyg</a>
-                  <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera verifieringsnotering</button>
+                  <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna tekniskt intyg</a>
+                  <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
                   <button class="btn soft" id="sendNoteToChatBtn" type="button" style="display:none;">Skapa notering i chatten</button>
                   <button class="btn" id="downloadReportBtn" type="button" style="display:none;">Ladda ner rapport (.txt)</button>
                 </div>
@@ -577,21 +577,22 @@
     }
   }
 
-  async function fetchVerify(hash){
+  function formatUnixSe(unixSeconds){
+    const n = Number(unixSeconds);
+    if (!Number.isFinite(n) || n <= 0) return null;
     try{
-      const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
-      const j = await r.json().catch(() => ({}));
-      if (r.ok && typeof j?.exists === "boolean") return { ok:true, data:j };
-    } catch {}
+      return new Date(n * 1000).toLocaleString("sv-SE");
+    } catch {
+      return null;
+    }
+  }
 
-    const r2 = await fetch(`/api/verify`, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ hash })
-    });
-    const j2 = await r2.json().catch(() => ({}));
-    if (!r2.ok) return { ok:false, error: j2?.error || `HTTP ${r2.status}` };
-    return { ok:true, data:j2 };
+  async function fetchVerify(hash){
+    // Vi litar på statusmodell: statusCode/statusText/legalText/confirmedAtUnix
+    const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return { ok:false, data:j, status:r.status };
+    return { ok:true, data:j, status:r.status };
   }
 
   function buildSummaryText(run){
@@ -610,18 +611,21 @@
     if (run.fileSizeMb != null) lines.push(`Filstorlek: ${run.fileSizeMb} MB`);
     lines.push("");
 
-    lines.push(`Resultat: ${run.match ? "OFÖRÄNDRAT (samma filversion som referensen)" : "AVVIKELSE (annan filversion än referensen)"}`);
+    lines.push(`Resultat (filjämförelse): ${run.match ? "OFÖRÄNDRAT (samma filversion)" : "AVVIKELSE (annan filversion)"}`);
     lines.push("");
 
-    if (run.exists === true) {
-      lines.push("Registreringsstatus: Registrerad hos Proofy");
-      if (run.regSe) lines.push(`Registreringstid (SE): ${run.regSe}`);
-      if (run.regUtc) lines.push(`Registreringstid (UTC): ${run.regUtc}`);
-    } else if (run.exists === false) {
-      lines.push("Registreringsstatus: Ej registrerad hos Proofy");
+    // Juridiskt korrekt statusformulering – vi gissar aldrig.
+    if (run.proofyStatusText) {
+      lines.push(`Status hos Proofy: ${run.proofyStatusText}`);
     } else {
-      lines.push("Registreringsstatus: Kunde inte kontrolleras (tillfälligt tekniskt problem)");
+      lines.push("Status hos Proofy: Kunde inte kontrolleras");
     }
+
+    if (run.confirmedSe) lines.push(`Tidpunkt (om bekräftad) – SE: ${run.confirmedSe}`);
+    if (run.confirmedUtc) lines.push(`Tidpunkt (om bekräftad) – UTC: ${run.confirmedUtc}`);
+
+    if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
+    if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
 
     return lines.join("\n");
   }
@@ -701,14 +705,17 @@
   function buildChatCommandForNote(run){
     if (!run) return "";
     const payload = {
-      t: "proofy_note_v1",
+      t: "proofy_note_v2",
       refHash: run.refHash || "",
       fileName: run.fileName || "",
       fileSizeMb: run.fileSizeMb != null ? String(run.fileSizeMb) : "",
       match: Boolean(run.match),
-      exists: run.exists,
-      regSe: run.regSe || "",
-      regUtc: run.regUtc || "",
+      proofyStatusCode: run.proofyStatusCode || "",
+      proofyStatusText: run.proofyStatusText || "",
+      confirmedSe: run.confirmedSe || "",
+      confirmedUtc: run.confirmedUtc || "",
+      observedBlockNumber: run.observedBlockNumber || "",
+      txHash: run.txHash || "",
       verifySe: run.verifySe || "",
       verifyUtc: run.verifyUtc || ""
     };
@@ -1076,7 +1083,7 @@
       return;
     }
 
-    // ✅ FAST kontrolltidpunkt (sparas i URL som checked=epoch)
+    // Fast kontrolltidpunkt (sparas i URL)
     const checkedEpoch = Math.floor(Date.now() / 1000);
     setParamsInUrl({ hash: refHash, checked: checkedEpoch });
 
@@ -1124,32 +1131,67 @@
       if (match) {
         outExplainTitle.textContent = "Underlaget motsvarar referensen.";
         outExplainBody.textContent =
-          "Det betyder att det är samma filversion som tidigare registrerades hos Proofy som referens. Detta säger inget om innehållets saklighet – endast att filversionen är densamma.";
+          "Det betyder att det är samma filversion som referensen. Detta säger inget om innehållets saklighet – endast att filversionen är densamma.";
       } else {
         outExplainTitle.textContent = "Underlaget motsvarar inte referensen.";
         outExplainBody.textContent =
-          "Det betyder att det är en annan filversion än den som registrerades hos Proofy som referens. Vanliga orsaker är ny export, ny skanning, konvertering eller att fel fil valts.";
+          "Det betyder att det är en annan filversion än referensen. Vanliga orsaker är ny export, ny skanning, konvertering eller att fel fil valts.";
       }
 
-      let exists = null;
-      let ts = null;
+      // Status från Proofy – vi gissar aldrig
+      let proofyStatusCode = "";
+      let proofyStatusText = "Kunde inte kontrolleras";
+      let legalText = "";
+      let confirmedAtUnix = null;
+      let observedBlockNumber = null;
+      let txHash = null;
 
       if (!verifyRes.ok) {
-        outRegStatus.textContent = "Kunde inte kontrollera registreringsstatus (hos Proofy) just nu.";
+        outRegStatus.textContent = "Kunde inte kontrolleras";
         outRegSe.textContent = "—";
         outRegUtc.textContent = "—";
       } else {
         const data = verifyRes.data || {};
-        exists = Boolean(data.exists);
-        ts = data.timestamp ? Number(data.timestamp) : null;
+        proofyStatusCode = String(data.statusCode || "");
+        proofyStatusText = String(data.statusText || "") || "Kunde inte kontrolleras";
+        legalText = String(data.legalText || "");
+        confirmedAtUnix = (data.confirmedAtUnix != null) ? Number(data.confirmedAtUnix) : null;
 
-        outRegStatus.textContent = exists ? "Registrerad hos Proofy" : "Ej registrerad hos Proofy";
-        outRegSe.textContent = (exists && ts) ? fmtSeEpoch(ts) : "—";
-        outRegUtc.textContent = (exists && ts) ? fmtUtcEpoch(ts) : "—";
+        observedBlockNumber = data?.evidence?.observedBlockNumber || null;
+        txHash = data?.submission?.txHash || null;
+
+        outRegStatus.textContent = proofyStatusText;
+
+        const confirmedSe = confirmedAtUnix ? formatUnixSe(confirmedAtUnix) : null;
+        outRegSe.textContent = confirmedSe ? (confirmedSe + " (Europe/Stockholm)") : "—";
+        outRegUtc.textContent = confirmedAtUnix ? fmtUtcEpoch(confirmedAtUnix) : "—";
+
+        // Förklara juridiskt korrekt om status inte är bekräftad
+        if (proofyStatusCode === "SUBMITTED_UNCONFIRMED") {
+          outExplainTitle.textContent = match
+            ? "Underlaget motsvarar referensen – registrering är ej bekräftad."
+            : "Avvikelse – och registrering är ej bekräftad.";
+          outExplainBody.textContent =
+            legalText || "En registrering har skickats in men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'.";
+        } else if (proofyStatusCode === "NOT_CONFIRMED") {
+          outExplainTitle.textContent = match
+            ? "Underlaget motsvarar referensen – men ingen bekräftelse kunde konstateras."
+            : "Avvikelse – och ingen bekräftelse kunde konstateras.";
+          outExplainBody.textContent =
+            legalText || "Ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
+        } else if (proofyStatusCode === "UNKNOWN") {
+          outExplainTitle.textContent = match
+            ? "Underlaget motsvarar referensen – men status kunde inte kontrolleras."
+            : "Avvikelse – och status kunde inte kontrolleras.";
+          outExplainBody.textContent =
+            legalText || "Status kunde inte kontrolleras på grund av tekniskt fel. Ingen slutsats kan dras om bekräftelse.";
+        }
       }
 
+      const confirmedSe = confirmedAtUnix ? (formatUnixSe(confirmedAtUnix) + " (Europe/Stockholm)") : null;
+      const confirmedUtc = confirmedAtUnix ? fmtUtcEpoch(confirmedAtUnix) : null;
+
       if (openCertBtn) {
-        // Intyg har egen fast kontrolltidpunkt; vi låter intyget hantera sin "checked"
         openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refHash)}`;
         openCertBtn.style.display = "inline-flex";
       }
@@ -1157,13 +1199,16 @@
       lastRun = {
         refHash,
         match,
-        exists,
-        regSe: (exists && ts) ? fmtSeEpoch(ts) : null,
-        regUtc: (exists && ts) ? fmtUtcEpoch(ts) : null,
         fileName: currentFile?.name || "",
         fileSizeMb: currentFile ? (currentFile.size/1024/1024).toFixed(2) : null,
 
-        // ✅ Fast verifieringstid
+        proofyStatusCode,
+        proofyStatusText,
+        confirmedSe,
+        confirmedUtc,
+        observedBlockNumber,
+        txHash,
+
         verifySe: verifySeFixed,
         verifyUtc: verifyUtcFixed
       };
@@ -1196,11 +1241,9 @@
   setFile(null);
   updateValidationUI();
 
-  // Om sidan öppnas med checked=... (t.ex. kopierad URL) så kan vi visa tidpunkten när resultat finns.
-  // Vi visar den inte innan verifiering körts, men vi bevarar parametern.
   const initialChecked = Number(getCheckedFromUrl());
   if (Number.isFinite(initialChecked) && initialChecked > 0) {
-    // behåll den i URL (ingen extra åtgärd här)
+    // bevaras i URL, används först när verifiering körs
   }
 })();
 </script>
