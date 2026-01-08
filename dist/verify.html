@@ -587,8 +587,64 @@
     }
   }
 
+  // PROOFY status model helper
+  function normalizeVerifyModel(data){
+    const sc = String(data?.statusCode || "");
+    const st = String(data?.statusText || "") || "Kunde inte kontrolleras";
+    const legal = String(data?.legalText || "");
+    const confirmedAtUnix = (data?.confirmedAtUnix != null) ? Number(data.confirmedAtUnix) : null;
+    const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
+    const txHash = data?.submission?.txHash || null;
+
+    // Backward compat (if older API returns exists/timestamp)
+    if (!sc) {
+      const exists = (typeof data?.exists === "boolean") ? data.exists : null;
+      const ts = data?.timestamp ? Number(data.timestamp) : 0;
+      if (exists === true || ts > 0) {
+        return {
+          ok: true,
+          statusCode: "CONFIRMED",
+          statusText: "Bekräftad",
+          legalText: legal,
+          confirmedAtUnix: ts > 0 ? ts : confirmedAtUnix,
+          observedBlockNumber,
+          txHash
+        };
+      }
+      if (exists === false) {
+        return {
+          ok: true,
+          statusCode: "NOT_CONFIRMED",
+          statusText: "Ej bekräftad",
+          legalText: legal,
+          confirmedAtUnix: null,
+          observedBlockNumber,
+          txHash
+        };
+      }
+      return {
+        ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        legalText: legal,
+        confirmedAtUnix: null,
+        observedBlockNumber,
+        txHash
+      };
+    }
+
+    return {
+      ok: data?.ok !== false,
+      statusCode: sc,
+      statusText: st,
+      legalText: legal,
+      confirmedAtUnix: Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0 ? confirmedAtUnix : null,
+      observedBlockNumber,
+      txHash
+    };
+  }
+
   async function fetchVerify(hash){
-    // Vi litar på statusmodell: statusCode/statusText/legalText/confirmedAtUnix
     const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return { ok:false, data:j, status:r.status };
@@ -614,7 +670,6 @@
     lines.push(`Resultat (filjämförelse): ${run.match ? "OFÖRÄNDRAT (samma filversion)" : "AVVIKELSE (annan filversion)"}`);
     lines.push("");
 
-    // Juridiskt korrekt statusformulering – vi gissar aldrig.
     if (run.proofyStatusText) {
       lines.push(`Status hos Proofy: ${run.proofyStatusText}`);
     } else {
@@ -1116,6 +1171,7 @@
       applyCopyHover(outHash, copyIdIconBtn, true);
       applyCopyHover(outFileHash, copyFileHashIconBtn, true);
 
+      // 1) Filjämförelse (lokal)
       if (match) {
         resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
         resultHeadline.style.background = "rgba(80,255,180,.06)";
@@ -1128,6 +1184,7 @@
 
       setExplainTone(match);
 
+      // Default explanation: filjämförelse
       if (match) {
         outExplainTitle.textContent = "Underlaget motsvarar referensen.";
         outExplainBody.textContent =
@@ -1138,8 +1195,8 @@
           "Det betyder att det är en annan filversion än referensen. Vanliga orsaker är ny export, ny skanning, konvertering eller att fel fil valts.";
       }
 
-      // Status från Proofy – vi gissar aldrig
-      let proofyStatusCode = "";
+      // 2) Status hos Proofy (server)
+      let proofyStatusCode = "UNKNOWN";
       let proofyStatusText = "Kunde inte kontrolleras";
       let legalText = "";
       let confirmedAtUnix = null;
@@ -1151,40 +1208,38 @@
         outRegSe.textContent = "—";
         outRegUtc.textContent = "—";
       } else {
-        const data = verifyRes.data || {};
-        proofyStatusCode = String(data.statusCode || "");
-        proofyStatusText = String(data.statusText || "") || "Kunde inte kontrolleras";
-        legalText = String(data.legalText || "");
-        confirmedAtUnix = (data.confirmedAtUnix != null) ? Number(data.confirmedAtUnix) : null;
-
-        observedBlockNumber = data?.evidence?.observedBlockNumber || null;
-        txHash = data?.submission?.txHash || null;
+        const norm = normalizeVerifyModel(verifyRes.data || {});
+        proofyStatusCode = norm.statusCode || "UNKNOWN";
+        proofyStatusText = norm.statusText || "Kunde inte kontrolleras";
+        legalText = norm.legalText || "";
+        confirmedAtUnix = norm.confirmedAtUnix;
+        observedBlockNumber = norm.observedBlockNumber;
+        txHash = norm.txHash;
 
         outRegStatus.textContent = proofyStatusText;
 
-        const confirmedSe = confirmedAtUnix ? formatUnixSe(confirmedAtUnix) : null;
-        outRegSe.textContent = confirmedSe ? (confirmedSe + " (Europe/Stockholm)") : "—";
+        const confirmedSeRaw = confirmedAtUnix ? formatUnixSe(confirmedAtUnix) : null;
+        outRegSe.textContent = confirmedSeRaw ? (confirmedSeRaw + " (Europe/Stockholm)") : "—";
         outRegUtc.textContent = confirmedAtUnix ? fmtUtcEpoch(confirmedAtUnix) : "—";
 
-        // Förklara juridiskt korrekt om status inte är bekräftad
-        if (proofyStatusCode === "SUBMITTED_UNCONFIRMED") {
-          outExplainTitle.textContent = match
-            ? "Underlaget motsvarar referensen – registrering är ej bekräftad."
-            : "Avvikelse – och registrering är ej bekräftad.";
-          outExplainBody.textContent =
-            legalText || "En registrering har skickats in men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'.";
-        } else if (proofyStatusCode === "NOT_CONFIRMED") {
+        // Om status inte är CONFIRMED, lägg juridiskt korrekt förtydligande i explain (utan att skriva över filresultatets logik)
+        if (proofyStatusCode === "NOT_CONFIRMED") {
           outExplainTitle.textContent = match
             ? "Underlaget motsvarar referensen – men ingen bekräftelse kunde konstateras."
             : "Avvikelse – och ingen bekräftelse kunde konstateras.";
           outExplainBody.textContent =
-            legalText || "Ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
+            legalText || "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett negativt påstående om framtida bekräftelse.";
         } else if (proofyStatusCode === "UNKNOWN") {
           outExplainTitle.textContent = match
             ? "Underlaget motsvarar referensen – men status kunde inte kontrolleras."
             : "Avvikelse – och status kunde inte kontrolleras.";
           outExplainBody.textContent =
             legalText || "Status kunde inte kontrolleras på grund av tekniskt fel. Ingen slutsats kan dras om bekräftelse.";
+        } else if (proofyStatusCode === "CONFIRMED") {
+          // Behåll filtexten men förstärk med bekräftelseinfo (utan att ändra matchens innebörd)
+          if (legalText) {
+            outExplainBody.textContent = outExplainBody.textContent + " " + legalText;
+          }
         }
       }
 
@@ -1192,7 +1247,8 @@
       const confirmedUtc = confirmedAtUnix ? fmtUtcEpoch(confirmedAtUnix) : null;
 
       if (openCertBtn) {
-        openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refHash)}`;
+        // Intyg visar snapshot; vi skickar med checked så att cert matchar samma kontrolltidpunkt
+        openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refHash)}&checked=${encodeURIComponent(String(checkedEpoch))}`;
         openCertBtn.style.display = "inline-flex";
       }
 
