@@ -2,23 +2,6 @@ import { createPublicClient, createWalletClient, http, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
-/**
- * Proofy /api/register (Amoy)
- * - Stabil registrering (idempotent + pre-read)
- * - Minimera onödiga "misslyckades" i UI
- * - Sänka avgifter på Amoy genom explicita fee-tak
- *
- * Env:
- * - AMOY_RPC_URL
- * - PROOFY_CONTRACT_ADDRESS
- * - PROOFY_PRIVATE_KEY (32 bytes hex, med eller utan 0x)
- * - REGISTER_TIMEOUT_MS (optional, default 25000)
- *
- * Valfria env:
- * - MAX_FEE_GWEI (default 30)
- * - MAX_PRIORITY_FEE_GWEI (default 1)
- */
-
 const PROOFY_ABI = [
   {
     type: "function",
@@ -105,7 +88,7 @@ function sanitizeError(e) {
     (e && typeof e === "object" && "shortMessage" in e && e.shortMessage) ||
     (e && typeof e === "object" && "message" in e && e.message) ||
     String(e);
-  return String(msg).slice(0, 800);
+  return String(msg).slice(0, 1000);
 }
 
 function toSafeUint64(ts) {
@@ -122,13 +105,12 @@ async function readGet({ publicClient, contractAddress, hash }) {
     functionName: "get",
     args: [hash],
   });
-
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
   return { exists, timestamp };
 }
 
-// Stöd både heltal och decimal (t.ex. "0.5")
+// Stöd heltal/decimal (t.ex. "0.5")
 function gweiToWeiBigInt(gwei) {
   const s = String(gwei).trim();
   const [i, d = ""] = s.split(".");
@@ -140,12 +122,9 @@ function gweiToWeiBigInt(gwei) {
 export async function onRequest({ request, env }) {
   const origin = request.headers.get("Origin") || "";
 
-  if (request.method === "OPTIONS") {
-    return corsPreflight(origin || "*");
-  }
-  if (request.method !== "POST") {
+  if (request.method === "OPTIONS") return corsPreflight(origin || "*");
+  if (request.method !== "POST")
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
-  }
 
   let body;
   try {
@@ -167,22 +146,14 @@ export async function onRequest({ request, env }) {
     return json(500, { ok: false, error: "Server misconfiguration (missing env)" }, origin);
   }
   if (!isValidAddressHex(contractAddress)) {
-    return json(
-      500,
-      { ok: false, error: "Server misconfiguration (bad contract address)" },
-      origin
-    );
+    return json(500, { ok: false, error: "Server misconfiguration (bad contract address)" }, origin);
   }
   if (!isValidPrivateKeyHex(privateKey)) {
-    return json(
-      500,
-      { ok: false, error: "Server misconfiguration (bad private key)" },
-      origin
-    );
+    return json(500, { ok: false, error: "Server misconfiguration (bad private key)" }, origin);
   }
 
-  const maxFeeGwei = env.MAX_FEE_GWEI ?? 30;
-  const maxPriorityFeeGwei = env.MAX_PRIORITY_FEE_GWEI ?? 1;
+  const maxFeeGwei = env.MAX_FEE_GWEI ?? 100;
+  const maxPriorityFeeGwei = env.MAX_PRIORITY_FEE_GWEI ?? 2;
 
   const maxFeePerGas = gweiToWeiBigInt(maxFeeGwei);
   const maxPriorityFeePerGas = gweiToWeiBigInt(maxPriorityFeeGwei);
@@ -192,38 +163,43 @@ export async function onRequest({ request, env }) {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   let step = "init";
+  let serverAddress = null;
 
   try {
     const transport = http(rpcUrl, { fetchOptions: { signal: controller.signal } });
 
-    const publicClient = createPublicClient({
-      chain: polygonAmoy,
-      transport,
-    });
+    const publicClient = createPublicClient({ chain: polygonAmoy, transport });
 
     step = "pre_read";
     const pre = await readGet({ publicClient, contractAddress, hash });
     if (pre.exists) {
+      return json(200, { ok: true, status: "already_registered", exists: true, timestamp: pre.timestamp, txHash: null }, origin);
+    }
+
+    step = "wallet_init";
+    const account = privateKeyToAccount(privateKey);
+    serverAddress = account.address;
+
+    // ✅ Balans-check innan vi ens försöker skriva
+    step = "balance_check";
+    const balance = await publicClient.getBalance({ address: account.address });
+    if (balance < 1n * 10n ** 16n) {
+      // < 0.01 MATIC: nästan garanterat för lite när fees spikar
       return json(
-        200,
+        500,
         {
-          ok: true,
-          status: "already_registered",
-          exists: true,
-          timestamp: pre.timestamp,
-          txHash: null,
+          ok: false,
+          error: "Server wallet balance too low",
+          address: account.address,
+          balanceWei: balance.toString(),
+          balanceMatic: Number(balance) / 1e18,
+          step,
         },
         origin
       );
     }
 
-    step = "wallet_init";
-    const account = privateKeyToAccount(privateKey);
-    const walletClient = createWalletClient({
-      account,
-      chain: polygonAmoy,
-      transport,
-    });
+    const walletClient = createWalletClient({ account, chain: polygonAmoy, transport });
 
     step = "simulate";
     const sim = await publicClient.simulateContract({
@@ -242,40 +218,21 @@ export async function onRequest({ request, env }) {
     });
 
     step = "wait_receipt";
-    await publicClient.waitForTransactionReceipt({
-      hash: txHash,
-      confirmations: 1,
-    });
+    await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
 
     step = "post_read";
     const post = await readGet({ publicClient, contractAddress, hash });
-
-    if (!post.exists || post.timestamp === 0) {
-      return json(
-        200,
-        {
-          ok: true,
-          status: "pending_readback",
-          exists: false,
-          timestamp: 0,
-          txHash,
-        },
-        origin
-      );
-    }
 
     return json(
       200,
       {
         ok: true,
-        status: "registered",
-        exists: true,
-        timestamp: post.timestamp,
+        status: post.exists ? "registered" : "pending_readback",
+        exists: post.exists,
+        timestamp: post.timestamp || 0,
         txHash,
-        feeCaps: {
-          maxFeeGwei: String(maxFeeGwei),
-          maxPriorityFeeGwei: String(maxPriorityFeeGwei),
-        },
+        serverAddress,
+        feeCaps: { maxFeeGwei: String(maxFeeGwei), maxPriorityFeeGwei: String(maxPriorityFeeGwei) },
       },
       origin
     );
@@ -283,26 +240,12 @@ export async function onRequest({ request, env }) {
     const detail = sanitizeError(e);
 
     if (e && typeof e === "object" && e.name === "AbortError") {
-      return json(
-        504,
-        { ok: false, error: "Upstream timeout", detail: `Timeout after ${timeoutMs}ms`, step },
-        origin
-      );
+      return json(504, { ok: false, error: "Upstream timeout", detail: `Timeout after ${timeoutMs}ms`, step, serverAddress }, origin);
     }
 
-    const isProbablyTemporary =
-      /timeout|temporarily|rate|limit|429|503|gateway|rpc|network|nonce|underpriced|insufficient funds/i.test(
-        detail
-      );
-
     return json(
-      isProbablyTemporary ? 503 : 500,
-      {
-        ok: false,
-        error: isProbablyTemporary ? "Temporary unavailable" : "Register failed",
-        detail,
-        step,
-      },
+      500,
+      { ok: false, error: "Register failed", detail, step, serverAddress },
       origin
     );
   } finally {
