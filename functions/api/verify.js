@@ -73,6 +73,15 @@ function isValidBytes32Hex(hash) {
   );
 }
 
+function isValidAddressHex(addr) {
+  return (
+    typeof addr === "string" &&
+    addr.startsWith("0x") &&
+    addr.length === 42 &&
+    isHex(addr)
+  );
+}
+
 function toSafeUint64(ts) {
   const v = BigInt(ts ?? 0n);
   if (v <= 0n) return 0;
@@ -80,6 +89,14 @@ function toSafeUint64(ts) {
   // uint64 timestamps är i praktiken alltid < MAX_SAFE_INTEGER, men vi är defensiva.
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
   return v <= maxSafe ? Number(v) : Number(maxSafe);
+}
+
+function sanitizeError(e) {
+  const msg =
+    (e && typeof e === "object" && "shortMessage" in e && e.shortMessage) ||
+    (e && typeof e === "object" && "message" in e && e.message) ||
+    String(e);
+  return String(msg).slice(0, 600);
 }
 
 async function readGet({ publicClient, contractAddress, hash }) {
@@ -104,7 +121,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method !== "GET" && request.method !== "POST") {
-    return json(405, { error: "Method Not Allowed" }, origin);
+    return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
 
   // Accept hash from GET query or POST body
@@ -120,14 +137,22 @@ export async function onRequest({ request, env }) {
   }
 
   if (!isValidBytes32Hex(hash)) {
-    return json(400, { error: "Invalid hash format", exists: false }, origin);
+    return json(400, { ok: false, error: "Invalid hash format", exists: false }, origin);
   }
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
   const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
 
   if (!rpcUrl || !contractAddress) {
-    return json(500, { error: "Server misconfiguration" }, origin);
+    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
+  }
+
+  if (!isValidAddressHex(contractAddress)) {
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration (bad contract address)" },
+      origin
+    );
   }
 
   try {
@@ -139,11 +164,15 @@ export async function onRequest({ request, env }) {
     const proof = await readGet({ publicClient, contractAddress, hash });
 
     if (proof.exists) {
-      return json(200, { exists: true, timestamp: proof.timestamp }, origin);
+      return json(200, { ok: true, exists: true, timestamp: proof.timestamp }, origin);
     }
-    return json(200, { exists: false }, origin);
+    return json(200, { ok: true, exists: false }, origin);
   } catch (e) {
-    // Håll API-svaret stabilt: frontend kan visa "kunde inte kontrolleras just nu".
-    return json(503, { error: "Verify temporarily unavailable" }, origin);
+    // Viktigt för felsökning: returnera detalj (sanitiserat).
+    return json(
+      503,
+      { ok: false, error: "Verify temporarily unavailable", detail: sanitizeError(e) },
+      origin
+    );
   }
 }
