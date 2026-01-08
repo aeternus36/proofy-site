@@ -7,7 +7,7 @@ import { polygonAmoy } from "viem/chains";
  *
  * Juridiskt krav:
  * - Får ALDRIG påstå "bekräftad/registrerad" utan att det kan styrkas via bekräftad notering.
- * - Vid inskickad men obekräftad: ska uttryckligen anges som "ej bekräftad".
+ * - Vid inskickad men obekräftad: ska uttryckligen anges som "Inskickad – ej bekräftad".
  * - Register, Verify och Certificate ska använda samma statusmodell.
  *
  * Driftkrav:
@@ -115,11 +115,14 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
 
-  // Bevisvärde: hämta även senaste blocknummer vid kontrolltillfället,
-  // så att Verify/Certificate kan visa vilken kontrollpunkt som användes.
+  // Bevisvärde: blocknummer vid kontrollpunkten.
   const observedBlockNumber = await publicClient.getBlockNumber();
 
-  return { exists, timestamp, observedBlockNumber: observedBlockNumber.toString() };
+  return {
+    exists,
+    timestamp,
+    observedBlockNumber: observedBlockNumber.toString(),
+  };
 }
 
 function gweiToWeiBigInt(gwei) {
@@ -131,15 +134,16 @@ function gweiToWeiBigInt(gwei) {
 }
 
 /**
- * Gemensam, strikt statusmodell (ska matchas av Verify och Certificate)
+ * Gemensam, strikt statusmodell
  *
  * statusCode:
- * - CONFIRMED: bekräftad notering finns
+ * - CONFIRMED: bekräftad notering finns (endast detta får visas som "bekräftad/registrerad")
  * - SUBMITTED_UNCONFIRMED: inskickad men ej bekräftad
  * - FAILED: misslyckad inskickning
  *
- * Viktigt: Endast CONFIRMED får användas som "registrerad/bekräftad" i UI.
+ * (Verify använder även NOT_CONFIRMED och UNKNOWN)
  */
+
 function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
     ok: true,
@@ -156,20 +160,36 @@ function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   };
 }
 
-function statusSubmittedUnconfirmed({ hash, txHash, serverAddress }) {
+function statusSubmittedUnconfirmed({ hash, txHash, serverAddress, observedBlockNumber }) {
   return {
     ok: true,
     statusCode: "SUBMITTED_UNCONFIRMED",
     statusText: "Inskickad – ej bekräftad",
     hash,
     confirmedAtUnix: null,
-    evidence: null,
+    evidence: observedBlockNumber ? { observedBlockNumber } : null,
     submission: {
       txHash,
       submittedBy: serverAddress,
     },
     legalText:
-      "En registrering har skickats in men är ännu inte bekräftad. Intyg får inte tolkas som bekräftat förrän status är 'Bekräftad'.",
+      "En registrering har skickats in men är ännu inte bekräftad. Status får inte tolkas som bekräftad förrän verifiering visar 'Bekräftad'.",
+  };
+}
+
+function statusFailed({ hash, detail }) {
+  return {
+    ok: false,
+    statusCode: "FAILED",
+    statusText: "Misslyckad",
+    hash: hash || null,
+    confirmedAtUnix: null,
+    evidence: null,
+    submission: null,
+    error: "Register failed",
+    detail,
+    legalText:
+      "Registrering kunde inte skickas in. Ingen bekräftad notering har skapats.",
   };
 }
 
@@ -209,7 +229,7 @@ export async function onRequest({ request, env }) {
     return json(500, { ok: false, error: "Bad private key" }, origin);
   }
 
-  // Gasgränser (driftstyrning). UI ska inte behöva tekniska termer.
+  // Driftstyrning (ska inte exponeras som tekniska termer i UI)
   const maxFeeGwei = env.MAX_FEE_GWEI ?? 300;
   const maxPriorityFeeGwei = env.MAX_PRIORITY_FEE_GWEI ?? 5;
 
@@ -224,7 +244,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 1) Kontroll: finns bekräftad notering?
+    // 1) Förkontroll: finns bekräftad notering?
     const pre = await readGetWithEvidence({
       publicClient,
       contractAddress,
@@ -232,8 +252,16 @@ export async function onRequest({ request, env }) {
     });
 
     if (pre.exists) {
-      // Endast denna väg får leda till "Bekräftad".
-      return json(200, statusConfirmed(pre), origin);
+      // ✅ Fix: statusConfirmed kräver hash (annars blir hash odefinierad i svaret)
+      return json(
+        200,
+        statusConfirmed({
+          hash,
+          timestamp: pre.timestamp,
+          observedBlockNumber: pre.observedBlockNumber,
+        }),
+        origin
+      );
     }
 
     // 2) Skicka in registrering (ingen väntan på bekräftelse).
@@ -258,13 +286,14 @@ export async function onRequest({ request, env }) {
       maxPriorityFeePerGas,
     });
 
-    // 3) Returnera strikt "ej bekräftad".
+    // 3) Returnera strikt "Inskickad – ej bekräftad" (aldrig "bekräftad" här).
     return json(
       200,
       statusSubmittedUnconfirmed({
         hash,
         txHash,
         serverAddress: account.address,
+        observedBlockNumber: pre.observedBlockNumber, // kontrollpunkten vid förkontrollen
       }),
       origin
     );
@@ -275,15 +304,7 @@ export async function onRequest({ request, env }) {
 
     return json(
       500,
-      {
-        ok: false,
-        statusCode: "FAILED",
-        statusText: "Misslyckad",
-        error: "Register failed",
-        detail: String(msg).slice(0, 500),
-        legalText:
-          "Registrering kunde inte skickas in. Ingen bekräftad notering har skapats.",
-      },
+      statusFailed({ hash, detail: String(msg).slice(0, 500) }),
       origin
     );
   }
