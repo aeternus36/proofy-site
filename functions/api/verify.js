@@ -89,13 +89,14 @@ function sanitizeError(e) {
 }
 
 /**
- * Gemensam statusmodell (ska matcha /api/register)
+ * Gemensam statusmodell (ska matcha Register + Certificate)
  *
  * statusCode:
  * - CONFIRMED: bekräftad notering finns
  * - NOT_CONFIRMED: ingen bekräftad notering vid kontrolltillfället
  * - UNKNOWN: kunde inte kontrolleras (tekniskt fel)
  */
+
 function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
     ok: true,
@@ -145,6 +146,7 @@ function statusUnknown({ hash, detail }) {
 }
 
 async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
+  // 1) Läs bekräftad notering (om den finns)
   const [ok, ts] = await publicClient.readContract({
     address: contractAddress,
     abi: PROOFY_ABI,
@@ -155,6 +157,7 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
 
+  // 2) Lägg till "observationsbevis" (blockhöjd vid kontroll)
   const observedBlockNumber = await publicClient.getBlockNumber();
 
   return {
@@ -216,14 +219,38 @@ export async function onRequest({ request, env }) {
       transport: http(rpcUrl),
     });
 
-    const proof = await readGetWithEvidence({ publicClient, contractAddress, hash });
+    const proof = await readGetWithEvidence({
+      publicClient,
+      contractAddress,
+      hash,
+    });
 
+    // ✅ Fix: skicka ALLTID med hash in i status-svaret
     if (proof.exists) {
-      return json(200, statusConfirmed(proof), origin);
+      return json(
+        200,
+        statusConfirmed({
+          hash,
+          timestamp: proof.timestamp,
+          observedBlockNumber: proof.observedBlockNumber,
+        }),
+        origin
+      );
     }
 
-    return json(200, statusNotConfirmed({ hash, observedBlockNumber: proof.observedBlockNumber }), origin);
+    return json(
+      200,
+      statusNotConfirmed({
+        hash,
+        observedBlockNumber: proof.observedBlockNumber,
+      }),
+      origin
+    );
   } catch (e) {
-    return json(503, statusUnknown({ hash, detail: sanitizeError(e) }), origin);
+    return json(
+      503,
+      statusUnknown({ hash, detail: sanitizeError(e) }),
+      origin
+    );
   }
 }
