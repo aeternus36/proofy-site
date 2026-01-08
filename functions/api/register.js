@@ -6,18 +6,13 @@ import { polygonAmoy } from "viem/chains";
  * Proofy /api/register (Amoy)
  *
  * Juridiskt krav:
- * - Får ALDRIG påstå "bekräftad" utan att det kan styrkas via bekräftad notering.
- * - Om ingen bekräftelse finns: ska uttryckligen anges som "Ej bekräftad".
- * - Vid tekniskt fel: ska anges som "Kunde inte kontrolleras" (inte ett negativt påstående).
+ * - Får ALDRIG påstå "bekräftad/registrerad" utan att det kan styrkas via bekräftad notering.
+ * - Vid inskickad men obekräftad: ska uttryckligen anges som "Ej bekräftad".
+ * - Register, Verify och Certificate ska använda samma statusmodell.
  *
- * Tekniskt krav:
+ * Driftkrav:
  * - Skickar in och returnerar referens direkt (ingen wait → ingen timeout-risk).
  * - Idempotent via registerIfMissing.
- *
- * Gemensam statusmodell (Register/Verify/Certificate):
- * - CONFIRMED
- * - NOT_CONFIRMED
- * - UNKNOWN
  */
 
 const PROOFY_ABI = [
@@ -109,14 +104,6 @@ function toSafeUint64(ts) {
   return v <= maxSafe ? Number(v) : Number(maxSafe);
 }
 
-function sanitizeError(e) {
-  const msg =
-    (e && typeof e === "object" && "shortMessage" in e && e.shortMessage) ||
-    (e && typeof e === "object" && "message" in e && e.message) ||
-    String(e);
-  return String(msg).slice(0, 600);
-}
-
 async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const [ok, ts] = await publicClient.readContract({
     address: contractAddress,
@@ -128,9 +115,7 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
 
-  // Kontrollpunkt (valfri) – används bara som revisionsstöd
   const observedBlockNumber = await publicClient.getBlockNumber();
-
   return { exists, timestamp, observedBlockNumber: observedBlockNumber.toString() };
 }
 
@@ -142,6 +127,14 @@ function gweiToWeiBigInt(gwei) {
   return int * 10n ** 9n + dec;
 }
 
+/**
+ * Gemensam statusmodell (samma som /api/verify och Certificate)
+ *
+ * statusCode:
+ * - CONFIRMED: bekräftad notering finns
+ * - NOT_CONFIRMED: ingen bekräftad notering vid kontrolltillfället
+ * - UNKNOWN: kunde inte kontrolleras (tekniskt fel)
+ */
 function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
     ok: true,
@@ -149,14 +142,17 @@ function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
     statusText: "Bekräftad",
     hash,
     confirmedAtUnix: timestamp,
-    evidence: { observedBlockNumber },
+    evidence: {
+      observedBlockNumber,
+    },
     submission: null,
     legalText:
-      "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot offentlig verifieringskälla.",
+      "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot extern verifieringskälla vid behov.",
   };
 }
 
 function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
+  const hasSubmission = Boolean(submission?.txHash);
   return {
     ok: true,
     statusCode: "NOT_CONFIRMED",
@@ -164,11 +160,15 @@ function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
     hash,
     confirmedAtUnix: null,
     evidence: observedBlockNumber ? { observedBlockNumber } : null,
-    submission: submission || null,
-    legalText:
-      submission?.txHash
-        ? "En registrering har skickats in men ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse."
-        : "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
+    submission: hasSubmission
+      ? {
+          txHash: submission.txHash,
+          submittedBy: submission.submittedBy || null,
+        }
+      : null,
+    legalText: hasSubmission
+      ? "En registrering har skickats in för behandling men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'."
+      : "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
   };
 }
 
@@ -188,10 +188,19 @@ function statusUnknown({ hash, detail }) {
   };
 }
 
+function sanitizeError(e) {
+  const msg =
+    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
+    "Register failed";
+  return String(msg).slice(0, 600);
+}
+
 export async function onRequest({ request, env }) {
   const origin = request.headers.get("Origin") || "";
 
-  if (request.method === "OPTIONS") return corsPreflight(origin || "*");
+  if (request.method === "OPTIONS") {
+    return corsPreflight(origin || "*");
+  }
   if (request.method !== "POST") {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
@@ -222,7 +231,7 @@ export async function onRequest({ request, env }) {
     return json(500, { ok: false, error: "Bad private key" }, origin);
   }
 
-  // Driftstyrning
+  // Gasgränser (driftstyrning)
   const maxFeeGwei = env.MAX_FEE_GWEI ?? 300;
   const maxPriorityFeeGwei = env.MAX_PRIORITY_FEE_GWEI ?? 5;
 
@@ -237,7 +246,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 1) Finns redan bekräftad notering?
+    // 1) Kontroll: finns bekräftad notering?
     const pre = await readGetWithEvidence({
       publicClient,
       contractAddress,
@@ -245,10 +254,10 @@ export async function onRequest({ request, env }) {
     });
 
     if (pre.exists) {
-      return json(200, statusConfirmed({ hash, ...pre }), origin);
+      return json(200, statusConfirmed({ ...pre, hash }), origin);
     }
 
-    // 2) Skicka in registrering (ingen väntan)
+    // 2) Skicka in registrering (ingen väntan på bekräftelse).
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -270,16 +279,13 @@ export async function onRequest({ request, env }) {
       maxPriorityFeePerGas,
     });
 
-    // 3) Juridiskt strikt: ej bekräftad (med inskickad-referens som processinfo)
+    // 3) Returnera fortsatt "Ej bekräftad" + processinfo (submission) utan att skapa en egen status.
     return json(
       200,
       statusNotConfirmed({
         hash,
         observedBlockNumber: pre.observedBlockNumber,
-        submission: {
-          txHash,
-          submittedBy: account.address,
-        },
+        submission: { txHash, submittedBy: account.address },
       }),
       origin
     );
