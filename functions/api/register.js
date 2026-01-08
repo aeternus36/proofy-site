@@ -4,9 +4,15 @@ import { polygonAmoy } from "viem/chains";
 
 /**
  * Proofy /api/register (Amoy)
- * - Skickar tx och returnerar txHash direkt (ingen wait → ingen 524-timeout)
- * - Idempotent via registerIfMissing
- * - Säker för Cloudflare Pages Functions
+ *
+ * Juridiskt krav:
+ * - Får ALDRIG påstå "bekräftad/registrerad" utan att det kan styrkas via bekräftad notering.
+ * - Vid inskickad men obekräftad: ska uttryckligen anges som "ej bekräftad".
+ * - Register, Verify och Certificate ska använda samma statusmodell.
+ *
+ * Driftkrav:
+ * - Skickar in och returnerar referens direkt (ingen wait → ingen timeout-risk).
+ * - Idempotent via registerIfMissing.
  */
 
 const PROOFY_ABI = [
@@ -37,6 +43,7 @@ function json(status, obj, origin) {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     Vary: "Origin",
+    "X-Content-Type-Options": "nosniff",
   };
   if (origin) headers["Access-Control-Allow-Origin"] = origin;
   return new Response(JSON.stringify(obj), { status, headers });
@@ -97,7 +104,7 @@ function toSafeUint64(ts) {
   return v <= maxSafe ? Number(v) : Number(maxSafe);
 }
 
-async function readGet({ publicClient, contractAddress, hash }) {
+async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const [ok, ts] = await publicClient.readContract({
     address: contractAddress,
     abi: PROOFY_ABI,
@@ -107,7 +114,12 @@ async function readGet({ publicClient, contractAddress, hash }) {
 
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
-  return { exists, timestamp };
+
+  // Bevisvärde: hämta även senaste blocknummer vid kontrolltillfället,
+  // så att Verify/Certificate kan visa vilken kontrollpunkt som användes.
+  const observedBlockNumber = await publicClient.getBlockNumber();
+
+  return { exists, timestamp, observedBlockNumber: observedBlockNumber.toString() };
 }
 
 function gweiToWeiBigInt(gwei) {
@@ -116,6 +128,49 @@ function gweiToWeiBigInt(gwei) {
   const int = BigInt(i || "0");
   const dec = BigInt((d + "000000000").slice(0, 9));
   return int * 10n ** 9n + dec;
+}
+
+/**
+ * Gemensam, strikt statusmodell (ska matchas av Verify och Certificate)
+ *
+ * statusCode:
+ * - CONFIRMED: bekräftad notering finns
+ * - SUBMITTED_UNCONFIRMED: inskickad men ej bekräftad
+ * - FAILED: misslyckad inskickning
+ *
+ * Viktigt: Endast CONFIRMED får användas som "registrerad/bekräftad" i UI.
+ */
+function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
+  return {
+    ok: true,
+    statusCode: "CONFIRMED",
+    statusText: "Bekräftad",
+    hash,
+    confirmedAtUnix: timestamp,
+    evidence: {
+      observedBlockNumber,
+    },
+    submission: null,
+    legalText:
+      "Det finns en bekräftad notering för detta underlagsavtryck. Uppgifterna ovan kan kontrolleras mot offentlig verifieringskälla.",
+  };
+}
+
+function statusSubmittedUnconfirmed({ hash, txHash, serverAddress }) {
+  return {
+    ok: true,
+    statusCode: "SUBMITTED_UNCONFIRMED",
+    statusText: "Inskickad – ej bekräftad",
+    hash,
+    confirmedAtUnix: null,
+    evidence: null,
+    submission: {
+      txHash,
+      submittedBy: serverAddress,
+    },
+    legalText:
+      "En registrering har skickats in men är ännu inte bekräftad. Intyg får inte tolkas som bekräftat förrän status är 'Bekräftad'.",
+  };
 }
 
 export async function onRequest({ request, env }) {
@@ -154,6 +209,7 @@ export async function onRequest({ request, env }) {
     return json(500, { ok: false, error: "Bad private key" }, origin);
   }
 
+  // Gasgränser (driftstyrning). UI ska inte behöva tekniska termer.
   const maxFeeGwei = env.MAX_FEE_GWEI ?? 300;
   const maxPriorityFeeGwei = env.MAX_PRIORITY_FEE_GWEI ?? 5;
 
@@ -168,23 +224,19 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 1) Pre-read (gratis)
-    const pre = await readGet({ publicClient, contractAddress, hash });
+    // 1) Kontroll: finns bekräftad notering?
+    const pre = await readGetWithEvidence({
+      publicClient,
+      contractAddress,
+      hash,
+    });
+
     if (pre.exists) {
-      return json(
-        200,
-        {
-          ok: true,
-          status: "already_registered",
-          exists: true,
-          timestamp: pre.timestamp,
-          txHash: null,
-        },
-        origin
-      );
+      // Endast denna väg får leda till "Bekräftad".
+      return json(200, statusConfirmed(pre), origin);
     }
 
-    // 2) Write (INGEN WAIT – Cloudflare-safe)
+    // 2) Skicka in registrering (ingen väntan på bekräftelse).
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -206,16 +258,14 @@ export async function onRequest({ request, env }) {
       maxPriorityFeePerGas,
     });
 
-    // 3) Returnera direkt (viktigt!)
+    // 3) Returnera strikt "ej bekräftad".
     return json(
       200,
-      {
-        ok: true,
-        status: "submitted",
+      statusSubmittedUnconfirmed({
+        hash,
         txHash,
         serverAddress: account.address,
-        note: "Transaction submitted. Confirmation happens asynchronously.",
-      },
+      }),
       origin
     );
   } catch (e) {
@@ -227,8 +277,12 @@ export async function onRequest({ request, env }) {
       500,
       {
         ok: false,
+        statusCode: "FAILED",
+        statusText: "Misslyckad",
         error: "Register failed",
         detail: String(msg).slice(0, 500),
+        legalText:
+          "Registrering kunde inte skickas in. Ingen bekräftad notering har skapats.",
       },
       origin
     );
