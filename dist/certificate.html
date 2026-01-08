@@ -271,7 +271,7 @@
       }
       .small{
         font-size:12px; color:var(--muted2); line-height:1.45;
-        max-width:420px;
+        max-width:520px;
       }
 
       .warnBox{
@@ -292,8 +292,29 @@
         line-height:1.55;
       }
 
+      details.tech{
+        margin-top:12px;
+        border:1px solid var(--border);
+        border-radius:16px;
+        background:rgba(255,255,255,.02);
+        padding:10px 12px;
+      }
+      details.tech > summary{
+        cursor:pointer;
+        font-weight:900;
+        color:rgba(234,240,255,.90);
+        list-style:none;
+      }
+      details.tech > summary::-webkit-details-marker{display:none}
+      .techGrid{
+        margin-top:10px;
+        display:grid;
+        grid-template-columns: 1fr;
+        gap:10px;
+      }
+
       @media print{
-        header, .actions, #warnBox { display:none !important; }
+        header, .actions, #warnBox, details.tech { display:none !important; }
         body{ background:#fff !important; color:#000 !important; }
         .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
         .pill, .statusBadge, .val { border-color:#ddd !important; background:#fff !important; }
@@ -385,6 +406,26 @@
                 <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
               </div>
             </div>
+
+            <details class="tech" id="techDetails">
+              <summary>Teknisk information (valfritt)</summary>
+              <div class="techGrid">
+                <div class="val">
+                  <div class="label">Kontrollpunkt (valfritt)</div>
+                  <div class="mono" id="observedPoint">—</div>
+                  <div class="small" style="margin-top:6px">
+                    Visar vilken kontrollpunkt som användes vid kontrolltillfället. Kan underlätta felsökning.
+                  </div>
+                </div>
+                <div class="val">
+                  <div class="label">Registreringsreferens (valfri)</div>
+                  <div class="mono" id="registrationRef">—</div>
+                  <div class="small" style="margin-top:6px">
+                    En intern referens kopplad till en inskickad registrering. Behövs normalt inte i ärendet.
+                  </div>
+                </div>
+              </div>
+            </details>
 
             <div class="fine">
               <b>Revisions-/juridisk tydlighet</b><br/>
@@ -553,7 +594,7 @@
       }
 
       function pickStatusPresentation(code){
-        // Kod -> UI-ton + rubrik (utan tekniska termer)
+        // Kod -> UI-ton + badge-text (utan tekniska termer)
         if (code === "CONFIRMED") return { tone:"good", badge:"Bekräftad" };
         if (code === "SUBMITTED_UNCONFIRMED") return { tone:"warn", badge:"Inskickad – ej bekräftad" };
         if (code === "NOT_CONFIRMED") return { tone:"bad", badge:"Ej bekräftad" };
@@ -610,6 +651,8 @@
         $("legalLine").textContent = "—";
         $("regLocal").textContent = "—";
         $("regUtc").textContent = "—";
+        $("observedPoint").textContent = "—";
+        $("registrationRef").textContent = "—";
 
         if (certId){
           $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
@@ -654,13 +697,19 @@
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
+        // Tekniskt (valfritt) – utan kedjeord i UI
+        const observedPoint = safeText(v?.evidence?.observedBlockNumber, "—");
+        const registrationRef = safeText(v?.submission?.txHash, "—");
+        $("observedPoint").textContent = observedPoint;
+        $("registrationRef").textContent = registrationRef;
+
         const pres = pickStatusPresentation(statusCode);
         setStatus(pres.tone, pres.badge);
 
-        // Intygets huvudrad: exakt servertext (så att inget UI “hittar på”)
+        // Exakt servertext (UI gissar aldrig)
         $("resultText").textContent = statusText;
 
-        // Juridisk rad (exakt servertext om den finns, annars defensiv standardtext)
+        // Juridisk rad (servertext om den finns)
         if (legalText){
           $("legalLine").textContent = legalText;
         } else {
@@ -679,19 +728,18 @@
         if (statusCode === "CONFIRMED" && confirmedAtUnix && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
           $("regLocal").textContent = fmtSe(confirmedAtUnix);
           $("regUtc").textContent = fmtUtc(confirmedAtUnix);
-        } else {
-          $("regLocal").textContent = "—";
-          $("regUtc").textContent = "—";
+          hideWarn(); // rent intyg
+          return;
         }
 
-        // Extra tydlighet vid ej bekräftad status
+        $("regLocal").textContent = "—";
+        $("regUtc").textContent = "—";
+
+        // Diskret, juridiskt korrekta varningar
         if (statusCode === "SUBMITTED_UNCONFIRMED"){
-          const tx = safeText(v?.submission?.txHash, "");
-          const msgTx = tx ? `<div style="margin-top:6px">Registreringsreferens (valfri): <span class="mono">${tx}</span></div>` : "";
           showWarn(`
             <b>Inskickad – ej bekräftad.</b><br/>
             Intyget kan inte redovisa bekräftelse innan status är bekräftad.
-            ${msgTx}
           `);
           return;
         }
@@ -704,16 +752,10 @@
           return;
         }
 
-        if (statusCode === "UNKNOWN"){
-          showWarn(`
-            <b>Kunde inte kontrolleras.</b><br/>
-            Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.
-          `);
-          return;
-        }
-
-        // CONFIRMED: visa ingen varning (rent intyg)
-        hideWarn();
+        showWarn(`
+          <b>Kunde inte kontrolleras.</b><br/>
+          Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.
+        `);
       }
 
       run();
