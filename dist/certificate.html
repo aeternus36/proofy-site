@@ -1,938 +1,646 @@
 <!doctype html>
 <html lang="sv">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="robots" content="noindex" />
-  <title>Proofy – Verifieringsintyg</title>
-  <style>
-    :root{
-      --bg:#07101b;
-      --panel:#0b1624;
-      --panel2:#0d1b2b;
-      --text:#e7eefc;
-      --muted:#a9b7d0;
-      --line:rgba(255,255,255,.08);
-      --accent:#64d6c7;
-      --accent2:#6ea8ff;
-      --warn:#ffcc66;
-      --bad:#ff6b6b;
-      --ok:#57e389;
-      --shadow: 0 18px 60px rgba(0,0,0,.45);
-      --radius:18px;
-      --radius2:26px;
-      --mono: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:var(--sans);
-      color:var(--text);
-      background:
-        radial-gradient(1200px 600px at 20% 0%, rgba(110,168,255,.16), transparent 60%),
-        radial-gradient(900px 500px at 85% 12%, rgba(100,214,199,.14), transparent 62%),
-        linear-gradient(180deg, #050b12, var(--bg));
-      min-height:100vh;
-    }
-    a{color:inherit}
-    .topbar{
-      position:sticky; top:0;
-      backdrop-filter: blur(10px);
-      background: rgba(5,11,18,.55);
-      border-bottom:1px solid var(--line);
-      z-index:10;
-    }
-    .topbar-inner{
-      max-width:1100px;
-      margin:0 auto;
-      padding:14px 18px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-    }
-    .brand{
-      display:flex; align-items:center; gap:10px;
-      text-decoration:none;
-    }
-    .brand .logo{
-      width:34px;height:34px;border-radius:10px;
-      display:grid; place-items:center;
-      background: rgba(110,168,255,.14);
-      border:1px solid rgba(110,168,255,.26);
-    }
-    .brand .logo span{
-      font-weight:800; letter-spacing:.4px;
-    }
-    .nav{
-      display:flex; gap:10px; align-items:center;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-    .pill{
-      padding:10px 14px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      text-decoration:none;
-      font-weight:600;
-      color:var(--text);
-      transition: transform .08s ease, border-color .08s ease;
-      white-space:nowrap;
-    }
-    .pill:hover{transform: translateY(-1px); border-color: rgba(110,168,255,.28);}
-    .pill.primary{
-      background: linear-gradient(90deg, rgba(110,168,255,.35), rgba(100,214,199,.28));
-      border-color: rgba(110,168,255,.35);
-    }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proofy – Verifieringsintyg</title>
 
-    .wrap{
-      max-width:1100px;
-      margin:0 auto;
-      padding:28px 18px 70px;
-    }
+    <style>
+      :root{
+        --bg:#070b14;
+        --card:#0e1526;
+        --card2:#0b1220;
+        --border:rgba(255,255,255,.08);
+        --text:#eaf0ff;
+        --muted:rgba(234,240,255,.72);
+        --muted2:rgba(234,240,255,.55);
+        --good:#36d399;
+        --bad:#ff6b6b;
+        --warn:#fbbf24;
+        --btn:#1b2a4a;
+        --btn2:#1a3b74;
+        --shadow:0 20px 60px rgba(0,0,0,.35);
+        --radius:18px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      *{box-sizing:border-box}
+      body{
+        margin:0;
+        background: radial-gradient(1200px 600px at 30% 20%, rgba(67,108,255,.20), transparent 60%),
+                    radial-gradient(900px 500px at 70% 35%, rgba(54,211,153,.12), transparent 55%),
+                    var(--bg);
+        color:var(--text);
+        font-family:var(--sans);
+      }
+      a{color:inherit}
+      header{
+        max-width:1100px;
+        margin:0 auto;
+        padding:22px 18px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+      }
+      .brand{
+        display:flex; gap:10px; align-items:center;
+        font-weight:700;
+      }
+      .logo{
+        width:34px;height:34px;border-radius:10px;
+        background:linear-gradient(135deg, rgba(67,108,255,.9), rgba(54,211,153,.85));
+        box-shadow:0 10px 25px rgba(0,0,0,.25);
+      }
+      nav{display:flex; gap:10px; flex-wrap:wrap}
+      .navbtn{
+        padding:10px 14px;
+        border:1px solid var(--border);
+        border-radius:999px;
+        background:rgba(255,255,255,.04);
+        text-decoration:none;
+        font-weight:600;
+        color:var(--text);
+        transition:.15s ease;
+      }
+      .navbtn:hover{transform:translateY(-1px); background:rgba(255,255,255,.06)}
+      .navbtn.primary{background:linear-gradient(135deg, rgba(67,108,255,.95), rgba(54,211,153,.85)); border:0}
 
-    .tag{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      color:var(--muted);
-      font-weight:700;
-      letter-spacing:.2px;
-      font-size:13px;
-    }
-    .tag .dot{
-      width:7px;height:7px;border-radius:99px;background: var(--accent);
-      box-shadow: 0 0 0 4px rgba(100,214,199,.12);
-    }
+      main{
+        max-width:1100px;
+        margin:0 auto;
+        padding:10px 18px 48px;
+      }
 
-    .hero{
-      margin-top:18px;
-      border-radius: var(--radius2);
-      padding:26px;
-      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
-      border:1px solid var(--line);
-      box-shadow: var(--shadow);
-    }
-    .hero-top{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:16px;
-      flex-wrap:wrap;
-    }
-    h1{
-      margin:10px 0 10px;
-      font-size: clamp(34px, 5vw, 52px);
-      line-height:1.05;
-      letter-spacing:-.8px;
-    }
-    .lead{
-      margin:0;
-      color:var(--muted);
-      max-width: 72ch;
-      font-size: 15.5px;
-      line-height: 1.55;
-    }
-    .badge{
-      display:inline-flex; align-items:center; gap:10px;
-      padding:10px 14px;
-      border-radius:999px;
-      font-weight:800;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      white-space:nowrap;
-    }
-    .badge .b-dot{width:10px;height:10px;border-radius:99px;background: var(--warn)}
-    .badge.ok .b-dot{background: var(--ok)}
-    .badge.bad .b-dot{background: var(--bad)}
-    .badge.wait .b-dot{background: var(--warn)}
-    .badge small{font-weight:700;color:var(--muted)}
+      .pill{
+        display:inline-flex; align-items:center; gap:10px;
+        padding:8px 12px;
+        border:1px solid var(--border);
+        border-radius:999px;
+        background:rgba(255,255,255,.04);
+        color:var(--muted);
+        font-weight:600;
+        font-size:13px;
+      }
 
-    .actions{
-      margin-top:14px;
-      display:flex; gap:10px; flex-wrap:wrap;
-    }
-    .btn{
-      appearance:none; border:none; cursor:pointer;
-      padding:12px 16px;
-      border-radius: 14px;
-      font-weight:800;
-      color:var(--text);
-      background: rgba(110,168,255,.18);
-      border:1px solid rgba(110,168,255,.28);
-      transition: transform .08s ease, border-color .08s ease;
-    }
-    .btn:hover{transform: translateY(-1px); border-color: rgba(110,168,255,.45);}
-    .btn.secondary{
-      background: rgba(255,255,255,.04);
-      border:1px solid var(--line);
-    }
-    .btn.ghost{
-      background: transparent;
-      border:1px solid var(--line);
-    }
+      .hero{
+        margin-top:10px;
+        border:1px solid var(--border);
+        background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+        border-radius:var(--radius);
+        box-shadow:var(--shadow);
+        padding:26px;
+      }
+      .heroTop{
+        display:flex;
+        gap:16px;
+        align-items:flex-start;
+        justify-content:space-between;
+        flex-wrap:wrap;
+      }
+      h1{
+        margin:12px 0 8px;
+        font-size:44px;
+        letter-spacing:-.02em;
+        line-height:1.02;
+      }
+      .lead{
+        max-width:820px;
+        color:var(--muted);
+        line-height:1.55;
+        font-size:16px;
+      }
+      .statusBadge{
+        display:inline-flex; align-items:center; gap:8px;
+        padding:10px 14px;
+        border-radius:999px;
+        font-weight:800;
+        border:1px solid var(--border);
+        background:rgba(255,255,255,.05);
+        min-width:160px;
+        justify-content:center;
+      }
+      .dot{width:9px;height:9px;border-radius:99px;background:var(--warn)}
+      .statusBadge.good .dot{background:var(--good)}
+      .statusBadge.bad .dot{background:var(--bad)}
+      .statusBadge.warn .dot{background:var(--warn)}
 
-    .grid{
-      margin-top:18px;
-      display:grid;
-      gap:14px;
-      grid-template-columns: 1.05fr .95fr;
-    }
-    @media (max-width: 980px){
-      .grid{grid-template-columns:1fr}
-    }
-    .card{
-      border-radius: var(--radius);
-      padding:16px;
-      background: rgba(7,16,27,.6);
-      border:1px solid var(--line);
-    }
-    .card h3{
-      margin:0 0 10px;
-      font-size:13px;
-      letter-spacing:.7px;
-      text-transform:uppercase;
-      color: rgba(231,238,252,.82);
-    }
-    .card p{margin:8px 0; color: var(--muted); line-height:1.5; font-size:14px;}
-    .mono{
-      font-family:var(--mono);
-      font-size: 13px;
-      line-height: 1.45;
-      color: rgba(231,238,252,.9);
-      word-break: break-all;
-      background: rgba(255,255,255,.03);
-      border:1px solid var(--line);
-      padding:12px 12px;
-      border-radius: 14px;
-    }
-    .row{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      flex-wrap:wrap;
-    }
-    .copy{
-      display:flex; gap:8px; align-items:center;
-    }
-    .tinybtn{
-      padding:10px 12px;
-      border-radius: 12px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.04);
-      color: var(--text);
-      font-weight:800;
-      cursor:pointer;
-    }
-    .tinybtn:hover{border-color: rgba(110,168,255,.35);}
-    .kv{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
-    }
-    @media (max-width: 700px){
-      .kv{grid-template-columns:1fr}
-    }
-    .k{
-      color: rgba(231,238,252,.82);
-      font-weight:800;
-      font-size:13px;
-    }
-    .v{
-      color: var(--muted);
-      font-size:14px;
-      line-height:1.45;
-      margin-top:4px;
-    }
-    .hr{
-      height:1px; background: var(--line);
-      margin:14px 0;
-    }
-    .note{
-      border-left: 3px solid rgba(110,168,255,.45);
-      padding:10px 12px;
-      border-radius: 12px;
-      background: rgba(110,168,255,.07);
-      color: var(--muted);
-      font-size:14px;
-      line-height:1.55;
-    }
-    .warnbox{
-      border-left: 3px solid rgba(255,204,102,.65);
-      background: rgba(255,204,102,.07);
-      padding:10px 12px;
-      border-radius: 12px;
-      color: var(--muted);
-      font-size:14px;
-      line-height:1.55;
-    }
-    details{
-      border-radius: var(--radius);
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      padding:14px 14px;
-    }
-    summary{
-      cursor:pointer;
-      font-weight:900;
-      color: rgba(231,238,252,.92);
-      list-style:none;
-    }
-    summary::-webkit-details-marker{display:none}
-    .legal h4{
-      margin:14px 0 6px; font-size:14px; letter-spacing:.2px;
-    }
-    .legal ul{margin:8px 0 0 18px; color: var(--muted); line-height:1.55; font-size:14px;}
-    .footer{
-      margin-top:16px;
-      color: rgba(231,238,252,.65);
-      font-size:13px;
-      line-height:1.55;
-    }
+      .actions{
+        display:flex; gap:10px; flex-wrap:wrap;
+        margin-top:16px;
+      }
+      button{
+        appearance:none;
+        border:1px solid var(--border);
+        background:rgba(255,255,255,.04);
+        color:var(--text);
+        padding:12px 16px;
+        border-radius:999px;
+        font-weight:800;
+        cursor:pointer;
+        transition:.15s ease;
+      }
+      button:hover{transform:translateY(-1px); background:rgba(255,255,255,.06)}
+      button.primary{
+        background:linear-gradient(135deg, rgba(67,108,255,.95), rgba(54,211,153,.85));
+        border:0;
+      }
+      button.ghost{background:transparent}
+      button:disabled{opacity:.55; cursor:not-allowed; transform:none}
 
-    /* QR */
-    .qrWrap{
-      display:flex;
-      gap:14px;
-      align-items:flex-start;
-      flex-wrap:wrap;
-    }
-    .qrBox{
-      width:210px;
-      aspect-ratio:1/1;
-      border-radius: 18px;
-      border:1px solid var(--line);
-      background: #fff;
-      overflow:hidden;
-      position:relative;
-      display:grid;
-      place-items:center;
-    }
-    .qrImg{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      image-rendering: pixelated;
-    }
-    .qrLogo{
-      position:absolute;
-      width:56px; height:56px;
-      border-radius: 14px;
-      background:#fff;
-      border:1px solid rgba(0,0,0,.08);
-      box-shadow: 0 12px 30px rgba(0,0,0,.2);
-      display:none; /* visas om logo laddas */
-      place-items:center;
-      overflow:hidden;
-    }
-    .qrLogo img{width:100%; height:100%; object-fit:cover;}
-    .muted{color:var(--muted)}
-    .okText{color:rgba(87,227,137,.95); font-weight:900}
-    .badText{color:rgba(255,107,107,.95); font-weight:900}
-    .waitText{color:rgba(255,204,102,.95); font-weight:900}
-    @media print{
-      .topbar,.nav,.actions,.btn,.tinybtn,#supportFab{display:none !important;}
-      body{background:#fff;color:#000}
-      .hero,.card,details{box-shadow:none !important; background:#fff !important; border-color:#ddd !important;}
-      .lead,.muted,.v,.note,.warnbox,.footer{color:#222 !important;}
-      .badge{border-color:#ddd !important;}
-      .qrBox{border-color:#ddd !important;}
-      a{color:#000 !important; text-decoration:none !important;}
-    }
-    #supportFab{
-      position:fixed; right:20px; bottom:18px;
-      padding:14px 16px;
-      border-radius:999px;
-      border:1px solid rgba(100,214,199,.45);
-      background: linear-gradient(90deg, rgba(110,168,255,.25), rgba(100,214,199,.22));
-      color:var(--text);
-      font-weight:900;
-      text-decoration:none;
-      box-shadow: 0 16px 40px rgba(0,0,0,.28);
-    }
-  </style>
-</head>
+      .grid{
+        margin-top:18px;
+        display:grid;
+        grid-template-columns: 1.15fr .85fr;
+        gap:14px;
+      }
+      @media (max-width: 900px){
+        .grid{grid-template-columns:1fr}
+        h1{font-size:36px}
+      }
 
-<body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/" aria-label="Proofy hem">
-        <div class="logo" aria-hidden="true"><span>P</span></div>
-        <div style="font-weight:900;letter-spacing:.2px;">Proofy</div>
-      </a>
-      <nav class="nav" aria-label="Navigering">
-        <a class="pill" href="/pilot">Starta pilot</a>
-        <a class="pill" href="/verify">Verifiera underlag</a>
-        <a class="pill" href="/register">Skapa Verifierings-ID</a>
-        <a class="pill primary" href="/#demo">Boka kort demo</a>
+      .card{
+        border:1px solid var(--border);
+        background:rgba(255,255,255,.03);
+        border-radius:var(--radius);
+        padding:18px;
+      }
+      .card h3{
+        margin:2px 0 10px;
+        font-size:13px;
+        color:var(--muted2);
+        letter-spacing:.08em;
+        text-transform:uppercase;
+      }
+      .kv{
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap:12px;
+      }
+      @media (max-width: 700px){
+        .kv{grid-template-columns:1fr}
+      }
+
+      .val{
+        background:rgba(0,0,0,.18);
+        border:1px solid var(--border);
+        border-radius:14px;
+        padding:12px;
+        min-height:54px;
+      }
+      .label{
+        font-size:12px;
+        color:var(--muted2);
+        margin-bottom:6px;
+        font-weight:700;
+      }
+      .mono{
+        font-family:var(--mono);
+        font-size:13px;
+        word-break:break-all;
+        color:rgba(234,240,255,.92);
+      }
+
+      .row{
+        display:flex; align-items:center; justify-content:space-between; gap:10px;
+      }
+      .copyBtn{
+        padding:8px 10px;
+        font-weight:800;
+        border-radius:12px;
+      }
+
+      .note{
+        margin-top:12px;
+        color:var(--muted);
+        font-size:14px;
+        line-height:1.55;
+      }
+
+      .fine{
+        margin-top:14px;
+        border-top:1px solid var(--border);
+        padding-top:14px;
+        color:var(--muted2);
+        font-size:13px;
+        line-height:1.55;
+      }
+
+      .qrWrap{
+        display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;
+      }
+      #qrcode{
+        width:168px; height:168px;
+        border-radius:16px;
+        border:1px solid var(--border);
+        background:rgba(0,0,0,.22);
+        display:grid; place-items:center;
+        overflow:hidden;
+      }
+      #qrcode canvas, #qrcode img{
+        width:168px !important;
+        height:168px !important;
+        display:block;
+      }
+      .small{
+        font-size:12px; color:var(--muted2); line-height:1.45;
+        max-width:360px;
+      }
+
+      .warnBox{
+        margin-top:12px;
+        border:1px solid rgba(251,191,36,.35);
+        background:rgba(251,191,36,.08);
+        border-radius:16px;
+        padding:12px;
+        color:rgba(255,255,255,.92);
+        display:none;
+      }
+      .warnBox.show{display:block}
+      .mutedLink{color:rgba(234,240,255,.85)}
+    </style>
+
+    <!-- QRCode lib (liten, stabil). Om du har CSP som blockerar CDN, kan du istället bundla lokalt. -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  </head>
+
+  <body>
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>Proofy</div>
+      </div>
+      <nav>
+        <a class="navbtn" href="/#pilot">Starta pilot</a>
+        <a class="navbtn" href="/verify">Verifiera underlag</a>
+        <a class="navbtn" href="/register">Skapa Verifierings-ID</a>
+        <a class="navbtn primary" href="/#demo">Boka kort demo</a>
       </nav>
-    </div>
-  </header>
+    </header>
 
-  <main class="wrap">
-    <span class="tag"><span class="dot"></span>Intyg • spårbarhet • byrå & granskning</span>
+    <main>
+      <div class="pill">Intyg · spårbarhet · byrå & granskning</div>
 
-    <section class="hero" role="region" aria-label="Verifieringsintyg">
-      <div class="hero-top">
-        <div>
-          <h1>Verifieringsintyg</h1>
-          <p class="lead">
-            Detta är ett <strong>tekniskt intyg</strong> (tekniskt underlag) som sammanfattar resultatet av en kontroll mot Proofys register för ett
-            <strong>Verifierings-ID</strong> (kontrollvärde kopplat till en specifik underlagsversion).
-            Intyget anger om ID:t är registrerat hos Proofy och, i så fall, <strong>registreringstid</strong>. Proofy lagrar <strong>inte</strong> dokumentinnehåll.
-          </p>
+      <section class="hero">
+        <div class="heroTop">
+          <div>
+            <h1>Verifieringsintyg</h1>
+            <div class="lead">
+              Detta är ett <b>tekniskt intyg</b> som sammanfattar resultatet av en kontroll av ett
+              <b>Verifierings-ID</b> (ett kontrollvärde kopplat till en specifik underlagsversion) mot Proofys register.
+              Proofy lagrar <b>inte</b> dokumentinnehåll i samband med kontrollen.
+            </div>
+          </div>
+
+          <div id="statusBadge" class="statusBadge warn" title="Status för verifiering">
+            <span class="dot"></span>
+            <span id="statusText">Kontrollerar…</span>
+          </div>
         </div>
 
-        <div class="badge wait" id="statusBadge" title="Status för kontrollen">
-          <span class="b-dot" aria-hidden="true"></span>
-          <span id="statusText">Väntar på kontroll…</span>
-          <small id="statusHint"></small>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn" id="btnPrint">Skriv ut / Spara som PDF</button>
-        <button class="btn secondary" id="btnRefresh">Uppdatera</button>
-        <a class="btn ghost" id="btnOpenVerify" href="/verify" rel="noopener">Öppna verifiering</a>
-      </div>
-
-      <div class="grid">
-        <div class="card">
-          <h3>Genererad via</h3>
-          <div class="kv">
-            <div>
-              <div class="k">Tjänst</div>
-              <div class="v">Proofy (proofy.se)</div>
-            </div>
-            <div>
-              <div class="k">Kontakt</div>
-              <div class="v"><a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></div>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <h3>Verifierings-ID</h3>
-          <div class="row">
-            <div class="mono" id="hashBox">—</div>
-            <div class="copy">
-              <button class="tinybtn" id="btnCopyHash">Kopiera</button>
-            </div>
-          </div>
-          <p class="muted" id="hashHelp">
-            ID:t avser en <strong>underlagsversion</strong>. Ny export/omskanning/omkomprimering kan ge nytt ID även om dokumentet ser likadant ut.
-          </p>
-
-          <div class="hr"></div>
-
-          <h3>Kontroll genomförd</h3>
-          <div class="kv">
-            <div>
-              <div class="k">Kontrolltid (Sverige)</div>
-              <div class="v" id="checkedLocal">—</div>
-            </div>
-            <div>
-              <div class="k">Kontrolltid (UTC)</div>
-              <div class="v" id="checkedUtc">—</div>
-            </div>
-          </div>
-          <p class="muted">Tidpunkten när denna kontroll kördes (uppdatering av intyget).</p>
+        <div class="actions">
+          <button class="primary" id="btnPrint">Skriv ut / Spara som PDF</button>
+          <button id="btnRefresh">Uppdatera</button>
+          <button class="ghost" id="btnOpenVerify">Öppna verifiering</button>
         </div>
 
-        <div class="card">
-          <h3>Resultat</h3>
-          <div class="kv">
-            <div>
-              <div class="k">Status</div>
-              <div class="v" id="resultText">—</div>
-            </div>
-            <div>
-              <div class="k">Registreringstid hos Proofy (Sverige)</div>
-              <div class="v" id="regLocal">—</div>
-            </div>
-            <div>
-              <div class="k">Registreringstid hos Proofy (UTC)</div>
-              <div class="v" id="regUtc">—</div>
-            </div>
-            <div>
-              <div class="k">Kedja / nät</div>
-              <div class="v" id="chainInfo">—</div>
-            </div>
-          </div>
+        <div id="warnBox" class="warnBox"></div>
 
-          <div class="hr"></div>
-
-          <h3>Länkar</h3>
-          <div class="kv">
-            <div>
-              <div class="k">Länk till intyg</div>
-              <div class="v">
+        <div class="grid">
+          <div class="card">
+            <h3>Sammanfattning</h3>
+            <div class="kv">
+              <div class="val">
+                <div class="label">Verifierings-ID</div>
                 <div class="row">
-                  <div class="mono" id="certLinkBox">—</div>
-                  <button class="tinybtn" id="btnCopyCertLink">Kopiera</button>
+                  <div class="mono" id="hashText">—</div>
+                  <button class="copyBtn" id="copyHash">Kopiera</button>
+                </div>
+                <div class="small" style="margin-top:8px">
+                  ID:t avser en specifik filversion. Ny export/omskanning/omkomprimering kan ge nytt ID även om underlaget ser likadant ut.
                 </div>
               </div>
+
+              <div class="val">
+                <div class="label">Kontroll genomförd</div>
+                <div class="mono" id="checkedLocal">—</div>
+                <div class="mono" id="checkedUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
+                <div class="small" style="margin-top:8px">
+                  Tidpunkten avser <b>när kontrollen kördes</b> (uppdatera intyget vid behov).
+                </div>
+              </div>
+
+              <div class="val">
+                <div class="label">Resultat</div>
+                <div class="mono" id="resultText">—</div>
+              </div>
+
+              <div class="val">
+                <div class="label">Registreringstid hos Proofy</div>
+                <div class="mono" id="regLocal">—</div>
+                <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
+              </div>
             </div>
-            <div>
-              <div class="k">Verifieringslänk</div>
-              <div class="v">
-                <div class="row">
-                  <div class="mono" id="verifyLinkBox">—</div>
-                  <button class="tinybtn" id="btnCopyVerifyLink">Kopiera</button>
+
+            <div class="fine">
+              <b>Juridisk/ revisionsmässig tydlighet:</b> Detta intyg är ett tekniskt underlag för spårbarhet och efterhandskontroll.
+              Det är <b>inte</b> e-signering, arkivering eller juridisk rådgivning. Bevisvärde och relevans bedöms alltid i sitt sammanhang
+              (t.ex. process, åtkomstkontroller, versionshantering och dokumentationskedja).
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Länkar & QR</h3>
+            <div class="qrWrap">
+              <div>
+                <div id="qrcode" aria-label="QR-kod"></div>
+              </div>
+              <div>
+                <div class="val" style="margin-bottom:12px">
+                  <div class="label">Länk till intyg</div>
+                  <div class="row">
+                    <div class="mono" id="certLink">—</div>
+                    <button class="copyBtn" id="copyCert">Kopiera</button>
+                  </div>
+                </div>
+
+                <div class="val">
+                  <div class="label">Verifieringslänk</div>
+                  <div class="row">
+                    <div class="mono" id="verifyLink">—</div>
+                    <button class="copyBtn" id="copyVerify">Kopiera</button>
+                  </div>
+                </div>
+
+                <div class="note">
+                  Tips: Spara Verifierings-ID i ärendet och dela verifieringslänken/QR för snabb kontroll vid intern kvalitetskontroll eller efterhandsgranskning.
+                </div>
+
+                <div class="fine">
+                  <b>Integritet:</b> Filen lämnar inte din dator i samband med skapande av ID eller kontroll i webbläsaren.
+                  Proofy hanterar endast ID:t och registreringstid i registret.
                 </div>
               </div>
             </div>
           </div>
-
-          <div class="hr"></div>
-
-          <h3>QR-kod</h3>
-          <div class="qrWrap">
-            <div class="qrBox" aria-label="QR-kod">
-              <img id="qrImg" class="qrImg" alt="QR-kod" />
-              <div class="qrLogo" id="qrLogo" aria-hidden="true">
-                <img id="qrLogoImg" alt="" />
-              </div>
-            </div>
-            <div style="flex:1;min-width:240px">
-              <p class="muted" style="margin-top:0">
-                QR-koden leder till verifieringssidan för Verifierings-ID:t.
-                För bästa utskriftskvalitet används en neutral QR-rendering och en valfri logotyp i mitten (om filen finns).
-              </p>
-              <div class="note">
-                <strong>Tips för byrå:</strong> Spara Verifierings-ID + Referens-ID i ärendet. Dela intygslänken för dokumentation
-                och verifieringslänk/QR för snabb kontroll.
-              </div>
-              <div class="footer" id="techLinks"></div>
-            </div>
-          </div>
         </div>
-      </div>
 
-      <div style="margin-top:14px" class="warnbox" id="pendingBox" hidden>
-        <strong class="waitText">Väntar på bekräftelse i nätet.</strong><br />
-        Registreringen har skickats, men blockkedjan kan behöva tid för att inkludera transaktionen.
-        Intyget uppdateras automatiskt under en begränsad tid. Om status inte ändras kan ni klicka “Uppdatera” eller försöka igen senare.
-      </div>
+      </section>
+    </main>
 
-      <div style="margin-top:14px" class="warnbox" id="notRegisteredBox" hidden>
-        <strong class="badText">Ingen registrering hittades vid kontrolltillfället.</strong><br />
-        Kontrollera att rätt fil/version används (Verifierings-ID måste matcha exakt).
-        Om ni nyss registrerade: vänta en stund och uppdatera intyget.
-      </div>
-
-      <div style="margin-top:14px" class="note" id="registeredBox" hidden>
-        <strong class="okText">Registrerad.</strong><br />
-        Verifierings-ID:t finns i Proofys register och registreringstiden visas ovan. Spara intyget i ärendet vid behov.
-      </div>
-
-      <div style="margin-top:14px">
-        <details class="legal" open>
-          <summary>Juridisk information och granskningsanpassning</summary>
-
-          <div class="hr"></div>
-
-          <h4>1) Vad intyget avser</h4>
-          <ul>
-            <li>Intyget avser utfallet av en <strong>teknisk kontroll</strong> av ett Verifierings-ID mot Proofys register vid angivet kontrolltillfälle.</li>
-            <li>Om ID:t är registrerat redovisas <strong>registreringstid</strong> (när ID:t första gången registrerades i kontraktet).</li>
-            <li>Intyget innehåller <strong>inte</strong> underlagets innehåll och Proofy lagrar inte dokumentinnehåll i samband med kontrollen.</li>
-          </ul>
-
-          <h4>2) Vad registreringstid betyder</h4>
-          <ul>
-            <li>Registreringstid är den tidpunkt då Verifierings-ID:t registrerades i Proofys register (blockkedjan).</li>
-            <li>Registreringstid säger inte när dokumentet skapades, signerades, godkändes, kommunicerades eller när en affärshändelse inträffade.</li>
-          </ul>
-
-          <h4>3) Vad intyget inte visar</h4>
-          <ul>
-            <li>Intyget visar inte vem som skapat dokumentet, vem som haft tillgång till det eller hur det har hanterats i ett system (åtkomstlogg/versionshistorik).</li>
-            <li>Intyget ersätter inte <strong>e-signering</strong>, arkivering, revisionsbevis i övrigt eller juridisk rådgivning.</li>
-            <li>Intyget bedömer inte underlagets saklighet/riktighet; det visar endast om kontrollvärdet matchar en registrerad referens.</li>
-          </ul>
-
-          <h4>4) Integritet och dataminimering</h4>
-          <ul>
-            <li>Verifierings-ID beräknas lokalt i webbläsaren från filen. Själva filen lämnar inte användarens dator för denna funktion.</li>
-            <li>Proofy hanterar endast kontrollvärde (hash), registreringstid och tekniska länkar. Personuppgifter kan förekomma i metadata runt ärendet, inte i kontrollvärdet.</li>
-          </ul>
-
-          <h4>5) Drift, bevisvärde och rekommenderat arbetssätt</h4>
-          <ul>
-            <li>För bästa bevisvärde: spara Verifierings-ID och intygslänk i ärendet vid fastställande, samt dokumentera vem som fastställde och på vilken grund.</li>
-            <li>Bevisvärde och relevans bedöms alltid i sitt sammanhang (t.ex. process, systemkontroller, rutiner, behörigheter, spårbarhet och övriga revisionsbevis).</li>
-            <li>Vid tvist/granskning: använd intyget tillsammans med kompletterande underlag (processbeskrivning, systemloggar, attest/behörighet, versionshantering).</li>
-          </ul>
-
-          <div class="footer">
-            Detta intyg är avsett som ett tekniskt underlag för spårbarhet och efterhandskontroll och utgör inte juridisk rådgivning.
-          </div>
-        </details>
-      </div>
-    </section>
-  </main>
-
-  <a id="supportFab" href="mailto:kontakt@proofy.se">Fråga oss</a>
-
-  <script>
-    (function(){
-      // ---------------------------
-      // Helpers
-      // ---------------------------
+    <script>
+      // ---------- Helpers ----------
       const $ = (id) => document.getElementById(id);
 
-      function safeText(el, txt){ el.textContent = (txt ?? "—"); }
-      function isBytes32Hex(h){
-        return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
-      }
-      function nowSeconds(){ return Math.floor(Date.now()/1000); }
-      function fmtUtc(sec){
-        if(!sec) return "—";
-        return new Date(sec*1000).toISOString().replace(".000Z","Z");
-      }
-      function fmtLocal(sec){
-        if(!sec) return "—";
-        try{
-          const dt = new Date(sec*1000);
-          return new Intl.DateTimeFormat("sv-SE", {
-            year:"numeric", month:"2-digit", day:"2-digit",
-            hour:"2-digit", minute:"2-digit", second:"2-digit",
-            timeZone:"Europe/Stockholm"
-          }).format(dt) + " (Europe/Stockholm)";
-        }catch{
-          return new Date(sec*1000).toLocaleString() + " (local)";
-        }
+      function isValidBytes32Hex(s){
+        return typeof s === "string" && s.startsWith("0x") && s.length === 66;
       }
 
-      async function copyToClipboard(text){
+      function toUtcString(ms){
+        const d = new Date(ms);
+        return d.toISOString().replace("T"," ").replace(".000Z"," UTC");
+      }
+
+      function toLocalString(ms){
+        const d = new Date(ms);
+        // Europe/Stockholm-ish via browser locale
+        return d.toLocaleString(undefined, { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+      }
+
+      function setStatus(type, text){
+        const badge = $("statusBadge");
+        badge.classList.remove("good","bad","warn");
+        badge.classList.add(type);
+        $("statusText").textContent = text;
+      }
+
+      function showWarn(html){
+        const box = $("warnBox");
+        box.innerHTML = html;
+        box.classList.add("show");
+      }
+      function hideWarn(){
+        const box = $("warnBox");
+        box.innerHTML = "";
+        box.classList.remove("show");
+      }
+
+      async function copyText(text){
         try{
           await navigator.clipboard.writeText(text);
-          return true;
-        }catch(e){
+        }catch{
           // fallback
           const ta = document.createElement("textarea");
           ta.value = text;
-          ta.style.position="fixed";
-          ta.style.left="-9999px";
           document.body.appendChild(ta);
           ta.select();
-          const ok = document.execCommand("copy");
+          document.execCommand("copy");
           document.body.removeChild(ta);
-          return ok;
         }
       }
 
-      function setBadge(state, main, hint){
-        const badge = $("statusBadge");
-        badge.classList.remove("ok","bad","wait");
-        if(state === "ok") badge.classList.add("ok");
-        else if(state === "bad") badge.classList.add("bad");
-        else badge.classList.add("wait");
-        safeText($("statusText"), main);
-        safeText($("statusHint"), hint ? (" " + hint) : "");
+      function renderQR(text){
+        const el = $("qrcode");
+        el.innerHTML = "";
+        if (typeof QRCode === "undefined"){
+          el.innerHTML = '<div class="small">QR-biblioteket kunde inte laddas (CSP/CDN). Länken fungerar ändå.</div>';
+          return;
+        }
+        new QRCode(el, {
+          text,
+          width: 168,
+          height: 168,
+          correctLevel: QRCode.CorrectLevel.M
+        });
       }
 
-      // ---------------------------
-      // Read params
-      // ---------------------------
-      const url = new URL(location.href);
-      const hash = (url.searchParams.get("hash") || "").trim();
-      const checkedParam = (url.searchParams.get("checked") || "").trim();
-      const certId = (url.searchParams.get("cert") || "").trim();
-
-      const checked = (() => {
-        const n = Number(checkedParam);
-        return Number.isFinite(n) && n > 0 ? Math.floor(n) : nowSeconds();
-      })();
-
-      // Links
-      const verifyUrl = `${location.origin}/verify?hash=${encodeURIComponent(hash)}`;
-      const certUrl = location.href;
-
-      // Update static UI
-      $("btnOpenVerify").href = verifyUrl;
-      safeText($("hashBox"), isBytes32Hex(hash) ? hash : "Ogiltigt Verifierings-ID i URL (förväntar bytes32 hex).");
-      safeText($("checkedLocal"), fmtLocal(checked));
-      safeText($("checkedUtc"), fmtUtc(checked));
-      safeText($("certLinkBox"), certUrl);
-      safeText($("verifyLinkBox"), verifyUrl);
-      safeText($("chainInfo"), "Polygon Amoy (80002)");
-
-      if(certId){
-        safeText(document.querySelector(".card .kv .k + .v") , ""); // no-op, keep stable
+      async function verify(hash){
+        const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { cache: "no-store" });
+        const t = await r.text();
+        let j = null;
+        try { j = JSON.parse(t); } catch {}
+        if (!r.ok) throw new Error(j?.error || j?.detail || t || `HTTP ${r.status}`);
+        return j;
       }
 
-      // Reference ID block (friendly)
-      const refBox = document.querySelectorAll(".card")[0].querySelectorAll(".kv .v")[2]; // "Referens-ID för intyget" text lives in right card; easier: set dedicated? keep stable.
-      // We keep the displayed "Referens-ID för intyget" as already in markup (certId shown below).
-      // Replace the placeholder in the right card:
-      const rightCard = document.querySelectorAll(".card")[1];
-      const refIdEl = rightCard.querySelector("#refIdDisplay");
-      // If you want a dedicated element, just keep "certId" in the DOM via existing static text:
-      // We'll insert it right under the label with a small tweak:
-      const refLabel = rightCard.querySelector("h3 + .kv"); // actually "Resultat" kv; not right place. We'll keep it simple:
-      // We'll show cert id in tech footer instead.
-      const techFooter = $("techLinks");
-      techFooter.innerHTML = `
-        <div style="margin-top:8px">
-          <span style="font-weight:900">Referens-ID för intyget:</span>
-          <span class="muted">${certId ? certId : "—"}</span>
-        </div>
-      `;
+      // Optional: trigger register from certificate if not registered.
+      // You can disable by setting AUTO_REGISTER = false.
+      const AUTO_REGISTER = false; // <- ändra till true om du vill att cert automatiskt ska försöka registrera
+      async function register(hash){
+        const r = await fetch(`/api/register`, {
+          method: "POST",
+          headers: { "content-type":"application/json" },
+          body: JSON.stringify({ hash }),
+        });
+        const t = await r.text();
+        let j = null;
+        try { j = JSON.parse(t); } catch {}
+        if (!r.ok) throw new Error(j?.error || j?.detail || t || `HTTP ${r.status}`);
+        return j;
+      }
 
-      // Buttons
-      $("btnPrint").addEventListener("click", () => window.print());
-      $("btnRefresh").addEventListener("click", () => runOnce(true));
-      $("btnCopyHash").addEventListener("click", async () => {
-        if(!isBytes32Hex(hash)) return;
-        const ok = await copyToClipboard(hash);
-        $("btnCopyHash").textContent = ok ? "Kopierad" : "Kunde inte kopiera";
-        setTimeout(()=> $("btnCopyHash").textContent = "Kopiera", 1200);
-      });
-      $("btnCopyCertLink").addEventListener("click", async () => {
-        const ok = await copyToClipboard(certUrl);
-        $("btnCopyCertLink").textContent = ok ? "Kopierad" : "Kunde inte kopiera";
-        setTimeout(()=> $("btnCopyCertLink").textContent = "Kopiera", 1200);
-      });
-      $("btnCopyVerifyLink").addEventListener("click", async () => {
-        const ok = await copyToClipboard(verifyUrl);
-        $("btnCopyVerifyLink").textContent = ok ? "Kopierad" : "Kunde inte kopiera";
-        setTimeout(()=> $("btnCopyVerifyLink").textContent = "Kopiera", 1200);
-      });
+      async function pollUntilRegistered(hash, { attempts=24, delayMs=5000 } = {}){
+        for (let i=1; i<=attempts; i++){
+          const v = await verify(hash).catch(() => null);
+          if (v && v.exists) return v;
+          await new Promise(r => setTimeout(r, delayMs));
+        }
+        return null;
+      }
 
-      // ---------------------------
-      // QR code rendering
-      // We use a reliable external renderer to keep file simple.
-      // If you prefer no external calls, say so and we can inline a QR library.
-      // ---------------------------
-      function renderQr(){
-        const text = verifyUrl;
-        // QuickChart QR is stable for simple usage
-        const qr = `https://quickchart.io/qr?size=280&margin=2&text=${encodeURIComponent(text)}`;
-        $("qrImg").src = qr;
+      // ---------- Main ----------
+      async function run(){
+        hideWarn();
 
-        // Optional logo overlay (fix: use absolute path)
-        // Place your logo at: /qr-logo.png (or /qr-logo.svg). If it doesn't exist, we hide overlay.
-        const logoCandidates = ["/qr-logo.png", "/qr-logo.svg", "/assets/qr-logo.png", "/assets/qr-logo.svg"];
-        const logo = $("qrLogo");
-        const img = $("qrLogoImg");
+        const url = new URL(location.href);
+        const hash = (url.searchParams.get("hash") || "").trim();
 
-        (async () => {
-          for(const src of logoCandidates){
-            try{
-              const r = await fetch(src, { method:"HEAD", cache:"no-store" });
-              if(r.ok){
-                img.src = src;
-                logo.style.display = "grid";
+        // "checked" may be unix seconds passed in query (optional)
+        const checked = url.searchParams.get("checked");
+        const checkedMs = checked && /^\d+$/.test(checked)
+          ? Number(checked) * 1000
+          : Date.now();
+
+        $("checkedLocal").textContent = `${toLocalString(checkedMs)} (lokal tid)`;
+        $("checkedUtc").textContent = toUtcString(checkedMs);
+
+        // Build links
+        const certLink = `${location.origin}${location.pathname}?hash=${encodeURIComponent(hash)}&checked=${Math.floor(checkedMs/1000)}&cert=${encodeURIComponent(url.searchParams.get("cert") || "")}`;
+        const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
+
+        $("certLink").textContent = certLink;
+        $("verifyLink").textContent = verifyLink;
+
+        $("btnOpenVerify").onclick = () => location.href = verifyLink;
+        $("btnPrint").onclick = () => window.print();
+        $("btnRefresh").onclick = () => run();
+
+        $("copyHash").onclick = () => copyText(hash || "");
+        $("copyCert").onclick = () => copyText(certLink);
+        $("copyVerify").onclick = () => copyText(verifyLink);
+
+        // QR should always show
+        renderQR(certLink);
+
+        // Validate hash
+        if (!isValidBytes32Hex(hash)){
+          setStatus("bad", "Ogiltigt ID");
+          $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
+          $("resultText").textContent = "Kunde inte verifiera: saknat/ogiltigt Verifierings-ID i URL.";
+          $("regLocal").textContent = "—";
+          $("regUtc").textContent = "—";
+          showWarn(`
+            <b>Fel:</b> Intyget saknar giltigt <span class="mono">hash</span> i URL:en.<br/>
+            Exempel: <span class="mono">/certificate.html?hash=0x...</span>
+          `);
+          return;
+        }
+
+        $("hashText").textContent = hash;
+
+        setStatus("warn", "Kontrollerar…");
+        $("resultText").textContent = "Kontrollerar mot Proofys register…";
+        $("regLocal").textContent = "—";
+        $("regUtc").textContent = "—";
+
+        // 1) Verify
+        let v;
+        try{
+          v = await verify(hash);
+        }catch(e){
+          setStatus("bad", "Tillfälligt fel");
+          $("resultText").textContent = "Kunde inte kontrollera just nu (tillfälligt fel).";
+          showWarn(`
+            <b>Tillfälligt fel:</b> API-svaret kunde inte hämtas.<br/>
+            Försök igen eller öppna verifieringssidan: <a class="mutedLink" href="${verifyLink}">${verifyLink}</a>
+          `);
+          return;
+        }
+
+        if (v.exists){
+          // Registered
+          const ts = Number(v.timestamp || 0);
+          const regMs = ts * 1000;
+
+          setStatus("good", "Registrerad");
+          $("resultText").textContent = "Registrerad (registrering hittades).";
+          $("regLocal").textContent = `${toLocalString(regMs)} (lokal tid)`;
+          $("regUtc").textContent = toUtcString(regMs);
+          return;
+        }
+
+        // Not registered
+        setStatus("bad", "Ej registrerad");
+        $("resultText").textContent = "Inte registrerad (ingen registrering hittades).";
+        $("regLocal").textContent = "—";
+        $("regUtc").textContent = "—";
+
+        // Optional: attempt to register + poll
+        if (AUTO_REGISTER){
+          showWarn(`
+            <b>Inte registrerad:</b> Intyget kan (valfritt) försöka registrera ID:t och uppdatera status automatiskt.
+            <div style="margin-top:10px">
+              <button id="btnTryRegister" class="primary">Försök registrera nu</button>
+            </div>
+            <div class="small" style="margin-top:10px">
+              Om du inte vill att intyg ska kunna trigga registrering, stäng av AUTO_REGISTER i filen.
+            </div>
+          `);
+
+          const btn = document.getElementById("btnTryRegister");
+          if (btn){
+            btn.onclick = async () => {
+              btn.disabled = true;
+              setStatus("warn", "Registrerar…");
+              $("resultText").textContent = "Registrering skickas…";
+
+              let reg;
+              try{
+                reg = await register(hash);
+              }catch(e){
+                setStatus("bad", "Misslyckades");
+                $("resultText").textContent = "Registrering misslyckades.";
+                showWarn(`<b>Registrering misslyckades:</b> ${String(e.message || e).slice(0,200)}`);
+                btn.disabled = false;
                 return;
               }
-            }catch(_){}
+
+              // poll verify
+              $("resultText").textContent = "Väntar på bekräftelse…";
+              const polled = await pollUntilRegistered(hash, { attempts: 24, delayMs: 5000 });
+
+              if (polled && polled.exists){
+                const ts = Number(polled.timestamp || 0);
+                const regMs = ts * 1000;
+                setStatus("good", "Registrerad");
+                $("resultText").textContent = "Registrerad (registrering hittades).";
+                $("regLocal").textContent = `${toLocalString(regMs)} (lokal tid)`;
+                $("regUtc").textContent = toUtcString(regMs);
+
+                hideWarn();
+                return;
+              }
+
+              setStatus("warn", "Väntar…");
+              $("resultText").textContent = "Transaktionen är skickad men inte bekräftad ännu.";
+              showWarn(`
+                <b>Transaktion skickad men ännu inte synlig i registret.</b><br/>
+                Detta är normalt på testnät vid kö/pending. Klicka <b>Uppdatera</b> om en stund.<br/>
+                ${reg?.txHash ? `Tx: <span class="mono">${reg.txHash}</span>` : ``}
+              `);
+              btn.disabled = false;
+            };
           }
-          logo.style.display = "none";
-        })();
-      }
-
-      renderQr();
-
-      // ---------------------------
-      // API calls
-      // ---------------------------
-      async function fetchJson(url){
-        const r = await fetch(url, { cache:"no-store" });
-        const ct = (r.headers.get("content-type") || "");
-        if(ct.includes("application/json")){
-          return await r.json();
-        }
-        const t = await r.text();
-        throw new Error(`Non-JSON response (${r.status}): ${t.slice(0,200)}`);
-      }
-
-      let diagCache = null;
-      async function getDiag(){
-        if(diagCache) return diagCache;
-        try{
-          diagCache = await fetchJson("/api/diag");
-        }catch(e){
-          diagCache = null;
-        }
-        return diagCache;
-      }
-
-      function setExplorerLinks(diag, txHash){
-        // Polygonscan Amoy explorer
-        const base = "https://amoy.polygonscan.com";
-        const parts = [];
-
-        if(diag && diag.contractAddress){
-          parts.push(`<div>Kontrakt: <a href="${base}/address/${diag.contractAddress}" target="_blank" rel="noopener">${diag.contractAddress}</a></div>`);
-        }
-        if(txHash){
-          parts.push(`<div>Transaktion: <a href="${base}/tx/${txHash}" target="_blank" rel="noopener">${txHash}</a></div>`);
-        }
-        if(diag && typeof diag.rpcChainId === "number"){
-          parts.push(`<div class="muted">ChainId: ${diag.rpcChainId}</div>`);
-        }
-        $("techLinks").innerHTML = ( $("techLinks").innerHTML || "" ) + (parts.length ? `<div style="margin-top:10px">${parts.join("")}</div>` : "");
-      }
-
-      function setResultUI({ exists, timestamp, mode, detail }){
-        // mode: "registered" | "pending" | "not_registered" | "invalid" | "error"
-        $("pendingBox").hidden = true;
-        $("notRegisteredBox").hidden = true;
-        $("registeredBox").hidden = true;
-
-        if(mode === "invalid"){
-          setBadge("bad", "Ogiltigt ID", "");
-          safeText($("resultText"), "Ogiltigt Verifierings-ID i URL.");
-          safeText($("regLocal"), "—");
-          safeText($("regUtc"), "—");
-          $("notRegisteredBox").hidden = false;
-          return;
-        }
-
-        if(mode === "registered"){
-          setBadge("ok", "Registrerad", "");
-          safeText($("resultText"), "Registrerad (match i Proofys register)");
-          safeText($("regLocal"), fmtLocal(timestamp));
-          safeText($("regUtc"), fmtUtc(timestamp));
-          $("registeredBox").hidden = false;
-          return;
-        }
-
-        if(mode === "pending"){
-          setBadge("wait", "Väntar på bekräftelse", "• kontroll pågår");
-          safeText($("resultText"), "Skickad – väntar på registrering i nätet");
-          safeText($("regLocal"), "—");
-          safeText($("regUtc"), "—");
-          $("pendingBox").hidden = false;
-          return;
-        }
-
-        if(mode === "not_registered"){
-          setBadge("bad", "Ej registrerad", "");
-          safeText($("resultText"), "Inte registrerad (ingen registrering hittades)");
-          safeText($("regLocal"), "—");
-          safeText($("regUtc"), "—");
-          $("notRegisteredBox").hidden = false;
-          return;
-        }
-
-        // error
-        setBadge("wait", "Kunde inte kontrolleras", "");
-        safeText($("resultText"), "Kunde inte kontrolleras just nu");
-        $("pendingBox").hidden = false;
-        if(detail){
-          $("pendingBox").innerHTML = `<strong class="waitText">Tillfälligt avbrott.</strong><br />${detail}`;
+        } else {
+          // guidance only
+          showWarn(`
+            <b>Inte registrerad:</b> Kontroll visar att ID:t inte finns i registret vid kontrolltillfället.<br/>
+            Kontrollera att du använder rätt filversion/ID och att registrering verkligen bekräftades on-chain.
+          `);
         }
       }
 
-      // Decide if we should auto-poll:
-      // - If the "checked" timestamp is recent (<= 15 min), it is very likely user just registered.
-      // - We poll up to 10 minutes total with exponential backoff capped at 10s.
-      const ageSec = Math.max(0, nowSeconds() - checked);
-      const shouldAutoPoll = ageSec <= 15 * 60;
-
-      let pollStop = false;
-      let pollRunning = false;
-
-      async function runOnce(userInitiated){
-        if(!isBytes32Hex(hash)){
-          setResultUI({ mode:"invalid" });
-          return;
-        }
-
-        // If user is here right after a register, "exists:false" should be shown as "pending" first (for a short window),
-        // then later it becomes "not_registered".
-        const pendingWindowSec = 10 * 60; // 10 minutes
-        const withinPendingWindow = (nowSeconds() - checked) <= pendingWindowSec;
-
-        try{
-          if(userInitiated){
-            setBadge("wait", "Uppdaterar…", "");
-          }else{
-            setBadge("wait", "Kontrollerar…", "");
-          }
-
-          // Verify against Proofy register
-          const v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
-
-          if(v && v.exists){
-            const ts = Number(v.timestamp || v.ts || 0);
-            setResultUI({ exists:true, timestamp: ts, mode:"registered" });
-
-            const diag = await getDiag();
-            setExplorerLinks(diag, null);
-            return true;
-          }
-
-          // Not found
-          if(withinPendingWindow){
-            setResultUI({ exists:false, timestamp:0, mode:"pending" });
-          }else{
-            setResultUI({ exists:false, timestamp:0, mode:"not_registered" });
-          }
-
-          const diag = await getDiag();
-          setExplorerLinks(diag, null);
-          return false;
-
-        }catch(e){
-          setResultUI({
-            mode:"error",
-            detail: "Kontrollen misslyckades tillfälligt. Försök igen om en stund eller klicka “Uppdatera”."
-          });
-          const diag = await getDiag();
-          setExplorerLinks(diag, null);
-          return false;
-        }
-      }
-
-      async function autoPoll(){
-        if(pollRunning) return;
-        pollRunning = true;
-
-        // First pass immediately
-        const ok = await runOnce(false);
-        if(ok){ pollRunning = false; return; }
-
-        if(!shouldAutoPoll){ pollRunning = false; return; }
-
-        // Poll up to 10 minutes
-        const start = Date.now();
-        let delay = 2500; // start fast
-        const maxDelay = 10000;
-
-        while(!pollStop && (Date.now() - start) < 10 * 60 * 1000){
-          await new Promise(r => setTimeout(r, delay));
-          const done = await runOnce(false);
-          if(done){ pollRunning = false; return; }
-          delay = Math.min(maxDelay, Math.floor(delay * 1.35));
-        }
-
-        // After polling ends, if still not found, switch to not registered.
-        // We only do this if checked time is not extremely recent anymore.
-        const stillRecent = (nowSeconds() - checked) <= 10*60;
-        if(!stillRecent){
-          setResultUI({ mode:"not_registered" });
-        }
-        pollRunning = false;
-      }
-
-      // Kick off
-      autoPoll();
-
-      // Accessibility: keyboard shortcut "r" to refresh
-      window.addEventListener("keydown", (e) => {
-        if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r") return; // let browser handle
-        if(e.key.toLowerCase() === "r"){
-          runOnce(true);
-        }
-      });
-
-    })();
-  </script>
-</body>
+      // Kickstart
+      run();
+    </script>
+  </body>
 </html>
