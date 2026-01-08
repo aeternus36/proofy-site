@@ -3,11 +3,15 @@ import { polygonAmoy } from "viem/chains";
 
 /**
  * Proofy /api/verify
- * - Tar emot hash via GET (?hash=... eller ?id=...) eller POST { hash: ... }
- * - Läser från ditt Proofy-kontrakt: get(bytes32) -> (bool ok, uint64 ts)
- * - Returnerar revisionsvänligt: exists + timestamp (om finns)
  *
- * OBS: Denna fil matchar ditt Solidity-kontrakt (INTE getProof()).
+ * Juridiskt krav:
+ * - Får ALDRIG påstå "bekräftad/registrerad" utan att det kan styrkas via bekräftad notering.
+ * - Om ingen bekräftelse finns: ska uttryckligen anges som "Ej bekräftad".
+ * - Vid tekniskt fel: ska anges som "Kunde inte kontrolleras" (inte ett negativt påstående).
+ *
+ * Tekniskt krav:
+ * - Read-only. Inga skrivningar. Ingen signering. Ingen nyckel.
+ * - Register, Verify och Certificate ska använda samma statusmodell.
  */
 
 const PROOFY_ABI = [
@@ -21,20 +25,6 @@ const PROOFY_ABI = [
       { name: "ts", type: "uint64" },
     ],
   },
-  {
-    type: "function",
-    name: "registeredAt",
-    stateMutability: "view",
-    inputs: [{ name: "refId", type: "bytes32" }],
-    outputs: [{ name: "ts", type: "uint64" }],
-  },
-  {
-    type: "function",
-    name: "exists",
-    stateMutability: "view",
-    inputs: [{ name: "refId", type: "bytes32" }],
-    outputs: [{ name: "ok", type: "bool" }],
-  },
 ];
 
 function json(status, obj, origin) {
@@ -42,9 +32,10 @@ function json(status, obj, origin) {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     Vary: "Origin",
+    "X-Content-Type-Options": "nosniff",
   };
 
-  // Conservative default: allow same-origin. If no Origin header (Postman/server), allow.
+  // Conservative: allow same-origin; if Origin exists, echo it back.
   if (origin) headers["Access-Control-Allow-Origin"] = origin;
 
   return new Response(JSON.stringify(obj), { status, headers });
@@ -85,8 +76,6 @@ function isValidAddressHex(addr) {
 function toSafeUint64(ts) {
   const v = BigInt(ts ?? 0n);
   if (v <= 0n) return 0;
-
-  // uint64 timestamps är i praktiken alltid < MAX_SAFE_INTEGER, men vi är defensiva.
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
   return v <= maxSafe ? Number(v) : Number(maxSafe);
 }
@@ -99,8 +88,63 @@ function sanitizeError(e) {
   return String(msg).slice(0, 600);
 }
 
-async function readGet({ publicClient, contractAddress, hash }) {
-  // Primär väg: get() ger både exists + timestamp.
+/**
+ * Gemensam statusmodell (ska matcha /api/register)
+ *
+ * statusCode:
+ * - CONFIRMED: bekräftad notering finns
+ * - NOT_CONFIRMED: ingen bekräftad notering vid kontrolltillfället
+ * - UNKNOWN: kunde inte kontrolleras (tekniskt fel)
+ */
+function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
+  return {
+    ok: true,
+    statusCode: "CONFIRMED",
+    statusText: "Bekräftad",
+    hash,
+    confirmedAtUnix: timestamp,
+    evidence: {
+      observedBlockNumber,
+    },
+    submission: null,
+    legalText:
+      "Det finns en bekräftad notering för detta underlagsavtryck. Uppgifterna ovan kan kontrolleras mot offentlig verifieringskälla.",
+  };
+}
+
+function statusNotConfirmed({ hash, observedBlockNumber }) {
+  return {
+    ok: true,
+    statusCode: "NOT_CONFIRMED",
+    statusText: "Ej bekräftad",
+    hash,
+    confirmedAtUnix: null,
+    evidence: {
+      observedBlockNumber,
+    },
+    submission: null,
+    legalText:
+      "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
+  };
+}
+
+function statusUnknown({ hash, detail }) {
+  return {
+    ok: false,
+    statusCode: "UNKNOWN",
+    statusText: "Kunde inte kontrolleras",
+    hash: hash || null,
+    confirmedAtUnix: null,
+    evidence: null,
+    submission: null,
+    error: "Verify temporarily unavailable",
+    detail,
+    legalText:
+      "Status kunde inte kontrolleras på grund av tekniskt fel. Ingen slutsats kan dras utifrån detta svar.",
+  };
+}
+
+async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const [ok, ts] = await publicClient.readContract({
     address: contractAddress,
     abi: PROOFY_ABI,
@@ -110,7 +154,14 @@ async function readGet({ publicClient, contractAddress, hash }) {
 
   const timestamp = toSafeUint64(ts);
   const exists = Boolean(ok) && timestamp !== 0;
-  return { exists, timestamp };
+
+  const observedBlockNumber = await publicClient.getBlockNumber();
+
+  return {
+    exists,
+    timestamp,
+    observedBlockNumber: observedBlockNumber.toString(),
+  };
 }
 
 export async function onRequest({ request, env }) {
@@ -137,7 +188,11 @@ export async function onRequest({ request, env }) {
   }
 
   if (!isValidBytes32Hex(hash)) {
-    return json(400, { ok: false, error: "Invalid hash format", exists: false }, origin);
+    return json(
+      400,
+      { ok: false, error: "Invalid hash format", statusCode: "BAD_REQUEST" },
+      origin
+    );
   }
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
@@ -161,18 +216,14 @@ export async function onRequest({ request, env }) {
       transport: http(rpcUrl),
     });
 
-    const proof = await readGet({ publicClient, contractAddress, hash });
+    const proof = await readGetWithEvidence({ publicClient, contractAddress, hash });
 
     if (proof.exists) {
-      return json(200, { ok: true, exists: true, timestamp: proof.timestamp }, origin);
+      return json(200, statusConfirmed(proof), origin);
     }
-    return json(200, { ok: true, exists: false }, origin);
+
+    return json(200, statusNotConfirmed({ hash, observedBlockNumber: proof.observedBlockNumber }), origin);
   } catch (e) {
-    // Viktigt för felsökning: returnera detalj (sanitiserat).
-    return json(
-      503,
-      { ok: false, error: "Verify temporarily unavailable", detail: sanitizeError(e) },
-      origin
-    );
+    return json(503, statusUnknown({ hash, detail: sanitizeError(e) }), origin);
   }
 }
