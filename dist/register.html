@@ -12,7 +12,6 @@
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
-    /* Minimal a11y-failsafe (om global .sr-only saknas) */
     .sr-only{
       position:absolute !important;
       width:1px !important;
@@ -24,48 +23,23 @@
       white-space:nowrap !important;
       border:0 !important;
     }
+    .actionsRow{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .actionsMetaRow{ display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
 
-    /* UX: minska visuellt brus i actions */
-    .actionsRow{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      align-items:center;
-    }
-    .actionsMetaRow{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-top:10px;
-      flex-wrap:wrap;
-    }
-
-    /* Döljer bakåtkomp-knappar */
     #copyIdBtn, #copyLinkBtn { display:none !important; }
-
-    /* Gör status-pill mindre “knappig” */
     #statusPill, #manualPill { margin-left:0 !important; }
-
     .hintline{ margin-top:6px; opacity:.9; }
-
-    /* Aktiv flik i topmeny: ej klickbar (minskar “varför finns knappen?”) */
     .navActions .btn.isCurrent{
       pointer-events:none;
       opacity:1;
       border-color: rgba(255,255,255,.18);
       background: rgba(255,255,255,.05);
     }
-
-    /* Primär nästa-steg-CTA (visas först efter att länk finns) */
     #nextStepBtn { display:none; }
-
-    /* “Skapa” blir sekundär efter första körning */
     .btn.softSecondary{
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.12);
     }
-
-    /* Manual: förenkla – bygg sker automatiskt */
     #manualBuildBtn { display:none !important; }
   </style>
 </head>
@@ -214,8 +188,8 @@
             <div class="small">
               1) Välj filversionen som ska vara <b>referens</b>.<br/>
               2) Proofy skapar ett Verifierings-ID lokalt (<b>ingen uppladdning</b>).<br/>
-              3) Dela länk/QR till kollega, klient eller ärendeakt för senare kontroll.<br/><br/>
-              <b>QR är för skanning med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att skanna sin egen skärm med kameran.
+              3) Spara Verifierings-ID + intygslänk i ärendet. Dela verifieringslänk/QR vid kontroll.<br/><br/>
+              <b>QR är för skanning med en annan enhet.</b>
             </div>
           </div>
 
@@ -289,8 +263,7 @@
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
                 <b>Obs:</b> Verifierings-ID och verifieringslänk skapas alltid lokalt.
-                För att kunna påvisa <b>bekräftelse</b> vid senare kontroll behöver registreringen bli <b>bekräftad</b>.
-                Om status är <i>”Inskickad – ej bekräftad”</i> kan du kontrollera igen via verifiering.
+                För att kunna påvisa <b>bekräftelse</b> vid senare kontroll behöver status vara <i>”Bekräftad”</i>.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
@@ -317,13 +290,12 @@
                   </div>
 
                   <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
-                    Skanna QR med <b>en annan enhet</b> (t.ex. klient/kollega).
-                    Klick på QR kopierar länken till urklipp.
+                    Skanna QR med <b>en annan enhet</b>. Klick på QR kopierar länken.
                   </div>
                 </div>
 
                 <div style="min-width:240px; flex:1;">
-                  <div class="meta">Status</div>
+                  <div class="meta">Status hos Proofy</div>
                   <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
                   <div class="meta" style="margin-top:10px;">Tidpunkt (om bekräftad)</div>
@@ -342,11 +314,11 @@
 
                     <div class="hr"></div>
 
-                    <div class="meta">Registreringsreferens (valfritt)</div>
+                    <div class="meta">Referens (valfri)</div>
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfritt)</div>
-                    <div id="blockOut" class="mono" style="margin-top:8px;">—</div>
+                    <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfri)</div>
+                    <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Meddelande (om något)</div>
                     <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
@@ -506,8 +478,8 @@
   const qrBox = $("qrBox");
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
+  const submitterOut = $("submitterOut");
   const txOut = $("txOut");
-  const blockOut = $("blockOut");
   const debugOut = $("debugOut");
   const copyIdIconBtn = $("copyIdIconBtn");
   const copyIdPill2 = $("copyIdPill2");
@@ -526,9 +498,6 @@
   const manualLinkOut = $("manualLinkOut");
   const manualQrTap = $("manualQrTap");
   const manualQrBox = $("manualQrBox");
-
-  // Pending-key måste matcha certificate.html
-  const PENDING_KEY = "proofy.pending.v1";
 
   let currentFile = null;
   let currentId = null;
@@ -640,7 +609,6 @@
       }
     }
 
-    // Certifikat/intyg får visas oavsett status, men intyget visar själv "ej bekräftad" om så är fallet.
     if (receiptBtn){
       if (currentId && !busy){
         receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(currentId)}`;
@@ -663,8 +631,8 @@
     if (qrTap) qrTap.style.display = "none";
     if (regStatusOut) regStatusOut.textContent = "—";
     if (timeOut) timeOut.textContent = "—";
+    if (submitterOut) submitterOut.textContent = "—";
     if (txOut) txOut.textContent = "—";
-    if (blockOut) blockOut.textContent = "—";
     if (debugOut) debugOut.textContent = "—";
     if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
     if (copyLinkIconBtn) copyLinkIconBtn.style.display = "none";
@@ -943,28 +911,13 @@
     lines.push(`Verifierings-ID: ${run.id || "—"}`);
     lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
     if (run.createdSe) lines.push(`Skapad lokalt: ${run.createdSe}`);
-    lines.push(`Status: ${run.statusLine || "—"}`);
+    lines.push(`Status hos Proofy: ${run.statusLine || "—"}`);
     if (run.timeSe) lines.push(`Tidpunkt (om bekräftad): ${run.timeSe}`);
-    if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
-    if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
+    if (run.ref) lines.push(`Referens (valfri): ${run.ref}`);
+    if (run.controlPoint) lines.push(`Kontrollpunkt (valfri): ${run.controlPoint}`);
     lines.push("");
     lines.push(`Noterad: ${nowSe()}`);
     return lines.join("\n");
-  }
-
-  function savePending({ hash, txHash }){
-    try{
-      const obj = {
-        hash,
-        txHash: txHash || "",
-        createdAt: Math.floor(Date.now()/1000)
-      };
-      localStorage.setItem(PENDING_KEY, JSON.stringify(obj));
-    } catch {}
-  }
-
-  function clearPending(){
-    try{ localStorage.removeItem(PENDING_KEY); } catch {}
   }
 
   function setFile(file){
@@ -1065,22 +1018,6 @@
     });
   }
 
-  copyIdBtn.addEventListener("click", async () => {
-    if (!currentId) return;
-    setPill("Kopierar…");
-    const ok = await copyTextToClipboard(currentId);
-    setPill(ok ? "ID kopierat ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
-  });
-
-  copyLinkBtn.addEventListener("click", async () => {
-    if (!currentLink) return;
-    setPill("Kopierar…");
-    const ok = await copyTextToClipboard(currentLink);
-    setPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
-  });
-
   function applyStatusToUI({ id, createdSe, data }){
     const sc = String(data?.statusCode || "");
     const st = String(data?.statusText || "");
@@ -1088,19 +1025,17 @@
     const confirmedAt = data?.confirmedAtUnix ?? null;
 
     const txHash = data?.submission?.txHash || null;
-    const submittedBy = data?.submission?.submittedBy || null;
     const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
 
+    // Valfria fält (felsökning)
     txOut.textContent = txHash || "—";
-    blockOut.textContent = observedBlockNumber || "—";
+    submitterOut.textContent = observedBlockNumber || "—";
+    debugOut.textContent = legal || "—";
 
-    // Lägg submitter i debug (valfritt), men blanda inte i "kontrollpunkt"
-    const extra = submittedBy ? `\nInskickad av (server): ${submittedBy}` : "";
-    debugOut.textContent = (legal || "—") + extra;
-
-    // Tidpunkt får endast visas som faktisk tid om bekräftad tid finns
     const confirmedSe = confirmedAt ? formatUnixSe(confirmedAt) : null;
     timeOut.textContent = confirmedSe || "—";
+
+    const hasSubmission = !!txHash;
 
     if (sc === "CONFIRMED") {
       headline.style.borderColor = "rgba(80,255,180,.20)";
@@ -1109,8 +1044,6 @@
 
       regStatusOut.textContent = st || "Bekräftad";
 
-      clearPending();
-
       if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
       lastRun = {
         id,
@@ -1118,41 +1051,21 @@
         createdSe,
         statusLine: st || "Bekräftad",
         timeSe: confirmedSe,
-        txHash: txHash,
-        observedBlockNumber: observedBlockNumber
+        ref: txHash || null,
+        controlPoint: observedBlockNumber || null
       };
-
-      return;
-    }
-
-    if (sc === "SUBMITTED_UNCONFIRMED") {
-      headline.style.borderColor = "rgba(255,255,255,.14)";
-      headline.style.background = "rgba(255,255,255,.05)";
-      headline.innerHTML = `⏳ <span class="meta">Inskickad – ej bekräftad</span>`;
-
-      regStatusOut.textContent = st || "Inskickad – ej bekräftad";
-
-      // ✅ Spara pending i format som certificate.html redan kan läsa
-      if (txHash) savePending({ hash: id, txHash });
-
-      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-      lastRun = {
-        id,
-        link: currentLink,
-        createdSe,
-        statusLine: st || "Inskickad – ej bekräftad",
-        timeSe: null,
-        txHash: txHash,
-        observedBlockNumber: observedBlockNumber
-      };
-
       return;
     }
 
     if (sc === "NOT_CONFIRMED") {
-      headline.style.borderColor = "rgba(255,80,80,.20)";
-      headline.style.background = "rgba(255,80,80,.06)";
-      headline.innerHTML = `<span class="err">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde konstateras)</span>`;
+      // Juridiskt strikt: Ej bekräftad – men vi kan informera om att inskickning skett (utan att det blir “status”)
+      headline.style.borderColor = "rgba(255,255,255,.14)";
+      headline.style.background = "rgba(255,255,255,.05)";
+
+      headline.innerHTML = hasSubmission
+        ? `⏳ <span class="meta">Ej bekräftad</span> <span class="meta">(registrering är inskickad)</span>`
+        : `<span class="err">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde konstateras)</span>`;
+
       regStatusOut.textContent = st || "Ej bekräftad";
 
       if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
@@ -1160,15 +1073,15 @@
         id,
         link: currentLink,
         createdSe,
-        statusLine: st || "Ej bekräftad",
+        statusLine: hasSubmission ? "Ej bekräftad (registrering inskickad)" : (st || "Ej bekräftad"),
         timeSe: null,
-        txHash: txHash,
-        observedBlockNumber: observedBlockNumber
+        ref: txHash || null,
+        controlPoint: observedBlockNumber || null
       };
       return;
     }
 
-    // UNKNOWN/FAILED eller okänd
+    // UNKNOWN
     headline.style.borderColor = "rgba(255,80,80,.20)";
     headline.style.background = "rgba(255,80,80,.06)";
     headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
@@ -1181,8 +1094,8 @@
       createdSe,
       statusLine: st || "Kunde inte kontrolleras",
       timeSe: null,
-      txHash: txHash,
-      observedBlockNumber: observedBlockNumber
+      ref: txHash || null,
+      controlPoint: observedBlockNumber || null
     };
   }
 
@@ -1234,15 +1147,16 @@
 
       attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
+      setBusy(true);
       setBusy(false);
 
       // Starta inskickning
       setPill("Skickar in registrering…");
-      regStatusOut.textContent = "Skickar in registrering…";
+      regStatusOut.textContent = "Kontrollerar status…";
       timeOut.textContent = "—";
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
-      headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
+      headline.textContent = "⏳ Kontrollerar status…";
 
       const reg = await safeRegisterRequest(id);
       if (myOp !== opId) return;
@@ -1252,12 +1166,11 @@
         const status = res?.status || 0;
         const retryable = isRetryableStatus(status) || !!reg.aborted;
 
-        const msg = "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade. Försök igen senare eller kontakta Proofy och ange Verifierings-ID.";
+        const msg = "Kunde inte genomföra kontrollen just nu. Verifierings-ID och verifieringslänk är skapade. Försök igen senare eller kontrollera via verifiering.";
         throw Object.assign(new Error(msg), { _proofy_retryable: retryable });
       }
 
       const data = reg.data || {};
-      // Viktigt: vi tolkar ENDAST statusCode. Vi gissar aldrig.
       applyStatusToUI({ id, createdSe, data });
 
       setPill("Klart ✅");
@@ -1272,23 +1185,23 @@
       const retryable = !!e?._proofy_retryable;
 
       errorMsg.textContent = retryable
-        ? "Tillfälligt tekniskt problem. Verifierings-ID och verifieringslänk är skapade. För att kunna påvisa bekräftelse vid senare kontroll behöver registreringen bli bekräftad. Försök igen senare eller kontrollera via verifiering."
-        : (e?.message || "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade.");
+        ? "Tillfälligt tekniskt problem. Verifierings-ID och verifieringslänk är skapade. För att kunna påvisa bekräftelse vid senare kontroll behöver status vara 'Bekräftad'. Försök igen senare eller kontrollera via verifiering."
+        : (e?.message || "Tekniskt problem. Verifierings-ID och verifieringslänk är skapade.");
 
       if (currentId && currentLink){
         resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Kunde inte kontrolleras (tillfälligt fel)";
+        regStatusOut.textContent = "Kunde inte kontrolleras";
         timeOut.textContent = "—";
 
         headline.style.borderColor = "rgba(255,80,80,.20)";
         headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Kunde inte skicka in registrering</span> <span class="meta">(ID/länk är skapade)</span>`;
+        headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(ID/länk är skapade)</span>`;
 
         debugOut.textContent = errorMsg.textContent;
         txOut.textContent = "—";
-        blockOut.textContent = "—";
+        submitterOut.textContent = "—";
 
         if (qrTap) qrTap.style.display = "inline-block";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
@@ -1299,10 +1212,10 @@
           id: currentId,
           link: currentLink,
           createdSe: nowSe(),
-          statusLine: "Kunde inte kontrolleras (tillfälligt fel)",
+          statusLine: "Kunde inte kontrolleras (ID/länk skapade)",
           timeSe: null,
-          txHash: null,
-          observedBlockNumber: null
+          ref: null,
+          controlPoint: null
         };
 
         setBusy(false);
