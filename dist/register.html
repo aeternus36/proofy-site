@@ -67,6 +67,27 @@
 
     /* Manual: förenkla – bygg sker automatiskt */
     #manualBuildBtn { display:none !important; }
+
+    /* 5/5 revisions-UX: färre knappar (visa “skapa ny” som textlänk) */
+    #createBtn.isAfterRun{
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    #createBtn.isAfterRun:hover{ transform:none; }
+    #startOverLink{
+      display:none;
+      font-weight:800;
+      text-decoration:none;
+      padding:10px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:transparent;
+      opacity:.9;
+    }
+    #startOverLink:hover{
+      opacity:1;
+      background: rgba(255,255,255,.03);
+    }
   </style>
 </head>
 
@@ -157,6 +178,11 @@
             <div class="actionsRow" aria-label="Åtgärder">
               <a class="btn primary" id="nextStepBtn" href="/verify.html">Gå till verifiering</a>
               <button class="btn primary" id="createBtn" disabled>Skapa Verifierings-ID</button>
+
+              <!-- 5/5: “ny fil” blir diskret textlänk efter första körning -->
+              <a id="startOverLink" href="#" role="button" aria-label="Skapa nytt Verifierings-ID">Skapa nytt</a>
+
+              <!-- Intyg visas alltid när ID finns, men märks tydligt om ej bekräftad / okänt -->
               <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna tekniskt intyg</a>
             </div>
 
@@ -289,8 +315,8 @@
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
                 <b>Obs:</b> Verifierings-ID och verifieringslänk skapas alltid lokalt.
-                För att kunna påvisa <b>bekräftelse</b> vid senare kontroll behöver registreringen bli <b>bekräftad</b>.
-                Om status är <i>”Inskickad – ej bekräftad”</i> kan du kontrollera igen via verifiering.
+                För att kunna påvisa <b>bekräftelse</b> vid senare kontroll behöver status vara <b>Bekräftad</b>.
+                Om status är <i>“Inskickad – ej bekräftad”</i> eller <i>“Ej bekräftad”</i> kan du kontrollera igen via verifiering.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
@@ -323,7 +349,7 @@
                 </div>
 
                 <div style="min-width:240px; flex:1;">
-                  <div class="meta">Status</div>
+                  <div class="meta">Status hos Proofy</div>
                   <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
                   <div class="meta" style="margin-top:10px;">Tidpunkt (om bekräftad)</div>
@@ -487,6 +513,7 @@
   const fileInfo = $("fileInfo");
 
   const createBtn = $("createBtn");
+  const startOverLink = $("startOverLink");
   const nextStepBtn = $("nextStepBtn");
   const copyIdBtn = $("copyIdBtn");
   const copyLinkBtn = $("copyLinkBtn");
@@ -533,6 +560,7 @@
   let busy = false;
   let opId = 0;
   let lastRun = null;
+  let lastProofyStatusCode = ""; // för märkning av intyg-knapp
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -615,6 +643,21 @@
     p.textContent = text;
   }
 
+  function updateReceiptLabel(){
+    if (!receiptBtn || !currentId) return;
+
+    // 5/5: intyg får alltid öppnas när ID finns, men märks tydligt.
+    if (lastProofyStatusCode === "CONFIRMED") {
+      receiptBtn.textContent = "Öppna tekniskt intyg";
+    } else if (lastProofyStatusCode === "UNKNOWN") {
+      receiptBtn.textContent = "Öppna tekniskt intyg (kunde inte kontrolleras)";
+    } else if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") {
+      receiptBtn.textContent = "Öppna tekniskt intyg (ej bekräftad)";
+    } else {
+      receiptBtn.textContent = "Öppna tekniskt intyg (status ej bekräftad)";
+    }
+  }
+
   function setBusy(v){
     busy = v;
     setAriaBusy(v);
@@ -623,11 +666,11 @@
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
 
+    // 5/5: Primär CTA bara när länk finns
     if (nextStepBtn){
       if (currentLink && !busy){
         nextStepBtn.href = currentLink;
         nextStepBtn.style.display = "inline-flex";
-
         createBtn.classList.remove("primary");
         createBtn.classList.add("softSecondary");
       } else {
@@ -637,11 +680,21 @@
       }
     }
 
-    // Certifikat/intyg får visas oavsett status, men själva intyget måste markera "ej bekräftad" om så är fallet.
+    // 5/5: “Skapa nytt” som diskret länk efter första körning
+    if (startOverLink){
+      if (currentId && !busy){
+        startOverLink.style.display = "inline-flex";
+      } else {
+        startOverLink.style.display = "none";
+      }
+    }
+
+    // Intyg: visas när ID finns (oavsett Proofy-status), men label ändras beroende på status.
     if (receiptBtn){
       if (currentId && !busy){
         receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(currentId)}`;
         receiptBtn.style.display = "inline-flex";
+        updateReceiptLabel();
       } else {
         receiptBtn.style.display = "none";
       }
@@ -671,6 +724,7 @@
     hidePill(copyNotePill);
     if (copyNoteBtn) copyNoteBtn.style.display = "none";
     lastRun = null;
+    lastProofyStatusCode = "";
 
     if (emptyState) emptyState.style.display = "block";
   }
@@ -939,8 +993,8 @@
     lines.push("");
     lines.push(`Verifierings-ID: ${run.id || "—"}`);
     lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
-    if (run.createdSe) lines.push(`Skapad lokalt: ${run.createdSe}`);
-    lines.push(`Status: ${run.statusLine || "—"}`);
+    if (run.createdSe) lines.push(`Skapat lokalt: ${run.createdSe}`);
+    lines.push(`Status hos Proofy: ${run.statusLine || "—"}`);
     if (run.timeSe) lines.push(`Tidpunkt (om bekräftad): ${run.timeSe}`);
     if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
@@ -953,6 +1007,7 @@
     currentFile = file || null;
     currentId = null;
     currentLink = null;
+    lastProofyStatusCode = "";
 
     resetReport();
 
@@ -963,6 +1018,7 @@
     if (receiptBtn) receiptBtn.style.display = "none";
     if (nextStepBtn) nextStepBtn.style.display = "none";
 
+    createBtn.classList.remove("isAfterRun");
     if (createBtn) createBtn.textContent = "Skapa Verifierings-ID";
 
     if (!currentFile){
@@ -999,6 +1055,15 @@
     const f = e.dataTransfer?.files?.[0];
     if (f) setFile(f);
   });
+
+  if (startOverLink){
+    startOverLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      // 5/5: tydlig reset, minskar knappar
+      if (fileInput) fileInput.value = "";
+      setFile(null);
+    });
+  }
 
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
@@ -1063,22 +1128,6 @@
     setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
 
-  // ========= PROOFY+ (5/5 juridik): pilla aldrig "Klart ✅" när status inte är bekräftad =========
-  function setOverallPillFromStatus(data){
-    const sc = String(data?.statusCode || "");
-    const st = String(data?.statusText || "");
-
-    if (sc === "CONFIRMED") { setPill("Bekräftad ✅"); return; }
-    if (sc === "SUBMITTED_UNCONFIRMED") { setPill("Inskickad – ej bekräftad ⏳"); return; }
-    if (sc === "NOT_CONFIRMED") { setPill("Ej bekräftad"); return; }
-    if (sc === "UNKNOWN") { setPill("Kunde inte kontrolleras"); return; }
-
-    // Fallback: visa serverns text utan att antyda bekräftelse
-    if (st) { setPill(st); return; }
-    setPill("Kunde inte kontrolleras");
-  }
-  // ===============================================================================================
-
   function applyStatusToUI({ id, createdSe, data }){
     const sc = String(data?.statusCode || "");
     const st = String(data?.statusText || "");
@@ -1091,18 +1140,23 @@
 
     // Default UI values
     txOut.textContent = txHash || "—";
-    // Vi använder detta fält som "kontrollpunkt" i UI för att undvika tekniska ord.
+
+    // “Kontrollpunkt” – undvik tekniska ord i UI
     submitterOut.textContent = observedBlockNumber || (submittedBy || "—");
+
     debugOut.textContent = legal || "—";
 
-    // Tidpunkt får endast visas som faktisk tid om bekräftad tid finns
     const confirmedSe = confirmedAt ? formatUnixSe(confirmedAt) : null;
     timeOut.textContent = confirmedSe || "—";
+
+    // Spara statuskod för intyg-märkning
+    lastProofyStatusCode = sc || "";
+    updateReceiptLabel();
 
     if (sc === "CONFIRMED") {
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
-      headline.innerHTML = `<span class="ok">✅ Bekräftad</span> <span class="meta">(kan kontrolleras vid behov)</span>`;
+      headline.innerHTML = `<span class="ok">✅ Bekräftad</span> <span class="meta">(status hos Proofy vid kontrolltillfället)</span>`;
 
       regStatusOut.textContent = st || "Bekräftad";
 
@@ -1120,11 +1174,11 @@
       return;
     }
 
+    // 5/5: Ingen egen “SUBMITTED”-status krävs – men om backend skickar den, visa strikt “ej bekräftad”
     if (sc === "SUBMITTED_UNCONFIRMED") {
-      // Viktig juridik: aldrig antyda bekräftelse
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
-      headline.innerHTML = `⏳ <span class="meta">Inskickad – ej bekräftad</span>`;
+      headline.innerHTML = `⏳ <span class="meta">Inskickad – ej bekräftad</span> <span class="meta">(status hos Proofy vid kontrolltillfället)</span>`;
 
       regStatusOut.textContent = st || "Inskickad – ej bekräftad";
 
@@ -1142,11 +1196,11 @@
       return;
     }
 
-    // För framtida kompatibilitet (om verify återanvänds)
     if (sc === "NOT_CONFIRMED") {
-      headline.style.borderColor = "rgba(255,80,80,.20)";
-      headline.style.background = "rgba(255,80,80,.06)";
-      headline.innerHTML = `<span class="err">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde konstateras)</span>`;
+      // 5/5: Undvik “felröd” som antyder misslyckande när allt faktiskt fungerar.
+      headline.style.borderColor = "rgba(251,191,36,.22)";
+      headline.style.background = "rgba(251,191,36,.08)";
+      headline.innerHTML = `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde visas vid kontrolltillfället)</span>`;
       regStatusOut.textContent = st || "Ej bekräftad";
 
       if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
@@ -1209,12 +1263,20 @@
       linkOut.textContent = currentLink;
       linkOut.href = currentLink;
 
+      // 5/5: Intyg tillgängligt när ID finns (men märks beroende på status)
       if (receiptBtn){
         receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
         receiptBtn.style.display = "inline-flex";
+        // Vi har ännu ingen Proofy-status: märk som “status ej bekräftad” tills kontroll/inskickning svarat
+        lastProofyStatusCode = "NOT_CONFIRMED";
+        updateReceiptLabel();
       }
 
-      createBtn.textContent = "Registrera en ny fil";
+      // 5/5: Separera “Skapat lokalt” från Proofy-status
+      setPill("Skapat lokalt ✅");
+
+      createBtn.textContent = "Skapa nytt Verifierings-ID";
+      createBtn.classList.add("isAfterRun");
 
       if (qrTap) qrTap.style.display = "inline-block";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
@@ -1228,16 +1290,12 @@
 
       attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
-      // ========= PROOFY+ (5/5 juridik): ID/länk kan vara klara utan att registrering är bekräftad =========
-      setPill("Verifierings-ID skapat");
-      // ===============================================================================================
-
       setBusy(true);
       setBusy(false);
 
-      // Starta inskickning
-      setPill("Skickar in registrering…");
-      regStatusOut.textContent = "Skickar in registrering…";
+      // Starta inskickning (men UI ska aldrig antyda bekräftelse)
+      setPill("Skickar in… (status ej bekräftad)");
+      regStatusOut.textContent = "Skickar in… (ej bekräftad)";
       timeOut.textContent = "—";
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
@@ -1259,10 +1317,8 @@
       // Viktigt: vi tolkar ENDAST statusCode. Vi gissar aldrig.
       applyStatusToUI({ id, createdSe, data });
 
-      // ========= PROOFY+ (5/5 juridik): pillen speglar bekräftelsegrad (aldrig "Klart ✅") =========
-      setOverallPillFromStatus(data);
-      // ============================================================================================
-
+      // 5/5: pill ska inte säga “klart” på ett sätt som kan tolkas som bekräftelse
+      setPill("Skapat lokalt ✅");
       setBusy(false);
 
     } catch (e){
@@ -1274,23 +1330,26 @@
       const retryable = !!e?._proofy_retryable;
 
       errorMsg.textContent = retryable
-        ? "Tillfälligt tekniskt problem. Verifierings-ID och verifieringslänk är skapade. För att kunna påvisa bekräftelse vid senare kontroll behöver registreringen bli bekräftad. Försök igen senare eller kontrollera via verifiering."
+        ? "Tillfälligt tekniskt problem. Verifierings-ID och verifieringslänk är skapade lokalt. Status hos Proofy kunde inte uppdateras nu. Försök igen senare eller kontrollera via verifiering."
         : (e?.message || "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade.");
 
       if (currentId && currentLink){
         resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Inskickning ej genomförd (ej bekräftad)";
+        regStatusOut.textContent = "Kunde inte kontrolleras (ej bekräftad)";
         timeOut.textContent = "—";
 
         headline.style.borderColor = "rgba(255,80,80,.20)";
         headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Kunde inte skicka in registrering</span> <span class="meta">(ID/länk är skapade)</span>`;
+        headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(ID/länk är skapade lokalt)</span>`;
 
         debugOut.textContent = errorMsg.textContent;
         txOut.textContent = "—";
         submitterOut.textContent = "—";
+
+        lastProofyStatusCode = "UNKNOWN";
+        updateReceiptLabel();
 
         if (qrTap) qrTap.style.display = "inline-block";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
@@ -1301,7 +1360,7 @@
           id: currentId,
           link: currentLink,
           createdSe: nowSe(),
-          statusLine: "Inskickning ej genomförd (ej bekräftad)",
+          statusLine: "Kunde inte kontrolleras",
           timeSe: null,
           txHash: null,
           observedBlockNumber: null
@@ -1310,10 +1369,7 @@
         setBusy(false);
       }
 
-      // ========= PROOFY+ (5/5 juridik): aldrig "Klart" vid fel/obekräftat =========
-      setPill("Verifierings-ID skapat (inskickning misslyckades)");
-      // ===============================================================================================
-
+      setPill("Skapat lokalt ✅");
       setBusy(false);
     }
   });
