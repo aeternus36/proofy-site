@@ -20,74 +20,91 @@
   <meta name="twitter:title" content="Proofy – Verifiera filversioner för redovisningsbyråer" />
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
 
-  <!-- Behåll dina nuvarande versionssträngar så inget “byter stil” -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01f" />
-  <link rel="stylesheet" href="/assets/header.css?v=2025-flat2" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-10a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-10a" />
 
   <style>
     html, body { background: #0b1220 !important; }
     body { background-image: none !important; }
     main::before{ content:none !important; }
     main{ background: transparent !important; }
+
+    /* status-pill ska vara tyst tills vi behöver visa något */
     #demoStatus { display:none; }
 
-    /* ✅ Minimal, “professionell” micro-UI som inte ändrar layout/stil */
-    .riskCard{
+    /* Lugnare hero-kort: mindre visuell “stökighet” */
+    .heroCard{
+      padding:18px;
       margin-top:14px;
+    }
+    .heroMetaRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:10px;
+    }
+
+    /* “B2B-badges” utan emojis – mer revisionsmässigt */
+    .proofyPills{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .proofyPills .badge{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+    }
+    .proofyPills .dot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background: rgba(120,180,255,.75);
+      display:inline-block;
+    }
+
+    /* Noteringsruta */
+    .noteBox{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+    .noteBox pre{
+      margin:0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: rgba(234,240,255,.9);
+    }
+    .noteActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    /* grid fallback (om proofy.css skulle ändras) */
+    .grid3{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 900px){
+      .grid3{ grid-template-columns: 1fr; }
+    }
+    .tile{
       border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.03);
       border-radius: 16px;
       padding: 12px 14px;
     }
-    .riskGrid{
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-top:10px;
-    }
-    @media (max-width: 900px){
-      .riskGrid{ grid-template-columns: 1fr; }
-    }
-    .riskItem b{ display:block; margin-bottom:6px; }
-    .riskItem .small{ opacity:.92; }
-    .subtleLine{
-      height:1px;
-      background: rgba(255,255,255,.10);
-      margin: 12px 0;
-    }
-    .copyBox{
-      margin-top:10px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 13px;
-      line-height: 1.35;
-      color: rgba(234,240,255,.92);
-      overflow-wrap:anywhere;
-      word-break:break-word;
-      user-select:text;
-    }
-    .copyBox button{
-      margin-top:10px;
-    }
-    .copyHint{
-      font-size:12.5px;
-      color: rgba(234,240,255,.72);
-      margin-top:6px;
-    }
-    .sr-only{
-      position:absolute !important;
-      width:1px !important;
-      height:1px !important;
-      padding:0 !important;
-      margin:-1px !important;
-      overflow:hidden !important;
-      clip:rect(0,0,0,0) !important;
-      white-space:nowrap !important;
-      border:0 !important;
-    }
-    #noteStatus{ display:none; margin-left:10px; }
+    .tile b{ display:block; margin-bottom:6px; }
   </style>
 
   <script type="application/ld+json">
@@ -147,88 +164,101 @@
     <h1 class="pageTitle">Visa att underlag är oförändrat – när det faktiskt prövas i efterhand.</h1>
 
     <p class="lead">
-      När ett bokslut, avtal eller beslut ifrågasätts senare behöver du kunna visa att filen du hänvisar till är
-      <strong>samma filversion som referensen</strong> – även om den har flyttats mellan system, personer och lagringsplatser.
+      När ett bokslut, avtal eller beslut ifrågasätts senare behöver ni kunna visa att filen ni hänvisar till är
+      <strong>samma filversion som referensen</strong> – även om den flyttats mellan system, personer och lagringsplatser.
       Proofy gör det möjligt <strong>utan att lagra filinnehåll</strong>.
     </p>
 
-    <div class="card" style="padding:18px; margin-top:14px;">
+    <!-- HERO: lugnare, tydligare CTA-hierarki -->
+    <div class="card heroCard">
       <div class="heroCtas" style="margin-top:12px;">
         <a class="btn primary" href="#kontakt">Boka kort demo</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
-        <a class="btn" href="/verify.html">Verifiera underlag</a>
-        <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn ghost" href="#anvandning">Så fungerar det</a>
+      </div>
+
+      <div class="heroMetaRow small" style="margin-bottom:0;">
+        <span><b>Pilot 30 dagar:</b> 4 900 kr exkl. moms</span>
+        <span>·</span>
+        <span>Faktura</span>
+        <span>·</span>
+        <span>Ingen bindning efter pilot</span>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="proofyPills">
+        <span class="badge"><span class="dot" aria-hidden="true"></span>Inget filinnehåll lagras</span>
+        <span class="badge"><span class="dot" aria-hidden="true"></span>Verifierings-ID i ärendet</span>
+        <span class="badge"><span class="dot" aria-hidden="true"></span>Verifiering på sekunder</span>
       </div>
 
       <p class="small" style="margin-top:10px; margin-bottom:0;">
-        Pilot 30 dagar: <b>4 900 kr</b> exkl. moms · Faktura · Ingen bindning efter pilot.
+        Rekommenderat upplägg: skapa Verifierings-ID när filversionen fastställs, spara ID i ärendet och verifiera vid behov
+        (t.ex. intern kvalitetskontroll eller efterhandsgranskning).
       </p>
 
-      <p class="small" style="margin-top:8px; margin-bottom:0;">
-        Testa i verkliga ärenden. Fast upplägg. Tydliga ramar.
+      <p class="small" style="margin-top:10px; margin-bottom:0;">
+        Proofy är ett tekniskt verifieringsunderlag och utgör inte e-signering, arkivering eller juridisk rådgivning.
       </p>
 
       <div class="hr"></div>
 
+      <!-- Snabb åtkomst till verktyg (flyttad från översta CTA-raden för lugnare first impression) -->
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <span class="badge">🔒 Inget filinnehåll lagras</span>
-        <span class="badge">🧾 Verifierings-ID i ärendet</span>
-        <span class="badge">⚡ Verifiera på sekunder</span>
+        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn" href="/verify.html">Verifiera underlag</a>
       </div>
-
-      <p class="small" style="margin-top:10px; margin-bottom:0;">
-        Vanligt upplägg: ni skapar Verifierings-ID när filversionen fastställs, sparar ID i ärendet och verifierar bara vid behov
-        (t.ex. vid kvalitetskontroll, fråga från kund eller efterhandsgranskning).
-      </p>
-
-      <p class="small" style="margin-top:12px;">
-        Proofy är ett tekniskt verifieringsunderlag. Inte e-signering, inte filarkiv och inte juridisk rådgivning.
-      </p>
     </div>
 
-    <!-- ✅ Nytt, men väldigt “rent”: tydlig avgränsning + revisionsnytta utan att stöka UI -->
-    <div class="riskCard" aria-label="Tydlig avgränsning och revisionsnytta">
-      <div style="font-weight:900; font-size:15px;">Tydlig användning i byråprocess (kortfattat)</div>
-      <div class="riskGrid">
-        <div class="riskItem">
-          <b>Syfte</b>
-          <span class="small">Stöd för dokumentation: visa om filversionen matchar en fastställd referens vid kontroll i efterhand.</span>
+    <!-- Tydlig “användning i byråprocess” + notering att klistra in -->
+    <section id="anvandning" style="margin-top:28px;">
+      <h2>Tydlig användning i byråprocess (kortfattat)</h2>
+
+      <div class="card content">
+        <div class="grid3" style="margin-top:12px;">
+          <div class="tile">
+            <b>Syfte</b>
+            <span class="small">Stöd för dokumentation: visa om filversionen matchar en fastställd referens vid kontroll i efterhand.</span>
+          </div>
+          <div class="tile">
+            <b>Begränsning</b>
+            <span class="small">Proofy bedömer inte innehållets riktighet och ersätter inte professionellt omdöme, internkontroll eller juridisk rådgivning.</span>
+          </div>
+          <div class="tile">
+            <b>Dataminimering</b>
+            <span class="small">Filen lämnar inte datorn via Proofys funktion; endast Verifierings-ID och registreringstid hanteras i registret.</span>
+          </div>
         </div>
-        <div class="riskItem">
-          <b>Begränsning</b>
-          <span class="small">Proofy bedömer inte innehållets riktighet och ersätter inte professionellt omdöme, internkontroll eller juridisk rådgivning.</span>
-        </div>
-        <div class="riskItem">
-          <b>Dataminimering</b>
-          <span class="small">Filen lämnar inte datorn via Proofys funktion; endast Verifierings-ID och registreringstid hanteras i registret.</span>
-        </div>
-      </div>
 
-      <div class="subtleLine"></div>
+        <div class="hr"></div>
 
-      <div style="font-weight:900; font-size:14px;">Notering att klistra in i ärendet (valfritt)</div>
-      <div class="copyHint">Kopiera och komplettera med ert Verifierings-ID och eventuell rutin/ärendereferens.</div>
+        <h3>Notering att klistra in i ärendet (valfritt)</h3>
+        <p class="small" style="margin-top:6px; margin-bottom:0;">
+          Kopiera och komplettera med ert Verifierings-ID och eventuell rutin/ärendereferens.
+        </p>
 
-      <div class="copyBox" id="caseNote" tabindex="0" role="group" aria-label="Notering för ärendet">
-        <div id="caseNoteText">
-PROOFY – Verifieringsnotering (ärende)
-
+        <div class="noteBox" id="proofyNoteBox">
+<pre id="proofyNoteText">PROOFY – Verifieringsnotering (ärende)
 Verifierings-ID: [ange]
 Referens: Fastställd filversion registrerad hos Proofy.
 Kontroll: Underlaget verifieras vid behov (t.ex. intern kvalitetskontroll/efterhandsgranskning).
-Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bedömning av innehållets saklighet/riktighet.
+Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bedömning av innehållets saklighet/riktighet.</pre>
+          <div class="noteActions">
+            <button class="btn soft" type="button" id="copyNoteBtn">Kopiera notering</button>
+            <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
+            <a class="btn ghost" href="/verify.html">Verifiera underlag</a>
+          </div>
+          <span class="small" id="copyNoteStatus" style="display:none; margin-top:8px;" aria-live="polite"></span>
         </div>
-
-        <button class="btn soft" type="button" id="copyNoteBtn" style="margin-top:10px;">Kopiera notering</button>
-        <span class="pill" id="noteStatus" aria-live="polite" aria-atomic="true" role="status"></span>
       </div>
-    </div>
+    </section>
 
     <section id="nytta" style="margin-top:28px;">
       <h2>För byråer</h2>
       <div class="card content">
         <p>
-          Proofy är byggt för byråers vardag: många ärenden, många versioner och hög kostnad när någon ifrågasätter ett underlag i efterhand.
+          Proofy är byggt för byråers vardag: många ärenden, många versioner och hög kostnad när ett underlag ifrågasätts i efterhand.
           Ni får ett <strong>Verifierings-ID</strong> att spara i ärendet, som gör det enkelt att visa om filen ni kontrollerar är samma filversion som den registrerade referensen.
         </p>
 
@@ -239,7 +269,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           </div>
           <div class="tile">
             <b>Vad ni får</b>
-            <span class="small">Ett Verifierings-ID i ärendet + möjlighet att verifiera filversionen på sekunder när det behövs.</span>
+            <span class="small">Verifierings-ID i ärendet + möjlighet att verifiera filversionen på sekunder när det behövs.</span>
           </div>
           <div class="tile">
             <b>Vad Proofy inte är</b>
@@ -251,11 +281,11 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           <h3>Så används Proofy i praktiken</h3>
 
           <p>
-            1) När ett underlag fastställs (t.ex. bokslut, rapport, beslut, avtal) skapar du ett <strong>Verifierings-ID</strong> och sparar det i ärendet.
+            1) När ett underlag fastställs (t.ex. bokslut, rapport, beslut, avtal) skapar ni ett <strong>Verifierings-ID</strong> och sparar det i ärendet.
           </p>
 
           <p>
-            2) Om underlaget behöver styrkas senare verifierar du filen på några sekunder och ser om den är <strong>oförändrad</strong> jämfört med referensen.
+            2) Om underlaget behöver styrkas senare verifierar ni filen på några sekunder och ser om den är <strong>oförändrad</strong> jämfört med referensen.
           </p>
 
           <p class="small" style="margin:10px 0 0;">
@@ -267,11 +297,11 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           <h3>Typiska situationer där Proofy passar</h3>
           <div class="grid3" style="margin-top:12px;">
             <div class="tile">
-              <b>Bokslut & rapporter</b>
+              <b>Bokslut &amp; rapporter</b>
               <span class="small">Visa att den filversion som låg till grund för beslut/rapportering inte har ändrats i efterhand.</span>
             </div>
             <div class="tile">
-              <b>Beslut & avtal</b>
+              <b>Beslut &amp; avtal</b>
               <span class="small">Styrk att dokumentet i ärendet är samma filversion som vid fastställande, även efter systembyten eller överlämningar.</span>
             </div>
             <div class="tile">
@@ -291,7 +321,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
       <h2>Kontakta oss</h2>
       <div class="card content">
         <p class="lead" style="font-size:16px; margin:0 0 10px;">
-          Be om en kort demo (10–15 min) eller starta en pilot. Du får svar inom 1 arbetsdag.
+          Be om en kort demo (10–15 min) eller starta en pilot. Ni får svar inom 1 arbetsdag.
         </p>
 
         <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
@@ -394,68 +424,47 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
 
 <script>
 (() => {
-  // --- Kopiera “ärendenotering” (rent, valfritt, stör inte resten) ---
+  // Kopiera “notering att klistra in”
   const copyBtn = document.getElementById("copyNoteBtn");
-  const noteText = document.getElementById("caseNoteText");
-  const noteStatus = document.getElementById("noteStatus");
+  const noteText = document.getElementById("proofyNoteText");
+  const copyStatus = document.getElementById("copyNoteStatus");
 
-  function showNoteStatus(text, tone){
-    if (!noteStatus) return;
-    noteStatus.style.display = "inline-block";
-    noteStatus.textContent = text;
-
-    noteStatus.style.fontWeight = "800";
-    noteStatus.style.border = "1px solid rgba(255,255,255,.14)";
-    noteStatus.style.background = "rgba(255,255,255,.06)";
-    noteStatus.style.color = "rgba(234,240,255,.92)";
-
-    if (tone === "ok"){
-      noteStatus.style.background = "rgba(50, 205, 50, .10)";
-      noteStatus.style.border = "1px solid rgba(50, 205, 50, .25)";
-    } else if (tone === "err"){
-      noteStatus.style.background = "rgba(255, 80, 80, .10)";
-      noteStatus.style.border = "1px solid rgba(255, 80, 80, .25)";
-    }
-
-    setTimeout(() => {
-      noteStatus.style.display = "none";
-      noteStatus.textContent = "";
-    }, 1400);
-  }
-
-  async function copyText(text){
-    const t = String(text || "").trim();
-    if (!t) return false;
+  async function copyToClipboard(text){
     try{
-      await navigator.clipboard.writeText(t);
-      return true;
-    } catch {
-      try{
-        const ta = document.createElement("textarea");
-        ta.value = t;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        ta.style.top = "0";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        const ok = document.execCommand("copy");
-        document.body.removeChild(ta);
-        return !!ok;
-      } catch {
-        return false;
+      if (navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+        return true;
       }
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-10000px";
+      ta.style.top = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
     }
   }
 
   if (copyBtn && noteText){
     copyBtn.addEventListener("click", async () => {
-      const ok = await copyText(noteText.textContent);
-      showNoteStatus(ok ? "Kopierad ✓" : "Kunde inte kopiera", ok ? "ok" : "err");
+      const ok = await copyToClipboard(noteText.textContent || "");
+      if (!copyStatus) return;
+
+      copyStatus.style.display = "inline-block";
+      copyStatus.textContent = ok ? "Notering kopierad." : "Kunde inte kopiera. Markera texten och kopiera manuellt.";
+      copyStatus.style.color = ok ? "rgba(180,255,200,.95)" : "rgba(255,170,170,.95)";
+      setTimeout(() => { copyStatus.style.display = "none"; }, 2600);
     });
   }
 
-  // --- Din befintliga demoform (oförändrad) ---
+  // Demoformulär (oförändrad logik, bara behåller robustheten)
   const form = document.getElementById("demoForm");
   if (!form) return;
 
@@ -610,7 +619,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2025-flat2" defer></script>
-<script src="/chat-widget.js?v=2025-01f" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-10a" defer></script>
+<script src="/chat-widget.js?v=2026-01-10a" defer></script>
 </body>
 </html>
