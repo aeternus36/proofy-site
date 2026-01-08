@@ -382,9 +382,9 @@
             <div class="fine">
               <b>Revisions-/juridisk tydlighet</b><br/>
               • Intyget visar endast om kontrollvärdet matchar en registrerad referens och i så fall <b>registreringstid</b>.<br/>
-              • Registreringstid säger <b>inte</b> när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
+              • Registreringstid anger när ID:t först registrerades i Proofys register – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
               • Intyget ersätter inte e-signering, arkivering, behörighetsloggar, processkontroller eller juridisk rådgivning.<br/>
-              • Bevisvärde och relevans bedöms alltid i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja).
+              • Bevisvärde och relevans bedöms i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja).
             </div>
 
             <div class="footer">
@@ -509,13 +509,18 @@
           return;
         }
 
+        // Viktigt: vissa libs behöver CorrectLevel, men vi fallbackar säkert
+        let level = undefined;
+        try{
+          level = window.QRCode?.CorrectLevel?.H;
+        }catch{}
         new window.QRCode(el, {
           text,
           width: 168,
           height: 168,
           colorDark: "#0b1220",
           colorLight: "#ffffff",
-          correctLevel: (window.QRCode?.CorrectLevel?.H ?? undefined)
+          correctLevel: level
         });
       }
 
@@ -527,7 +532,6 @@
       }
 
       function parseVerifyResponse(v){
-        // Robust: stöd flera backend-format
         const exists =
           v?.exists === true ||
           v?.registered === true ||
@@ -537,10 +541,47 @@
         const tsRaw = v?.timestamp ?? v?.ts ?? v?.registeredAt ?? v?.registered_at ?? 0;
         const ts = Number(tsRaw) || 0;
 
-        // Om exists saknas men timestamp finns, tolka som registrerad
         const isRegistered = exists || ts > 0;
-
         return { isRegistered, ts };
+      }
+
+      // localStorage pending tx (saved by register page)
+      const PENDING_KEY = "proofy.pending.v1";
+      function loadPending(){
+        try{
+          const raw = localStorage.getItem(PENDING_KEY);
+          if(!raw) return null;
+          const obj = JSON.parse(raw);
+          if(!obj || typeof obj !== "object") return null;
+          return obj;
+        }catch{ return null; }
+      }
+      function savePending(obj){
+        try{ localStorage.setItem(PENDING_KEY, JSON.stringify(obj)); }catch{}
+      }
+      function clearPending(){
+        try{ localStorage.removeItem(PENDING_KEY); }catch{}
+      }
+      function pendingForHash(hash){
+        const p = loadPending();
+        if(!p) return null;
+        if(String(p.hash||"").toLowerCase() !== String(hash||"").toLowerCase()) return null;
+        // txHash är frivillig (men bra). Vi accepterar pending utan txHash också.
+        return p;
+      }
+
+      async function pollVerify(hash, tries, delayMs){
+        for(let i=1;i<=tries;i++){
+          try{
+            const v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
+            const parsed = parseVerifyResponse(v);
+            if(parsed.isRegistered) return { ok:true, parsed, raw:v };
+          }catch(e){
+            // ignorera tillfälliga fel i polling; vi fortsätter
+          }
+          await new Promise(res => setTimeout(res, delayMs));
+        }
+        return { ok:false };
       }
 
       // ---------- Main ----------
@@ -556,7 +597,6 @@
           return Number.isFinite(n) && n > 0 ? Math.floor(n) : nowSeconds();
         })();
 
-        // Build links (consistent .html routes)
         const certId = (url.searchParams.get("cert") || "").trim();
         const certLink = `${location.origin}${location.pathname}?hash=${encodeURIComponent(hash)}&checked=${checked}${certId ? `&cert=${encodeURIComponent(certId)}` : ""}`;
         const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
@@ -587,11 +627,9 @@
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
         };
 
-        // Times
         $("checkedLocal").textContent = fmtSe(checked);
         $("checkedUtc").textContent = fmtUtc(checked);
 
-        // Validate hash
         if (!isValidBytes32Hex(hash)){
           setStatus("bad", "Ogiltigt ID");
           $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
@@ -612,7 +650,13 @@
         $("regLocal").textContent = "—";
         $("regUtc").textContent = "—";
 
-        // Verify
+        if (certId){
+          $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
+        } else {
+          $("techHint").textContent = "";
+        }
+
+        // 1) First verify snapshot
         let v;
         try{
           v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
@@ -633,22 +677,57 @@
           $("resultText").textContent = "Registrerad (match i Proofys register).";
           $("regLocal").textContent = fmtSe(parsed.ts);
           $("regUtc").textContent = fmtUtc(parsed.ts);
-
-          if (certId){
-            $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
-          } else {
-            $("techHint").textContent = "";
-          }
+          clearPending(); // ingen pending behövs när det är bekräftat
           return;
         }
 
-        // Not registered
+        // 2) Not registered -> check if we have pending tx saved for this exact hash
+        const p = pendingForHash(hash);
+
+        if (p){
+          // Visa juridiskt korrekt: "inskickad men ej bekräftad"
+          setStatus("warn", "Väntar på bekräftelse");
+          $("resultText").textContent = "Registrering inskickad men ej bekräftad on-chain ännu.";
+          $("regLocal").textContent = "—";
+          $("regUtc").textContent = "—";
+
+          const txLine = p.txHash ? `<div style="margin-top:6px">Transaktion: <span class="mono">${p.txHash}</span></div>` : "";
+          showWarn(`
+            <b>Registrering inskickad.</b> Intyget visar <b>bekräftad status</b> från registret.<br/>
+            Om registreringen gjordes nyligen kan det ta en stund innan den syns i kontrollen.
+            ${txLine}
+          `);
+
+          // Poll verify (2 min max)
+          const polled = await pollVerify(hash, 24, 5000);
+          if (polled.ok){
+            const ts = polled.parsed.ts;
+            setStatus("good", "Registrerad");
+            $("resultText").textContent = "Registrerad (match i Proofys register).";
+            $("regLocal").textContent = fmtSe(ts);
+            $("regUtc").textContent = fmtUtc(ts);
+            clearPending();
+            hideWarn();
+            return;
+          }
+
+          // Still not confirmed
+          setStatus("bad", "Ej registrerad");
+          $("resultText").textContent = "Inte registrerad vid kontrolltillfället (ingen bekräftad registrering hittades).";
+          showWarn(`
+            <b>Ej bekräftad inom väntetid.</b><br/>
+            Det kan bero på att transaktionen inte blev inkluderad (t.ex. avvisad/ersatt/ej mined).<br/>
+            Rekommendation: uppdatera senare eller gör om registreringen för samma Verifierings-ID.
+            ${p.txHash ? `<div style="margin-top:6px">Senaste tx: <span class="mono">${p.txHash}</span></div>` : ""}
+          `);
+          return;
+        }
+
+        // 3) Not registered and no pending -> show strict result
         setStatus("bad", "Ej registrerad");
         $("resultText").textContent = "Inte registrerad (ingen registrering hittades vid kontrolltillfället).";
         $("regLocal").textContent = "—";
         $("regUtc").textContent = "—";
-
-        // mild guidance (audit-friendly)
         showWarn(`
           <b>Ingen registrering hittades.</b><br/>
           Kontrollera att rätt filversion/Verifierings-ID används. Om registrering gjordes nyligen: vänta en stund och uppdatera intyget.
