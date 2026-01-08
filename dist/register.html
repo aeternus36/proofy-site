@@ -346,7 +346,7 @@
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfritt)</div>
-                    <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
+                    <div id="blockOut" class="mono" style="margin-top:8px;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Meddelande (om något)</div>
                     <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
@@ -506,8 +506,8 @@
   const qrBox = $("qrBox");
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
-  const submitterOut = $("submitterOut");
   const txOut = $("txOut");
+  const blockOut = $("blockOut");
   const debugOut = $("debugOut");
   const copyIdIconBtn = $("copyIdIconBtn");
   const copyIdPill2 = $("copyIdPill2");
@@ -526,6 +526,9 @@
   const manualLinkOut = $("manualLinkOut");
   const manualQrTap = $("manualQrTap");
   const manualQrBox = $("manualQrBox");
+
+  // Pending-key måste matcha certificate.html
+  const PENDING_KEY = "proofy.pending.v1";
 
   let currentFile = null;
   let currentId = null;
@@ -637,7 +640,7 @@
       }
     }
 
-    // Certifikat/intyg får visas oavsett status, men själva intyget måste markera "ej bekräftad" om så är fallet.
+    // Certifikat/intyg får visas oavsett status, men intyget visar själv "ej bekräftad" om så är fallet.
     if (receiptBtn){
       if (currentId && !busy){
         receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(currentId)}`;
@@ -660,8 +663,8 @@
     if (qrTap) qrTap.style.display = "none";
     if (regStatusOut) regStatusOut.textContent = "—";
     if (timeOut) timeOut.textContent = "—";
-    if (submitterOut) submitterOut.textContent = "—";
     if (txOut) txOut.textContent = "—";
+    if (blockOut) blockOut.textContent = "—";
     if (debugOut) debugOut.textContent = "—";
     if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
     if (copyLinkIconBtn) copyLinkIconBtn.style.display = "none";
@@ -949,6 +952,21 @@
     return lines.join("\n");
   }
 
+  function savePending({ hash, txHash }){
+    try{
+      const obj = {
+        hash,
+        txHash: txHash || "",
+        createdAt: Math.floor(Date.now()/1000)
+      };
+      localStorage.setItem(PENDING_KEY, JSON.stringify(obj));
+    } catch {}
+  }
+
+  function clearPending(){
+    try{ localStorage.removeItem(PENDING_KEY); } catch {}
+  }
+
   function setFile(file){
     currentFile = file || null;
     currentId = null;
@@ -1073,11 +1091,12 @@
     const submittedBy = data?.submission?.submittedBy || null;
     const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
 
-    // Default UI values
     txOut.textContent = txHash || "—";
-    // Vi använder detta fält som "kontrollpunkt" i UI för att undvika tekniska ord.
-    submitterOut.textContent = observedBlockNumber || (submittedBy || "—");
-    debugOut.textContent = legal || "—";
+    blockOut.textContent = observedBlockNumber || "—";
+
+    // Lägg submitter i debug (valfritt), men blanda inte i "kontrollpunkt"
+    const extra = submittedBy ? `\nInskickad av (server): ${submittedBy}` : "";
+    debugOut.textContent = (legal || "—") + extra;
 
     // Tidpunkt får endast visas som faktisk tid om bekräftad tid finns
     const confirmedSe = confirmedAt ? formatUnixSe(confirmedAt) : null;
@@ -1089,6 +1108,8 @@
       headline.innerHTML = `<span class="ok">✅ Bekräftad</span> <span class="meta">(kan kontrolleras vid behov)</span>`;
 
       regStatusOut.textContent = st || "Bekräftad";
+
+      clearPending();
 
       if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
       lastRun = {
@@ -1105,12 +1126,14 @@
     }
 
     if (sc === "SUBMITTED_UNCONFIRMED") {
-      // Viktig juridik: aldrig antyda bekräftelse
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
       headline.innerHTML = `⏳ <span class="meta">Inskickad – ej bekräftad</span>`;
 
       regStatusOut.textContent = st || "Inskickad – ej bekräftad";
+
+      // ✅ Spara pending i format som certificate.html redan kan läsa
+      if (txHash) savePending({ hash: id, txHash });
 
       if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
       lastRun = {
@@ -1126,7 +1149,6 @@
       return;
     }
 
-    // För framtida kompatibilitet (om verify återanvänds)
     if (sc === "NOT_CONFIRMED") {
       headline.style.borderColor = "rgba(255,80,80,.20)";
       headline.style.background = "rgba(255,80,80,.06)";
@@ -1146,7 +1168,7 @@
       return;
     }
 
-    // Okänd status: visa inte negativa påståenden
+    // UNKNOWN/FAILED eller okänd
     headline.style.borderColor = "rgba(255,80,80,.20)";
     headline.style.background = "rgba(255,80,80,.06)";
     headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
@@ -1212,7 +1234,6 @@
 
       attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
-      setBusy(true);
       setBusy(false);
 
       // Starta inskickning
@@ -1258,7 +1279,7 @@
         resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Inskickning ej genomförd (ej bekräftad)";
+        regStatusOut.textContent = "Kunde inte kontrolleras (tillfälligt fel)";
         timeOut.textContent = "—";
 
         headline.style.borderColor = "rgba(255,80,80,.20)";
@@ -1267,7 +1288,7 @@
 
         debugOut.textContent = errorMsg.textContent;
         txOut.textContent = "—";
-        submitterOut.textContent = "—";
+        blockOut.textContent = "—";
 
         if (qrTap) qrTap.style.display = "inline-block";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
@@ -1278,7 +1299,7 @@
           id: currentId,
           link: currentLink,
           createdSe: nowSe(),
-          statusLine: "Inskickning ej genomförd (ej bekräftad)",
+          statusLine: "Kunde inte kontrolleras (tillfälligt fel)",
           timeSe: null,
           txHash: null,
           observedBlockNumber: null
