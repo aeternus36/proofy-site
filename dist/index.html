@@ -19,91 +19,20 @@
   <meta name="twitter:title" content="Proofy – Verifiera filversioner för redovisningsbyråer" />
   <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
 
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-10a" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-10a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2025-01f" />
+  <link rel="stylesheet" href="/assets/header.css?v=2025-flat2" />
 
   <style>
     html, body { background: #0b1220 !important; }
     body { background-image: none !important; }
     main::before{ content:none !important; }
     main{ background: transparent !important; }
-
-    /* status-pill ska vara tyst tills vi behöver visa något */
     #demoStatus { display:none; }
 
-    /* Lugnare hero-kort: mindre visuell “stökighet” */
-    .heroCard{
-      padding:18px;
-      margin-top:14px;
-    }
-    .heroMetaRow{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      margin-top:10px;
-    }
-
-    /* “B2B-badges” utan emojis – mer revisionsmässigt */
-    .proofyPills{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
-    .proofyPills .badge{
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-    }
-    .proofyPills .dot{
-      width:8px;
-      height:8px;
-      border-radius:999px;
-      background: rgba(120,180,255,.75);
-      display:inline-block;
-    }
-
-    /* Noteringsruta */
-    .noteBox{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      border-radius: 16px;
-      padding: 12px 14px;
-      margin-top: 10px;
-    }
-    .noteBox pre{
-      margin:0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12.5px;
-      line-height: 1.4;
-      color: rgba(234,240,255,.9);
-    }
-    .noteActions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
-
-    /* grid fallback (om proofy.css skulle ändras) */
-    .grid3{
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-    @media (max-width: 900px){
-      .grid3{ grid-template-columns: 1fr; }
-    }
-    .tile{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      border-radius: 16px;
-      padding: 12px 14px;
-    }
-    .tile b{ display:block; margin-bottom:6px; }
+    /* 5/5 polish: minimalt, bara luft/rytm (rör inte globala stilar) */
+    .heroCtas { gap: 10px; flex-wrap: wrap; }
+    .heroMeta { margin-top: 8px; margin-bottom: 0; }
+    .heroRule { margin: 12px 0; }
   </style>
 
   <script type="application/ld+json">
@@ -164,32 +93,37 @@
 
     <p class="lead">
       När ett bokslut, avtal eller beslut ifrågasätts senare behöver ni kunna visa att filen ni hänvisar till är
-      <strong>samma filversion som referensen</strong> – även om den flyttats mellan system, personer och lagringsplatser.
+      <strong>samma filversion som referensen</strong> – även om den har flyttats mellan system, personer och lagringsplatser.
       Proofy gör det möjligt <strong>utan att lagra filinnehåll</strong>.
     </p>
 
-    <!-- HERO: lugnare, tydligare CTA-hierarki -->
-    <div class="card heroCard">
-      <div class="heroCtas" style="margin-top:12px;">
+    <!-- 5/5 juridisk/revisions-positionering (kort, utan tekniskt språk) -->
+    <p class="small" style="margin-top:10px; max-width:88ch;">
+      <b>Professionell användning:</b> Proofy används som <b>tekniskt verifieringsunderlag</b> i byråns dokumentation och intern kontroll.
+      Tjänsten visar endast om en fil <b>matchar en fastställd referens</b> och ersätter inte professionellt omdöme, internkontroller, revision eller juridisk bedömning.
+    </p>
+
+    <div class="card" style="padding:18px; margin-top:14px;">
+      <div class="heroCtas" style="margin-top:12px; display:flex;">
         <a class="btn primary" href="#kontakt">Boka kort demo</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
-        <a class="btn ghost" href="#anvandning">Så fungerar det</a>
+        <a class="btn" href="#sa-funkar-det">Så fungerar det</a>
       </div>
 
-      <div class="heroMetaRow small" style="margin-bottom:0;">
-        <span><b>Pilot 30 dagar:</b> 4 900 kr exkl. moms</span>
-        <span>·</span>
-        <span>Faktura</span>
-        <span>·</span>
-        <span>Ingen bindning efter pilot</span>
-      </div>
+      <p class="small heroMeta">
+        Pilot 30 dagar: <b>4 900 kr</b> exkl. moms · Faktura · Ingen bindning efter pilot
+      </p>
 
-      <div class="hr"></div>
+      <p class="small heroMeta" style="margin-top:6px;">
+        Testa i verkliga ärenden. Fast upplägg. Tydliga ramar.
+      </p>
 
-      <div class="proofyPills">
-        <span class="badge"><span class="dot" aria-hidden="true"></span>Inget filinnehåll lagras</span>
-        <span class="badge"><span class="dot" aria-hidden="true"></span>Verifierings-ID i ärendet</span>
-        <span class="badge"><span class="dot" aria-hidden="true"></span>Verifiering på sekunder</span>
+      <div class="hr heroRule"></div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <span class="badge">🔒 Inget filinnehåll lagras</span>
+        <span class="badge">🧾 Verifierings-ID i ärendet</span>
+        <span class="badge">⚡ Verifiering på sekunder</span>
       </div>
 
       <p class="small" style="margin-top:10px; margin-bottom:0;">
@@ -201,59 +135,65 @@
         Proofy är ett tekniskt verifieringsunderlag och utgör inte e-signering, arkivering eller juridisk rådgivning.
       </p>
 
-      <div class="hr"></div>
+      <div class="hr" style="margin:14px 0;"></div>
 
-      <!-- Snabb åtkomst till verktyg (flyttad från översta CTA-raden för lugnare first impression) -->
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
-        <a class="btn" href="/verify.html">Verifiera underlag</a>
+        <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn ghost" href="/verify.html">Verifiera underlag</a>
       </div>
     </div>
 
-    <!-- Tydlig “användning i byråprocess” + notering att klistra in -->
-    <section id="anvandning" style="margin-top:28px;">
-      <h2>Tydlig användning i byråprocess (kortfattat)</h2>
-
+    <!-- Ny, kort "Så fungerar det" som stärker 5/5 tydlighet utan att bli lång -->
+    <section id="sa-funkar-det" style="margin-top:22px;">
       <div class="card content">
+        <h2 style="margin-top:0;">Så fungerar det (kort)</h2>
+
         <div class="grid3" style="margin-top:12px;">
           <div class="tile">
-            <b>Syfte</b>
-            <span class="small">Stöd för dokumentation: visa om filversionen matchar en fastställd referens vid kontroll i efterhand.</span>
+            <b>1) Fastställ referens</b>
+            <span class="small">
+              När en filversion ska ligga till grund för ett ärende (t.ex. bokslut, rapport, avtal) skapar ni ett Verifierings-ID och sparar det i ärendet.
+            </span>
           </div>
           <div class="tile">
-            <b>Begränsning</b>
-            <span class="small">Proofy bedömer inte innehållets riktighet och ersätter inte professionellt omdöme, internkontroll eller juridisk rådgivning.</span>
+            <b>2) Verifiera vid behov</b>
+            <span class="small">
+              Vid kontroll i efterhand verifierar ni filen och ser om den <b>matchar referensen</b> (oförändrad filversion).
+            </span>
           </div>
           <div class="tile">
-            <b>Dataminimering</b>
-            <span class="small">Filen lämnar inte datorn via Proofys funktion; endast Verifierings-ID och registreringstid hanteras i registret.</span>
+            <b>3) Dokumentera resultat</b>
+            <span class="small">
+              Notera i ärendet: match/ingen match och kontrolltidpunkt. Proofy bedömer inte innehållets riktighet.
+            </span>
           </div>
         </div>
 
         <div class="hr"></div>
 
-        <h3>Notering att klistra in i ärendet (valfritt)</h3>
-        <p class="small" style="margin-top:6px; margin-bottom:0;">
+        <h3 style="margin-bottom:8px;">Notering att klistra in i ärendet (valfritt)</h3>
+        <p class="small" style="margin-top:0;">
           Kopiera och komplettera med ert Verifierings-ID och eventuell rutin/ärendereferens.
         </p>
 
-        <div class="noteBox" id="proofyNoteBox">
-<pre id="proofyNoteText">PROOFY – Verifieringsnotering (ärende)
+        <div class="card content" style="margin-top:10px;">
+          <pre style="margin:0; white-space:pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:13px; line-height:1.5;">
+PROOFY – Verifieringsnotering (ärende)
 Verifierings-ID: [ange]
 Referens: Fastställd filversion registrerad hos Proofy.
 Kontroll: Underlaget verifieras vid behov (t.ex. intern kvalitetskontroll/efterhandsgranskning).
+Resultat: [match/ingen match]  Datum/tid: [ange]
 Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bedömning av innehållets saklighet/riktighet.</pre>
-          <div class="noteActions">
-            <button class="btn soft" type="button" id="copyNoteBtn">Kopiera notering</button>
-            <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
-            <a class="btn ghost" href="/verify.html">Verifiera underlag</a>
-          </div>
-          <span class="small" id="copyNoteStatus" style="display:none; margin-top:8px;" aria-live="polite"></span>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+          <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="btn" href="/verify.html">Verifiera underlag</a>
         </div>
       </div>
     </section>
 
-    <section id="nytta" style="margin-top:28px;">
+    <section id="nytta" style="margin-top:22px;">
       <h2>För byråer</h2>
       <div class="card content">
         <p>
@@ -423,47 +363,6 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
 
 <script>
 (() => {
-  // Kopiera “notering att klistra in”
-  const copyBtn = document.getElementById("copyNoteBtn");
-  const noteText = document.getElementById("proofyNoteText");
-  const copyStatus = document.getElementById("copyNoteStatus");
-
-  async function copyToClipboard(text){
-    try{
-      if (navigator.clipboard && window.isSecureContext){
-        await navigator.clipboard.writeText(text);
-        return true;
-      }
-      // fallback
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "absolute";
-      ta.style.left = "-10000px";
-      ta.style.top = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return ok;
-    } catch {
-      return false;
-    }
-  }
-
-  if (copyBtn && noteText){
-    copyBtn.addEventListener("click", async () => {
-      const ok = await copyToClipboard(noteText.textContent || "");
-      if (!copyStatus) return;
-
-      copyStatus.style.display = "inline-block";
-      copyStatus.textContent = ok ? "Notering kopierad." : "Kunde inte kopiera. Markera texten och kopiera manuellt.";
-      copyStatus.style.color = ok ? "rgba(180,255,200,.95)" : "rgba(255,170,170,.95)";
-      setTimeout(() => { copyStatus.style.display = "none"; }, 2600);
-    });
-  }
-
-  // Demoformulär (oförändrad logik, bara behåller robustheten)
   const form = document.getElementById("demoForm");
   if (!form) return;
 
@@ -618,7 +517,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
 })();
 </script>
 
-<script src="/assets/header-toggle.js?v=2026-01-10a" defer></script>
-<script src="/chat-widget.js?v=2026-01-10a" defer></script>
+<script src="/assets/header-toggle.js?v=2025-flat2" defer></script>
+<script src="/chat-widget.js?v=2025-01f" defer></script>
 </body>
 </html>
