@@ -35,7 +35,16 @@
     .heroCard{
       padding:18px;
       margin-top:14px;
+
+      /* 5/5 polish: pyttelite bättre djup/kontrast utan layoutförändring */
+      border-color: rgba(255,255,255,.10);
+      background: rgba(255,255,255,.035);
     }
+
+    /* lite bättre rytm i texten i hero */
+    .heroCard .small { color: rgba(234,240,255,.86); }
+    .heroCard .hr { opacity: .95; }
+
     .heroMetaRow{
       display:flex;
       gap:10px;
@@ -78,7 +87,7 @@
       word-break: break-word;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 12.5px;
-      line-height: 1.4;
+      line-height: 1.45;
       color: rgba(234,240,255,.9);
     }
     .noteActions{
@@ -86,6 +95,7 @@
       gap:10px;
       flex-wrap:wrap;
       margin-top:10px;
+      align-items:center;
     }
 
     /* grid fallback (om proofy.css skulle ändras) */
@@ -104,6 +114,21 @@
       padding: 12px 14px;
     }
     .tile b{ display:block; margin-bottom:6px; }
+
+    /* 5/5: diskret, premium fokus för tangentbord (påverkar inte mus) */
+    a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible{
+      outline: 2px solid rgba(120,180,255,.55);
+      outline-offset: 3px;
+      border-radius: 12px;
+    }
+
+    /* 5/5: håll CTA-raden stabil på små skärmar utan “hopp” */
+    .heroCtas{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
   </style>
 
   <script type="application/ld+json">
@@ -168,10 +193,10 @@
       Proofy gör det möjligt <strong>utan att lagra filinnehåll</strong>.
     </p>
 
-    <!-- Minimal 5/5-förtydligande (ingen ny layout, bara en kort rad) -->
+    <!-- 5/5: juridisk/revisions-positionering (kort, sakligt, utan “sälj”) -->
     <p class="small" style="margin-top:10px; max-width:92ch;">
-      <b>Professionell användning:</b> Proofy används som tekniskt verifieringsunderlag i dokumentation och intern kontroll.
-      Tjänsten visar endast om en fil matchar en fastställd referens och ersätter inte professionellt omdöme, granskning eller juridisk bedömning.
+      <b>Professionell användning:</b> Proofy används som <b>tekniskt verifieringsunderlag</b> i dokumentation och intern kontroll.
+      Tjänsten visar endast om en fil <b>matchar en fastställd referens</b> och ersätter inte professionellt omdöme, internkontroll, revision eller juridisk bedömning.
     </p>
 
     <!-- HERO: lugnare, tydligare CTA-hierarki -->
@@ -228,7 +253,7 @@
           </div>
           <div class="tile">
             <b>Begränsning</b>
-            <span class="small">Proofy bedömer inte innehållets riktighet och ersätter inte professionellt omdöme, internkontroll, granskning eller juridisk bedömning.</span>
+            <span class="small">Proofy bedömer inte innehållets riktighet och ersätter inte professionellt omdöme, internkontroll, revision eller juridisk bedömning.</span>
           </div>
           <div class="tile">
             <b>Dataminimering</b>
@@ -302,7 +327,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
         <div class="card content" style="margin-top:18px;">
           <h3>Typiska situationer där Proofy passar</h3>
           <div class="grid3" style="margin-top:12px;">
-            <div class="d>
+            <div class="tile">
               <b>Bokslut &amp; rapporter</b>
               <span class="small">Visa att den filversion som låg till grund för beslut/rapportering inte har ändrats i efterhand.</span>
             </div>
