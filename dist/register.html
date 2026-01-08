@@ -157,7 +157,7 @@
             <div class="actionsRow" aria-label="Åtgärder">
               <a class="btn primary" id="nextStepBtn" href="/verify.html">Gå till verifiering</a>
               <button class="btn primary" id="createBtn" disabled>Skapa Verifierings-ID</button>
-              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna registreringskvitto</a>
+              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna tekniskt intyg</a>
             </div>
 
             <div class="actionsMetaRow">
@@ -288,9 +288,9 @@
               </div>
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
-                <b>Obs:</b> Om registreringen inte går igenom just nu är Verifierings-ID och verifieringslänk ändå skapade.
-                För senare kontroll mot Proofys register behöver registreringen gå igenom.
-                Försök igen senare, eller mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och ange Verifierings-ID.
+                <b>Obs:</b> Verifierings-ID och verifieringslänk skapas alltid lokalt.
+                För att kunna påvisa <b>bekräftelse</b> vid senare kontroll behöver registreringen bli <b>bekräftad</b>.
+                Om status är <i>”Inskickad – ej bekräftad”</i> kan du kontrollera igen via verifiering.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
@@ -326,11 +326,11 @@
                   <div class="meta">Status</div>
                   <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
-                  <div class="meta" style="margin-top:10px;">Tidpunkt</div>
+                  <div class="meta" style="margin-top:10px;">Tidpunkt (om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
 
                   <div class="actions" style="margin-top:12px;">
-                    <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera registreringsnotering</button>
+                    <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering för ärendeakt</button>
                     <span id="copyNotePill" class="pill" style="display:none;"></span>
                   </div>
 
@@ -345,10 +345,10 @@
                     <div class="meta">Registreringsreferens (valfritt)</div>
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Identifierare för support (valfritt)</div>
+                    <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfritt)</div>
                     <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Meddelande vid problem (om något)</div>
+                    <div class="meta" style="margin-top:10px;">Meddelande (om något)</div>
                     <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
                   </details>
                 </div>
@@ -637,6 +637,7 @@
       }
     }
 
+    // Certifikat/intyg får visas oavsett status, men själva intyget måste markera "ej bekräftad" om så är fallet.
     if (receiptBtn){
       if (currentId && !busy){
         receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(currentId)}`;
@@ -702,6 +703,16 @@
       }).format(new Date()) + " (Europe/Stockholm)";
     } catch {
       return new Date().toLocaleString("sv-SE");
+    }
+  }
+
+  function formatUnixSe(unixSeconds){
+    const n = Number(unixSeconds);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    try{
+      return new Date(n * 1000).toLocaleString("sv-SE");
+    } catch {
+      return null;
     }
   }
 
@@ -924,14 +935,15 @@
   function buildNote(run){
     if (!run) return "—";
     const lines = [];
-    lines.push("PROOFY – Registreringsnotering");
+    lines.push("PROOFY – Notering för ärendeakt");
     lines.push("");
     lines.push(`Verifierings-ID: ${run.id || "—"}`);
     lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
-    if (run.createdSe) lines.push(`Skapad: ${run.createdSe}`);
+    if (run.createdSe) lines.push(`Skapad lokalt: ${run.createdSe}`);
     lines.push(`Status: ${run.statusLine || "—"}`);
-    if (run.timeSe) lines.push(`Registrerad hos Proofy: ${run.timeSe}`);
-    if (run.txHash) lines.push(`Registreringsreferens: ${run.txHash}`);
+    if (run.timeSe) lines.push(`Tidpunkt (om bekräftad): ${run.timeSe}`);
+    if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
+    if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
     lines.push("");
     lines.push(`Noterad: ${nowSe()}`);
     return lines.join("\n");
@@ -1051,6 +1063,107 @@
     setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
 
+  function applyStatusToUI({ id, createdSe, data }){
+    const sc = String(data?.statusCode || "");
+    const st = String(data?.statusText || "");
+    const legal = String(data?.legalText || "");
+    const confirmedAt = data?.confirmedAtUnix ?? null;
+
+    const txHash = data?.submission?.txHash || null;
+    const submittedBy = data?.submission?.submittedBy || null;
+    const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
+
+    // Default UI values
+    txOut.textContent = txHash || "—";
+    // Vi använder detta fält som "kontrollpunkt" i UI för att undvika tekniska ord.
+    submitterOut.textContent = observedBlockNumber || (submittedBy || "—");
+    debugOut.textContent = legal || "—";
+
+    // Tidpunkt får endast visas som faktisk tid om bekräftad tid finns
+    const confirmedSe = confirmedAt ? formatUnixSe(confirmedAt) : null;
+    timeOut.textContent = confirmedSe || "—";
+
+    if (sc === "CONFIRMED") {
+      headline.style.borderColor = "rgba(80,255,180,.20)";
+      headline.style.background = "rgba(80,255,180,.06)";
+      headline.innerHTML = `<span class="ok">✅ Bekräftad</span> <span class="meta">(kan kontrolleras vid behov)</span>`;
+
+      regStatusOut.textContent = st || "Bekräftad";
+
+      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
+      lastRun = {
+        id,
+        link: currentLink,
+        createdSe,
+        statusLine: st || "Bekräftad",
+        timeSe: confirmedSe,
+        txHash: txHash,
+        observedBlockNumber: observedBlockNumber
+      };
+
+      return;
+    }
+
+    if (sc === "SUBMITTED_UNCONFIRMED") {
+      // Viktig juridik: aldrig antyda bekräftelse
+      headline.style.borderColor = "rgba(255,255,255,.14)";
+      headline.style.background = "rgba(255,255,255,.05)";
+      headline.innerHTML = `⏳ <span class="meta">Inskickad – ej bekräftad</span>`;
+
+      regStatusOut.textContent = st || "Inskickad – ej bekräftad";
+
+      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
+      lastRun = {
+        id,
+        link: currentLink,
+        createdSe,
+        statusLine: st || "Inskickad – ej bekräftad",
+        timeSe: null,
+        txHash: txHash,
+        observedBlockNumber: observedBlockNumber
+      };
+
+      return;
+    }
+
+    // För framtida kompatibilitet (om verify återanvänds)
+    if (sc === "NOT_CONFIRMED") {
+      headline.style.borderColor = "rgba(255,80,80,.20)";
+      headline.style.background = "rgba(255,80,80,.06)";
+      headline.innerHTML = `<span class="err">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde konstateras)</span>`;
+      regStatusOut.textContent = st || "Ej bekräftad";
+
+      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
+      lastRun = {
+        id,
+        link: currentLink,
+        createdSe,
+        statusLine: st || "Ej bekräftad",
+        timeSe: null,
+        txHash: txHash,
+        observedBlockNumber: observedBlockNumber
+      };
+      return;
+    }
+
+    // Okänd status: visa inte negativa påståenden
+    headline.style.borderColor = "rgba(255,80,80,.20)";
+    headline.style.background = "rgba(255,80,80,.06)";
+    headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
+    regStatusOut.textContent = st || "Kunde inte kontrolleras";
+
+    if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
+    lastRun = {
+      id,
+      link: currentLink,
+      createdSe,
+      statusLine: st || "Kunde inte kontrolleras",
+      timeSe: null,
+      txHash: txHash,
+      observedBlockNumber: observedBlockNumber
+    };
+  }
+
   createBtn.addEventListener("click", async () => {
     if (!currentFile || busy) return;
 
@@ -1102,60 +1215,29 @@
       setBusy(true);
       setBusy(false);
 
-      setPill("Registrerar…");
-      regStatusOut.textContent = "Registrerar…";
+      // Starta inskickning
+      setPill("Skickar in registrering…");
+      regStatusOut.textContent = "Skickar in registrering…";
       timeOut.textContent = "—";
       headline.style.borderColor = "rgba(255,255,255,.14)";
       headline.style.background = "rgba(255,255,255,.05)";
-      headline.textContent = "⏳ Registrering pågår…";
+      headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
 
       const reg = await safeRegisterRequest(id);
       if (myOp !== opId) return;
 
       if (!reg.ok){
         const res = reg.res;
-        const data = reg.data || {};
         const status = res?.status || 0;
         const retryable = isRetryableStatus(status) || !!reg.aborted;
 
-        const msg = "Registreringen kunde inte slutföras just nu. Försök igen senare eller kontakta Proofy och ange Verifierings-ID.";
-
+        const msg = "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade. Försök igen senare eller kontakta Proofy och ange Verifierings-ID.";
         throw Object.assign(new Error(msg), { _proofy_retryable: retryable });
       }
 
       const data = reg.data || {};
-      const already = !!data.alreadyExists;
-
-      headline.style.borderColor = "rgba(80,255,180,.20)";
-      headline.style.background = "rgba(80,255,180,.06)";
-      headline.innerHTML = already
-        ? `<span class="ok">✅ Redan registrerad hos Proofy</span> <span class="meta">(samma ID kan användas)</span>`
-        : `<span class="ok">✅ Registrerad hos Proofy</span> <span class="meta">(redo för senare kontroll)</span>`;
-
-      regStatusOut.textContent = already ? "Redan registrerad hos Proofy" : "Registrerad hos Proofy";
-
-      let registeredSe = null;
-      if (data.timestamp){
-        registeredSe = new Date(Number(data.timestamp) * 1000).toLocaleString("sv-SE");
-        timeOut.textContent = registeredSe;
-      } else {
-        timeOut.textContent = "—";
-      }
-
-      txOut.textContent = data.txHash || "—";
-      submitterOut.textContent = data.submitter || "—";
-      debugOut.textContent = "—";
-
-      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-
-      lastRun = {
-        id,
-        link: currentLink,
-        createdSe,
-        statusLine: already ? "Redan registrerad hos Proofy" : "Registrerad hos Proofy",
-        timeSe: registeredSe,
-        txHash: data.txHash || null
-      };
+      // Viktigt: vi tolkar ENDAST statusCode. Vi gissar aldrig.
+      applyStatusToUI({ id, createdSe, data });
 
       setPill("Klart ✅");
       setBusy(false);
@@ -1169,35 +1251,37 @@
       const retryable = !!e?._proofy_retryable;
 
       errorMsg.textContent = retryable
-        ? "Tillfälligt tekniskt problem. Verifierings-ID och verifieringslänk är skapade. För senare kontroll mot Proofys register behöver registreringen gå igenom. Försök igen senare eller kontakta Proofy."
-        : (e?.message || "Registreringen kunde inte slutföras just nu. Verifierings-ID och verifieringslänk är skapade. För senare kontroll mot Proofys register behöver registreringen gå igenom.");
+        ? "Tillfälligt tekniskt problem. Verifierings-ID och verifieringslänk är skapade. För att kunna påvisa bekräftelse vid senare kontroll behöver registreringen bli bekräftad. Försök igen senare eller kontrollera via verifiering."
+        : (e?.message || "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade.");
 
       if (currentId && currentLink){
         resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Ej registrerad hos Proofy just nu (ID/länk är skapade)";
+        regStatusOut.textContent = "Inskickning ej genomförd (ej bekräftad)";
         timeOut.textContent = "—";
 
         headline.style.borderColor = "rgba(255,80,80,.20)";
         headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Registreringen kunde inte slutföras</span> <span class="meta">(ID/länk är skapade)</span>`;
+        headline.innerHTML = `<span class="err">⚠️ Kunde inte skicka in registrering</span> <span class="meta">(ID/länk är skapade)</span>`;
 
         debugOut.textContent = errorMsg.textContent;
+        txOut.textContent = "—";
+        submitterOut.textContent = "—";
 
         if (qrTap) qrTap.style.display = "inline-block";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
         attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
-        // Notering ska fortfarande vara användbar även om registreringen inte gick igenom
         if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
         lastRun = lastRun || {
           id: currentId,
           link: currentLink,
           createdSe: nowSe(),
-          statusLine: "Ej registrerad hos Proofy just nu",
+          statusLine: "Inskickning ej genomförd (ej bekräftad)",
           timeSe: null,
-          txHash: null
+          txHash: null,
+          observedBlockNumber: null
         };
 
         setBusy(false);
