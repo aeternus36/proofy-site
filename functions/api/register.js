@@ -1,10 +1,4 @@
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  isHex,
-  parseGwei,
-} from "viem";
+import { createPublicClient, createWalletClient, http, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
@@ -12,14 +6,17 @@ import { polygonAmoy } from "viem/chains";
  * Proofy /api/register (Amoy)
  *
  * Juridiskt krav:
- * - Får ALDRIG påstå "Bekräftad" utan att det kan styrkas via bekräftad notering (get() => ok + ts).
- * - Vid inskickad men obekräftad: ska uttryckligen anges som "Ej bekräftad" och att tx är inskickad.
- * - Register/Verify/Certificate ska använda samma statusmodell.
+ * - Får ALDRIG påstå "bekräftad/registrerad" utan bekräftad notering.
+ * - Vid inskickad men obekräftad: ska uttryckligen anges som "Ej bekräftad".
+ * - Register, Verify och Certificate ska använda samma statusmodell.
  *
  * Driftkrav:
- * - Returnerar snabbt (ingen lång wait som riskerar timeout).
- * - Robust mot "pending fastnar": speed-up med samma nonce + högre fee.
- * - Idempotent: registerIfMissing.
+ * - Skickar in och returnerar txHash direkt (ingen wait → ingen timeout-risk).
+ * - Idempotent via registerIfMissing.
+ *
+ * Fix (EIP-1559):
+ * - maxPriorityFeePerGas får ALDRIG vara högre än maxFeePerGas.
+ * - Om env-tak används: clampa alltid.
  */
 
 const PROOFY_ABI = [
@@ -71,34 +68,22 @@ function corsPreflight(origin) {
 }
 
 function isValidBytes32Hex(s) {
-  return (
-    typeof s === "string" &&
-    /^0x[0-9a-fA-F]{64}$/.test(s.trim()) &&
-    isHex(s.trim())
-  );
+  return typeof s === "string" && /^0x[0-9a-fA-F]{64}$/.test(s.trim()) && isHex(s);
 }
 
 function isValidAddressHex(addr) {
-  return (
-    typeof addr === "string" &&
-    /^0x[0-9a-fA-F]{40}$/.test(addr.trim()) &&
-    isHex(addr.trim())
-  );
+  return typeof addr === "string" && /^0x[0-9a-fA-F]{40}$/.test(addr.trim()) && isHex(addr);
 }
 
 function normalizePrivateKey(pk) {
   if (typeof pk !== "string") return "";
-  const t = pk.trim();
-  if (!t) return "";
-  return t.startsWith("0x") ? t : `0x${t}`;
+  const trimmed = pk.trim();
+  if (!trimmed) return "";
+  return trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
 }
 
 function isValidPrivateKeyHex(pk) {
-  return (
-    typeof pk === "string" &&
-    /^0x[0-9a-fA-F]{64}$/.test(pk.trim()) &&
-    isHex(pk.trim())
-  );
+  return typeof pk === "string" && /^0x[0-9a-fA-F]{64}$/.test(pk.trim()) && isHex(pk);
 }
 
 function toSafeUint64(ts) {
@@ -108,20 +93,40 @@ function toSafeUint64(ts) {
   return v <= maxSafe ? Number(v) : Number(maxSafe);
 }
 
-function sanitizeError(e) {
-  const msg =
-    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
-    String(e);
-  return String(msg).slice(0, 800);
+async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
+  const [ok, ts] = await publicClient.readContract({
+    address: contractAddress,
+    abi: PROOFY_ABI,
+    functionName: "get",
+    args: [hash],
+  });
+
+  const timestamp = toSafeUint64(ts);
+  const exists = Boolean(ok) && timestamp !== 0;
+
+  const observedBlockNumber = await publicClient.getBlockNumber();
+  return { exists, timestamp, observedBlockNumber: observedBlockNumber.toString() };
+}
+
+function gweiToWeiBigInt(gwei) {
+  const s = String(gwei);
+  const [i, d = ""] = s.split(".");
+  const int = BigInt(i || "0");
+  const dec = BigInt((d + "000000000").slice(0, 9));
+  return int * 10n ** 9n + dec;
+}
+
+function weiToGweiNumber(wei) {
+  // bästa-effort logg/diagnostik (inte för beräkning)
+  try {
+    return Number(wei) / 1e9;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Gemensam statusmodell
- *
- * statusCode:
- * - CONFIRMED: bekräftad notering finns (get() => ok + ts)
- * - NOT_CONFIRMED: ingen bekräftad notering vid kontrolltillfället
- * - UNKNOWN: kunde inte kontrolleras (tekniskt fel)
+ * Gemensam statusmodell (samma som /api/verify och Certificate)
  */
 function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
@@ -133,12 +138,12 @@ function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
     evidence: { observedBlockNumber },
     submission: null,
     legalText:
-      "Det finns en bekräftad notering för detta kontrollvärde vid kontrolltillfället. Uppgifterna kan kontrolleras mot extern verifieringskälla vid behov.",
+      "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot extern verifieringskälla vid behov.",
   };
 }
 
 function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
-  const hasTx = Boolean(submission?.txHash);
+  const hasSubmission = Boolean(submission?.txHash);
   return {
     ok: true,
     statusCode: "NOT_CONFIRMED",
@@ -146,16 +151,13 @@ function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
     hash,
     confirmedAtUnix: null,
     evidence: observedBlockNumber ? { observedBlockNumber } : null,
-    submission: hasTx
+    submission: hasSubmission
       ? {
           txHash: submission.txHash,
           submittedBy: submission.submittedBy || null,
-          ...(submission.replacedTxHash
-            ? { replacedTxHash: submission.replacedTxHash }
-            : {}),
         }
       : null,
-    legalText: hasTx
+    legalText: hasSubmission
       ? "En registrering har skickats in men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'."
       : "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
   };
@@ -177,133 +179,116 @@ function statusUnknown({ hash, detail }) {
   };
 }
 
-async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
-  const [ok, ts] = await publicClient.readContract({
-    address: contractAddress,
-    abi: PROOFY_ABI,
-    functionName: "get",
-    args: [hash],
-  });
-
-  const timestamp = toSafeUint64(ts);
-  const exists = Boolean(ok) && timestamp !== 0;
-
-  const observedBlockNumber = await publicClient.getBlockNumber();
-  return { exists, timestamp, observedBlockNumber: observedBlockNumber.toString() };
+function sanitizeError(e) {
+  const msg =
+    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
+    "Register failed";
+  return String(msg).slice(0, 800);
 }
 
 /**
- * Skicka tx robust:
- * - nonce från "pending"
- * - fee från nätet men med golv (Amoy kan annars fastna)
- * - kort wait på receipt
- * - om fortfarande pending: speedup (samma nonce, högre fee) -> ny txHash
- *
- * Vi väntar INTE på finalitet (för att undvika timeouts), men vi minskar "fastnar"-risken kraftigt.
+ * EIP-1559 gas: välj stabilt och VALID.
+ * - Försök hämta nätets förslag via estimateFeesPerGas.
+ * - Clamp mot env-tak.
+ * - Se till att priority <= fee.
  */
-async function sendWithSpeedUp({
-  publicClient,
-  walletClient,
-  contractAddress,
-  hash,
-  feeFloorMaxGwei = "40",
-  feeFloorPrioGwei = "2",
-  firstWaitMs = 12000,
-}) {
-  const account = walletClient.account;
+async function pickFees(publicClient, env) {
+  // Tak (gwei) – du kan styra detta i env
+  const capGwei = Number(env.MAX_FEE_GWEI ?? 120); // rimligt standardtak för Amoy
+  const tipCapGwei = Number(env.MAX_PRIORITY_FEE_GWEI ?? 3); // rimlig tip-tak
+  const minTipGwei = Number(env.MIN_PRIORITY_FEE_GWEI ?? 1); // undvik 0
 
-  const sim = await publicClient.simulateContract({
-    account,
-    address: contractAddress,
-    abi: PROOFY_ABI,
-    functionName: "registerIfMissing",
-    args: [hash],
-  });
+  const capWei = gweiToWeiBigInt(capGwei);
+  const tipCapWei = gweiToWeiBigInt(tipCapGwei);
+  const minTipWei = gweiToWeiBigInt(minTipGwei);
 
-  const nonce = await publicClient.getTransactionCount({
-    address: account.address,
-    blockTag: "pending",
-  });
+  let suggestedMaxFee = null;
+  let suggestedPriority = null;
 
-  const estimated = await publicClient.estimateFeesPerGas().catch(() => ({}));
-
-  const floorMax = parseGwei(String(feeFloorMaxGwei));
-  const floorPrio = parseGwei(String(feeFloorPrioGwei));
-
-  let maxFeePerGas =
-    estimated?.maxFeePerGas && estimated.maxFeePerGas > floorMax
-      ? estimated.maxFeePerGas
-      : floorMax;
-
-  let maxPriorityFeePerGas =
-    estimated?.maxPriorityFeePerGas && estimated.maxPriorityFeePerGas > floorPrio
-      ? estimated.maxPriorityFeePerGas
-      : floorPrio;
-
-  // 1) första sändning
-  const txHash1 = await walletClient.writeContract({
-    ...sim.request,
-    nonce,
-    maxFeePerGas,
-    maxPriorityFeePerGas,
-  });
-
-  // kort wait för att se om den råkar hinna få receipt direkt
-  const start = Date.now();
-  while (Date.now() - start < firstWaitMs) {
-    const r = await publicClient
-      .getTransactionReceipt({ hash: txHash1 })
-      .catch(() => null);
-    if (r) return { txHash: txHash1, replaced: false };
-    await new Promise((r) => setTimeout(r, 1200));
+  try {
+    const fees = await publicClient.estimateFeesPerGas();
+    // viem kan returnera null/undefined beroende på chain/rpc – därför defensivt
+    suggestedMaxFee = fees?.maxFeePerGas ?? null;
+    suggestedPriority = fees?.maxPriorityFeePerGas ?? null;
+  } catch {
+    // fall through till fallback
   }
 
-  // 2) fortfarande pending => speed-up (same nonce)
-  maxFeePerGas = maxFeePerGas + maxFeePerGas / 5n; // +20%
-  maxPriorityFeePerGas =
-    maxPriorityFeePerGas + maxPriorityFeePerGas / 2n; // +50%
+  // Fallback om RPC inte stödjer fee-estimates:
+  // maxFee = cap, priority = min(tipCap, 2 gwei) men aldrig > maxFee
+  let maxFeePerGas = suggestedMaxFee && suggestedMaxFee > 0n ? suggestedMaxFee : capWei;
+  let maxPriorityFeePerGas =
+    suggestedPriority && suggestedPriority > 0n ? suggestedPriority : gweiToWeiBigInt(2);
 
-  const txHash2 = await walletClient.writeContract({
-    ...sim.request,
-    nonce,
+  // Clamp mot tak
+  if (maxFeePerGas > capWei) maxFeePerGas = capWei;
+  if (maxPriorityFeePerGas > tipCapWei) maxPriorityFeePerGas = tipCapWei;
+
+  // Miniminivå
+  if (maxPriorityFeePerGas < minTipWei) maxPriorityFeePerGas = minTipWei;
+
+  // KRITISKT: priority får aldrig vara > fee
+  if (maxPriorityFeePerGas > maxFeePerGas) {
+    // sänk tip till fee
+    maxPriorityFeePerGas = maxFeePerGas;
+  }
+
+  // Extra: om fee är extremt lågt (0), sätt safe fallback
+  if (maxFeePerGas <= 0n) maxFeePerGas = capWei;
+  if (maxPriorityFeePerGas <= 0n) maxPriorityFeePerGas = minTipWei;
+  if (maxPriorityFeePerGas > maxFeePerGas) maxPriorityFeePerGas = maxFeePerGas;
+
+  return {
     maxFeePerGas,
     maxPriorityFeePerGas,
-  });
-
-  return { txHash: txHash2, replaced: true, replacedTxHash: txHash1 };
+    debug: {
+      capGwei,
+      tipCapGwei,
+      pickedMaxFeeGwei: weiToGweiNumber(maxFeePerGas),
+      pickedTipGwei: weiToGweiNumber(maxPriorityFeePerGas),
+    },
+  };
 }
 
 export async function onRequest({ request, env }) {
   const origin = request.headers.get("Origin") || "";
 
   if (request.method === "OPTIONS") return corsPreflight(origin || "*");
-  if (request.method !== "POST")
-    return json(405, { ok: false, error: "Method Not Allowed" }, origin);
+  if (request.method !== "POST") return json(405, { ok: false, error: "Method Not Allowed" }, origin);
 
-  const body = await request.json().catch(() => ({}));
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json(400, { ok: false, error: "Invalid JSON body" }, origin);
+  }
+
   const hash = String(body?.hash || "").trim();
-
-  if (!isValidBytes32Hex(hash))
-    return json(400, { ok: false, error: "Invalid hash format" }, origin);
+  if (!isValidBytes32Hex(hash)) return json(400, { ok: false, error: "Invalid hash format" }, origin);
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
   const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
   const privateKey = normalizePrivateKey(env.PROOFY_PRIVATE_KEY);
 
-  if (!rpcUrl || !contractAddress || !privateKey)
+  if (!rpcUrl || !contractAddress || !privateKey) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
-
-  if (!isValidAddressHex(contractAddress))
+  }
+  if (!isValidAddressHex(contractAddress)) {
     return json(500, { ok: false, error: "Bad contract address" }, origin);
-
-  if (!isValidPrivateKeyHex(privateKey))
+  }
+  if (!isValidPrivateKeyHex(privateKey)) {
     return json(500, { ok: false, error: "Bad private key" }, origin);
+  }
 
   try {
     const transport = http(rpcUrl);
-    const publicClient = createPublicClient({ chain: polygonAmoy, transport });
 
-    // 1) Läsning först: redan bekräftad?
+    const publicClient = createPublicClient({
+      chain: polygonAmoy,
+      transport,
+    });
+
+    // 1) Läs om redan bekräftad
     const pre = await readGetWithEvidence({
       publicClient,
       contractAddress,
@@ -311,10 +296,13 @@ export async function onRequest({ request, env }) {
     });
 
     if (pre.exists) {
-      return json(200, statusConfirmed({ hash, ...pre }), origin);
+      return json(200, statusConfirmed({ ...pre, hash }), origin);
     }
 
-    // 2) Skicka tx via server-wallet
+    // 2) Välj VALID gas (EIP-1559)
+    const { maxFeePerGas, maxPriorityFeePerGas } = await pickFees(publicClient, env);
+
+    // 3) Skicka in registrering (ingen väntan på bekräftelse)
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -322,32 +310,27 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // Avgiftsgolv kan styras via env om du vill (bra för drift)
-    const feeFloorMaxGwei = String(env.FEE_FLOOR_MAX_GWEI || "40");
-    const feeFloorPrioGwei = String(env.FEE_FLOOR_PRIO_GWEI || "2");
-    const firstWaitMs = Number(env.FIRST_WAIT_MS || 12000);
-
-    const sent = await sendWithSpeedUp({
-      publicClient,
-      walletClient,
-      contractAddress,
-      hash,
-      feeFloorMaxGwei,
-      feeFloorPrioGwei,
-      firstWaitMs,
+    const sim = await publicClient.simulateContract({
+      account,
+      address: contractAddress,
+      abi: PROOFY_ABI,
+      functionName: "registerIfMissing",
+      args: [hash],
     });
 
-    // 3) Juridiskt korrekt: fortfarande ej bekräftad tills get() visar ok+ts
+    const txHash = await walletClient.writeContract({
+      ...sim.request,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+    });
+
+    // 4) Returnera strikt "Ej bekräftad" + txHash som referens
     return json(
       200,
       statusNotConfirmed({
         hash,
         observedBlockNumber: pre.observedBlockNumber,
-        submission: {
-          txHash: sent.txHash,
-          submittedBy: account.address,
-          ...(sent.replaced ? { replacedTxHash: sent.replacedTxHash } : {}),
-        },
+        submission: { txHash, submittedBy: account.address },
       }),
       origin
     );
