@@ -1,0 +1,26 @@
+diff --git a/dist/register.html b/dist/register.html
+index 0000000..0000000 100644
+--- a/dist/register.html
++++ b/dist/register.html
+@@ -676,6 +676,14 @@
+   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
++
++  // UX: auto-start create after file selection (reduce one click)
++  fileInput.addEventListener("change", () => {
++    setTimeout(() => {
++      if (currentFile && !busy) createBtn.click();
++    }, 400);
++  });
+diff --git a/dist/register.html b/dist/register.html
+index 0000000..0000000 100644
+--- a/dist/register.html
++++ b/dist/register.html
+@@ -1090,6 +1090,12 @@
+       localIdBox.style.display = "block";
+       localIdOut.textContent = id;
++
++      // UX: auto-copy Verifierings-ID when created (reduce one click)
++      copyTextToClipboard(id).then(() => {
++        showPill(copyIdPill, "Verifierings-ID kopierat");
++        setTimeout(() => hidePill(copyIdPill), 1200);
++      });
