@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#0b1220" />
     <title>Proofy – Verifieringsintyg</title>
 
-    <!-- Same header/hamburger styling as other pages -->
+    <!-- Samma header/hamburger‑stil som övriga sidor -->
     <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
     <style>
@@ -55,7 +55,7 @@
         border-radius: 14px;
       }
 
-      /* NOTE: header/nav styling is handled by /assets/header.css now */
+      /* NOTE: header/nav styling hanteras av /assets/header.css */
 
       main{
         max-width:1100px;
@@ -295,13 +295,14 @@
       }
     </style>
 
+    <!-- QR‑generator -->
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
   </head>
 
   <body>
     <a class="skip" href="#main">Hoppa till innehåll</a>
 
-    <!-- Shared Proofy header + hamburger -->
+    <!-- Delad Proofy‑header + hamburger -->
     <header>
       <div class="wrap">
         <div class="nav">
@@ -559,52 +560,25 @@
         }
       }
 
-      /* ✅ FIX: renderQR now matches Proofy qr.min.js API (new QRCode(el) + makeCode) */
       function renderQR(text){
         const el = $("qrcode");
         el.innerHTML = "";
-
-        const payload = String(text || "").trim();
-        if (!payload){
-          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">Ingen länk att koda.</div>';
-          return;
-        }
 
         if (typeof window.QRCode !== "function"){
           el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR kunde inte laddas.</div>';
           return;
         }
 
-        try{
-          const qr = new window.QRCode(el);
-
-          // Use Proofy-build options
-          qr._htOption.width = 168;
-          qr._htOption.height = 168;
-          qr._htOption.colorDark = "#0b1220";
-          qr._htOption.colorLight = "#ffffff";
-          qr._htOption.quiet = 4;
-          qr._htOption.minScale = 4;
-
-          // Proofy-build exposes QRCodeCorrectLevel, not QRCode.CorrectLevel
-          if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null){
-            qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
-          }
-
-          qr.makeCode(payload);
-
-          // Defensive: keep pixel-perfect size even if global CSS touches canvas
-          const canvas = el.querySelector("canvas");
-          if (canvas){
-            canvas.style.width = "168px";
-            canvas.style.height = "168px";
-            canvas.style.display = "block";
-            canvas.style.imageRendering = "pixelated";
-          }
-        } catch (e){
-          console.error("QR render failed:", e);
-          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR-koden kunde inte visas.</div>';
-        }
+        let level = undefined;
+        try{ level = window.QRCode?.CorrectLevel?.H; }catch{}
+        new window.QRCode(el, {
+          text,
+          width: 168,
+          height: 168,
+          colorDark: "#0b1220",
+          colorLight: "#ffffff",
+          correctLevel: level
+        });
       }
 
       async function fetchJson(url, options){
@@ -735,7 +709,7 @@
         setStatus("warn", "Kontrollerar…");
         $("resultText").textContent = "Kontrollerar status hos Proofy…";
 
-        // Source of truth: /api/verify (statusmodell)
+        // Källa: /api/verify (status‑modell)
         let v;
         try{
           v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
@@ -818,7 +792,7 @@
       run();
     </script>
 
-    <!-- Needed for hamburger toggle -->
+    <!-- Behövs för hamburgare -->
     <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
   </body>
 </html>
