@@ -33,7 +33,7 @@ function json(status, obj, origin) {
   const headers = {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
-    Vary: "Origin",
+    vary: "Origin",
     "x-content-type-options": "nosniff",
   };
   if (origin) headers["access-control-allow-origin"] = origin;
@@ -49,7 +49,7 @@ function corsPreflight(origin) {
       "access-control-allow-methods": "POST, OPTIONS",
       "access-control-allow-headers": "Content-Type",
       "access-control-max-age": "86400",
-      Vary: "Origin",
+      vary: "Origin",
     },
   });
 }
@@ -113,12 +113,13 @@ async function assertAmoyChain(publicClient) {
   return cid;
 }
 
-/**
- * Robust EIP-1559 fee-val:
- * - försök estimateFeesPerGas()
- * - clampa inom MAX_FEE_GWEI / MAX_PRIORITY_FEE_GWEI
- * - se till att priority >= MIN_PRIORITY_FEE_GWEI
- */
+function getTimeoutMs(env) {
+  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
+  if (!raw) return 20_000;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
+}
+
 async function pickFeesForDebug(publicClient, env) {
   const capGwei = parseNumberEnv(env.MAX_FEE_GWEI, DEFAULTS.MAX_FEE_GWEI);
   const tipCapGwei = parseNumberEnv(
@@ -178,29 +179,21 @@ async function pickFeesForDebug(publicClient, env) {
   };
 }
 
-async function readProof(publicClient, contractAddress, hash) {
-  // getProof(bytes32) -> (timestamp, submitter)
+async function readGet(publicClient, contractAddress, hash) {
   const res = await publicClient.readContract({
     address: contractAddress,
     abi: PROOFY_ABI,
-    functionName: "getProof",
+    functionName: "get",
     args: [hash],
   });
 
-  // viem kan returnera array [timestamp, submitter] eller object beroende på ABI-format
-  const timestamp =
-    Array.isArray(res) ? res[0] : res?.timestamp ?? 0n;
-  const submitter =
-    Array.isArray(res) ? res[1] : res?.submitter ?? "0x0000000000000000000000000000000000000000";
+  const ok = Array.isArray(res) ? res[0] : res?.ok ?? false;
+  const ts = Array.isArray(res) ? res[1] : res?.ts ?? 0n;
 
-  const tsNum = Number(timestamp);
-  const confirmed = tsNum > 0;
+  const tsNum = Number(ts);
+  const confirmed = Boolean(ok) && tsNum > 0;
 
-  return {
-    confirmed,
-    confirmedAtUnix: confirmed ? tsNum : null,
-    submitter,
-  };
+  return { confirmed, confirmedAtUnix: confirmed ? tsNum : null };
 }
 
 export async function onRequest({ request, env }) {
@@ -230,30 +223,28 @@ export async function onRequest({ request, env }) {
   if (!rpcUrl || !contractAddress || !privateKey) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
-
   if (!isAddress(contractAddress)) {
     return json(500, { ok: false, error: "Bad contract address" }, origin);
   }
-
   if (!isValidPrivateKeyHex(privateKey)) {
     return json(500, { ok: false, error: "Bad private key" }, origin);
   }
 
   try {
-    const transport = http(rpcUrl, { timeout: 20_000 });
+    const timeout = getTimeoutMs(env);
+    const transport = http(rpcUrl, { timeout });
 
     const publicClient = createPublicClient({
       chain: polygonAmoy,
       transport,
     });
 
-    // Säkerställ kedja
     const chainId = await assertAmoyChain(publicClient);
 
-    // 1) Kolla om den redan finns on-chain
+    // 1) Om den redan finns -> returnera CONFIRMED direkt
     try {
-      const proof = await readProof(publicClient, contractAddress, hash);
-      if (proof.confirmed) {
+      const existing = await readGet(publicClient, contractAddress, hash);
+      if (existing.confirmed) {
         return json(
           200,
           {
@@ -261,7 +252,7 @@ export async function onRequest({ request, env }) {
             statusCode: "CONFIRMED",
             statusText: "Bekräftad (fanns redan)",
             hash,
-            confirmedAtUnix: proof.confirmedAtUnix,
+            confirmedAtUnix: existing.confirmedAtUnix,
             evidence: null,
             submission: null,
             legalText: "Fanns redan bekräftad notering.",
@@ -270,13 +261,11 @@ export async function onRequest({ request, env }) {
         );
       }
     } catch {
-      // Read kan faila tillfälligt — vi försöker ändå registrera.
+      // Om read misslyckas fortsätter vi ändå (kan fortfarande registrera)
     }
 
-    // 2) Välj avgifter (EIP-1559) + debug
     const fees = await pickFeesForDebug(publicClient, env);
 
-    // 3) Skapa signer
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -284,16 +273,15 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 4) Simulera register(bytes32)
+    // 2) Simulera registerIfMissing(bytes32)
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
       abi: PROOFY_ABI,
-      functionName: "register",
+      functionName: "registerIfMissing",
       args: [hash],
     });
 
-    // 5) Skicka tx
     const txHash = await walletClient.writeContract({
       ...sim.request,
       maxFeePerGas: fees.raw.maxFeePerGas,
@@ -320,19 +308,18 @@ export async function onRequest({ request, env }) {
       origin
     );
   } catch (e) {
-    // Vanligt edge case: kontraktet kan revert:a om redan registrerad.
-    // Då försöker vi en sista gång läsa state och returnera CONFIRMED om det stämmer.
+    // Fallback: försök läsa state en sista gång, om tx faktiskt resulterade i registrering
     try {
-      const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
-      const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
-      if (rpcUrl && contractAddress && isAddress(contractAddress)) {
-        const publicClient = createPublicClient({
+      const rpcUrl2 = String(env.AMOY_RPC_URL || "").trim();
+      const contractAddress2 = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
+      if (rpcUrl2 && isAddress(contractAddress2)) {
+        const publicClient2 = createPublicClient({
           chain: polygonAmoy,
-          transport: http(rpcUrl, { timeout: 20_000 }),
+          transport: http(rpcUrl2, { timeout: getTimeoutMs(env) }),
         });
-        await assertAmoyChain(publicClient);
-        const proof = await readProof(publicClient, contractAddress, hash);
-        if (proof.confirmed) {
+        await assertAmoyChain(publicClient2);
+        const existing = await readGet(publicClient2, contractAddress2, hash);
+        if (existing.confirmed) {
           return json(
             200,
             {
@@ -340,7 +327,7 @@ export async function onRequest({ request, env }) {
               statusCode: "CONFIRMED",
               statusText: "Bekräftad (registrerades nyligen)",
               hash,
-              confirmedAtUnix: proof.confirmedAtUnix,
+              confirmedAtUnix: existing.confirmedAtUnix,
               evidence: null,
               submission: null,
               legalText: "Notering finns bekräftad on-chain.",
@@ -350,7 +337,7 @@ export async function onRequest({ request, env }) {
         }
       }
     } catch {
-      // ignorera fallback-fel
+      // ignore
     }
 
     return json(
