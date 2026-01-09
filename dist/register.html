@@ -540,7 +540,7 @@
   let lastRun = null;
   let lastProofyStatusCode = "";
 
-  // NEW: polling state
+  // polling state
   let pollTimer = null;
   let pollStartAt = 0;
   let pollTxHash = null;
@@ -606,7 +606,7 @@
     return { ok: false, res: null, data: {}, attempt: attempts, aborted:false };
   }
 
-  // NEW: safe GET helper (for /api/tx and /api/verify)
+  // safe GET helper (for /api/tx and /api/verify)
   async function safeGetJson(url){
     const { res, data, aborted } = await fetchJsonWithTimeout(url, { method:"GET" }, 20000);
     if (!res || !res.ok || aborted) return { ok:false, res, data, aborted };
@@ -1000,7 +1000,7 @@
     pollStartAt = Date.now();
     pollTxHash = txHash;
 
-    const maxMs = 120000; // 2 min: revisionsvänligt, sen får man kontrollera senare
+    const maxMs = 120000; // 2 min
     let attempt = 0;
 
     const tick = async () => {
@@ -1009,7 +1009,6 @@
 
       const elapsed = Date.now() - pollStartAt;
       if (elapsed > maxMs) {
-        // juridiskt: vi drar ingen slutsats, vi säger bara att kontroll ej kunde slutföras nu
         lastProofyStatusCode = "NOT_CONFIRMED";
         updateReceiptLabel();
         debugOut.textContent = "Kontroll av registreringen kunde inte slutföras inom tidsgränsen. Du kan kontrollera igen via verifiering senare.";
@@ -1029,7 +1028,6 @@
       if (myOp !== opId) return;
 
       if (!txRes.ok || txRes.data?.ok === false) {
-        // tekniskt fel: inte negativt påstående
         lastProofyStatusCode = "UNKNOWN";
         updateReceiptLabel();
         debugOut.textContent = "Status kunde inte kontrolleras just nu (tekniskt fel vid kontroll av transaktion). Ingen slutsats kan dras.";
@@ -1038,8 +1036,7 @@
         headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
         regStatusOut.textContent = "Kunde inte kontrolleras";
         timeOut.textContent = "—";
-
-        // fortsätt försöka ändå (till maxMs)
+        // fortsätt försöka ändå
       } else {
         const mined = !!txRes.data?.mined;
         if (!mined) {
@@ -1050,11 +1047,9 @@
           const st = String(txRes.data?.status || "");
           const blockNo = txRes.data?.blockNumber || null;
 
-          // visa kontrollpunkt i debugfält utan att överdriva
           submitterOut.textContent = blockNo ? String(blockNo) : (submitterOut.textContent || "—");
 
           if (st === "reverted") {
-            // Viktigt juridiskt: detta är inte “ej bekräftad”, det är “kunde inte registreras”
             lastProofyStatusCode = "UNKNOWN";
             updateReceiptLabel();
             headline.style.borderColor = "rgba(255,80,80,.20)";
@@ -1063,15 +1058,14 @@
             regStatusOut.textContent = "Kunde inte kontrolleras";
             timeOut.textContent = "—";
             debugOut.textContent = "Transaktionen blev mined men misslyckades (reverted). Ingen registrering kan påvisas för detta försök. Du kan försöka igen eller kontakta Proofy med txHash.";
-            return; // stoppa polling
+            return; // stop polling
           }
 
-          // mined success -> verify
-          const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}`);
+          // IMPORTANT FIX: include tx in verify call so status can be SUBMITTED_UNCONFIRMED
+          const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
           if (myOp !== opId) return;
 
           if (!ver.ok || ver.data?.ok === false) {
-            // tekniskt fel: ingen slutsats
             lastProofyStatusCode = "UNKNOWN";
             updateReceiptLabel();
             headline.style.borderColor = "rgba(255,80,80,.20)";
@@ -1080,12 +1074,10 @@
             regStatusOut.textContent = "Kunde inte kontrolleras";
             timeOut.textContent = "—";
             debugOut.textContent = "Status kunde inte kontrolleras vid verifiering (tekniskt fel). Ingen slutsats kan dras.";
-            // fortsätt polling (kedjan kan vara inkonsekvent kort stund)
+            // continue polling
           } else {
-            // Apply verify status (CONFIRMED / NOT_CONFIRMED)
             applyStatusToUI({ id, createdSe, data: ver.data });
 
-            // om confirmed -> klart, annars kan det vara lag/propagation – fortsätt en stund
             if (String(ver.data?.statusCode || "") === "CONFIRMED") {
               return;
             }
@@ -1093,7 +1085,6 @@
         }
       }
 
-      // backoff
       const delay = Math.min(9000, 2200 + attempt * 350);
       pollTimer = setTimeout(tick, delay);
     };
@@ -1266,18 +1257,22 @@
       return;
     }
 
-    if (sc === "NOT_CONFIRMED") {
+    if (sc === "NOT_CONFIRMED" || sc === "SUBMITTED_UNCONFIRMED") {
+      // visa "inskickad – ej bekräftad" om backend ger det, annars "ej bekräftad"
+      const isSubmitted = (sc === "SUBMITTED_UNCONFIRMED");
       headline.style.borderColor = "rgba(251,191,36,.22)";
       headline.style.background = "rgba(251,191,36,.08)";
-      headline.innerHTML = `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde visas vid kontrolltillfället)</span>`;
-      regStatusOut.textContent = st || "Ej bekräftad";
+      headline.innerHTML = isSubmitted
+        ? `<span class="meta">⏳ Inskickad – ej bekräftad</span> <span class="meta">(kontroll pågår)</span>`
+        : `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde visas vid kontrolltillfället)</span>`;
+      regStatusOut.textContent = st || (isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad");
 
       if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
       lastRun = {
         id,
         link: currentLink,
         createdSe,
-        statusLine: st || "Ej bekräftad",
+        statusLine: st || (isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad"),
         timeSe: null,
         txHash: txHash,
         observedBlockNumber: observedBlockNumber
@@ -1288,7 +1283,7 @@
     headline.style.borderColor = "rgba(255,80,80,.20)";
     headline.style.background = "rgba(255,80,80,.06)";
     headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
-    regStatusOut.textContent = st || "Kunde inte kontrolleras";
+    regStatusOut.textContent = st || "Kunde inte konteras";
 
     if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
     lastRun = {
@@ -1320,7 +1315,7 @@
       if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt Verifierings-ID.");
 
       currentId = id;
-      currentLink = buildVerifyLink(id);
+      currentLink = buildVerifyLink(id); // initialt utan tx (vi uppdaterar när txHash finns)
 
       if (emptyState) emptyState.style.display = "none";
 
@@ -1379,18 +1374,26 @@
       // Sätt UI från register-svaret (NOT_CONFIRMED + txHash)
       applyStatusToUI({ id, createdSe, data });
 
-      // Starta polling bara om txHash finns
+      // IMPORTANT FIX: om vi fick txHash, uppdatera länken/QR så verify.html också får tx
       const txHash = data?.submission?.txHash || null;
       if (txHash) {
-        // Sätt ett mer korrekt “kontroll pågår” (utan att påstå bekräftelse)
+        currentLink = `${buildVerifyLink(id)}&tx=${encodeURIComponent(txHash)}`;
+
+        linkOut.textContent = currentLink;
+        linkOut.href = currentLink;
+
+        if (qrTap) qrTap.style.display = "inline-block";
+        requestAnimationFrame(() => renderQr(qrBox, currentLink));
+      }
+
+      // Starta polling bara om txHash finns
+      if (txHash) {
         headline.style.borderColor = "rgba(255,255,255,.14)";
         headline.style.background = "rgba(255,255,255,.05)";
         headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
         regStatusOut.textContent = "Inskickad – ej bekräftad";
-        // Poll tx -> verify
         pollTxAndVerify(myOp, id, txHash, createdSe);
       } else {
-        // Ingen tx: då finns inget att följa upp automatiskt
         debugOut.textContent = debugOut.textContent || "Ingen transaktionsreferens kunde konstateras. Du kan kontrollera via verifiering senare.";
       }
 
