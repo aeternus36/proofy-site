@@ -4,14 +4,14 @@ import { polygonAmoy } from "viem/chains";
 /**
  * Proofy /api/verify
  *
- * Juridiskt krav:
- * - Får ALDRIG påstå "bekräftad/registrerad" utan att det kan styrkas via bekräftad notering.
- * - Om ingen bekräftelse finns: ska uttryckligen anges som "Ej bekräftad".
- * - Vid tekniskt fel: ska anges som "Kunde inte kontrolleras" (inte ett negativt påstående).
+ * Juridik:
+ * - Aldrig "bekräftad" utan att en bekräftad notering kan läsas.
+ * - Om ingen bekräftelse finns: "Ej bekräftad" eller "Inskickad – ej bekräftad" (om submission finns).
+ * - Vid tekniskt fel: "Kunde inte kontrolleras" (inte ett negativt påstående).
  *
- * Tekniskt krav:
- * - Read-only. Inga skrivningar. Ingen signering. Ingen nyckel.
- * - Register, Verify och Certificate ska använda samma statusmodell.
+ * Teknik:
+ * - Read-only. Inga skrivningar.
+ * - Samma statusmodell som Register/Certificate.
  */
 
 const PROOFY_ABI = [
@@ -34,10 +34,7 @@ function json(status, obj, origin) {
     Vary: "Origin",
     "X-Content-Type-Options": "nosniff",
   };
-
-  // Conservative: allow same-origin; if Origin exists, echo it back.
   if (origin) headers["Access-Control-Allow-Origin"] = origin;
-
   return new Response(JSON.stringify(obj), { status, headers });
 }
 
@@ -61,6 +58,16 @@ function isValidBytes32Hex(hash) {
     hash.startsWith("0x") &&
     hash.length === 66 &&
     isHex(hash)
+  );
+}
+
+// txHash är 32 bytes => 0x + 64 hex
+function isValidTxHash(tx) {
+  return (
+    typeof tx === "string" &&
+    tx.startsWith("0x") &&
+    tx.length === 66 &&
+    isHex(tx)
   );
 }
 
@@ -90,11 +97,11 @@ function sanitizeError(e) {
 
 /**
  * Gemensam statusmodell
- *
  * statusCode:
- * - CONFIRMED: bekräftad notering finns
- * - NOT_CONFIRMED: ingen bekräftad notering vid kontrolltillfället
- * - UNKNOWN: kunde inte kontrolleras (tekniskt fel)
+ * - CONFIRMED
+ * - SUBMITTED_UNCONFIRMED
+ * - NOT_CONFIRMED
+ * - UNKNOWN
  */
 function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
@@ -103,12 +110,25 @@ function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
     statusText: "Bekräftad",
     hash,
     confirmedAtUnix: timestamp,
-    evidence: {
-      observedBlockNumber,
-    },
+    evidence: { observedBlockNumber },
     submission: null,
     legalText:
       "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot extern verifieringskälla vid behov.",
+  };
+}
+
+function statusSubmittedUnconfirmed({ hash, observedBlockNumber, submission }) {
+  const txHash = submission?.txHash || null;
+  return {
+    ok: true,
+    statusCode: "SUBMITTED_UNCONFIRMED",
+    statusText: "Inskickad – ej bekräftad",
+    hash,
+    confirmedAtUnix: null,
+    evidence: observedBlockNumber ? { observedBlockNumber } : null,
+    submission: txHash ? { txHash } : null,
+    legalText:
+      "En registrering har skickats in men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'.",
   };
 }
 
@@ -119,9 +139,7 @@ function statusNotConfirmed({ hash, observedBlockNumber }) {
     statusText: "Ej bekräftad",
     hash,
     confirmedAtUnix: null,
-    evidence: {
-      observedBlockNumber,
-    },
+    evidence: observedBlockNumber ? { observedBlockNumber } : null,
     submission: null,
     legalText:
       "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
@@ -156,7 +174,6 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const exists = Boolean(ok) && timestamp !== 0;
 
   const observedBlockNumber = await publicClient.getBlockNumber();
-
   return {
     exists,
     timestamp,
@@ -167,24 +184,23 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
 export async function onRequest({ request, env }) {
   const origin = request.headers.get("Origin") || "";
 
-  if (request.method === "OPTIONS") {
-    return corsPreflight(origin || "*");
-  }
-
+  if (request.method === "OPTIONS") return corsPreflight(origin || "*");
   if (request.method !== "GET" && request.method !== "POST") {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
 
-  // Accept hash from GET query or POST body
+  // Accept hash from GET query or POST body. Optional tx for better UX.
   let hash = "";
+  let tx = "";
+
   if (request.method === "GET") {
     const url = new URL(request.url);
-    hash = String(
-      (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim()
-    );
+    hash = String((url.searchParams.get("hash") || url.searchParams.get("id") || "").trim());
+    tx = String((url.searchParams.get("tx") || "").trim());
   } else {
     const body = await request.json().catch(() => ({}));
     hash = String(body?.hash || "").trim();
+    tx = String(body?.tx || "").trim();
   }
 
   if (!isValidBytes32Hex(hash)) {
@@ -195,13 +211,15 @@ export async function onRequest({ request, env }) {
     );
   }
 
+  // tx är valfri. Om den är med men ogiltig: behandla som ej angiven (inte hårt fel).
+  if (tx && !isValidTxHash(tx)) tx = "";
+
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
   const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
 
   if (!rpcUrl || !contractAddress) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
-
   if (!isValidAddressHex(contractAddress)) {
     return json(
       500,
@@ -223,7 +241,20 @@ export async function onRequest({ request, env }) {
     });
 
     if (proof.exists) {
-      return json(200, statusConfirmed(proof), origin);
+      return json(200, statusConfirmed({ hash, ...proof }), origin);
+    }
+
+    // Om någon redan har skickat in en registrering (txHash finns), visa "Inskickad – ej bekräftad"
+    if (tx) {
+      return json(
+        200,
+        statusSubmittedUnconfirmed({
+          hash,
+          observedBlockNumber: proof.observedBlockNumber,
+          submission: { txHash: tx },
+        }),
+        origin
+      );
     }
 
     return json(
