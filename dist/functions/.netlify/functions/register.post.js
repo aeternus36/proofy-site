@@ -7,6 +7,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
+// ABI för notering + register
 const PROOFY_ABI = [
   {
     type: "function",
@@ -30,6 +31,12 @@ const PROOFY_ABI = [
   },
 ];
 
+// ---- BigInt-safe JSON ----
+function safeJsonStringify(obj) {
+  return JSON.stringify(obj, (_k, v) => (typeof v === "bigint" ? v.toString() : v));
+}
+
+// Standard JSON-response (BigInt-safe)
 function json(status, obj, origin) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
@@ -38,7 +45,7 @@ function json(status, obj, origin) {
     "X-Content-Type-Options": "nosniff",
   };
   if (origin) headers["Access-Control-Allow-Origin"] = origin;
-  return new Response(JSON.stringify(obj), { status, headers });
+  return new Response(safeJsonStringify(obj), { status, headers });
 }
 
 function corsPreflight(origin) {
@@ -103,12 +110,16 @@ function gweiToWeiBigInt(gwei) {
 
 function weiToGweiNumber(wei) {
   try {
+    // NOTE: only used for debug display; not fed back into write.
     return Number(wei) / 1e9;
   } catch {
     return null;
   }
 }
 
+/**
+ * EIP-1559 fee-valsfunktion med debug-fält (BigInt-safe).
+ */
 async function pickFeesForDebug(publicClient, env) {
   const capGwei = Number(env.MAX_FEE_GWEI ?? 600);
   const tipCapGwei = Number(env.MAX_PRIORITY_FEE_GWEI ?? 20);
@@ -142,22 +153,26 @@ async function pickFeesForDebug(publicClient, env) {
   if (maxPriorityFeePerGas < minTipWei) maxPriorityFeePerGas = minTipWei;
   if (maxPriorityFeePerGas > maxFeePerGas) maxPriorityFeePerGas = maxFeePerGas;
 
+  // return both numeric gwei display AND raw wei BigInt (will be stringified safely)
   return {
     picked: {
-      maxFeePerGas: weiToGweiNumber(maxFeePerGas),
-      maxPriorityFeePerGas: weiToGweiNumber(maxPriorityFeePerGas),
+      maxFeePerGasGwei: weiToGweiNumber(maxFeePerGas),
+      maxPriorityFeePerGasGwei: weiToGweiNumber(maxPriorityFeePerGas),
       capGwei,
       tipCapGwei,
       minTipGwei,
     },
     estimate: {
-      maxFeePerGas: suggestedMaxFee ? weiToGweiNumber(suggestedMaxFee) : null,
-      maxPriorityFeePerGas: suggestedPriority
+      maxFeePerGasGwei: suggestedMaxFee ? weiToGweiNumber(suggestedMaxFee) : null,
+      maxPriorityFeePerGasGwei: suggestedPriority
         ? weiToGweiNumber(suggestedPriority)
         : null,
       error: estimateError,
     },
-    raw: { maxFeePerGas, maxPriorityFeePerGas },
+    rawWei: {
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+    },
   };
 }
 
@@ -165,11 +180,8 @@ export async function onRequest({ request, env }) {
   const origin = request.headers.get("Origin") || "";
 
   if (request.method === "OPTIONS") return corsPreflight(origin || "*");
-
-  // (POST-only fil, men safe-guard)
-  if (request.method !== "POST") {
+  if (request.method !== "POST")
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
-  }
 
   let body;
   try {
@@ -179,23 +191,21 @@ export async function onRequest({ request, env }) {
   }
 
   const hash = String(body?.hash || "").trim();
-  if (!isValidBytes32Hex(hash)) {
+  if (!isValidBytes32Hex(hash))
     return json(400, { ok: false, error: "Invalid hash format" }, origin);
-  }
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
   const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
   const privateKey = normalizePrivateKey(env.PROOFY_PRIVATE_KEY);
 
-  if (!rpcUrl || !contractAddress || !privateKey) {
+  if (!rpcUrl || !contractAddress || !privateKey)
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
-  }
-  if (!isValidAddressHex(contractAddress)) {
+
+  if (!isValidAddressHex(contractAddress))
     return json(500, { ok: false, error: "Bad contract address" }, origin);
-  }
-  if (!isValidPrivateKeyHex(privateKey)) {
+
+  if (!isValidPrivateKeyHex(privateKey))
     return json(500, { ok: false, error: "Bad private key" }, origin);
-  }
 
   try {
     const transport = http(rpcUrl, { timeout: 20_000 });
@@ -205,7 +215,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // redan bekräftad?
+    // kontrollera om redan bekräftad
     let existsBefore = false;
     let beforeTs = null;
     try {
@@ -236,8 +246,10 @@ export async function onRequest({ request, env }) {
       );
     }
 
+    // Välj valid gas & debug info
     const fees = await pickFeesForDebug(publicClient, env);
 
+    // skapa signer
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -245,6 +257,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
+    // simulera skrivning
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
@@ -253,10 +266,11 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
+    // skriv kontrakt (använd rawWei BigInt direkt)
     const txHash = await walletClient.writeContract({
       ...sim.request,
-      maxFeePerGas: gweiToWeiBigInt(fees.picked.maxFeePerGas),
-      maxPriorityFeePerGas: gweiToWeiBigInt(fees.picked.maxPriorityFeePerGas),
+      maxFeePerGas: fees.rawWei.maxFeePerGas,
+      maxPriorityFeePerGas: fees.rawWei.maxPriorityFeePerGas,
     });
 
     return json(
@@ -269,7 +283,13 @@ export async function onRequest({ request, env }) {
         confirmedAtUnix: null,
         evidence: null,
         submission: { txHash, submittedBy: account.address },
-        legalText: "En registrering har skickats in men är ännu inte bekräftad.",
+        legalText:
+          "En registrering har skickats in men är ännu inte bekräftad.",
+        // debug är nu BigInt-safe pga safeJsonStringify
+        debug: {
+          fees,
+          contractAddress,
+        },
       },
       origin
     );
