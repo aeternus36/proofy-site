@@ -7,7 +7,6 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
-// ABI för notering + register
 const PROOFY_ABI = [
   {
     type: "function",
@@ -31,7 +30,6 @@ const PROOFY_ABI = [
   },
 ];
 
-// Standard JSON-response
 function json(status, obj, origin) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
@@ -111,13 +109,10 @@ function weiToGweiNumber(wei) {
   }
 }
 
-/**
- * EIP-1559 fee-valsfunktion med debug-fält.
- */
 async function pickFeesForDebug(publicClient, env) {
-  const capGwei = Number(env.MAX_FEE_GWEI ?? 600); // tak för maxFee
-  const tipCapGwei = Number(env.MAX_PRIORITY_FEE_GWEI ?? 20); // tak för priority
-  const minTipGwei = Number(env.MIN_PRIORITY_FEE_GWEI ?? 1); // min priority
+  const capGwei = Number(env.MAX_FEE_GWEI ?? 600);
+  const tipCapGwei = Number(env.MAX_PRIORITY_FEE_GWEI ?? 20);
+  const minTipGwei = Number(env.MIN_PRIORITY_FEE_GWEI ?? 1);
 
   const capWei = gweiToWeiBigInt(capGwei);
   const tipCapWei = gweiToWeiBigInt(tipCapGwei);
@@ -135,7 +130,6 @@ async function pickFeesForDebug(publicClient, env) {
     estimateError = String(err?.message || err);
   }
 
-  // fallback
   let maxFeePerGas =
     suggestedMaxFee && suggestedMaxFee > 0n ? suggestedMaxFee : capWei;
   let maxPriorityFeePerGas =
@@ -170,10 +164,9 @@ async function pickFeesForDebug(publicClient, env) {
 export async function onRequest({ request, env }) {
   const origin = request.headers.get("Origin") || "";
 
-  // OPTIONS preflight
   if (request.method === "OPTIONS") return corsPreflight(origin || "*");
 
-  // Detta är POST-only fil. Men om Cloudflare ändå skickar annat hit:
+  // (POST-only fil, men safe-guard)
   if (request.method !== "POST") {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
@@ -197,11 +190,9 @@ export async function onRequest({ request, env }) {
   if (!rpcUrl || !contractAddress || !privateKey) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
-
   if (!isValidAddressHex(contractAddress)) {
     return json(500, { ok: false, error: "Bad contract address" }, origin);
   }
-
   if (!isValidPrivateKeyHex(privateKey)) {
     return json(500, { ok: false, error: "Bad private key" }, origin);
   }
@@ -214,7 +205,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // kontrollera om redan bekräftad
+    // redan bekräftad?
     let existsBefore = false;
     let beforeTs = null;
     try {
@@ -226,9 +217,7 @@ export async function onRequest({ request, env }) {
       });
       existsBefore = Boolean(ok) && Number(ts) !== 0;
       beforeTs = Number(ts);
-    } catch {
-      // ignore read failures here; will fall through to register attempt
-    }
+    } catch {}
 
     if (existsBefore) {
       return json(
@@ -247,10 +236,8 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // Välj valid gas & debug info
     const fees = await pickFeesForDebug(publicClient, env);
 
-    // skapa signer
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -258,7 +245,6 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // simulera skrivning
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
@@ -267,7 +253,6 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
-    // skriv kontrakt
     const txHash = await walletClient.writeContract({
       ...sim.request,
       maxFeePerGas: gweiToWeiBigInt(fees.picked.maxFeePerGas),
@@ -284,12 +269,7 @@ export async function onRequest({ request, env }) {
         confirmedAtUnix: null,
         evidence: null,
         submission: { txHash, submittedBy: account.address },
-        legalText:
-          "En registrering har skickats in men är ännu inte bekräftad.",
-        debug: {
-          fees,
-          contractAddress,
-        },
+        legalText: "En registrering har skickats in men är ännu inte bekräftad.",
       },
       origin
     );
