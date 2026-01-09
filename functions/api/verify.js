@@ -1,5 +1,6 @@
-import { createPublicClient, http, isHex } from "viem";
+import { createPublicClient, http, isHex, isAddress } from "viem";
 import { polygonAmoy } from "viem/chains";
+import { ABI as PROOFY_ABI } from "./abi.js";
 
 /**
  * Proofy /api/verify
@@ -14,32 +15,14 @@ import { polygonAmoy } from "viem/chains";
  * - Samma statusmodell som Register/Certificate.
  */
 
-const PROOFY_ABI = [
-  {
-    type: "function",
-    name: "get",
-    stateMutability: "view",
-    inputs: [{ name: "refId", type: "bytes32" }],
-    outputs: [
-      { name: "ok", type: "bool" },
-      { name: "ts", type: "uint64" },
-    ],
-  },
-];
-
-const DEFAULTS = {
-  // Om du vill hård-styra CORS origins:
-  // env.ALLOWED_ORIGINS = "https://proofy.se,https://www.proofy.se"
-};
-
 function json(status, obj, origin) {
   const headers = {
-    "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    Vary: "Origin",
-    "X-Content-Type-Options": "nosniff",
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    vary: "Origin",
+    "x-content-type-options": "nosniff",
   };
-  if (origin) headers["Access-Control-Allow-Origin"] = origin;
+  if (origin) headers["access-control-allow-origin"] = origin;
   return new Response(JSON.stringify(obj), { status, headers });
 }
 
@@ -47,12 +30,12 @@ function corsPreflight(origin) {
   return new Response(null, {
     status: 204,
     headers: {
-      "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": origin || "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Max-Age": "86400",
-      Vary: "Origin",
+      "cache-control": "no-store",
+      "access-control-allow-origin": origin || "*",
+      "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "Content-Type",
+      "access-control-max-age": "86400",
+      vary: "Origin",
     },
   });
 }
@@ -79,7 +62,6 @@ function isValidBytes32Hex(hash) {
   );
 }
 
-// txHash är 32 bytes => 0x + 64 hex
 function isValidTxHash(tx) {
   return (
     typeof tx === "string" &&
@@ -88,26 +70,22 @@ function isValidTxHash(tx) {
   );
 }
 
-function isValidAddressHex(addr) {
-  return (
-    typeof addr === "string" &&
-    /^0x[0-9a-fA-F]{40}$/.test(addr.trim()) &&
-    isHex(addr.trim())
-  );
-}
-
-function toSafeUint64(ts) {
-  const v = BigInt(ts ?? 0n);
-  if (v <= 0n) return 0;
-  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
-  return v <= maxSafe ? Number(v) : Number(maxSafe);
-}
-
 function sanitizeError(e) {
   const msg =
-    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
-    String(e);
+    (e && typeof e === "object" && (e.shortMessage || e.message)) || String(e);
   return String(msg).slice(0, 600);
+}
+
+function toSafeUnixSeconds(tsBigint) {
+  // getProof returns uint256; we only need safe number for UI.
+  try {
+    const v = BigInt(tsBigint ?? 0n);
+    if (v <= 0n) return 0;
+    const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+    return v <= maxSafe ? Number(v) : Number(maxSafe);
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -118,14 +96,14 @@ function sanitizeError(e) {
  * - NOT_CONFIRMED
  * - UNKNOWN
  */
-function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
+function statusConfirmed({ hash, timestamp, observedBlockNumber, submitter }) {
   return {
     ok: true,
     statusCode: "CONFIRMED",
     statusText: "Bekräftad",
     hash,
     confirmedAtUnix: timestamp,
-    evidence: { observedBlockNumber },
+    evidence: { observedBlockNumber, submitter: submitter || null },
     submission: null,
     legalText:
       "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot extern verifieringskälla vid behov.",
@@ -148,7 +126,6 @@ function statusSubmittedUnconfirmed({ hash, observedBlockNumber, submission }) {
 }
 
 function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
-  // submission är valfri: om vi vet txHash men den inte lett till bekräftelse ännu
   const txHash = submission?.txHash || null;
   return {
     ok: true,
@@ -186,43 +163,54 @@ async function assertAmoyChain(publicClient) {
       `Wrong chainId from RPC. Expected ${polygonAmoy.id}, got ${cid}`
     );
   }
+  return cid;
 }
 
-async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
-  const [ok, ts] = await publicClient.readContract({
+function getTimeoutMs(env) {
+  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
+  if (!raw) return 20_000;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
+}
+
+async function readProofWithEvidence({ publicClient, contractAddress, hash }) {
+  // getProof(bytes32) -> (uint256 timestamp, address submitter)
+  const res = await publicClient.readContract({
     address: contractAddress,
     abi: PROOFY_ABI,
-    functionName: "get",
+    functionName: "getProof",
     args: [hash],
   });
 
-  const timestamp = toSafeUint64(ts);
-  const exists = Boolean(ok) && timestamp !== 0;
+  const ts = Array.isArray(res) ? res[0] : res?.timestamp ?? 0n;
+  const submitter = Array.isArray(res) ? res[1] : res?.submitter ?? null;
+
+  const timestamp = toSafeUnixSeconds(ts);
+  const exists = timestamp !== 0;
 
   const observedBlockNumber = await publicClient.getBlockNumber();
+
   return {
     exists,
     timestamp,
+    submitter: submitter || null,
     observedBlockNumber: observedBlockNumber.toString(),
   };
 }
 
 /**
  * Om tx skickas in kan vi förbättra sanningshalten:
- * - receipt hittas => tx är mined (kan vara success/revert)
+ * - receipt hittas => tx är mined (kan vara success/reverted)
  * - transaction hittas men receipt saknas => tx är broadcast/pending
- * - inget hittas => tx okänd (behandla som ej angiven)
+ * - inget hittas => tx okänd
  */
 async function resolveTxState(publicClient, txHash) {
   if (!txHash) return { known: false, state: "UNKNOWN" };
 
   // 1) receipt (mined)
   try {
-    const receipt = await publicClient.getTransactionReceipt({
-      hash: txHash,
-    });
+    const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
     if (receipt) {
-      // status kan vara "success" eller "reverted" (viem), men vi ska inte dra juridiska slutsatser av revert
       const blockNumber = receipt.blockNumber
         ? receipt.blockNumber.toString()
         : null;
@@ -234,24 +222,22 @@ async function resolveTxState(publicClient, txHash) {
       };
     }
   } catch {
-    // receipt finns ofta inte om tx är pending eller okänd
+    // ignore
   }
 
-  // 2) transaction (pending/broadcast)
+  // 2) pending/broadcast
   try {
     const tx = await publicClient.getTransaction({ hash: txHash });
-    if (tx) {
-      return { known: true, state: "PENDING" };
-    }
+    if (tx) return { known: true, state: "PENDING" };
   } catch {
-    // okänd
+    // ignore
   }
 
   return { known: false, state: "UNKNOWN" };
 }
 
 export async function onRequest({ request, env }) {
-  const origin = pickCorsOrigin(request.headers.get("Origin"), env);
+  const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
   if (request.method === "OPTIONS") return corsPreflight(origin);
 
@@ -259,16 +245,14 @@ export async function onRequest({ request, env }) {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
 
-  // Accept hash from GET query or POST body. Optional tx for better UX.
+  // Accept hash from GET query or POST body. Optional tx for bättre UX.
   let hash = "";
   let tx = "";
 
   if (request.method === "GET") {
     const url = new URL(request.url);
     hash = String(
-      (url.searchParams.get("hash") ||
-        url.searchParams.get("id") ||
-        "").trim()
+      (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim()
     );
     tx = String((url.searchParams.get("tx") || "").trim());
   } else {
@@ -285,7 +269,7 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  // tx är valfri. Om den är med men ogiltig: behandla som ej angiven (inte hårt fel).
+  // tx valfri. Om ogiltig: ignorera (inte hårt fel).
   if (tx && !isValidTxHash(tx)) tx = "";
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
@@ -294,7 +278,7 @@ export async function onRequest({ request, env }) {
   if (!rpcUrl || !contractAddress) {
     return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
-  if (!isValidAddressHex(contractAddress)) {
+  if (!isAddress(contractAddress)) {
     return json(
       500,
       { ok: false, error: "Server misconfiguration (bad contract address)" },
@@ -303,16 +287,17 @@ export async function onRequest({ request, env }) {
   }
 
   try {
+    const timeout = getTimeoutMs(env);
+
     const publicClient = createPublicClient({
       chain: polygonAmoy,
-      // timeout för edge-runtime
-      transport: http(rpcUrl, { timeout: 20_000 }),
+      transport: http(rpcUrl, { timeout }),
     });
 
     await assertAmoyChain(publicClient);
 
     // 1) Sanning: är den bekräftad i kontraktet?
-    const proof = await readGetWithEvidence({
+    const proof = await readProofWithEvidence({
       publicClient,
       contractAddress,
       hash,
@@ -322,14 +307,11 @@ export async function onRequest({ request, env }) {
       return json(200, statusConfirmed({ hash, ...proof }), origin);
     }
 
-    // 2) Om inte bekräftad: om tx finns, kolla om tx faktiskt existerar (pending/mined)
+    // 2) Inte bekräftad: om tx finns, kolla om tx faktiskt existerar
     if (tx) {
       const txState = await resolveTxState(publicClient, tx);
 
-      // Om tx är känd (pending/mined) -> "Inskickad – ej bekräftad"
       if (txState.known) {
-        // Om mined kan vi sätta observedBlockNumber från receipt (om den finns),
-        // annars behåll proof.observedBlockNumber.
         const observedBlockNumber =
           txState.observedBlockNumber || proof.observedBlockNumber;
 
@@ -343,9 +325,7 @@ export async function onRequest({ request, env }) {
           origin
         );
       }
-
-      // Om tx är okänd: behandla som ej given (för att inte påstå submission)
-      // Fall tillbaka till NOT_CONFIRMED utan submission.
+      // Om tx okänd: fall tillbaka till NOT_CONFIRMED utan submission.
     }
 
     return json(
