@@ -13,6 +13,15 @@ const DEFAULTS = {
   MAX_FEE_GWEI: 600,
   MAX_PRIORITY_FEE_GWEI: 20,
   MIN_PRIORITY_FEE_GWEI: 1,
+
+  // Hur länge vi väntar på mining i samma request innan vi returnerar "pending".
+  WAIT_FOR_MINING_MS: 25_000,
+
+  // Om tx bedöms droppad: hur många resubmits max (0 = av).
+  RESUBMIT_MAX_ATTEMPTS: 1,
+
+  // Fee bump vid resubmit (multiplikativt, t.ex. 1.25 => +25%)
+  RESUBMIT_BUMP_MULTIPLIER: 1.25,
 };
 
 function pickCorsOrigin(requestOrigin, env) {
@@ -86,6 +95,13 @@ function parseNumberEnv(v, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function getTimeoutMs(env) {
+  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
+  if (!raw) return 20_000;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
+}
+
 function gweiToWeiBigInt(gwei) {
   const s = String(gwei).trim();
   if (!s) return 0n;
@@ -103,11 +119,20 @@ function weiToGweiNumber(wei) {
   }
 }
 
-function getTimeoutMs(env) {
-  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
-  if (!raw) return 20_000;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+// Gör ett objekt JSON-säkert: BigInt -> string (rekursivt)
+function toJsonSafe(value) {
+  if (typeof value === "bigint") return value.toString();
+  if (Array.isArray(value)) return value.map(toJsonSafe);
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = toJsonSafe(v);
+    return out;
+  }
+  return value;
 }
 
 async function assertAmoyChain(publicClient) {
@@ -118,6 +143,23 @@ async function assertAmoyChain(publicClient) {
     );
   }
   return cid;
+}
+
+async function readGet(publicClient, contractAddress, hash) {
+  const res = await publicClient.readContract({
+    address: contractAddress,
+    abi: PROOFY_ABI,
+    functionName: "get",
+    args: [hash],
+  });
+
+  const ok = Array.isArray(res) ? res[0] : res?.ok ?? false;
+  const ts = Array.isArray(res) ? res[1] : res?.ts ?? 0n;
+
+  const tsNum = Number(ts);
+  const confirmed = Boolean(ok) && tsNum > 0;
+
+  return { confirmed, confirmedAtUnix: confirmed ? tsNum : null };
 }
 
 async function pickFeesForDebug(publicClient, env) {
@@ -160,7 +202,6 @@ async function pickFeesForDebug(publicClient, env) {
   if (maxPriorityFeePerGas < minTipWei) maxPriorityFeePerGas = minTipWei;
   if (maxPriorityFeePerGas > maxFeePerGas) maxPriorityFeePerGas = maxFeePerGas;
 
-  // OBS: raw innehåller BigInt – får INTE skickas direkt i JSON.
   return {
     picked: {
       maxFeePerGas: weiToGweiNumber(maxFeePerGas),
@@ -180,33 +221,69 @@ async function pickFeesForDebug(publicClient, env) {
   };
 }
 
-// Gör ett objekt JSON-säkert: BigInt -> string (rekursivt)
-function toJsonSafe(value) {
-  if (typeof value === "bigint") return value.toString();
-  if (Array.isArray(value)) return value.map(toJsonSafe);
-  if (value && typeof value === "object") {
-    const out = {};
-    for (const [k, v] of Object.entries(value)) out[k] = toJsonSafe(v);
-    return out;
-  }
-  return value;
+function bumpFee(valueWei, multiplier) {
+  // multiplier ~1.25 etc. Vi gör heltal och minst +1 wei.
+  const m = Number(multiplier);
+  if (!Number.isFinite(m) || m <= 1) return valueWei;
+  const bumped = BigInt(Math.floor(Number(valueWei) * m));
+  if (bumped <= valueWei) return valueWei + 1n;
+  return bumped;
 }
 
-async function readGet(publicClient, contractAddress, hash) {
-  const res = await publicClient.readContract({
+async function tryWaitForReceipt(publicClient, txHash, waitMs) {
+  const timeout = clamp(Number(waitMs || 0), 1_000, 60_000);
+  try {
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash,
+      timeout,
+    });
+    return { kind: "MINED", receipt };
+  } catch (e) {
+    // timeout eller RPC-fel – hanteras av caller
+    return { kind: "TIMEOUT_OR_ERROR", error: sanitizeError(e) };
+  }
+}
+
+async function isTxDropped(publicClient, txHash) {
+  // Dropped-heuristik:
+  // - Ingen receipt
+  // - Och getTransaction hittar den inte
+  // => sannolikt droppad / aldrig propagaterad längre
+  const receipt = await publicClient
+    .getTransactionReceipt({ hash: txHash })
+    .catch(() => null);
+  if (receipt) return false;
+
+  const tx = await publicClient.getTransaction({ hash: txHash }).catch(() => null);
+  if (tx) return false;
+
+  return true;
+}
+
+async function sendRegisterTx({
+  publicClient,
+  walletClient,
+  account,
+  contractAddress,
+  hash,
+  maxFeePerGas,
+  maxPriorityFeePerGas,
+}) {
+  const sim = await publicClient.simulateContract({
+    account,
     address: contractAddress,
     abi: PROOFY_ABI,
-    functionName: "get",
+    functionName: "registerIfMissing",
     args: [hash],
   });
 
-  const ok = Array.isArray(res) ? res[0] : res?.ok ?? false;
-  const ts = Array.isArray(res) ? res[1] : res?.ts ?? 0n;
+  const txHash = await walletClient.writeContract({
+    ...sim.request,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  });
 
-  const tsNum = Number(ts);
-  const confirmed = Boolean(ok) && tsNum > 0;
-
-  return { confirmed, confirmedAtUnix: confirmed ? tsNum : null };
+  return txHash;
 }
 
 export async function onRequest({ request, env }) {
@@ -254,7 +331,7 @@ export async function onRequest({ request, env }) {
 
     const chainId = await assertAmoyChain(publicClient);
 
-    // 1) Finns redan? -> CONFIRMED direkt
+    // 0) Om den redan finns: returnera CONFIRMED direkt.
     try {
       const existing = await readGet(publicClient, contractAddress, hash);
       if (existing.confirmed) {
@@ -278,38 +355,160 @@ export async function onRequest({ request, env }) {
     }
 
     const fees = await pickFeesForDebug(publicClient, env);
-
     const account = privateKeyToAccount(privateKey);
+
     const walletClient = createWalletClient({
       account,
       chain: polygonAmoy,
       transport,
     });
 
-    // 2) Simulera registerIfMissing (idempotent)
-    const sim = await publicClient.simulateContract({
-      account,
-      address: contractAddress,
-      abi: PROOFY_ABI,
-      functionName: "registerIfMissing",
-      args: [hash],
-    });
+    const waitForMiningMs = clamp(
+      parseNumberEnv(env.WAIT_FOR_MINING_MS, DEFAULTS.WAIT_FOR_MINING_MS),
+      3_000,
+      60_000
+    );
 
-    const txHash = await walletClient.writeContract({
-      ...sim.request,
+    const resubmitMaxAttempts = clamp(
+      parseNumberEnv(env.RESUBMIT_MAX_ATTEMPTS, DEFAULTS.RESUBMIT_MAX_ATTEMPTS),
+      0,
+      3
+    );
+
+    const bumpMultiplier = clamp(
+      parseNumberEnv(
+        env.RESUBMIT_BUMP_MULTIPLIER,
+        DEFAULTS.RESUBMIT_BUMP_MULTIPLIER
+      ),
+      1.05,
+      3.0
+    );
+
+    // 1) Skicka tx
+    let attempt = 0;
+    let txHash = await sendRegisterTx({
+      publicClient,
+      walletClient,
+      account,
+      contractAddress,
+      hash,
       maxFeePerGas: fees.raw.maxFeePerGas,
       maxPriorityFeePerGas: fees.raw.maxPriorityFeePerGas,
     });
 
-    // DEBUG måste vara JSON-säker (inga BigInt!)
+    // 2) Vänta kort på receipt
+    let receiptInfo = await tryWaitForReceipt(
+      publicClient,
+      txHash,
+      waitForMiningMs
+    );
+
+    // 3) Om den inte mined: försök resubmit om den bedöms droppad
+    while (
+      receiptInfo.kind !== "MINED" &&
+      attempt < resubmitMaxAttempts
+    ) {
+      const dropped = await isTxDropped(publicClient, txHash);
+      if (!dropped) break;
+
+      attempt += 1;
+
+      // bump fees (men respektera original caps: vi bump:ar *inom* dina MAX_*)
+      const bumpedMaxFee = bumpFee(fees.raw.maxFeePerGas, bumpMultiplier);
+      const bumpedTip = bumpFee(fees.raw.maxPriorityFeePerGas, bumpMultiplier);
+
+      // Se till att tip inte överstiger maxFee
+      const finalTip = bumpedTip > bumpedMaxFee ? bumpedMaxFee : bumpedTip;
+
+      txHash = await sendRegisterTx({
+        publicClient,
+        walletClient,
+        account,
+        contractAddress,
+        hash,
+        maxFeePerGas: bumpedMaxFee,
+        maxPriorityFeePerGas: finalTip,
+      });
+
+      receiptInfo = await tryWaitForReceipt(
+        publicClient,
+        txHash,
+        waitForMiningMs
+      );
+    }
+
+    // 4) Om mined: verifiera state (sanning) och returnera CONFIRMED om den nu finns.
+    if (receiptInfo.kind === "MINED") {
+      // Om tx reverted: vi säger inte "bekräftad"
+      if (receiptInfo.receipt?.status === "reverted") {
+        const debug = toJsonSafe({
+          chainId,
+          contractAddress,
+          txHash,
+          receiptStatus: receiptInfo.receipt.status,
+          resubmits: attempt,
+          fees: { picked: fees.picked, estimate: fees.estimate, raw: fees.raw },
+        });
+
+        return json(
+          200,
+          {
+            ok: true,
+            statusCode: "NOT_CONFIRMED",
+            statusText: "Ej bekräftad",
+            hash,
+            confirmedAtUnix: null,
+            evidence: {
+              observedBlockNumber:
+                receiptInfo.receipt.blockNumber?.toString?.() ?? null,
+            },
+            submission: { txHash, submittedBy: account.address },
+            legalText:
+              "En registrering har behandlats men kunde inte bekräftas. Ingen slutsats om bekräftelse kan dras.",
+            debug,
+          },
+          origin
+        );
+      }
+
+      // receipt success: kontrollera kontraktet (definitiv sanning)
+      const post = await readGet(publicClient, contractAddress, hash).catch(
+        () => ({ confirmed: false, confirmedAtUnix: null })
+      );
+
+      if (post.confirmed) {
+        return json(
+          200,
+          {
+            ok: true,
+            statusCode: "CONFIRMED",
+            statusText: "Bekräftad",
+            hash,
+            confirmedAtUnix: post.confirmedAtUnix,
+            evidence: {
+              observedBlockNumber:
+                receiptInfo.receipt.blockNumber?.toString?.() ?? null,
+            },
+            submission: { txHash, submittedBy: account.address },
+            legalText:
+              "Det finns en bekräftad notering för detta kontrollvärde.",
+          },
+          origin
+        );
+      }
+      // Om något märkligt: fallback till pending-svar
+    }
+
+    // 5) Pending/timeout: returnera NOT_CONFIRMED med txHash (UI kan poll:a /api/tx + /api/verify)
     const debug = toJsonSafe({
-      fees: {
-        picked: fees.picked,
-        estimate: fees.estimate,
-        raw: fees.raw, // BigInt -> string via toJsonSafe
-      },
-      contractAddress,
       chainId,
+      contractAddress,
+      txHash,
+      waitForMiningMs,
+      resubmits: attempt,
+      fees: { picked: fees.picked, estimate: fees.estimate, raw: fees.raw },
+      note:
+        "Tx skickad men inte bekräftad inom väntetiden. Klient bör polla /api/tx och /api/verify.",
     });
 
     return json(
