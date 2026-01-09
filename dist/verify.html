@@ -42,6 +42,9 @@
 
     /* UX: färre knappar – vi visar inte "Dela" som separat knapp (länken är klickbar för kopiering). */
     #shareSelfLinkBtn { display:none !important; }
+
+    /* UX: gör verify-knappen primär när redo (JS växlar klass) */
+    #verifyBtn.primary { opacity: 1; }
   </style>
 </head>
 
@@ -205,6 +208,7 @@
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
+            <b>Auto:</b> Verifiering startar automatiskt när både ID och fil finns (ingen uppladdning).<br/>
             <b>Tips:</b> Om underlaget har exporterats om, skannats om eller sparats på nytt kan det räknas som en annan filversion
             även om det “ser likadant ut”.
           </p>
@@ -386,7 +390,6 @@
   const selfLinkOut = $("selfLinkOut");
   const copySelfLinkIconBtn = $("copySelfLinkIconBtn");
   const selfLinkPill = $("selfLinkPill");
-  const shareSelfLinkBtn = $("shareSelfLinkBtn"); // (gömd i CSS)
 
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
@@ -432,6 +435,10 @@
   let busy = false;
   let opId = 0;
   let lastRun = null;
+
+  // Auto-run guard
+  let autoRunTimer = null;
+  let autoRanOnceFor = ""; // helps avoid repeated runs on same inputs
 
   function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
@@ -803,6 +810,7 @@
     busy = v;
     verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
     setVerifyBtnTone(!verifyBtn.disabled);
+    verifyBtn.textContent = busy ? "Verifierar…" : (lastRun ? "Verifiera igen" : "Verifiera");
   }
 
   function updateSelfLinkUI(){
@@ -867,8 +875,28 @@
       return;
     }
 
-    setStatus("Redo att verifiera");
+    setStatus("Redo (startar automatiskt)");
     setBusy(false);
+  }
+
+  function scheduleAutoVerify(reason){
+    // Do not auto-run while busy or if not ready
+    if (busy) return;
+    const id = (hashInput.value || "").trim();
+    if (!isValidId(id) || !currentFile) return;
+
+    const key = `${id}::${currentFile.name}::${currentFile.size}::${currentFile.lastModified}`;
+    if (autoRanOnceFor === key) return;
+
+    if (autoRunTimer) clearTimeout(autoRunTimer);
+    autoRunTimer = setTimeout(() => {
+      if (busy) return;
+      const id2 = (hashInput.value || "").trim();
+      if (!isValidId(id2) || !currentFile) return;
+
+      autoRanOnceFor = key;
+      verifyBtn.click();
+    }, 260);
   }
 
   function setFile(file){
@@ -881,6 +909,7 @@
       fileInfo.textContent = "Inget underlag valt.";
     }
     updateValidationUI();
+    scheduleAutoVerify("file");
   }
 
   const urlId = getIdFromUrl();
@@ -919,6 +948,7 @@
       }
 
       updateValidationUI();
+      scheduleAutoVerify("paste");
       hashInput.focus();
       hashInput.setSelectionRange(hashInput.value.length, hashInput.value.length);
     });
@@ -928,6 +958,7 @@
     clearIdBtn.addEventListener("click", () => {
       hashInput.value = "";
       setParamsInUrl({ hash: "", checked: "" });
+      autoRanOnceFor = ""; // allow auto-run again later
       showPill(idPill, "Rensat");
       updateValidationUI();
       hashInput.focus();
@@ -954,26 +985,11 @@
     });
   }
 
-  if (shareSelfLinkBtn){
-    shareSelfLinkBtn.addEventListener("click", async () => {
-      const id = (hashInput.value || "").trim();
-      if (!isValidId(id)) return;
-      const link = buildSelfLink(id);
-
-      try{
-        await navigator.share({ title: "Proofy – verifieringslänk", url: link });
-        showPill(selfLinkPill, "Delad ✓");
-      } catch {
-        const ok = await copyTextToClipboard(link);
-        showPill(selfLinkPill, ok ? "Länk kopierad ✅" : "Kunde inte dela");
-      }
-    });
-  }
-
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
     if (isValidId(v)) setParamsInUrl({ hash: v, checked: getCheckedFromUrl() || "" });
     updateValidationUI();
+    scheduleAutoVerify("typing");
   });
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
@@ -1206,8 +1222,9 @@
 
       hideAlert();
 
-      setStatus("Verifiering klar");
+      setStatus("Verifiering klar ✅");
       setBusy(false);
+
     } catch (e){
       if (myOp !== opId) return;
       errorBox.style.display = "block";
@@ -1217,17 +1234,11 @@
     }
   });
 
-  const fileLabel = document.querySelector("label[for='fileInput']");
-  if (fileLabel) fileLabel.addEventListener("click", () => fileInput.click());
-
+  // Init
   resetUI();
   setFile(null);
   updateValidationUI();
-
-  const initialChecked = Number(getCheckedFromUrl());
-  if (Number.isFinite(initialChecked) && initialChecked > 0) {
-    // bevaras i URL, används först när verifiering körs
-  }
+  scheduleAutoVerify("init");
 })();
 </script>
 
