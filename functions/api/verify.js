@@ -6,13 +6,9 @@ import { ABI as PROOFY_ABI } from "./abi.js";
  * Proofy /api/verify
  *
  * Juridik:
- * - Aldrig "bekräftad" utan att en bekräftad notering kan läsas från kontraktet.
- * - Om ingen bekräftelse finns: "Ej bekräftad" eller "Inskickad – ej bekräftad" (om submission är känd).
- * - Vid tekniskt fel: "Kunde inte kontrolleras" (inte ett negativt påstående).
- *
- * Teknik:
- * - Read-only. Inga skrivningar.
- * - Samma statusmodell som Register/Certificate.
+ * - Aldrig "bekräftad" utan att kontraktet visar bekräftad notering.
+ * - Om ingen bekräftelse finns: "Ej bekräftad" eller "Inskickad – ej bekräftad" (om tx är känd).
+ * - Vid tekniskt fel: "Kunde inte kontrolleras".
  */
 
 function json(status, obj, origin) {
@@ -76,34 +72,28 @@ function sanitizeError(e) {
   return String(msg).slice(0, 600);
 }
 
-function toSafeUnixSeconds(tsBigint) {
-  // getProof returns uint256; we only need safe number for UI.
-  try {
-    const v = BigInt(tsBigint ?? 0n);
-    if (v <= 0n) return 0;
-    const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
-    return v <= maxSafe ? Number(v) : Number(maxSafe);
-  } catch {
-    return 0;
-  }
+function getTimeoutMs(env) {
+  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
+  if (!raw) return 20_000;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
 }
 
 /**
- * Gemensam statusmodell
  * statusCode:
  * - CONFIRMED
  * - SUBMITTED_UNCONFIRMED
  * - NOT_CONFIRMED
  * - UNKNOWN
  */
-function statusConfirmed({ hash, timestamp, observedBlockNumber, submitter }) {
+function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
     ok: true,
     statusCode: "CONFIRMED",
     statusText: "Bekräftad",
     hash,
     confirmedAtUnix: timestamp,
-    evidence: { observedBlockNumber, submitter: submitter || null },
+    evidence: { observedBlockNumber },
     submission: null,
     legalText:
       "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot extern verifieringskälla vid behov.",
@@ -163,51 +153,34 @@ async function assertAmoyChain(publicClient) {
       `Wrong chainId from RPC. Expected ${polygonAmoy.id}, got ${cid}`
     );
   }
-  return cid;
 }
 
-function getTimeoutMs(env) {
-  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
-  if (!raw) return 20_000;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
-}
-
-async function readProofWithEvidence({ publicClient, contractAddress, hash }) {
-  // getProof(bytes32) -> (uint256 timestamp, address submitter)
+async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const res = await publicClient.readContract({
     address: contractAddress,
     abi: PROOFY_ABI,
-    functionName: "getProof",
+    functionName: "get",
     args: [hash],
   });
 
-  const ts = Array.isArray(res) ? res[0] : res?.timestamp ?? 0n;
-  const submitter = Array.isArray(res) ? res[1] : res?.submitter ?? null;
+  const ok = Array.isArray(res) ? res[0] : res?.ok ?? false;
+  const ts = Array.isArray(res) ? res[1] : res?.ts ?? 0n;
 
-  const timestamp = toSafeUnixSeconds(ts);
-  const exists = timestamp !== 0;
+  const timestamp = Number(ts);
+  const exists = Boolean(ok) && timestamp !== 0;
 
   const observedBlockNumber = await publicClient.getBlockNumber();
 
   return {
     exists,
-    timestamp,
-    submitter: submitter || null,
+    timestamp: exists ? timestamp : 0,
     observedBlockNumber: observedBlockNumber.toString(),
   };
 }
 
-/**
- * Om tx skickas in kan vi förbättra sanningshalten:
- * - receipt hittas => tx är mined (kan vara success/reverted)
- * - transaction hittas men receipt saknas => tx är broadcast/pending
- * - inget hittas => tx okänd
- */
 async function resolveTxState(publicClient, txHash) {
   if (!txHash) return { known: false, state: "UNKNOWN" };
 
-  // 1) receipt (mined)
   try {
     const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
     if (receipt) {
@@ -225,7 +198,6 @@ async function resolveTxState(publicClient, txHash) {
     // ignore
   }
 
-  // 2) pending/broadcast
   try {
     const tx = await publicClient.getTransaction({ hash: txHash });
     if (tx) return { known: true, state: "PENDING" };
@@ -245,15 +217,12 @@ export async function onRequest({ request, env }) {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
 
-  // Accept hash from GET query or POST body. Optional tx for bättre UX.
   let hash = "";
   let tx = "";
 
   if (request.method === "GET") {
     const url = new URL(request.url);
-    hash = String(
-      (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim()
-    );
+    hash = String((url.searchParams.get("hash") || url.searchParams.get("id") || "").trim());
     tx = String((url.searchParams.get("tx") || "").trim());
   } else {
     const body = await request.json().catch(() => ({}));
@@ -269,7 +238,6 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  // tx valfri. Om ogiltig: ignorera (inte hårt fel).
   if (tx && !isValidTxHash(tx)) tx = "";
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
@@ -287,27 +255,33 @@ export async function onRequest({ request, env }) {
   }
 
   try {
-    const timeout = getTimeoutMs(env);
-
     const publicClient = createPublicClient({
       chain: polygonAmoy,
-      transport: http(rpcUrl, { timeout }),
+      transport: http(rpcUrl, { timeout: getTimeoutMs(env) }),
     });
 
     await assertAmoyChain(publicClient);
 
-    // 1) Sanning: är den bekräftad i kontraktet?
-    const proof = await readProofWithEvidence({
+    // 1) Sanning: finns den i kontraktet?
+    const proof = await readGetWithEvidence({
       publicClient,
       contractAddress,
       hash,
     });
 
     if (proof.exists) {
-      return json(200, statusConfirmed({ hash, ...proof }), origin);
+      return json(
+        200,
+        statusConfirmed({
+          hash,
+          timestamp: proof.timestamp,
+          observedBlockNumber: proof.observedBlockNumber,
+        }),
+        origin
+      );
     }
 
-    // 2) Inte bekräftad: om tx finns, kolla om tx faktiskt existerar
+    // 2) Om inte bekräftad: om tx angavs, kolla om tx är känd (pending/mined)
     if (tx) {
       const txState = await resolveTxState(publicClient, tx);
 
@@ -325,7 +299,6 @@ export async function onRequest({ request, env }) {
           origin
         );
       }
-      // Om tx okänd: fall tillbaka till NOT_CONFIRMED utan submission.
     }
 
     return json(
