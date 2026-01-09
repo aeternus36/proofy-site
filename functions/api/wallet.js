@@ -2,10 +2,15 @@ import { createPublicClient, http, isHex, isAddress, formatUnits } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
-const DEFAULTS = {
-  // Om du vill hård-styra CORS origins:
-  // env.ALLOWED_ORIGINS = "https://proofy.se,https://www.proofy.se"
-};
+/**
+ * wallet.js
+ * GET /api/wallet
+ * Returnerar kedje-ID, tjänsteadress och saldo (för gas).
+ *
+ * Viktigt:
+ * - UI berörs inte av denna fil.
+ * - Cloudflare Pages Functions (Workers runtime).
+ */
 
 function pickCorsOrigin(requestOrigin, env) {
   const origin = (requestOrigin || "").trim();
@@ -21,28 +26,39 @@ function pickCorsOrigin(requestOrigin, env) {
   return allowed.includes(origin) ? origin : "null";
 }
 
+function withCors(headers, origin) {
+  const h = { ...headers, Vary: "Origin" };
+  if (origin) h["access-control-allow-origin"] = origin;
+  return h;
+}
+
 function json(status, obj, origin) {
-  const headers = {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
-    Vary: "Origin",
-  };
-  if (origin) headers["access-control-allow-origin"] = origin;
-  return new Response(JSON.stringify(obj), { status, headers });
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: withCors(
+      {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
+      },
+      origin
+    ),
+  });
 }
 
 function corsPreflight(origin) {
   return new Response(null, {
     status: 204,
-    headers: {
-      "cache-control": "no-store",
-      "access-control-allow-origin": origin || "*",
-      "access-control-allow-methods": "GET, OPTIONS",
-      "access-control-allow-headers": "Content-Type",
-      "access-control-max-age": "86400",
-      Vary: "Origin",
-    },
+    headers: withCors(
+      {
+        "cache-control": "no-store",
+        // Tillåt både GET och POST så att browser-preflight inte faller över olika endpoints.
+        "access-control-allow-methods": "GET, POST, OPTIONS",
+        "access-control-allow-headers": "Content-Type",
+        "access-control-max-age": "86400",
+      },
+      origin || "*"
+    ),
   });
 }
 
@@ -60,11 +76,8 @@ function normalizeHexWith0x(value) {
 }
 
 function isValidPrivateKeyHex(pk) {
-  return (
-    typeof pk === "string" &&
-    /^0x[0-9a-fA-F]{64}$/.test(pk.trim()) &&
-    isHex(pk.trim())
-  );
+  const t = typeof pk === "string" ? pk.trim() : "";
+  return /^0x[0-9a-fA-F]{64}$/.test(t) && isHex(t);
 }
 
 function normalizeAddress(addr) {
@@ -82,10 +95,19 @@ async function assertAmoyChain(publicClient) {
   return cid;
 }
 
+function getTimeoutMs(env) {
+  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
+  if (!raw) return 20_000;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
+}
+
 export async function onRequest({ request, env }) {
   const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
   if (request?.method === "OPTIONS") return corsPreflight(origin);
+
+  // Detta endpoint är status/diagnostik och ska vara GET.
   if (request?.method && request.method !== "GET") {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
@@ -93,7 +115,7 @@ export async function onRequest({ request, env }) {
   try {
     const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
 
-    // Föredra publik adress för ren statuskontroll (ingen hemlighet behövs).
+    // Rekommenderat: ange publik adress för statuskontroll (ingen hemlighet behövs).
     const configuredAddress = normalizeAddress(env.PROOFY_WALLET_ADDRESS);
 
     // Fallback: härledning av adress via hemlig nyckel (endast om adress saknas).
@@ -141,9 +163,11 @@ export async function onRequest({ request, env }) {
       address = account.address;
     }
 
+    const timeout = getTimeoutMs(env);
+
     const client = createPublicClient({
       chain: polygonAmoy,
-      transport: http(rpcUrl, { timeout: 20_000 }),
+      transport: http(rpcUrl, { timeout }),
     });
 
     const [chainId, balance] = await Promise.all([
@@ -151,9 +175,7 @@ export async function onRequest({ request, env }) {
       client.getBalance({ address }),
     ]);
 
-    // Exakt, revisionsvänlig representation:
-    // - balanceBaseUnit: minsta enhet som sträng
-    // - balanceDisplay: decimalsträng utan flyttalsavrundning
+    // Exakt representation (ingen floating rounding):
     const balanceBaseUnit = balance.toString();
     const balanceDisplay = formatUnits(balance, 18);
 
@@ -171,10 +193,6 @@ export async function onRequest({ request, env }) {
       origin
     );
   } catch (e) {
-    return json(
-      500,
-      { ok: false, error: sanitizeError(e) },
-      origin
-    );
+    return json(500, { ok: false, error: sanitizeError(e) }, origin);
   }
 }
