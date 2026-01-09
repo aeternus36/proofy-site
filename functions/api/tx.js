@@ -1,11 +1,13 @@
-
 import { createPublicClient, http, isHex } from "viem";
 import { polygonAmoy } from "viem/chains";
 
-const DEFAULTS = {
-  // Om du vill hård-styra CORS origins:
-  // env.ALLOWED_ORIGINS = "https://proofy.se,https://www.proofy.se"
-};
+/**
+ * tx.js
+ * GET /api/tx?tx=<0x...>
+ * Returnerar mined/pending/status för en txHash.
+ *
+ * UI berörs inte av denna fil.
+ */
 
 function pickCorsOrigin(requestOrigin, env) {
   const origin = (requestOrigin || "").trim();
@@ -23,12 +25,12 @@ function pickCorsOrigin(requestOrigin, env) {
 
 function json(status, obj, origin) {
   const headers = {
-    "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    Vary: "Origin",
-    "X-Content-Type-Options": "nosniff",
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    vary: "Origin",
+    "x-content-type-options": "nosniff",
   };
-  if (origin) headers["Access-Control-Allow-Origin"] = origin;
+  if (origin) headers["access-control-allow-origin"] = origin;
   return new Response(JSON.stringify(obj), { status, headers });
 }
 
@@ -36,20 +38,20 @@ function corsPreflight(origin) {
   return new Response(null, {
     status: 204,
     headers: {
-      "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": origin || "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Max-Age": "86400",
-      Vary: "Origin",
+      "cache-control": "no-store",
+      "access-control-allow-origin": origin || "*",
+      // Tillåt även POST för att undvika preflight-problem i vissa fetch-wrappers
+      "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "Content-Type",
+      "access-control-max-age": "86400",
+      vary: "Origin",
     },
   });
 }
 
 function sanitizeError(e) {
   const msg =
-    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
-    String(e);
+    (e && typeof e === "object" && (e.shortMessage || e.message)) || String(e);
   return String(msg).slice(0, 400);
 }
 
@@ -68,10 +70,18 @@ async function assertAmoyChain(publicClient) {
       `Wrong chainId from RPC. Expected ${polygonAmoy.id}, got ${cid}`
     );
   }
+  return cid;
+}
+
+function getTimeoutMs(env) {
+  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
+  if (!raw) return 20_000;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
 }
 
 export async function onRequest({ request, env }) {
-  const origin = pickCorsOrigin(request.headers.get("Origin"), env);
+  const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
   if (request.method === "OPTIONS") return corsPreflight(origin);
   if (request.method !== "GET") {
@@ -91,19 +101,33 @@ export async function onRequest({ request, env }) {
   }
 
   try {
+    const timeout = getTimeoutMs(env);
+
     const publicClient = createPublicClient({
       chain: polygonAmoy,
-      transport: http(rpcUrl, { timeout: 20_000 }),
+      transport: http(rpcUrl, { timeout }),
     });
 
     await assertAmoyChain(publicClient);
 
-    // 1) Försök receipt först (mined)
+    // 1) Receipt först (mined)
     const receipt = await publicClient
       .getTransactionReceipt({ hash: tx })
       .catch(() => null);
 
     if (receipt) {
+      // confirmations: best-effort (om vi kan läsa latest block)
+      let confirmations = null;
+      try {
+        const latest = await publicClient.getBlockNumber();
+        if (typeof latest === "bigint" && typeof receipt.blockNumber === "bigint") {
+          const diff = latest - receipt.blockNumber;
+          confirmations = diff >= 0n ? (diff + 1n).toString() : "0";
+        }
+      } catch {
+        confirmations = null;
+      }
+
       return json(
         200,
         {
@@ -112,9 +136,12 @@ export async function onRequest({ request, env }) {
           pending: false,
           status: receipt.status, // "success" | "reverted"
           blockNumber: receipt.blockNumber?.toString?.() ?? null,
+          confirmations,
           to: receipt.to ?? null,
           from: receipt.from ?? null,
           transactionHash: receipt.transactionHash ?? tx,
+          gasUsed: receipt.gasUsed?.toString?.() ?? null,
+          effectiveGasPrice: receipt.effectiveGasPrice?.toString?.() ?? null,
         },
         origin
       );
@@ -135,7 +162,7 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // 3) Okänd tx (kan vara för gammal RPC, fel nätverk, eller helt enkelt inte existerar)
+    // 3) Okänd tx (kan vara fel nätverk, ej broadcastad, eller RPC saknar historik)
     return json(
       200,
       {
