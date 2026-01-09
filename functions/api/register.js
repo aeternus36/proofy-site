@@ -31,7 +31,17 @@ const PROOFY_ABI = [
   },
 ];
 
-// Standard JSON-response
+const DEFAULTS = {
+  MAX_FEE_GWEI: 600,
+  MAX_PRIORITY_FEE_GWEI: 20,
+  MIN_PRIORITY_FEE_GWEI: 1,
+  // Om du vill hård-styra CORS origins: sätt env.ALLOWED_ORIGINS = "https://proofy.se,https://www.proofy.se"
+  // annars tillåts origin som skickas in (om den finns), fallback "*".
+};
+
+/**
+ * Standard JSON-response
+ */
 function json(status, obj, origin) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
@@ -55,6 +65,13 @@ function corsPreflight(origin) {
       Vary: "Origin",
     },
   });
+}
+
+function sanitizeError(e) {
+  const msg =
+    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
+    String(e);
+  return String(msg).slice(0, 800);
 }
 
 function isValidBytes32Hex(s) {
@@ -88,15 +105,16 @@ function isValidPrivateKeyHex(pk) {
   );
 }
 
-function sanitizeError(e) {
-  const msg =
-    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
-    String(e);
-  return String(msg).slice(0, 800);
+function parseNumberEnv(v, fallback) {
+  if (v === undefined || v === null) return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function gweiToWeiBigInt(gwei) {
-  const s = String(gwei);
+  // robust: accepterar number/string med max 9 decimaler
+  const s = String(gwei).trim();
+  if (!s) return 0n;
   const [i, d = ""] = s.split(".");
   const int = BigInt(i || "0");
   const dec = BigInt((d + "000000000").slice(0, 9));
@@ -104,6 +122,7 @@ function gweiToWeiBigInt(gwei) {
 }
 
 function weiToGweiNumber(wei) {
+  // Endast för debug/visning. Inte för att räkna tillbaka.
   try {
     return Number(wei) / 1e9;
   } catch {
@@ -111,13 +130,36 @@ function weiToGweiNumber(wei) {
   }
 }
 
+function pickCorsOrigin(requestOrigin, env) {
+  const origin = (requestOrigin || "").trim();
+  const allow = String(env.ALLOWED_ORIGINS || "").trim();
+  if (!allow) {
+    // Om origin finns -> spegla den (bra för browser). Om inte -> "*"
+    return origin || "*";
+  }
+  const allowed = allow
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (!origin) return "*";
+  return allowed.includes(origin) ? origin : "null";
+}
+
 /**
  * EIP-1559 fee-valsfunktion med debug-fält.
+ * Returnerar alltid BigInt i raw och number i picked (för debug).
  */
 async function pickFeesForDebug(publicClient, env) {
-  const capGwei = Number(env.MAX_FEE_GWEI ?? 600);        // tak för maxFee
-  const tipCapGwei = Number(env.MAX_PRIORITY_FEE_GWEI ?? 20);  // tak för priority
-  const minTipGwei = Number(env.MIN_PRIORITY_FEE_GWEI ?? 1);   // min priority
+  const capGwei = parseNumberEnv(env.MAX_FEE_GWEI, DEFAULTS.MAX_FEE_GWEI);
+  const tipCapGwei = parseNumberEnv(
+    env.MAX_PRIORITY_FEE_GWEI,
+    DEFAULTS.MAX_PRIORITY_FEE_GWEI
+  );
+  const minTipGwei = parseNumberEnv(
+    env.MIN_PRIORITY_FEE_GWEI,
+    DEFAULTS.MIN_PRIORITY_FEE_GWEI
+  );
 
   const capWei = gweiToWeiBigInt(capGwei);
   const tipCapWei = gweiToWeiBigInt(tipCapGwei);
@@ -138,10 +180,11 @@ async function pickFeesForDebug(publicClient, env) {
   // fallback
   let maxFeePerGas =
     suggestedMaxFee && suggestedMaxFee > 0n ? suggestedMaxFee : capWei;
+
   let maxPriorityFeePerGas =
     suggestedPriority && suggestedPriority > 0n
       ? suggestedPriority
-      : gweiToWeiBigInt(minTipGwei);
+      : minTipWei;
 
   if (maxFeePerGas > capWei) maxFeePerGas = capWei;
   if (maxPriorityFeePerGas > tipCapWei) maxPriorityFeePerGas = tipCapWei;
@@ -167,12 +210,25 @@ async function pickFeesForDebug(publicClient, env) {
   };
 }
 
+async function assertAmoyChain(publicClient) {
+  // polygonAmoy.id måste matcha RPC:ens chainId
+  const cid = await publicClient.getChainId();
+  if (cid !== polygonAmoy.id) {
+    throw new Error(
+      `Wrong chainId from RPC. Expected ${polygonAmoy.id}, got ${cid}`
+    );
+  }
+}
+
 export async function onRequest({ request, env }) {
-  const origin = request.headers.get("Origin") || "";
-  if (request.method === "OPTIONS")
-    return corsPreflight(origin || "*");
-  if (request.method !== "POST")
+  const origin = pickCorsOrigin(request.headers.get("Origin"), env);
+
+  if (request.method === "OPTIONS") {
+    return corsPreflight(origin);
+  }
+  if (request.method !== "POST") {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
+  }
 
   let body;
   try {
@@ -182,33 +238,46 @@ export async function onRequest({ request, env }) {
   }
 
   const hash = String(body?.hash || "").trim();
-  if (!isValidBytes32Hex(hash))
+  if (!isValidBytes32Hex(hash)) {
     return json(400, { ok: false, error: "Invalid hash format" }, origin);
+  }
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
   const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
   const privateKey = normalizePrivateKey(env.PROOFY_PRIVATE_KEY);
 
-  if (!rpcUrl || !contractAddress || !privateKey)
-    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
+  if (!rpcUrl || !contractAddress || !privateKey) {
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration" },
+      origin
+    );
+  }
 
-  if (!isValidAddressHex(contractAddress))
+  if (!isValidAddressHex(contractAddress)) {
     return json(500, { ok: false, error: "Bad contract address" }, origin);
+  }
 
-  if (!isValidPrivateKeyHex(privateKey))
+  if (!isValidPrivateKeyHex(privateKey)) {
     return json(500, { ok: false, error: "Bad private key" }, origin);
+  }
 
   try {
-    const transport = http(rpcUrl);
+    // timeout för RPC (Cloudflare)
+    const transport = http(rpcUrl, { timeout: 20_000 });
 
     const publicClient = createPublicClient({
       chain: polygonAmoy,
       transport,
     });
 
+    // Säkerställ rätt kedja
+    await assertAmoyChain(publicClient);
+
     // kontrollera om redan bekräftad
     let existsBefore = false;
     let beforeTs = null;
+
     try {
       const [ok, ts] = await publicClient.readContract({
         address: contractAddress,
@@ -218,7 +287,9 @@ export async function onRequest({ request, env }) {
       });
       existsBefore = Boolean(ok) && Number(ts) !== 0;
       beforeTs = Number(ts);
-    } catch {}
+    } catch {
+      // Om read fail: vi fortsätter och försöker registrera, men kan misslyckas senare
+    }
 
     if (existsBefore) {
       return json(
@@ -248,7 +319,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // simulera skrivning
+    // simulera skrivning (ger request inkl. gas)
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
@@ -257,16 +328,13 @@ export async function onRequest({ request, env }) {
       args: [hash],
     });
 
-    // skriv kontrakt
+    // skriv kontrakt (ANVÄND BigInt direkt)
     const txHash = await walletClient.writeContract({
       ...sim.request,
-      maxFeePerGas: gweiToWeiBigInt(fees.picked.maxFeePerGas),
-      maxPriorityFeePerGas: gweiToWeiBigInt(
-        fees.picked.maxPriorityFeePerGas
-      ),
+      maxFeePerGas: fees.raw.maxFeePerGas,
+      maxPriorityFeePerGas: fees.raw.maxPriorityFeePerGas,
     });
 
-    // svar med debug
     return json(
       200,
       {
@@ -283,6 +351,7 @@ export async function onRequest({ request, env }) {
           fees,
           rpcUrl,
           contractAddress,
+          chainId: polygonAmoy.id,
         },
       },
       origin
