@@ -1128,7 +1128,15 @@
     setBusy(false);
   }
 
-  fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
+  fileInput.addEventListener("change", () => {
+  setFile(fileInput.files?.[0] || null);
+
+  // UX: auto-start after file selection (reduce one click)
+  setTimeout(() => {
+    if (currentFile && !busy) createBtn.click();
+  }, 400);
+});
+
 
   dropZone.addEventListener("click", () => fileInput.click());
   dropZone.addEventListener("keydown", (e) => {
@@ -1283,7 +1291,7 @@
     headline.style.borderColor = "rgba(255,80,80,.20)";
     headline.style.background = "rgba(255,80,80,.06)";
     headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
-    regStatusOut.textContent = st || "Kunde inte konteras";
+    regStatusOut.textContent = st || "Kunde inte kontrolleras";
 
     if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
     lastRun = {
@@ -1321,6 +1329,13 @@
 
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
+// UX: auto-copy Verifierings-ID when created (reduce one click)
+copyTextToClipboard(id).then((ok) => {
+  if (ok) {
+    showPill(copyIdPill, "Verifierings-ID kopierat");
+    setTimeout(() => hidePill(copyIdPill), 1200);
+  }
+});
 
       resultBox.style.display = "block";
       idOut.textContent = id;
