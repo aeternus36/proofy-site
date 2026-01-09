@@ -4,7 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0b1220" />
     <title>Proofy – Verifieringsintyg</title>
+
+    <!-- Same header/hamburger styling as other pages -->
+    <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
     <style>
       :root{
@@ -51,39 +55,7 @@
         border-radius: 14px;
       }
 
-      header{
-        max-width:1100px;
-        margin:0 auto;
-        padding:22px 18px;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:12px;
-      }
-      .brand{
-        display:flex; gap:10px; align-items:center;
-        font-weight:800;
-        text-decoration:none;
-      }
-      .logo{
-        width:34px;height:34px;border-radius:10px;
-        background:linear-gradient(135deg, rgba(67,108,255,.9), rgba(54,211,153,.85));
-        box-shadow:0 10px 25px rgba(0,0,0,.25);
-      }
-      nav{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end}
-      .navbtn{
-        padding:10px 14px;
-        border:1px solid var(--border);
-        border-radius:999px;
-        background:rgba(255,255,255,.04);
-        text-decoration:none;
-        font-weight:700;
-        color:var(--text);
-        transition:.15s ease;
-        white-space:nowrap;
-      }
-      .navbtn:hover{transform:translateY(-1px); background:rgba(255,255,255,.06)}
-      .navbtn.primary{background:linear-gradient(135deg, rgba(67,108,255,.95), rgba(54,211,153,.85)); border:0}
+      /* NOTE: header/nav styling is handled by /assets/header.css now */
 
       main{
         max-width:1100px;
@@ -329,17 +301,46 @@
   <body>
     <a class="skip" href="#main">Hoppa till innehåll</a>
 
+    <!-- Shared Proofy header + hamburger -->
     <header>
-      <a class="brand" href="/" aria-label="Proofy hem">
-        <div class="logo" aria-hidden="true"></div>
-        <div>Proofy</div>
-      </a>
-      <nav aria-label="Navigering">
-        <a class="navbtn" href="/pilot.html">Starta pilot</a>
-        <a class="navbtn" href="/verify.html">Verifiera underlag</a>
-        <a class="navbtn" href="/register.html">Skapa Verifierings-ID</a>
-        <a class="navbtn primary" href="/#kontakt">Boka kort demo</a>
-      </nav>
+      <div class="wrap">
+        <div class="nav">
+          <a class="brand" href="/" aria-label="Proofy">
+            <span class="logo" aria-hidden="true"></span>
+            <span>Proofy</span>
+          </a>
+
+          <div class="navActions" id="navActionsDesktop">
+            <a class="btn soft" href="/register.html">Skapa Verifierings-ID</a>
+            <a class="btn soft" href="/verify.html">Verifiera underlag</a>
+            <a class="btn soft" href="/pilot.html">Starta pilot</a>
+            <a class="btn primary" href="/#kontakt">Boka kort demo</a>
+          </div>
+
+          <details class="mnav" id="mnav">
+            <summary class="mnavSummary" aria-label="Öppna meny">
+              <span class="mnavIcon" aria-hidden="true"></span>
+            </summary>
+
+            <nav class="mnavMenu" aria-label="Meny">
+              <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+              <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+              <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+              <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
+
+              <div class="mnavMeta">
+                <a class="mnavLink" href="/security.html">Säkerhet</a>
+                <a class="mnavLink" href="/privacy.html">Integritet</a>
+                <a class="mnavLink" href="/terms.html">Villkor</a>
+                <a class="mnavLink" href="/cookies.html">Cookies</a>
+
+                <div class="mnavNote">Verifiering · revision · granskning</div>
+                <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
+              </div>
+            </nav>
+          </details>
+        </div>
+      </div>
     </header>
 
     <main id="main">
@@ -623,12 +624,8 @@
         }
 
         tech.style.display = "block";
-
-        // Auto-öppna om det finns info (smidigt vid felsökning),
-        // men bara när det faktiskt finns något att visa.
         tech.open = true;
 
-        // Dölj rader som saknar innehåll, så rutan känns “ren”.
         const observedWrap = $("observedPoint")?.closest(".val");
         const refWrap = $("registrationRef")?.closest(".val");
         if (observedWrap) observedWrap.style.display = hasObserved ? "block" : "none";
@@ -732,7 +729,7 @@
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
-        // Tekniskt (valfritt) – utan kedjeord i UI
+        // Tekniskt (valfritt)
         const observedPoint = safeText(v?.evidence?.observedBlockNumber, "—");
         const registrationRef = safeText(v?.submission?.txHash, "—");
         $("observedPoint").textContent = observedPoint;
@@ -742,10 +739,8 @@
         const pres = pickStatusPresentation(statusCode);
         setStatus(pres.tone, pres.badge);
 
-        // Exakt servertext (UI gissar aldrig)
         $("resultText").textContent = statusText;
 
-        // Juridisk rad (servertext om den finns)
         if (legalText){
           $("legalLine").textContent = legalText;
         } else {
@@ -771,7 +766,6 @@
         $("regLocal").textContent = "—";
         $("regUtc").textContent = "—";
 
-        // Diskret, juridiskt korrekta varningar
         if (statusCode === "SUBMITTED_UNCONFIRMED"){
           showWarn(`
             <b>Inskickad – ej bekräftad.</b><br/>
@@ -796,5 +790,8 @@
 
       run();
     </script>
+
+    <!-- Needed for hamburger toggle -->
+    <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
   </body>
 </html>
