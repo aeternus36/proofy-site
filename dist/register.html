@@ -45,7 +45,10 @@
       border-color: rgba(255,255,255,.18);
       background: rgba(255,255,255,.05);
     }
-    #nextStepBtn { display:none; }
+
+    /* VIKTIGT: ta inte bort via CSS – JS visar denna när länken finns */
+    /* #nextStepBtn { display:none; }  <-- borttagen */
+
     .btn.softSecondary{
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.12);
@@ -56,26 +59,22 @@
       border: 1px solid rgba(255,255,255,.12);
     }
     #createBtn.isAfterRun:hover{ transform:none; }
-    /* UX: dölj dublett-knapp efter registrering */
-#startOverLink {
-  display: none !important;
-}
-/* UX: dölj "Skapa nytt Verifierings-ID" (createBtn) efter körning */
-#createBtn.isAfterRun{
-  display: none !important;
-}
-/* UX: sekundär handling – ska inte konkurrera med verifiering */
-#receiptBtn{
-  background: rgba(255,255,255,.04) !important;
-  border: 1px solid rgba(255,255,255,.12) !important;
-  color: rgba(234,240,255,.85) !important;
-}
-/* UX: sekundär knapp efter registrering (Visa registreringsunderlag) */
-.actionsRow a.btn:not(#nextStepBtn) {
-  background: rgba(255,255,255,.04) !important;
-  border: 1px solid rgba(255,255,255,.12) !important;
-  color: rgba(234,240,255,.85) !important;
-}
+
+    /* (Död kod borttagen: #startOverLink finns inte i HTML längre) */
+
+    /* UX: sekundär handling – ska inte konkurrera med verifiering */
+    #receiptBtn{
+      background: rgba(255,255,255,.04) !important;
+      border: 1px solid rgba(255,255,255,.12) !important;
+      color: rgba(234,240,255,.85) !important;
+    }
+
+    /* UX: sekundär knapp efter registrering (Visa registreringsunderlag) */
+    .actionsRow a.btn:not(#nextStepBtn) {
+      background: rgba(255,255,255,.04) !important;
+      border: 1px solid rgba(255,255,255,.12) !important;
+      color: rgba(234,240,255,.85) !important;
+    }
   </style>
 </head>
 
@@ -495,7 +494,6 @@
   const fileInfo = $("fileInfo");
 
   const createBtn = $("createBtn");
-  const startOverLink = $("startOverLink");
   const nextStepBtn = $("nextStepBtn");
   const copyIdBtn = $("copyIdBtn");
   const copyLinkBtn = $("copyLinkBtn");
@@ -668,14 +666,6 @@
         nextStepBtn.style.display = "none";
         createBtn.classList.add("primary");
         createBtn.classList.remove("softSecondary");
-      }
-    }
-
-    if (startOverLink){
-      if (currentId && !busy){
-        startOverLink.style.display = "inline-flex";
-      } else {
-        startOverLink.style.display = "none";
       }
     }
 
@@ -1065,7 +1055,6 @@
             return; // stop polling
           }
 
-          // IMPORTANT FIX: include tx in verify call so status can be SUBMITTED_UNCONFIRMED
           const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
           if (myOp !== opId) return;
 
@@ -1078,7 +1067,6 @@
             regStatusOut.textContent = "Kunde inte kontrolleras";
             timeOut.textContent = "—";
             debugOut.textContent = "Status kunde inte kontrolleras vid verifiering (tekniskt fel). Ingen slutsats kan dras.";
-            // continue polling
           } else {
             applyStatusToUI({ id, createdSe, data: ver.data });
 
@@ -1133,14 +1121,13 @@
   }
 
   fileInput.addEventListener("change", () => {
-  setFile(fileInput.files?.[0] || null);
+    setFile(fileInput.files?.[0] || null);
 
-  // UX: auto-start after file selection (reduce one click)
-  setTimeout(() => {
-    if (currentFile && !busy) createBtn.click();
-  }, 400);
-});
-
+    // UX: auto-start after file selection (reduce one click)
+    setTimeout(() => {
+      if (currentFile && !busy) createBtn.click();
+    }, 400);
+  });
 
   dropZone.addEventListener("click", () => fileInput.click());
   dropZone.addEventListener("keydown", (e) => {
@@ -1158,14 +1145,6 @@
     const f = e.dataTransfer?.files?.[0];
     if (f) setFile(f);
   });
-
-  if (startOverLink){
-    startOverLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (fileInput) fileInput.value = "";
-      setFile(null);
-    });
-  }
 
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
@@ -1270,7 +1249,6 @@
     }
 
     if (sc === "NOT_CONFIRMED" || sc === "SUBMITTED_UNCONFIRMED") {
-      // visa "inskickad – ej bekräftad" om backend ger det, annars "ej bekräftad"
       const isSubmitted = (sc === "SUBMITTED_UNCONFIRMED");
       headline.style.borderColor = "rgba(251,191,36,.22)";
       headline.style.background = "rgba(251,191,36,.08)";
@@ -1327,19 +1305,20 @@
       if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt Verifierings-ID.");
 
       currentId = id;
-      currentLink = buildVerifyLink(id); // initialt utan tx (vi uppdaterar när txHash finns)
+      currentLink = buildVerifyLink(id);
 
       if (emptyState) emptyState.style.display = "none";
 
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
-// UX: auto-copy Verifierings-ID when created (reduce one click)
-copyTextToClipboard(id).then((ok) => {
-  if (ok) {
-    showPill(copyIdPill, "Verifierings-ID kopierat");
-    setTimeout(() => hidePill(copyIdPill), 1200);
-  }
-});
+
+      // UX: auto-copy Verifierings-ID when created (reduce one click)
+      copyTextToClipboard(id).then((ok) => {
+        if (ok) {
+          showPill(copyIdPill, "Verifierings-ID kopierat");
+          setTimeout(() => hidePill(copyIdPill), 1200);
+        }
+      });
 
       resultBox.style.display = "block";
       idOut.textContent = id;
@@ -1372,7 +1351,6 @@ copyTextToClipboard(id).then((ok) => {
 
       setBusy(false);
 
-      // Register submit
       setPill("Skickar in… (ej bekräftad)");
       regStatusOut.textContent = "Skickar in… (ej bekräftad)";
       timeOut.textContent = "—";
@@ -1389,11 +1367,8 @@ copyTextToClipboard(id).then((ok) => {
       }
 
       const data = reg.data || {};
-
-      // Sätt UI från register-svaret (NOT_CONFIRMED + txHash)
       applyStatusToUI({ id, createdSe, data });
 
-      // IMPORTANT FIX: om vi fick txHash, uppdatera länken/QR så verify.html också får tx
       const txHash = data?.submission?.txHash || null;
       if (txHash) {
         currentLink = `${buildVerifyLink(id)}&tx=${encodeURIComponent(txHash)}`;
@@ -1405,7 +1380,6 @@ copyTextToClipboard(id).then((ok) => {
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
       }
 
-      // Starta polling bara om txHash finns
       if (txHash) {
         headline.style.borderColor = "rgba(255,255,255,.14)";
         headline.style.background = "rgba(255,255,255,.05)";
