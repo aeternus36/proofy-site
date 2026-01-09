@@ -3,53 +3,40 @@ import {
   createWalletClient,
   http,
   isHex,
+  isAddress,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
-
-// ABI för notering + register
-const PROOFY_ABI = [
-  {
-    type: "function",
-    name: "get",
-    stateMutability: "view",
-    inputs: [{ name: "refId", type: "bytes32" }],
-    outputs: [
-      { name: "ok", type: "bool" },
-      { name: "ts", type: "uint64" },
-    ],
-  },
-  {
-    type: "function",
-    name: "registerIfMissing",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "refId", type: "bytes32" }],
-    outputs: [
-      { name: "created", type: "bool" },
-      { name: "ts", type: "uint64" },
-    ],
-  },
-];
+import { ABI as PROOFY_ABI } from "./abi.js";
 
 const DEFAULTS = {
   MAX_FEE_GWEI: 600,
   MAX_PRIORITY_FEE_GWEI: 20,
   MIN_PRIORITY_FEE_GWEI: 1,
-  // Om du vill hård-styra CORS origins: sätt env.ALLOWED_ORIGINS = "https://proofy.se,https://www.proofy.se"
-  // annars tillåts origin som skickas in (om den finns), fallback "*".
 };
 
-/**
- * Standard JSON-response
- */
+function pickCorsOrigin(requestOrigin, env) {
+  const origin = (requestOrigin || "").trim();
+  const allow = String(env.ALLOWED_ORIGINS || "").trim();
+  if (!allow) return origin || "*";
+
+  const allowed = allow
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (!origin) return "*";
+  return allowed.includes(origin) ? origin : "null";
+}
+
 function json(status, obj, origin) {
   const headers = {
-    "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
     Vary: "Origin",
-    "X-Content-Type-Options": "nosniff",
+    "x-content-type-options": "nosniff",
   };
-  if (origin) headers["Access-Control-Allow-Origin"] = origin;
+  if (origin) headers["access-control-allow-origin"] = origin;
   return new Response(JSON.stringify(obj), { status, headers });
 }
 
@@ -57,11 +44,11 @@ function corsPreflight(origin) {
   return new Response(null, {
     status: 204,
     headers: {
-      "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": origin || "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Max-Age": "86400",
+      "cache-control": "no-store",
+      "access-control-allow-origin": origin || "*",
+      "access-control-allow-methods": "POST, OPTIONS",
+      "access-control-allow-headers": "Content-Type",
+      "access-control-max-age": "86400",
       Vary: "Origin",
     },
   });
@@ -69,8 +56,7 @@ function corsPreflight(origin) {
 
 function sanitizeError(e) {
   const msg =
-    (e && typeof e === "object" && (e.shortMessage || e.message)) ||
-    String(e);
+    (e && typeof e === "object" && (e.shortMessage || e.message)) || String(e);
   return String(msg).slice(0, 800);
 }
 
@@ -82,27 +68,16 @@ function isValidBytes32Hex(s) {
   );
 }
 
-function isValidAddressHex(addr) {
-  return (
-    typeof addr === "string" &&
-    /^0x[0-9a-fA-F]{40}$/.test(addr.trim()) &&
-    isHex(addr.trim())
-  );
-}
-
-function normalizePrivateKey(pk) {
-  if (typeof pk !== "string") return "";
-  const t = pk.trim();
-  if (!t) return "";
-  return t.startsWith("0x") ? t : `0x${t}`;
+function normalizeHexWith0x(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
 }
 
 function isValidPrivateKeyHex(pk) {
-  return (
-    typeof pk === "string" &&
-    /^0x[0-9a-fA-F]{64}$/.test(pk.trim()) &&
-    isHex(pk.trim())
-  );
+  const t = typeof pk === "string" ? pk.trim() : "";
+  return /^0x[0-9a-fA-F]{64}$/.test(t) && isHex(t);
 }
 
 function parseNumberEnv(v, fallback) {
@@ -112,7 +87,6 @@ function parseNumberEnv(v, fallback) {
 }
 
 function gweiToWeiBigInt(gwei) {
-  // robust: accepterar number/string med max 9 decimaler
   const s = String(gwei).trim();
   if (!s) return 0n;
   const [i, d = ""] = s.split(".");
@@ -122,7 +96,6 @@ function gweiToWeiBigInt(gwei) {
 }
 
 function weiToGweiNumber(wei) {
-  // Endast för debug/visning. Inte för att räkna tillbaka.
   try {
     return Number(wei) / 1e9;
   } catch {
@@ -130,25 +103,21 @@ function weiToGweiNumber(wei) {
   }
 }
 
-function pickCorsOrigin(requestOrigin, env) {
-  const origin = (requestOrigin || "").trim();
-  const allow = String(env.ALLOWED_ORIGINS || "").trim();
-  if (!allow) {
-    // Om origin finns -> spegla den (bra för browser). Om inte -> "*"
-    return origin || "*";
+async function assertAmoyChain(publicClient) {
+  const cid = await publicClient.getChainId();
+  if (cid !== polygonAmoy.id) {
+    throw new Error(
+      `Wrong chainId from RPC. Expected ${polygonAmoy.id}, got ${cid}`
+    );
   }
-  const allowed = allow
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  if (!origin) return "*";
-  return allowed.includes(origin) ? origin : "null";
+  return cid;
 }
 
 /**
- * EIP-1559 fee-valsfunktion med debug-fält.
- * Returnerar alltid BigInt i raw och number i picked (för debug).
+ * Robust EIP-1559 fee-val:
+ * - försök estimateFeesPerGas()
+ * - clampa inom MAX_FEE_GWEI / MAX_PRIORITY_FEE_GWEI
+ * - se till att priority >= MIN_PRIORITY_FEE_GWEI
  */
 async function pickFeesForDebug(publicClient, env) {
   const capGwei = parseNumberEnv(env.MAX_FEE_GWEI, DEFAULTS.MAX_FEE_GWEI);
@@ -177,7 +146,6 @@ async function pickFeesForDebug(publicClient, env) {
     estimateError = String(err?.message || err);
   }
 
-  // fallback
   let maxFeePerGas =
     suggestedMaxFee && suggestedMaxFee > 0n ? suggestedMaxFee : capWei;
 
@@ -210,22 +178,35 @@ async function pickFeesForDebug(publicClient, env) {
   };
 }
 
-async function assertAmoyChain(publicClient) {
-  // polygonAmoy.id måste matcha RPC:ens chainId
-  const cid = await publicClient.getChainId();
-  if (cid !== polygonAmoy.id) {
-    throw new Error(
-      `Wrong chainId from RPC. Expected ${polygonAmoy.id}, got ${cid}`
-    );
-  }
+async function readProof(publicClient, contractAddress, hash) {
+  // getProof(bytes32) -> (timestamp, submitter)
+  const res = await publicClient.readContract({
+    address: contractAddress,
+    abi: PROOFY_ABI,
+    functionName: "getProof",
+    args: [hash],
+  });
+
+  // viem kan returnera array [timestamp, submitter] eller object beroende på ABI-format
+  const timestamp =
+    Array.isArray(res) ? res[0] : res?.timestamp ?? 0n;
+  const submitter =
+    Array.isArray(res) ? res[1] : res?.submitter ?? "0x0000000000000000000000000000000000000000";
+
+  const tsNum = Number(timestamp);
+  const confirmed = tsNum > 0;
+
+  return {
+    confirmed,
+    confirmedAtUnix: confirmed ? tsNum : null,
+    submitter,
+  };
 }
 
 export async function onRequest({ request, env }) {
-  const origin = pickCorsOrigin(request.headers.get("Origin"), env);
+  const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
-  if (request.method === "OPTIONS") {
-    return corsPreflight(origin);
-  }
+  if (request.method === "OPTIONS") return corsPreflight(origin);
   if (request.method !== "POST") {
     return json(405, { ok: false, error: "Method Not Allowed" }, origin);
   }
@@ -244,17 +225,13 @@ export async function onRequest({ request, env }) {
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
   const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
-  const privateKey = normalizePrivateKey(env.PROOFY_PRIVATE_KEY);
+  const privateKey = normalizeHexWith0x(env.PROOFY_PRIVATE_KEY);
 
   if (!rpcUrl || !contractAddress || !privateKey) {
-    return json(
-      500,
-      { ok: false, error: "Server misconfiguration" },
-      origin
-    );
+    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
   }
 
-  if (!isValidAddressHex(contractAddress)) {
+  if (!isAddress(contractAddress)) {
     return json(500, { ok: false, error: "Bad contract address" }, origin);
   }
 
@@ -263,7 +240,6 @@ export async function onRequest({ request, env }) {
   }
 
   try {
-    // timeout för RPC (Cloudflare)
     const transport = http(rpcUrl, { timeout: 20_000 });
 
     const publicClient = createPublicClient({
@@ -271,47 +247,36 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // Säkerställ rätt kedja
-    await assertAmoyChain(publicClient);
+    // Säkerställ kedja
+    const chainId = await assertAmoyChain(publicClient);
 
-    // kontrollera om redan bekräftad
-    let existsBefore = false;
-    let beforeTs = null;
-
+    // 1) Kolla om den redan finns on-chain
     try {
-      const [ok, ts] = await publicClient.readContract({
-        address: contractAddress,
-        abi: PROOFY_ABI,
-        functionName: "get",
-        args: [hash],
-      });
-      existsBefore = Boolean(ok) && Number(ts) !== 0;
-      beforeTs = Number(ts);
+      const proof = await readProof(publicClient, contractAddress, hash);
+      if (proof.confirmed) {
+        return json(
+          200,
+          {
+            ok: true,
+            statusCode: "CONFIRMED",
+            statusText: "Bekräftad (fanns redan)",
+            hash,
+            confirmedAtUnix: proof.confirmedAtUnix,
+            evidence: null,
+            submission: null,
+            legalText: "Fanns redan bekräftad notering.",
+          },
+          origin
+        );
+      }
     } catch {
-      // Om read fail: vi fortsätter och försöker registrera, men kan misslyckas senare
+      // Read kan faila tillfälligt — vi försöker ändå registrera.
     }
 
-    if (existsBefore) {
-      return json(
-        200,
-        {
-          ok: true,
-          statusCode: "CONFIRMED",
-          statusText: "Bekräftad (fanns redan)",
-          hash,
-          confirmedAtUnix: beforeTs,
-          evidence: null,
-          submission: null,
-          legalText: "Fanns redan bekräftad notering.",
-        },
-        origin
-      );
-    }
-
-    // Välj valid gas & debug info
+    // 2) Välj avgifter (EIP-1559) + debug
     const fees = await pickFeesForDebug(publicClient, env);
 
-    // skapa signer
+    // 3) Skapa signer
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
@@ -319,16 +284,16 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // simulera skrivning (ger request inkl. gas)
+    // 4) Simulera register(bytes32)
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
       abi: PROOFY_ABI,
-      functionName: "registerIfMissing",
+      functionName: "register",
       args: [hash],
     });
 
-    // skriv kontrakt (ANVÄND BigInt direkt)
+    // 5) Skicka tx
     const txHash = await walletClient.writeContract({
       ...sim.request,
       maxFeePerGas: fees.raw.maxFeePerGas,
@@ -345,18 +310,49 @@ export async function onRequest({ request, env }) {
         confirmedAtUnix: null,
         evidence: null,
         submission: { txHash, submittedBy: account.address },
-        legalText:
-          "En registrering har skickats in men är ännu inte bekräftad.",
+        legalText: "En registrering har skickats in men är ännu inte bekräftad.",
         debug: {
           fees,
-          rpcUrl,
           contractAddress,
-          chainId: polygonAmoy.id,
+          chainId,
         },
       },
       origin
     );
   } catch (e) {
+    // Vanligt edge case: kontraktet kan revert:a om redan registrerad.
+    // Då försöker vi en sista gång läsa state och returnera CONFIRMED om det stämmer.
+    try {
+      const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
+      const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
+      if (rpcUrl && contractAddress && isAddress(contractAddress)) {
+        const publicClient = createPublicClient({
+          chain: polygonAmoy,
+          transport: http(rpcUrl, { timeout: 20_000 }),
+        });
+        await assertAmoyChain(publicClient);
+        const proof = await readProof(publicClient, contractAddress, hash);
+        if (proof.confirmed) {
+          return json(
+            200,
+            {
+              ok: true,
+              statusCode: "CONFIRMED",
+              statusText: "Bekräftad (registrerades nyligen)",
+              hash,
+              confirmedAtUnix: proof.confirmedAtUnix,
+              evidence: null,
+              submission: null,
+              legalText: "Notering finns bekräftad on-chain.",
+            },
+            origin
+          );
+        }
+      }
+    } catch {
+      // ignorera fallback-fel
+    }
+
     return json(
       503,
       {
