@@ -2,15 +2,54 @@ import { createPublicClient, http, isHex, isAddress, formatUnits } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
-function json(status, obj) {
-  return new Response(JSON.stringify(obj), {
-    status,
+const DEFAULTS = {
+  // Om du vill hård-styra CORS origins:
+  // env.ALLOWED_ORIGINS = "https://proofy.se,https://www.proofy.se"
+};
+
+function pickCorsOrigin(requestOrigin, env) {
+  const origin = (requestOrigin || "").trim();
+  const allow = String(env.ALLOWED_ORIGINS || "").trim();
+  if (!allow) return origin || "*";
+
+  const allowed = allow
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (!origin) return "*";
+  return allowed.includes(origin) ? origin : "null";
+}
+
+function json(status, obj, origin) {
+  const headers = {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    Vary: "Origin",
+  };
+  if (origin) headers["access-control-allow-origin"] = origin;
+  return new Response(JSON.stringify(obj), { status, headers });
+}
+
+function corsPreflight(origin) {
+  return new Response(null, {
+    status: 204,
     headers: {
-      "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
+      "access-control-allow-origin": origin || "*",
+      "access-control-allow-methods": "GET, OPTIONS",
+      "access-control-allow-headers": "Content-Type",
+      "access-control-max-age": "86400",
+      Vary: "Origin",
     },
   });
+}
+
+function sanitizeError(e) {
+  const msg =
+    (e && typeof e === "object" && (e.shortMessage || e.message)) || String(e);
+  return String(msg).slice(0, 500);
 }
 
 function normalizeHexWith0x(value) {
@@ -23,9 +62,8 @@ function normalizeHexWith0x(value) {
 function isValidPrivateKeyHex(pk) {
   return (
     typeof pk === "string" &&
-    pk.startsWith("0x") &&
-    pk.length === 66 &&
-    isHex(pk)
+    /^0x[0-9a-fA-F]{64}$/.test(pk.trim()) &&
+    isHex(pk.trim())
   );
 }
 
@@ -34,7 +72,24 @@ function normalizeAddress(addr) {
   return addr.trim();
 }
 
-export async function onRequest({ env }) {
+async function assertAmoyChain(publicClient) {
+  const cid = await publicClient.getChainId();
+  if (cid !== polygonAmoy.id) {
+    throw new Error(
+      `Wrong chainId from RPC. Expected ${polygonAmoy.id}, got ${cid}`
+    );
+  }
+  return cid;
+}
+
+export async function onRequest({ request, env }) {
+  const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
+
+  if (request?.method === "OPTIONS") return corsPreflight(origin);
+  if (request?.method && request.method !== "GET") {
+    return json(405, { ok: false, error: "Method Not Allowed" }, origin);
+  }
+
   try {
     const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
 
@@ -45,30 +100,42 @@ export async function onRequest({ env }) {
     const privateKey = normalizeHexWith0x(env.PROOFY_PRIVATE_KEY);
 
     if (!rpcUrl) {
-      return json(500, {
-        ok: false,
-        error: "Saknar AMOY_RPC_URL (anslutningsadress till nätverket).",
-      });
+      return json(
+        500,
+        {
+          ok: false,
+          error: "Saknar AMOY_RPC_URL (anslutningsadress till nätverket).",
+        },
+        origin
+      );
     }
 
     let address = "";
 
     if (configuredAddress) {
       if (!isAddress(configuredAddress)) {
-        return json(500, {
-          ok: false,
-          error:
-            "PROOFY_WALLET_ADDRESS är angiven men har fel format (förväntad adress).",
-        });
+        return json(
+          500,
+          {
+            ok: false,
+            error:
+              "PROOFY_WALLET_ADDRESS är angiven men har fel format (förväntad adress).",
+          },
+          origin
+        );
       }
       address = configuredAddress;
     } else {
       if (!isValidPrivateKeyHex(privateKey)) {
-        return json(500, {
-          ok: false,
-          error:
-            "Saknar tjänsteadress. Ange PROOFY_WALLET_ADDRESS (rekommenderas) eller korrekt PROOFY_PRIVATE_KEY.",
-        });
+        return json(
+          500,
+          {
+            ok: false,
+            error:
+              "Saknar tjänsteadress. Ange PROOFY_WALLET_ADDRESS (rekommenderas) eller korrekt PROOFY_PRIVATE_KEY.",
+          },
+          origin
+        );
       }
       const account = privateKeyToAccount(privateKey);
       address = account.address;
@@ -76,11 +143,11 @@ export async function onRequest({ env }) {
 
     const client = createPublicClient({
       chain: polygonAmoy,
-      transport: http(rpcUrl),
+      transport: http(rpcUrl, { timeout: 20_000 }),
     });
 
     const [chainId, balance] = await Promise.all([
-      client.getChainId(),
+      assertAmoyChain(client),
       client.getBalance({ address }),
     ]);
 
@@ -88,21 +155,26 @@ export async function onRequest({ env }) {
     // - balanceBaseUnit: minsta enhet som sträng
     // - balanceDisplay: decimalsträng utan flyttalsavrundning
     const balanceBaseUnit = balance.toString();
-    const balanceDisplay = formatUnits(balance, 18); // 18 decimaler för detta nätverk
+    const balanceDisplay = formatUnits(balance, 18);
 
-    return json(200, {
-      ok: true,
-      chainId,
-      address,
-      balanceBaseUnit,
-      balanceDisplay,
-      // För UI: neutralt språk, utan marknads-/tekniktermer.
-      note:
-        "Visar tillgängliga medel för att kunna betala nätverksavgifter vid registrering.",
-    });
+    return json(
+      200,
+      {
+        ok: true,
+        chainId,
+        address,
+        balanceBaseUnit,
+        balanceDisplay,
+        note:
+          "Visar tillgängliga medel för att kunna betala nätverksavgifter vid registrering.",
+      },
+      origin
+    );
   } catch (e) {
-    const msg =
-      (e && typeof e === "object" && "message" in e && e.message) || String(e);
-    return json(500, { ok: false, error: String(msg).slice(0, 500) });
+    return json(
+      500,
+      { ok: false, error: sanitizeError(e) },
+      origin
+    );
   }
 }
