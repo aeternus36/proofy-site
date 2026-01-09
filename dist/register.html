@@ -56,24 +56,15 @@
       border: 1px solid rgba(255,255,255,.12);
     }
     #createBtn.isAfterRun:hover{ transform:none; }
-    #startOverLink{
-      display:none;
-      font-weight:800;
-      text-decoration:none;
-      padding:10px 12px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background:transparent;
-      opacity:.9;
-    }
-    #startOverLink:hover{
-      opacity:1;
-      background: rgba(255,255,255,.03);
-    }
     /* UX: dölj dublett-knapp efter registrering */
 #startOverLink {
   display: none !important;
 }
+    /* UX: dölj "Skapa nytt Verifierings-ID" efter lyckad registrering */
+.status-ok ~ .actions #createAnotherBtn {
+  display: none !important;
+}
+
   </style>
 </head>
 
