@@ -7,6 +7,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { polygonAmoy } from "viem/chains";
 
+// ABI för notering + register
 const PROOFY_ABI = [
   {
     type: "function",
@@ -25,10 +26,12 @@ const PROOFY_ABI = [
     inputs: [{ name: "refId", type: "bytes32" }],
     outputs: [
       { name: "created", type: "bool" },
-      { name: "ts", type: "uint64" }],
+      { name: "ts", type: "uint64" },
+    ],
   },
 ];
 
+// Standard JSON-response
 function json(status, obj, origin) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
@@ -109,12 +112,12 @@ function weiToGweiNumber(wei) {
 }
 
 /**
- * Välj fees med debug-loggning.
+ * EIP-1559 fee-valsfunktion med debug-fält.
  */
-async function pickFeesWithDebug(publicClient, env) {
-  const capGwei = Number(env.MAX_FEE_GWEI ?? 300);
-  const tipCapGwei = Number(env.MAX_PRIORITY_FEE_GWEI ?? 5);
-  const minTipGwei = Number(env.MIN_PRIORITY_FEE_GWEI ?? 1);
+async function pickFeesForDebug(publicClient, env) {
+  const capGwei = Number(env.MAX_FEE_GWEI ?? 600);        // tak för maxFee
+  const tipCapGwei = Number(env.MAX_PRIORITY_FEE_GWEI ?? 20);  // tak för priority
+  const minTipGwei = Number(env.MIN_PRIORITY_FEE_GWEI ?? 1);   // min priority
 
   const capWei = gweiToWeiBigInt(capGwei);
   const tipCapWei = gweiToWeiBigInt(tipCapGwei);
@@ -122,48 +125,46 @@ async function pickFeesWithDebug(publicClient, env) {
 
   let suggestedMaxFee = null;
   let suggestedPriority = null;
+  let estimateError = null;
+
   try {
     const estimate = await publicClient.estimateFeesPerGas();
     suggestedMaxFee = estimate?.maxFeePerGas ?? null;
     suggestedPriority = estimate?.maxPriorityFeePerGas ?? null;
-
-    console.log(
-      `FEE ESTIMATE RPC: maxFeePerGas=${weiToGweiNumber(
-        suggestedMaxFee
-      )} gwei, maxPriorityFeePerGas=${weiToGweiNumber(
-        suggestedPriority
-      )} gwei`
-    );
   } catch (err) {
-    console.log("FEE ESTIMATE ERROR:", err);
+    estimateError = String(err?.message || err);
   }
 
+  // fallback
   let maxFeePerGas =
     suggestedMaxFee && suggestedMaxFee > 0n ? suggestedMaxFee : capWei;
   let maxPriorityFeePerGas =
     suggestedPriority && suggestedPriority > 0n
       ? suggestedPriority
-      : gweiToWeiBigInt(2);
+      : gweiToWeiBigInt(minTipGwei);
 
   if (maxFeePerGas > capWei) maxFeePerGas = capWei;
-  if (maxPriorityFeePerGas > tipCapWei)
-    maxPriorityFeePerGas = tipCapWei;
+  if (maxPriorityFeePerGas > tipCapWei) maxPriorityFeePerGas = tipCapWei;
+  if (maxPriorityFeePerGas < minTipWei) maxPriorityFeePerGas = minTipWei;
+  if (maxPriorityFeePerGas > maxFeePerGas) maxPriorityFeePerGas = maxFeePerGas;
 
-  if (maxPriorityFeePerGas < minTipWei)
-    maxPriorityFeePerGas = minTipWei;
-
-  if (maxPriorityFeePerGas > maxFeePerGas)
-    maxPriorityFeePerGas = maxFeePerGas;
-
-  console.log(
-    `PICKED FEES -> maxFeePerGas=${weiToGweiNumber(
-      maxFeePerGas
-    )} gwei, maxPriorityFeePerGas=${weiToGweiNumber(
-      maxPriorityFeePerGas
-    )} gwei (capGwei=${capGwei}, tipCapGwei=${tipCapGwei})`
-  );
-
-  return { maxFeePerGas, maxPriorityFeePerGas };
+  return {
+    picked: {
+      maxFeePerGas: weiToGweiNumber(maxFeePerGas),
+      maxPriorityFeePerGas: weiToGweiNumber(maxPriorityFeePerGas),
+      capGwei,
+      tipCapGwei,
+      minTipGwei,
+    },
+    estimate: {
+      maxFeePerGas: suggestedMaxFee ? weiToGweiNumber(suggestedMaxFee) : null,
+      maxPriorityFeePerGas: suggestedPriority
+        ? weiToGweiNumber(suggestedPriority)
+        : null,
+      error: estimateError,
+    },
+    raw: { maxFeePerGas, maxPriorityFeePerGas },
+  };
 }
 
 export async function onRequest({ request, env }) {
@@ -205,23 +206,21 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    console.log("REGISTER DEBUG: contractAddress=", contractAddress);
-    console.log("REGISTER DEBUG: rpcUrl=", rpcUrl);
+    // kontrollera om redan bekräftad
+    let existsBefore = false;
+    let beforeTs = null;
+    try {
+      const [ok, ts] = await publicClient.readContract({
+        address: contractAddress,
+        abi: PROOFY_ABI,
+        functionName: "get",
+        args: [hash],
+      });
+      existsBefore = Boolean(ok) && Number(ts) !== 0;
+      beforeTs = Number(ts);
+    } catch {}
 
-    // Check existing confirmed on chain
-    const [getOk, getTs] = await publicClient.readContract({
-      address: contractAddress,
-      abi: PROOFY_ABI,
-      functionName: "get",
-      args: [hash],
-    }).catch(err => {
-      console.log("REGISTER DEBUG: readContract error:", err);
-      return [false, 0n];
-    });
-    const beforeExists = Boolean(getOk) && Number(getTs) !== 0;
-
-    if (beforeExists) {
-      console.log("REGISTER DEBUG: already confirmed on chain");
+    if (existsBefore) {
       return json(
         200,
         {
@@ -229,7 +228,7 @@ export async function onRequest({ request, env }) {
           statusCode: "CONFIRMED",
           statusText: "Bekräftad (fanns redan)",
           hash,
-          confirmedAtUnix: Number(getTs),
+          confirmedAtUnix: beforeTs,
           evidence: null,
           submission: null,
           legalText: "Fanns redan bekräftad notering.",
@@ -238,51 +237,36 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // Pick fees
-    const { maxFeePerGas, maxPriorityFeePerGas } = await pickFeesWithDebug(
-      publicClient,
-      env
-    );
+    // Välj valid gas & debug info
+    const fees = await pickFeesForDebug(publicClient, env);
 
-    // Log picked fees for cloud logs
-    console.log(
-      `REGISTER DEBUG: using fees: maxFeePerGas=${weiToGweiNumber(
-        maxFeePerGas
-      )} gwei, maxPriorityFeePerGas=${weiToGweiNumber(
-        maxPriorityFeePerGas
-      )} gwei`
-    );
-
+    // skapa signer
     const account = privateKeyToAccount(privateKey);
-    console.log("REGISTER DEBUG: submitting with account=", account.address);
-
     const walletClient = createWalletClient({
       account,
       chain: polygonAmoy,
       transport,
     });
 
+    // simulera skrivning
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
       abi: PROOFY_ABI,
       functionName: "registerIfMissing",
       args: [hash],
-    }).catch(err => {
-      console.log("REGISTER DEBUG: simulateContract error:", err);
-      throw err;
     });
 
-    console.log("REGISTER DEBUG: simulateContract succeeded");
-
+    // skriv kontrakt
     const txHash = await walletClient.writeContract({
       ...sim.request,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
+      maxFeePerGas: gweiToWeiBigInt(fees.picked.maxFeePerGas),
+      maxPriorityFeePerGas: gweiToWeiBigInt(
+        fees.picked.maxPriorityFeePerGas
+      ),
     });
 
-    console.log("REGISTER DEBUG: txHash=", txHash);
-
+    // svar med debug
     return json(
       200,
       {
@@ -295,11 +279,15 @@ export async function onRequest({ request, env }) {
         submission: { txHash, submittedBy: account.address },
         legalText:
           "En registrering har skickats in men är ännu inte bekräftad.",
+        debug: {
+          fees,
+          rpcUrl,
+          contractAddress,
+        },
       },
       origin
     );
   } catch (e) {
-    console.log("REGISTER DEBUG: exception:", e);
     return json(
       503,
       {
