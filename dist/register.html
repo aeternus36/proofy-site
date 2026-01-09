@@ -47,30 +47,17 @@
     }
 
     /* VIKTIGT: ta inte bort via CSS – JS visar denna när länken finns */
-    /* #nextStepBtn { display:none; }  <-- borttagen */
+    /* #nextStepBtn { display:none; } */
 
     .btn.softSecondary{
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.12);
     }
-    #manualBuildBtn { display:none !important; }
-    #createBtn.isAfterRun{
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.12);
-    }
-    #createBtn.isAfterRun:hover{ transform:none; }
 
-    /* (Död kod borttagen: #startOverLink finns inte i HTML längre) */
+    #manualBuildBtn { display:none !important; }
 
     /* UX: sekundär handling – ska inte konkurrera med verifiering */
     #receiptBtn{
-      background: rgba(255,255,255,.04) !important;
-      border: 1px solid rgba(255,255,255,.12) !important;
-      color: rgba(234,240,255,.85) !important;
-    }
-
-    /* UX: sekundär knapp efter registrering (Visa registreringsunderlag) */
-    .actionsRow a.btn:not(#nextStepBtn) {
       background: rgba(255,255,255,.04) !important;
       border: 1px solid rgba(255,255,255,.12) !important;
       color: rgba(234,240,255,.85) !important;
@@ -652,23 +639,30 @@
     busy = v;
     setAriaBusy(v);
 
+    // enable/disable
     createBtn.disabled = !currentFile || busy;
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
 
+    // UX: När länk finns -> visa "Gå till verifiering" och göm "Skapa ..." (ingen "Skapa nytt")
     if (nextStepBtn){
       if (currentLink && !busy){
         nextStepBtn.href = currentLink;
         nextStepBtn.style.display = "inline-flex";
-        createBtn.classList.remove("primary");
-        createBtn.classList.add("softSecondary");
       } else {
         nextStepBtn.style.display = "none";
-        createBtn.classList.add("primary");
-        createBtn.classList.remove("softSecondary");
       }
     }
 
+    if (createBtn){
+      if (currentLink && !busy){
+        createBtn.style.display = "none";
+      } else {
+        createBtn.style.display = "inline-flex";
+      }
+    }
+
+    // receipt as secondary
     if (receiptBtn){
       if (currentId && !busy){
         receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(currentId)}`;
@@ -1100,8 +1094,7 @@
 
     if (receiptBtn) receiptBtn.style.display = "none";
     if (nextStepBtn) nextStepBtn.style.display = "none";
-
-    createBtn.classList.remove("isAfterRun");
+    if (createBtn) createBtn.style.display = "inline-flex";
     if (createBtn) createBtn.textContent = "Skapa Verifierings-ID";
 
     if (!currentFile){
@@ -1334,9 +1327,6 @@
 
       setPill("Skapat lokalt ✅");
 
-      createBtn.textContent = "Skapa nytt Verifierings-ID";
-      createBtn.classList.add("isAfterRun");
-
       if (qrTap) qrTap.style.display = "inline-block";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
@@ -1351,6 +1341,7 @@
 
       setBusy(false);
 
+      // Register submit
       setPill("Skickar in… (ej bekräftad)");
       regStatusOut.textContent = "Skickar in… (ej bekräftad)";
       timeOut.textContent = "—";
@@ -1369,6 +1360,7 @@
       const data = reg.data || {};
       applyStatusToUI({ id, createdSe, data });
 
+      // om txHash finns -> uppdatera länken/QR så verify.html får tx
       const txHash = data?.submission?.txHash || null;
       if (txHash) {
         currentLink = `${buildVerifyLink(id)}&tx=${encodeURIComponent(txHash)}`;
@@ -1380,6 +1372,7 @@
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
       }
 
+      // polling bara om txHash finns
       if (txHash) {
         headline.style.borderColor = "rgba(255,255,255,.14)";
         headline.style.background = "rgba(255,255,255,.05)";
@@ -1391,6 +1384,7 @@
       }
 
       setPill("Skapat lokalt ✅");
+      setBusy(false); // <- detta kommer nu att gömma createBtn och visa nextStepBtn
 
     } catch (e){
       console.error(e);
