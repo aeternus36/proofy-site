@@ -103,6 +103,13 @@ function weiToGweiNumber(wei) {
   }
 }
 
+function getTimeoutMs(env) {
+  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
+  if (!raw) return 20_000;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
+}
+
 async function assertAmoyChain(publicClient) {
   const cid = await publicClient.getChainId();
   if (cid !== polygonAmoy.id) {
@@ -111,13 +118,6 @@ async function assertAmoyChain(publicClient) {
     );
   }
   return cid;
-}
-
-function getTimeoutMs(env) {
-  const raw = String(env.RPC_TIMEOUT_MS || "").trim();
-  if (!raw) return 20_000;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
 }
 
 async function pickFeesForDebug(publicClient, env) {
@@ -160,6 +160,7 @@ async function pickFeesForDebug(publicClient, env) {
   if (maxPriorityFeePerGas < minTipWei) maxPriorityFeePerGas = minTipWei;
   if (maxPriorityFeePerGas > maxFeePerGas) maxPriorityFeePerGas = maxFeePerGas;
 
+  // OBS: raw innehåller BigInt – får INTE skickas direkt i JSON.
   return {
     picked: {
       maxFeePerGas: weiToGweiNumber(maxFeePerGas),
@@ -177,6 +178,18 @@ async function pickFeesForDebug(publicClient, env) {
     },
     raw: { maxFeePerGas, maxPriorityFeePerGas },
   };
+}
+
+// Gör ett objekt JSON-säkert: BigInt -> string (rekursivt)
+function toJsonSafe(value) {
+  if (typeof value === "bigint") return value.toString();
+  if (Array.isArray(value)) return value.map(toJsonSafe);
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = toJsonSafe(v);
+    return out;
+  }
+  return value;
 }
 
 async function readGet(publicClient, contractAddress, hash) {
@@ -241,7 +254,7 @@ export async function onRequest({ request, env }) {
 
     const chainId = await assertAmoyChain(publicClient);
 
-    // 1) Om den redan finns -> returnera CONFIRMED direkt
+    // 1) Finns redan? -> CONFIRMED direkt
     try {
       const existing = await readGet(publicClient, contractAddress, hash);
       if (existing.confirmed) {
@@ -261,7 +274,7 @@ export async function onRequest({ request, env }) {
         );
       }
     } catch {
-      // Om read misslyckas fortsätter vi ändå (kan fortfarande registrera)
+      // ignore
     }
 
     const fees = await pickFeesForDebug(publicClient, env);
@@ -273,7 +286,7 @@ export async function onRequest({ request, env }) {
       transport,
     });
 
-    // 2) Simulera registerIfMissing(bytes32)
+    // 2) Simulera registerIfMissing (idempotent)
     const sim = await publicClient.simulateContract({
       account,
       address: contractAddress,
@@ -288,6 +301,17 @@ export async function onRequest({ request, env }) {
       maxPriorityFeePerGas: fees.raw.maxPriorityFeePerGas,
     });
 
+    // DEBUG måste vara JSON-säker (inga BigInt!)
+    const debug = toJsonSafe({
+      fees: {
+        picked: fees.picked,
+        estimate: fees.estimate,
+        raw: fees.raw, // BigInt -> string via toJsonSafe
+      },
+      contractAddress,
+      chainId,
+    });
+
     return json(
       200,
       {
@@ -299,47 +323,11 @@ export async function onRequest({ request, env }) {
         evidence: null,
         submission: { txHash, submittedBy: account.address },
         legalText: "En registrering har skickats in men är ännu inte bekräftad.",
-        debug: {
-          fees,
-          contractAddress,
-          chainId,
-        },
+        debug,
       },
       origin
     );
   } catch (e) {
-    // Fallback: försök läsa state en sista gång, om tx faktiskt resulterade i registrering
-    try {
-      const rpcUrl2 = String(env.AMOY_RPC_URL || "").trim();
-      const contractAddress2 = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
-      if (rpcUrl2 && isAddress(contractAddress2)) {
-        const publicClient2 = createPublicClient({
-          chain: polygonAmoy,
-          transport: http(rpcUrl2, { timeout: getTimeoutMs(env) }),
-        });
-        await assertAmoyChain(publicClient2);
-        const existing = await readGet(publicClient2, contractAddress2, hash);
-        if (existing.confirmed) {
-          return json(
-            200,
-            {
-              ok: true,
-              statusCode: "CONFIRMED",
-              statusText: "Bekräftad (registrerades nyligen)",
-              hash,
-              confirmedAtUnix: existing.confirmedAtUnix,
-              evidence: null,
-              submission: null,
-              legalText: "Notering finns bekräftad on-chain.",
-            },
-            origin
-          );
-        }
-      }
-    } catch {
-      // ignore
-    }
-
     return json(
       503,
       {
