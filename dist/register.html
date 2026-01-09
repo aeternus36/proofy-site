@@ -640,7 +640,7 @@
   function updateReceiptLabel(){
     if (!receiptBtn || !currentId) return;
     if (lastProofyStatusCode === "CONFIRMED") {
-      receiptBtn.textContent = "Öppna tekniskt intyg";
+      receiptBtn.textContent = "Visa registreringsunderlag";
     } else if (lastProofyStatusCode === "UNKNOWN") {
       receiptBtn.textContent = "Öppna tekniskt intyg (kunde inte kontrolleras)";
     } else if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") {
