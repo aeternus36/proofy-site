@@ -55,6 +55,8 @@
         border-radius: 14px;
       }
 
+      /* NOTE: header/nav styling is handled by /assets/header.css now */
+
       main{
         max-width:1100px;
         margin:0 auto;
@@ -98,7 +100,6 @@
         color:var(--muted);
         line-height:1.55;
         font-size:16px;
-        margin-top:14px;
       }
       .statusBadge{
         display:inline-flex; align-items:center; gap:8px;
@@ -139,16 +140,14 @@
       button.ghost{background:transparent}
       button:disabled{opacity:.55; cursor:not-allowed; transform:none}
 
-      /* === Audit-first top section (local-only, minimal risk) === */
-      .auditTop{
-        margin-top:16px;
+      .grid{
+        margin-top:18px;
         display:grid;
-        grid-template-columns: 1.05fr .95fr;
+        grid-template-columns: 1.15fr .85fr;
         gap:14px;
-        align-items:start;
       }
       @media (max-width: 900px){
-        .auditTop{ grid-template-columns:1fr; }
+        .grid{grid-template-columns:1fr}
         h1{font-size:36px}
       }
 
@@ -175,6 +174,16 @@
         .kv{grid-template-columns:1fr}
       }
 
+      /* ✅ NEW (surgical): audit overview grid that can show 3 items on desktop, collapses safely */
+      .auditKv{
+        display:grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap:12px;
+      }
+      @media (max-width: 900px){
+        .auditKv{grid-template-columns:1fr}
+      }
+
       .val{
         background:rgba(0,0,0,.18);
         border:1px solid var(--border);
@@ -193,6 +202,13 @@
         font-size:13px;
         word-break:break-all;
         color:rgba(234,240,255,.92);
+      }
+
+      /* ✅ NEW (surgical): timestamps must NOT break inside "Europe/Stockholm" */
+      .monoTime{
+        word-break:normal;
+        overflow-wrap:normal;
+        white-space:normal; /* allow wrap at spaces, not mid-word */
       }
 
       .row{
@@ -237,12 +253,14 @@
         width:168px; height:168px;
         display:grid; place-items:center;
       }
+
+      /* ✅ CHANGE (surgical): do NOT force-stretch canvas/img to 168px (can cause blur/odd sizing).
+         We keep it crisp by letting the library set an integer size; we just center it. */
       #qrcode canvas, #qrcode img, #qrcode svg{
-        width:168px !important;
-        height:168px !important;
         display:block;
         image-rendering: pixelated;
       }
+
       .small{
         font-size:12px; color:var(--muted2); line-height:1.45;
         max-width:520px;
@@ -294,11 +312,7 @@
         .pill, .statusBadge, .val { border-color:#ddd !important; background:#fff !important; }
         .lead, .note, .fine, .small, .footer { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
-
-        .auditTop{ display:flex !important; flex-direction:column !important; gap:14px !important; }
-        .card{ break-inside:avoid; page-break-inside:avoid; }
         #qrcodeTap{ border-color:#ddd !important; }
-        #qrcodeTap, #qrcode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       }
     </style>
 
@@ -308,6 +322,7 @@
   <body>
     <a class="skip" href="#main">Hoppa till innehåll</a>
 
+    <!-- Shared Proofy header + hamburger -->
     <header>
       <div class="wrap">
         <div class="nav">
@@ -356,6 +371,11 @@
         <div class="heroTop">
           <div>
             <h1>Verifieringsintyg</h1>
+            <div class="lead">
+              Detta intyg är ett <b>tekniskt underlag</b> som sammanfattar utfallet av en kontroll av ett
+              <b>Verifierings-ID</b> (kontrollvärde för en specifik filversion) mot Proofys register vid angiven kontrolltid.
+              Proofy lagrar <b>inte</b> dokumentinnehåll i registret.
+            </div>
           </div>
 
           <div id="statusBadge" class="statusBadge warn" title="Status hos Proofy vid kontrolltillfället">
@@ -372,11 +392,40 @@
 
         <div id="warnBox" class="warnBox" role="status" aria-live="polite" aria-atomic="true"></div>
 
-        <!-- ✅ BEST: Nyckeluppgifter först, sedan live-verifiering (QR/länk) -->
-        <div class="auditTop" aria-label="Snabböversikt (revision/juridik)">
-          <div class="card" id="cardEssentials">
-            <h3>Nyckeluppgifter</h3>
+        <!-- ✅ NEW (surgical): Audit trail-översikt högst upp för revisor/juridik (duplication only) -->
+        <div class="card" style="margin-top:14px" aria-label="Audit trail (översikt)">
+          <h3>Audit trail (översikt)</h3>
+          <div class="auditKv">
+            <div class="val">
+              <div class="label">Verifierings-ID</div>
+              <div class="row">
+                <div class="mono" id="auditHash">—</div>
+                <button class="copyBtn" id="copyHashTop" type="button">Kopiera</button>
+              </div>
+            </div>
 
+            <div class="val">
+              <div class="label">Kontroll genomförd (snapshot)</div>
+              <div class="mono monoTime" id="auditCheckedLocal">—</div>
+              <div class="mono monoTime" id="auditCheckedUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
+            </div>
+
+            <div class="val">
+              <div class="label">Verifieringslänk (live-kontroll)</div>
+              <div class="row">
+                <div class="mono" id="auditVerifyLink">—</div>
+                <button class="copyBtn" id="copyVerifyTop" type="button">Kopiera</button>
+              </div>
+              <div class="small" style="margin-top:8px">
+                Skanna/öppna för att kontrollera status mot Proofys register.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Sammanfattning</h3>
             <div class="kv">
               <div class="val">
                 <div class="label">Verifierings-ID</div>
@@ -391,17 +440,11 @@
 
               <div class="val">
                 <div class="label">Kontroll genomförd</div>
-                <div class="mono" id="checkedLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
-                <div class="mono" id="checkedUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+                <div class="mono monoTime" id="checkedLocal">—</div>
+                <div class="mono monoTime" id="checkedUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
                 <div class="small" style="margin-top:8px">
                   Kontrolltiden avser <b>när detta intyg uppdaterades</b> (snapshot). Uppdatera vid behov.
                 </div>
-              </div>
-
-              <div class="val">
-                <div class="label">Tidpunkt (om bekräftad)</div>
-                <div class="mono" id="regLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
-                <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               </div>
 
               <div class="val">
@@ -409,15 +452,51 @@
                 <div class="mono" id="resultText">—</div>
                 <div class="small" id="legalLine" style="margin-top:8px">—</div>
               </div>
+
+              <div class="val">
+                <div class="label">Tidpunkt (om bekräftad)</div>
+                <div class="mono monoTime" id="regLocal">—</div>
+                <div class="mono monoTime" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
+              </div>
             </div>
 
-            <div class="note">
-              <b>Praktiskt tips:</b> Spara Verifierings-ID + intygslänk i ärendet vid fastställande.
-              Dela verifieringslänk/QR vid intern kvalitetskontroll eller efterhandsgranskning.
+            <details class="tech" id="techDetails">
+              <summary>Teknisk information (valfritt)</summary>
+              <div class="techGrid">
+                <div class="val">
+                  <div class="label">Kontrollpunkt (valfritt)</div>
+                  <div class="mono" id="observedPoint">—</div>
+                  <div class="small" style="margin-top:6px">
+                    Visar vilken kontrollpunkt som användes vid kontrolltillfället. Kan underlätta felsökning.
+                  </div>
+                </div>
+                <div class="val">
+                  <div class="label">Registreringsreferens (valfri)</div>
+                  <div class="mono" id="registrationRef">—</div>
+                  <div class="small" style="margin-top:6px">
+                    En intern referens kopplad till en inskickad registrering. Behövs normalt inte i ärendet.
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <div class="fine">
+              <b>Revisions-/juridisk tydlighet</b><br/>
+              • Intyget redovisar status för kontrollvärdet i Proofys register vid kontrolltillfället.<br/>
+              • Tidpunkt anges endast när status är <b>bekräftad</b>.<br/>
+              • Tidpunkten avser när kontrollvärdet först blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
+              • Intyget ersätter inte e-signering, arkivering, behörighetsloggar, processkontroller eller juridisk rådgivning.<br/>
+              • Bevisvärde och relevans bedöms i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja).<br/>
+              • Intyget avser en <b>teknisk kontroll vid kontrolltillfället</b>. Utfallet kan ändras om registret uppdateras senare.
+            </div>
+
+            <div class="footer">
+              <div><b>Integritet:</b> Verifierings-ID skapas lokalt från filen. Vid kontroll skickas endast kontrollvärdet – inte filen.</div>
+              <div style="margin-top:6px">Kontakt: <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></div>
             </div>
           </div>
 
-          <div class="card" id="cardLinks">
+          <div class="card">
             <h3>Länkar &amp; QR</h3>
             <div class="qrWrap">
               <div>
@@ -432,14 +511,6 @@
 
               <div style="flex:1; min-width:260px;">
                 <div class="val" style="margin-bottom:12px">
-                  <div class="label">Verifieringslänk</div>
-                  <div class="row">
-                    <div class="mono" id="verifyLink">—</div>
-                    <button class="copyBtn" id="copyVerify" type="button">Kopiera</button>
-                  </div>
-                </div>
-
-                <div class="val">
                   <div class="label">Länk till intyg</div>
                   <div class="row">
                     <div class="mono" id="certLink">—</div>
@@ -447,55 +518,22 @@
                   </div>
                 </div>
 
+                <div class="val">
+                  <div class="label">Verifieringslänk</div>
+                  <div class="row">
+                    <div class="mono" id="verifyLink">—</div>
+                    <button class="copyBtn" id="copyVerify" type="button">Kopiera</button>
+                  </div>
+                </div>
+
+                <div class="note">
+                  <b>Praktiskt tips:</b> Spara Verifierings-ID + intygslänk i ärendet vid fastställande.
+                  Dela verifieringslänk/QR vid intern kvalitetskontroll eller efterhandsgranskning.
+                </div>
+
                 <div class="small" id="techHint" style="margin-top:10px"></div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Lead (oförändrad text) -->
-        <div class="lead">
-          Detta intyg är ett <b>tekniskt underlag</b> som sammanfattar utfallet av en kontroll av ett
-          <b>Verifierings-ID</b> (kontrollvärde för en specifik filversion) mot Proofys register vid angiven kontrolltid.
-          Proofy lagrar <b>inte</b> dokumentinnehåll i registret.
-        </div>
-
-        <div class="card" id="cardSummary" style="margin-top:14px;">
-          <h3>Revisions-/juridisk tydlighet</h3>
-
-          <div class="fine" style="border-top:0; padding-top:0; margin-top:0;">
-            <b>Revisions-/juridisk tydlighet</b><br/>
-            • Intyget redovisar status för kontrollvärdet i Proofys register vid kontrolltillfället.<br/>
-            • Tidpunkt anges endast när status är <b>bekräftad</b>.<br/>
-            • Tidpunkten avser när kontrollvärdet först blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
-            • Intyget ersätter inte e-signering, arkivering, behörighetsloggar, processkontroller eller juridisk rådgivning.<br/>
-            • Bevisvärde och relevans bedöms i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja).<br/>
-            • Intyget avser en <b>teknisk kontroll vid kontrolltillfället</b>. Utfallet kan ändras om registret uppdateras senare.
-          </div>
-
-          <details class="tech" id="techDetails">
-            <summary>Teknisk information (valfritt)</summary>
-            <div class="techGrid">
-              <div class="val">
-                <div class="label">Kontrollpunkt (valfritt)</div>
-                <div class="mono" id="observedPoint">—</div>
-                <div class="small" style="margin-top:6px">
-                  Visar vilken kontrollpunkt som användes vid kontrolltillfället. Kan underlätta felsökning.
-                </div>
-              </div>
-              <div class="val">
-                <div class="label">Registreringsreferens (valfri)</div>
-                <div class="mono" id="registrationRef">—</div>
-                <div class="small" style="margin-top:6px">
-                  En intern referens kopplad till en inskickad registrering. Behövs normalt inte i ärendet.
-                </div>
-              </div>
-            </div>
-          </details>
-
-          <div class="footer">
-            <div><b>Integritet:</b> Verifierings-ID skapas lokalt från filen. Vid kontroll skickas endast kontrollvärdet – inte filen.</div>
-            <div style="margin-top:6px">Kontakt: <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></div>
           </div>
         </div>
       </section>
@@ -528,12 +566,11 @@
         if(!sec) return "—";
         try{
           const dt = new Date(sec*1000);
-          const tz = "Europe\u2060/Stockholm"; // prevents ugly wrap at "/"
           return new Intl.DateTimeFormat("sv-SE", {
             timeZone:"Europe/Stockholm",
             year:"numeric", month:"2-digit", day:"2-digit",
             hour:"2-digit", minute:"2-digit", second:"2-digit"
-          }).format(dt) + ` (${tz})`;
+          }).format(dt) + " (Europe/Stockholm)";
         }catch{
           return new Date(sec*1000).toLocaleString("sv-SE") + " (lokal)";
         }
@@ -574,85 +611,80 @@
         }
       }
 
-      /* ✅ Proofy-native QR render + self-check */
+      /* ✅ FIX (robust + self-check):
+         - Works with Proofy-build: new QRCode(el) + makeCode(...)
+         - Also works if library is option-based: new QRCode(el, opts)
+         - Never leaves blank white box without explanation */
       function renderQR(text){
         const el = $("qrcode");
-        el.innerHTML = "";
-
         const payload = String(text || "").trim();
 
-        const setFallback = (msg, warn) => {
-          el.innerHTML =
-            '<div class="small" style="padding:10px;color:#0b1220;text-align:center;line-height:1.35">' +
-            msg +
-            "</div>";
-          if (warn) console.warn(warn);
-        };
+        el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">Genererar QR…</div>';
 
         if (!payload){
-          setFallback("Ingen länk att koda.", "Proofy QR: empty payload (nothing to encode).");
-          return;
-        }
-        if (typeof window.QRCode !== "function"){
-          setFallback("QR kunde inte laddas.", "Proofy QR: window.QRCode is not available (qr.min.js not loaded?).");
+          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">Ingen länk att koda.</div>';
+          console.warn("[Proofy] QR: empty payload");
           return;
         }
 
-        const correctLevel =
-          (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) ? window.QRCodeCorrectLevel.H :
-          (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) ? window.QRCode.CorrectLevel.H :
-          undefined;
+        if (typeof window.QRCode !== "function"){
+          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR-bibliotek saknas.</div>';
+          console.warn("[Proofy] QR: window.QRCode not available");
+          return;
+        }
 
         try{
-          let qr = null;
+          el.innerHTML = "";
 
-          try{
-            qr = new window.QRCode(el);
-            if (qr && qr._htOption){
-              qr._htOption.width = 168;
-              qr._htOption.height = 168;
-              qr._htOption.colorDark = "#0b1220";
-              qr._htOption.colorLight = "#ffffff";
-              qr._htOption.quiet = 4;
-              qr._htOption.minScale = 4;
-              if (correctLevel != null) qr._htOption.correctLevel = correctLevel;
+          // Pass opts as second arg (harmless for 1-arg constructors, required for option-based variants)
+          const opts = {
+            width: 168,
+            height: 168,
+            colorDark: "#0b1220",
+            colorLight: "#ffffff"
+          };
+
+          const qr = new window.QRCode(el, opts);
+
+          // Proofy-build exposes _htOption; option-based variants may ignore or differ
+          if (qr && qr._htOption){
+            qr._htOption.width = 168;
+            qr._htOption.height = 168;
+            qr._htOption.colorDark = "#0b1220";
+            qr._htOption.colorLight = "#ffffff";
+            qr._htOption.quiet = 4;
+            qr._htOption.minScale = 4;
+
+            if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null){
+              qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
             }
-          }catch{
-            qr = null;
           }
 
-          if (!qr || typeof qr.makeCode !== "function"){
-            el.innerHTML = "";
-            const opts = {
-              width: 168,
-              height: 168,
-              colorDark: "#0b1220",
-              colorLight: "#ffffff",
-              correctLevel: correctLevel
-            };
-            qr = new window.QRCode(el, opts);
+          if (qr && typeof qr.makeCode === "function"){
+            qr.makeCode(payload);
+          } else {
+            // If we can't find makeCode, fail loudly with explanation
+            throw new Error("QRCode instance saknar makeCode()");
           }
 
-          if (!qr || typeof qr.makeCode !== "function"){
-            setFallback("QR-koden kunde inte visas.", "Proofy QR: QRCode instance has no makeCode().");
+          // Self-check: ensure something was rendered
+          const rendered = el.querySelector("canvas, img, svg");
+          if (!rendered){
+            el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR kunde inte renderas.</div>';
+            console.warn("[Proofy] QR: makeCode ran but produced no canvas/img/svg");
             return;
           }
 
-          qr.makeCode(payload);
-
-          const node = el.querySelector("canvas, img, svg");
-          if (!node){
-            setFallback("QR-koden kunde inte visas.", "Proofy QR: QRCode ran but produced no canvas/img/svg.");
-            return;
+          // Keep crisp rendering (do NOT force-scale size here; let library keep integer pixel grid)
+          if (rendered.tagName === "CANVAS"){
+            rendered.style.display = "block";
+            rendered.style.imageRendering = "pixelated";
           }
 
-          node.style.width = "168px";
-          node.style.height = "168px";
-          node.style.display = "block";
-          node.style.imageRendering = "pixelated";
-        }catch(e){
-          setFallback("QR-koden kunde inte visas.", "Proofy QR: render failed: " + (e && e.message ? e.message : String(e)));
-          console.error("QR render failed:", e);
+        } catch (e){
+          console.error("[Proofy] QR render failed:", e);
+          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR-koden kunde inte visas.</div>';
+          console.warn("[Proofy] QR fallback shown");
         }
       }
 
@@ -724,11 +756,15 @@
         const certId = (url.searchParams.get("cert") || "").trim();
         const certLink = `${location.origin}${location.pathname}?hash=${encodeURIComponent(hash)}&checked=${checked}${certId ? `&cert=${encodeURIComponent(certId)}` : ""}`;
 
-        // ✅ QR MUST point to verify.html?hash=... (audit trail + live verification)
+        // ✅ Requirement: QR MUST point to verify link (live control / audit trail)
         const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
 
         $("certLink").textContent = certLink;
         $("verifyLink").textContent = verifyLink;
+
+        // Audit trail (top) mirrors core fields
+        $("auditHash").textContent = safeText(hash, "—");
+        $("auditVerifyLink").textContent = verifyLink;
 
         $("btnOpenVerify").onclick = () => location.href = verifyLink;
         $("btnPrint").onclick = () => window.print();
@@ -738,6 +774,11 @@
         $("copyCert").onclick = () => copyText(certLink);
         $("copyVerify").onclick = () => copyText(verifyLink);
 
+        // Top audit copy buttons
+        $("copyHashTop").onclick = () => copyText(hash);
+        $("copyVerifyTop").onclick = () => copyText(verifyLink);
+
+        // QR render
         renderQR(verifyLink);
 
         const qrTap = $("qrcodeTap");
@@ -751,8 +792,11 @@
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
         };
 
+        // Timestamps (main + audit top)
         $("checkedLocal").textContent = fmtSe(checked);
         $("checkedUtc").textContent = fmtUtc(checked);
+        $("auditCheckedLocal").textContent = fmtSe(checked);
+        $("auditCheckedUtc").textContent = fmtUtc(checked);
 
         // Reset fields
         $("resultText").textContent = "Kontrollerar…";
@@ -786,6 +830,7 @@
         setStatus("warn", "Kontrollerar…");
         $("resultText").textContent = "Kontrollerar status hos Proofy…";
 
+        // Source of truth: /api/verify (statusmodell)
         let v;
         try{
           v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
@@ -806,6 +851,7 @@
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
+        // Tekniskt (valfritt)
         const observedPoint = safeText(v?.evidence?.observedBlockNumber, "—");
         const registrationRef = safeText(v?.submission?.txHash, "—");
         $("observedPoint").textContent = observedPoint;
@@ -831,6 +877,7 @@
           }
         }
 
+        // Tidpunkt: endast om bekräftad
         if (statusCode === "CONFIRMED" && confirmedAtUnix && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
           $("regLocal").textContent = fmtSe(confirmedAtUnix);
           $("regUtc").textContent = fmtUtc(confirmedAtUnix);
@@ -866,6 +913,7 @@
       run();
     </script>
 
+    <!-- Needed for hamburger toggle -->
     <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
   </body>
 </html>
