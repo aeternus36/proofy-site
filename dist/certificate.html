@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#0b1220" />
     <title>Proofy – Verifieringsintyg</title>
 
-    <!-- Samma header/hamburger‑stil som övriga sidor -->
+    <!-- Same header/hamburger styling as other pages -->
     <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
     <style>
@@ -55,7 +55,7 @@
         border-radius: 14px;
       }
 
-      /* NOTE: header/nav styling hanteras av /assets/header.css */
+      /* NOTE: header/nav styling is handled by /assets/header.css now */
 
       main{
         max-width:1100px;
@@ -295,14 +295,13 @@
       }
     </style>
 
-    <!-- QR‑generator -->
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
   </head>
 
   <body>
     <a class="skip" href="#main">Hoppa till innehåll</a>
 
-    <!-- Delad Proofy‑header + hamburger -->
+    <!-- Shared Proofy header + hamburger -->
     <header>
       <div class="wrap">
         <div class="nav">
@@ -709,7 +708,7 @@
         setStatus("warn", "Kontrollerar…");
         $("resultText").textContent = "Kontrollerar status hos Proofy…";
 
-        // Källa: /api/verify (status‑modell)
+        // Source of truth: /api/verify (statusmodell)
         let v;
         try{
           v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
@@ -792,7 +791,7 @@
       run();
     </script>
 
-    <!-- Behövs för hamburgare -->
+    <!-- Needed for hamburger toggle -->
     <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
   </body>
 </html>
