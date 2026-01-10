@@ -292,6 +292,10 @@
         .pill, .statusBadge, .val { border-color:#ddd !important; background:#fff !important; }
         .lead, .note, .fine, .small, .footer { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
+
+        /* ✅ Minimal print-säkring: QR ska synas tydligt i PDF/print */
+        #qrcodeTap{ border-color:#ddd !important; }
+        #qrcodeTap, #qrcode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       }
     </style>
 
@@ -559,51 +563,106 @@
         }
       }
 
-      /* ✅ FIX: renderQR now matches Proofy qr.min.js API (new QRCode(el) + makeCode) */
+      /* ✅ FIX (surgical): Proofy-build first (new QRCode(el) + makeCode),
+         but also supports option-based QRCode(el, opts) builds if swapped in.
+         Includes self-check so QR never stays blank/white without explanation. */
       function renderQR(text){
         const el = $("qrcode");
         el.innerHTML = "";
 
         const payload = String(text || "").trim();
+
+        const setFallback = (msg, warn) => {
+          el.innerHTML =
+            '<div class="small" style="padding:10px;color:#0b1220;text-align:center;line-height:1.35">' +
+            msg +
+            "</div>";
+          if (warn) console.warn(warn);
+        };
+
         if (!payload){
-          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">Ingen länk att koda.</div>';
+          setFallback("Ingen länk att koda.", "Proofy QR: empty payload (nothing to encode).");
           return;
         }
 
         if (typeof window.QRCode !== "function"){
-          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR kunde inte laddas.</div>';
+          setFallback("QR kunde inte laddas.", "Proofy QR: window.QRCode is not available (qr.min.js not loaded?).");
           return;
         }
 
+        // Prefer high error correction if available (Proofy-build uses window.QRCodeCorrectLevel)
+        const correctLevel =
+          (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) ? window.QRCodeCorrectLevel.H :
+          (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) ? window.QRCode.CorrectLevel.H :
+          undefined;
+
+        const opts = {
+          text: payload,
+          width: 168,
+          height: 168,
+          colorDark: "#0b1220",
+          colorLight: "#ffffff",
+          quiet: 4,
+          minScale: 4
+        };
+        if (correctLevel != null) opts.correctLevel = correctLevel;
+
         try{
-          const qr = new window.QRCode(el);
+          let qr = null;
 
-          // Use Proofy-build options
-          qr._htOption.width = 168;
-          qr._htOption.height = 168;
-          qr._htOption.colorDark = "#0b1220";
-          qr._htOption.colorLight = "#ffffff";
-          qr._htOption.quiet = 4;
-          qr._htOption.minScale = 4;
-
-          // Proofy-build exposes QRCodeCorrectLevel, not QRCode.CorrectLevel
-          if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null){
-            qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
+          // 1) Proofy-build (constructor has NO opts) + makeCode
+          try{
+            qr = new window.QRCode(el);
+            if (qr && qr._htOption) {
+              qr._htOption.width = 168;
+              qr._htOption.height = 168;
+              qr._htOption.colorDark = "#0b1220";
+              qr._htOption.colorLight = "#ffffff";
+              qr._htOption.quiet = 4;
+              qr._htOption.minScale = 4;
+              if (correctLevel != null) qr._htOption.correctLevel = correctLevel;
+            }
+            if (qr && typeof qr.makeCode === "function") {
+              qr.makeCode(payload);
+            } else {
+              qr = null;
+            }
+          }catch(_){
+            qr = null;
           }
 
-          qr.makeCode(payload);
-
-          // Defensive: keep pixel-perfect size even if global CSS touches canvas
-          const canvas = el.querySelector("canvas");
-          if (canvas){
-            canvas.style.width = "168px";
-            canvas.style.height = "168px";
-            canvas.style.display = "block";
-            canvas.style.imageRendering = "pixelated";
+          // 2) Fallback: option-based builds (constructor accepts opts)
+          if (!qr){
+            qr = new window.QRCode(el, opts);
+            // Some option-builds still want makeCode to apply text reliably
+            if (qr && typeof qr.makeCode === "function"){
+              try{ qr.makeCode(payload); }catch(_){}
+            }
           }
-        } catch (e){
+
+          // Self-check: ensure something actually rendered
+          const node = el.querySelector("canvas, img, svg");
+          if (!node){
+            setFallback("QR-koden kunde inte visas.", "Proofy QR: QRCode ran but produced no canvas/img/svg.");
+            return;
+          }
+
+          // Pixel-perfect: enforce exact CSS size
+          node.style.width = "168px";
+          node.style.height = "168px";
+          node.style.display = "block";
+          node.style.imageRendering = "pixelated";
+
+          // Proofy-build renders integer-sized canvas; keep it stable
+          if (node.tagName && node.tagName.toLowerCase() === "canvas"){
+            const c = node;
+            // If global CSS or other scripts changed it, we pull it back.
+            if (c.style.width !== "168px") c.style.width = "168px";
+            if (c.style.height !== "168px") c.style.height = "168px";
+          }
+        }catch(e){
+          setFallback("QR-koden kunde inte visas.", "Proofy QR: render failed: " + (e && e.message ? e.message : String(e)));
           console.error("QR render failed:", e);
-          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR-koden kunde inte visas.</div>';
         }
       }
 
@@ -674,6 +733,8 @@
 
         const certId = (url.searchParams.get("cert") || "").trim();
         const certLink = `${location.origin}${location.pathname}?hash=${encodeURIComponent(hash)}&checked=${checked}${certId ? `&cert=${encodeURIComponent(certId)}` : ""}`;
+
+        // ✅ QR MUST point to verify.html?hash=... (audit trail + live verification)
         const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
 
         $("certLink").textContent = certLink;
