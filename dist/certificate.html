@@ -101,6 +101,64 @@
         line-height:1.55;
         font-size:16px;
       }
+
+      /* --- NEW: top “Snabb verifiering” box (auditor-friendly) --- */
+      .topRight{
+        display:flex;
+        flex-direction:column;
+        gap:12px;
+        align-items:flex-end;
+        min-width:260px;
+      }
+      @media (max-width: 900px){
+        .topRight{ align-items:flex-start; width:100%; }
+      }
+
+      .quickVerify{
+        border:1px solid var(--border);
+        background:rgba(255,255,255,.03);
+        border-radius:16px;
+        padding:12px;
+        width:320px;
+        max-width:100%;
+      }
+      .quickTitle{
+        font-size:12px;
+        color:var(--muted2);
+        letter-spacing:.08em;
+        text-transform:uppercase;
+        font-weight:900;
+        margin:0 0 10px;
+      }
+      .quickRow{
+        display:flex;
+        gap:12px;
+        align-items:center;
+      }
+      .quickMeta{
+        flex:1;
+        min-width:0;
+      }
+      .quickLink{
+        margin-top:8px;
+        display:flex;
+        gap:10px;
+        align-items:center;
+      }
+      .quickLink .mono{
+        font-size:12px;
+        color:rgba(234,240,255,.86);
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      }
+      .smallHint{
+        margin-top:8px;
+        font-size:12px;
+        color:var(--muted2);
+        line-height:1.45;
+      }
+
       .statusBadge{
         display:inline-flex; align-items:center; gap:8px;
         padding:10px 14px;
@@ -222,7 +280,9 @@
       .qrWrap{
         display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;
       }
-      #qrcodeTap{
+
+      /* Shared QR styles */
+      #qrcodeTap, #qrcodeTapTop{
         width:184px; height:184px;
         border-radius:16px;
         border:1px solid var(--border);
@@ -231,11 +291,12 @@
         overflow:hidden;
         cursor:pointer;
       }
-      #qrcode{
+      #qrcode, #qrcodeTop{
         width:168px; height:168px;
         display:grid; place-items:center;
       }
-      #qrcode canvas, #qrcode img, #qrcode svg{
+      #qrcode canvas, #qrcode img, #qrcode svg,
+      #qrcodeTop canvas, #qrcodeTop img, #qrcodeTop svg{
         width:168px !important;
         height:168px !important;
         display:block;
@@ -288,9 +349,9 @@
       @media print{
         header, .actions, #warnBox, details.tech { display:none !important; }
         body{ background:#fff !important; color:#000 !important; }
-        .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
+        .hero, .card, .quickVerify { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
         .pill, .statusBadge, .val { border-color:#ddd !important; background:#fff !important; }
-        .lead, .note, .fine, .small, .footer { color:#111 !important; }
+        .lead, .note, .fine, .small, .footer, .smallHint { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
       }
     </style>
@@ -357,9 +418,34 @@
             </div>
           </div>
 
-          <div id="statusBadge" class="statusBadge warn" title="Status hos Proofy vid kontrolltillfället">
-            <span class="dot" aria-hidden="true"></span>
-            <span id="statusText">Kontrollerar…</span>
+          <!-- NEW right column: status + quick verification -->
+          <div class="topRight" aria-label="Status och snabb verifiering">
+            <div id="statusBadge" class="statusBadge warn" title="Status hos Proofy vid kontrolltillfället">
+              <span class="dot" aria-hidden="true"></span>
+              <span id="statusText">Kontrollerar…</span>
+            </div>
+
+            <div class="quickVerify" aria-label="Snabb verifiering">
+              <div class="quickTitle">Snabb verifiering</div>
+              <div class="quickRow">
+                <div id="qrcodeTapTop" role="button" tabindex="0"
+                     aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
+                     title="Klicka för att kopiera verifieringslänk">
+                  <div id="qrcodeTop" aria-label="QR-kod"></div>
+                </div>
+
+                <div class="quickMeta">
+                  <div class="label" style="margin:0">Verifieringslänk</div>
+                  <div class="quickLink">
+                    <div class="mono" id="verifyLinkTop">—</div>
+                    <button class="copyBtn" id="copyVerifyTop" type="button">Kopiera</button>
+                  </div>
+                  <div class="smallHint">
+                    Skanna på <b>annan enhet</b> för direkt kontroll. QR öppnar verifiering (live).
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -445,18 +531,8 @@
           </div>
 
           <div class="card">
-            <h3>Länkar &amp; QR</h3>
+            <h3>Länkar</h3>
             <div class="qrWrap">
-              <div>
-                <div class="label" style="margin-bottom:8px">QR-kod (snabb kontroll)</div>
-                <div id="qrcodeTap" role="button" tabindex="0" aria-label="QR-kod (klicka för att kopiera verifieringslänk)" title="Klicka för att kopiera verifieringslänk">
-                  <div id="qrcode" aria-label="QR-kod"></div>
-                </div>
-                <div class="small" style="margin-top:10px">
-                  Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
-                </div>
-              </div>
-
               <div style="flex:1; min-width:260px;">
                 <div class="val" style="margin-bottom:12px">
                   <div class="label">Länk till intyg</div>
@@ -501,7 +577,7 @@
       function fmtUtc(sec){
         if(!sec) return "—";
         const d = new Date(sec * 1000);
-        const Y = d.getUTCFullYear();
+        const Y = d.getUTC fullYear?.() ?? d.getUTCFullYear();
         const M = pad2(d.getUTCMonth() + 1);
         const D = pad2(d.getUTCDate());
         const h = pad2(d.getUTCHours());
@@ -559,9 +635,11 @@
         }
       }
 
-      /* ✅ FIX: renderQR now matches Proofy qr.min.js API (new QRCode(el) + makeCode) */
-      function renderQR(text){
-        const el = $("qrcode");
+      // Robust QR render: supports Proofy build (makeCode) + common option-based libs
+      function renderQRInto(containerId, text){
+        const el = $(containerId);
+        if (!el) return;
+
         el.innerHTML = "";
 
         const payload = String(text || "").trim();
@@ -570,39 +648,59 @@
           return;
         }
 
-        if (typeof window.QRCode !== "function"){
+        const QR = window.QRCode;
+        if (typeof QR !== "function"){
           el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR kunde inte laddas.</div>';
           return;
         }
 
+        const levelH =
+          (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H) ||
+          (QR.CorrectLevel && QR.CorrectLevel.H) ||
+          undefined;
+
+        // 1) Proofy build: new QRCode(el) + makeCode(text)
         try{
-          const qr = new window.QRCode(el);
+          if (QR.prototype && typeof QR.prototype.makeCode === "function"){
+            const qr = new QR(el);
 
-          // Use Proofy-build options
-          qr._htOption.width = 168;
-          qr._htOption.height = 168;
-          qr._htOption.colorDark = "#0b1220";
-          qr._htOption.colorLight = "#ffffff";
-          qr._htOption.quiet = 4;
-          qr._htOption.minScale = 4;
+            if (qr && qr._htOption){
+              qr._htOption.width = 168;
+              qr._htOption.height = 168;
+              qr._htOption.colorDark = "#0b1220";
+              qr._htOption.colorLight = "#ffffff";
+              qr._htOption.quiet = 4;
+              qr._htOption.minScale = 4;
+              if (levelH != null) qr._htOption.correctLevel = levelH;
+            }
 
-          // Proofy-build exposes QRCodeCorrectLevel, not QRCode.CorrectLevel
-          if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null){
-            qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
+            qr.makeCode(payload);
+
+            const canvas = el.querySelector("canvas");
+            if (canvas){
+              canvas.style.width = "168px";
+              canvas.style.height = "168px";
+              canvas.style.display = "block";
+              canvas.style.imageRendering = "pixelated";
+            }
+            return;
           }
+        } catch (e) {
+          el.innerHTML = "";
+        }
 
-          qr.makeCode(payload);
-
-          // Defensive: keep pixel-perfect size even if global CSS touches canvas
-          const canvas = el.querySelector("canvas");
-          if (canvas){
-            canvas.style.width = "168px";
-            canvas.style.height = "168px";
-            canvas.style.display = "block";
-            canvas.style.imageRendering = "pixelated";
-          }
+        // 2) Common qrcode.js: new QRCode(el, opts)
+        try{
+          new QR(el, {
+            text: payload,
+            width: 168,
+            height: 168,
+            colorDark: "#0b1220",
+            colorLight: "#ffffff",
+            correctLevel: levelH
+          });
+          return;
         } catch (e){
-          console.error("QR render failed:", e);
           el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR-koden kunde inte visas.</div>';
         }
       }
@@ -679,6 +777,9 @@
         $("certLink").textContent = certLink;
         $("verifyLink").textContent = verifyLink;
 
+        // Top quick verify link
+        $("verifyLinkTop").textContent = verifyLink;
+
         $("btnOpenVerify").onclick = () => location.href = verifyLink;
         $("btnPrint").onclick = () => window.print();
         $("btnRefresh").onclick = () => run();
@@ -686,18 +787,21 @@
         $("copyHash").onclick = () => copyText(hash);
         $("copyCert").onclick = () => copyText(certLink);
         $("copyVerify").onclick = () => copyText(verifyLink);
+        $("copyVerifyTop").onclick = () => copyText(verifyLink);
 
-        renderQR(verifyLink);
+        // Render QR in the TOP box (primary)
+        renderQRInto("qrcodeTop", verifyLink);
 
-        const qrTap = $("qrcodeTap");
-        const doQrCopy = async () => {
+        // QR tap-to-copy (top)
+        const qrTapTop = $("qrcodeTapTop");
+        const doQrCopyTop = async () => {
           await copyText(verifyLink);
           showWarn(`<b>Kopierat:</b> verifieringslänk till urklipp.`);
           setTimeout(() => hideWarn(), 1200);
         };
-        qrTap.onclick = (e) => { e.preventDefault(); doQrCopy(); };
-        qrTap.onkeydown = (e) => {
-          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
+        qrTapTop.onclick = (e) => { e.preventDefault(); doQrCopyTop(); };
+        qrTapTop.onkeydown = (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopyTop(); }
         };
 
         $("checkedLocal").textContent = fmtSe(checked);
