@@ -149,6 +149,9 @@
       @media (max-width: 900px){
         .grid{grid-template-columns:1fr}
         h1{font-size:36px}
+
+        /* ✅ Mobile audit UX: show QR card early without changing desktop layout */
+        #cardLinks{ order:-1; }
       }
 
       .card{
@@ -376,7 +379,7 @@
         <div id="warnBox" class="warnBox" role="status" aria-live="polite" aria-atomic="true"></div>
 
         <div class="grid">
-          <div class="card">
+          <div class="card" id="cardSummary">
             <h3>Sammanfattning</h3>
             <div class="kv">
               <div class="val">
@@ -392,8 +395,8 @@
 
               <div class="val">
                 <div class="label">Kontroll genomförd</div>
-                <div class="mono" id="checkedLocal">—</div>
-                <div class="mono" id="checkedUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
+                <div class="mono" id="checkedLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+                <div class="mono" id="checkedUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="small" style="margin-top:8px">
                   Kontrolltiden avser <b>när detta intyg uppdaterades</b> (snapshot). Uppdatera vid behov.
                 </div>
@@ -407,8 +410,8 @@
 
               <div class="val">
                 <div class="label">Tidpunkt (om bekräftad)</div>
-                <div class="mono" id="regLocal">—</div>
-                <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
+                <div class="mono" id="regLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+                <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               </div>
             </div>
 
@@ -448,7 +451,7 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="card" id="cardLinks">
             <h3>Länkar &amp; QR</h3>
             <div class="qrWrap">
               <div>
@@ -563,10 +566,7 @@
         }
       }
 
-      /* ✅ FIX (Proofy-native + backwards compatible):
-         - Primary path: Proofy build: new QRCode(el) + set _htOption + makeCode(text)
-         - Fallback path: option-based builds: new QRCode(el, opts)
-         - Self-check: never leave blank/white without explanation. */
+      /* ✅ Proofy-native QR render + self-check (never blank/white without explanation) */
       function renderQR(text){
         const el = $("qrcode");
         el.innerHTML = "";
@@ -590,37 +590,16 @@
           return;
         }
 
-        // Proofy-build defaults: QRErrorCorrectLevel lives in window.QRCodeCorrectLevel
         const correctLevel =
           (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) ? window.QRCodeCorrectLevel.H :
           (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) ? window.QRCode.CorrectLevel.H :
           undefined;
 
-        const opts = {
-          text: payload,
-          width: 168,
-          height: 168,
-          colorDark: "#0b1220",
-          colorLight: "#ffffff"
-        };
-        if (correctLevel != null) opts.correctLevel = correctLevel;
-
         try{
-          // Primary: Proofy build
-          let qr = null;
-          let usedProofyPath = false;
+          const qr = new window.QRCode(el);
 
-          try{
-            qr = new window.QRCode(el); // Proofy constructor signature
-            usedProofyPath = true;
-          }catch(_){
-            qr = null;
-            usedProofyPath = false;
-          }
-
-          if (qr && usedProofyPath && qr._htOption && typeof qr.makeCode === "function"){
-            // Make the internal canvas EXACTLY 168x168 (no CSS scaling blur).
-            // Proofy build picks integer scale based on (width/height) and (moduleCount + quiet*2).
+          // Proofy build: use _htOption (safe, exists in your qr.min.js)
+          if (qr && qr._htOption){
             qr._htOption.width = 168;
             qr._htOption.height = 168;
             qr._htOption.colorDark = "#0b1220";
@@ -628,44 +607,25 @@
             qr._htOption.quiet = 4;
             qr._htOption.minScale = 4;
             if (correctLevel != null) qr._htOption.correctLevel = correctLevel;
-
-            qr.makeCode(payload);
-          } else {
-            // Fallback: option-based builds (new QRCode(el, opts))
-            // NOTE: Proofy build will ignore this path because its constructor doesn't accept opts.
-            qr = new window.QRCode(el, opts);
-
-            // Some option-based builds still require makeCode to apply text.
-            if (qr && typeof qr.makeCode === "function"){
-              try{ qr.makeCode(payload); }catch(_){}
-            }
           }
 
-          // Self-check: ensure something rendered
+          if (typeof qr.makeCode !== "function"){
+            setFallback("QR-koden kunde inte visas.", "Proofy QR: QRCode instance has no makeCode().");
+            return;
+          }
+
+          qr.makeCode(payload);
+
           const node = el.querySelector("canvas, img, svg");
           if (!node){
             setFallback("QR-koden kunde inte visas.", "Proofy QR: QRCode ran but produced no canvas/img/svg.");
             return;
           }
 
-          // Pixel-perfect sizing in our layout (168×168 inside 184×184 card)
           node.style.width = "168px";
           node.style.height = "168px";
           node.style.display = "block";
           node.style.imageRendering = "pixelated";
-
-          // If it is a canvas from an option-build and internal size differs, avoid blur by aligning when possible
-          if (node.tagName && node.tagName.toLowerCase() === "canvas"){
-            const c = node;
-            // Proofy build already sets intrinsic size to the computed integer grid. We don't fight it.
-            // But if another build produced a different intrinsic size, keep CSS match stable.
-            // (Do NOT overwrite intrinsic size here unless it's clearly wrong; avoids breaking module grid.)
-            if (!c.width || !c.height){
-              // very defensive edge case
-              c.width = 168;
-              c.height = 168;
-            }
-          }
         }catch(e){
           setFallback("QR-koden kunde inte visas.", "Proofy QR: render failed: " + (e && e.message ? e.message : String(e)));
           console.error("QR render failed:", e);
