@@ -55,8 +55,6 @@
         border-radius: 14px;
       }
 
-      /* NOTE: header/nav styling is handled by /assets/header.css now */
-
       main{
         max-width:1100px;
         margin:0 auto;
@@ -297,7 +295,6 @@
         .lead, .note, .fine, .small, .footer { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
 
-        /* Audit-first PDF: keep the essentials together on page 1 */
         .auditTop{ display:flex !important; flex-direction:column !important; gap:14px !important; }
         .card{ break-inside:avoid; page-break-inside:avoid; }
         #qrcodeTap{ border-color:#ddd !important; }
@@ -311,7 +308,6 @@
   <body>
     <a class="skip" href="#main">Hoppa till innehåll</a>
 
-    <!-- Shared Proofy header + hamburger -->
     <header>
       <div class="wrap">
         <div class="nav">
@@ -376,43 +372,8 @@
 
         <div id="warnBox" class="warnBox" role="status" aria-live="polite" aria-atomic="true"></div>
 
-        <!-- ✅ Audit-first: essentials first (QR + verify link + ID + timestamps) -->
+        <!-- ✅ BEST: Nyckeluppgifter först, sedan live-verifiering (QR/länk) -->
         <div class="auditTop" aria-label="Snabböversikt (revision/juridik)">
-          <div class="card" id="cardLinks">
-            <h3>Länkar &amp; QR</h3>
-            <div class="qrWrap">
-              <div>
-                <div class="label" style="margin-bottom:8px">QR-kod (snabb kontroll)</div>
-                <div id="qrcodeTap" role="button" tabindex="0" aria-label="QR-kod (klicka för att kopiera verifieringslänk)" title="Klicka för att kopiera verifieringslänk">
-                  <div id="qrcode" aria-label="QR-kod"></div>
-                </div>
-                <div class="small" style="margin-top:10px">
-                  Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
-                </div>
-              </div>
-
-              <div style="flex:1; min-width:260px;">
-                <div class="val" style="margin-bottom:12px">
-                  <div class="label">Verifieringslänk</div>
-                  <div class="row">
-                    <div class="mono" id="verifyLink">—</div>
-                    <button class="copyBtn" id="copyVerify" type="button">Kopiera</button>
-                  </div>
-                </div>
-
-                <div class="val">
-                  <div class="label">Länk till intyg</div>
-                  <div class="row">
-                    <div class="mono" id="certLink">—</div>
-                    <button class="copyBtn" id="copyCert" type="button">Kopiera</button>
-                  </div>
-                </div>
-
-                <div class="small" id="techHint" style="margin-top:10px"></div>
-              </div>
-            </div>
-          </div>
-
           <div class="card" id="cardEssentials">
             <h3>Nyckeluppgifter</h3>
 
@@ -455,16 +416,50 @@
               Dela verifieringslänk/QR vid intern kvalitetskontroll eller efterhandsgranskning.
             </div>
           </div>
+
+          <div class="card" id="cardLinks">
+            <h3>Länkar &amp; QR</h3>
+            <div class="qrWrap">
+              <div>
+                <div class="label" style="margin-bottom:8px">QR-kod (snabb kontroll)</div>
+                <div id="qrcodeTap" role="button" tabindex="0" aria-label="QR-kod (klicka för att kopiera verifieringslänk)" title="Klicka för att kopiera verifieringslänk">
+                  <div id="qrcode" aria-label="QR-kod"></div>
+                </div>
+                <div class="small" style="margin-top:10px">
+                  Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
+                </div>
+              </div>
+
+              <div style="flex:1; min-width:260px;">
+                <div class="val" style="margin-bottom:12px">
+                  <div class="label">Verifieringslänk</div>
+                  <div class="row">
+                    <div class="mono" id="verifyLink">—</div>
+                    <button class="copyBtn" id="copyVerify" type="button">Kopiera</button>
+                  </div>
+                </div>
+
+                <div class="val">
+                  <div class="label">Länk till intyg</div>
+                  <div class="row">
+                    <div class="mono" id="certLink">—</div>
+                    <button class="copyBtn" id="copyCert" type="button">Kopiera</button>
+                  </div>
+                </div>
+
+                <div class="small" id="techHint" style="margin-top:10px"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- ✅ Lead flyttad NER (oförändrad text) för audit-first -->
+        <!-- Lead (oförändrad text) -->
         <div class="lead">
           Detta intyg är ett <b>tekniskt underlag</b> som sammanfattar utfallet av en kontroll av ett
           <b>Verifierings-ID</b> (kontrollvärde för en specifik filversion) mot Proofys register vid angiven kontrolltid.
           Proofy lagrar <b>inte</b> dokumentinnehåll i registret.
         </div>
 
-        <!-- Resten ligger kvar (oförändrat innehåll) -->
         <div class="card" id="cardSummary" style="margin-top:14px;">
           <h3>Revisions-/juridisk tydlighet</h3>
 
@@ -533,8 +528,7 @@
         if(!sec) return "—";
         try{
           const dt = new Date(sec*1000);
-          // Prevent ugly mobile wrap at "/" in Europe/Stockholm without changing meaning
-          const tz = "Europe\u2060/Stockholm";
+          const tz = "Europe\u2060/Stockholm"; // prevents ugly wrap at "/"
           return new Intl.DateTimeFormat("sv-SE", {
             timeZone:"Europe/Stockholm",
             year:"numeric", month:"2-digit", day:"2-digit",
@@ -580,8 +574,7 @@
         }
       }
 
-      /* ✅ Proofy-native QR render + self-check (never blank/white without explanation)
-         Works with Proofy build (new QRCode(el) + makeCode) and tolerates option-based variant. */
+      /* ✅ Proofy-native QR render + self-check */
       function renderQR(text){
         const el = $("qrcode");
         el.innerHTML = "";
@@ -793,7 +786,6 @@
         setStatus("warn", "Kontrollerar…");
         $("resultText").textContent = "Kontrollerar status hos Proofy…";
 
-        // Source of truth: /api/verify (statusmodell)
         let v;
         try{
           v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}`);
@@ -814,7 +806,6 @@
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
-        // Tekniskt (valfritt)
         const observedPoint = safeText(v?.evidence?.observedBlockNumber, "—");
         const registrationRef = safeText(v?.submission?.txHash, "—");
         $("observedPoint").textContent = observedPoint;
@@ -840,7 +831,6 @@
           }
         }
 
-        // Tidpunkt: endast om bekräftad
         if (statusCode === "CONFIRMED" && confirmedAtUnix && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
           $("regLocal").textContent = fmtSe(confirmedAtUnix);
           $("regUtc").textContent = fmtUtc(confirmedAtUnix);
@@ -876,7 +866,6 @@
       run();
     </script>
 
-    <!-- Needed for hamburger toggle -->
     <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
   </body>
 </html>
