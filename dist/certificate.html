@@ -164,7 +164,6 @@
         letter-spacing:.08em;
         text-transform:uppercase;
       }
-
       .kv{
         display:grid;
         grid-template-columns: 1fr 1fr;
@@ -172,16 +171,6 @@
       }
       @media (max-width: 700px){
         .kv{grid-template-columns:1fr}
-      }
-
-      /* ✅ NEW (surgical): audit overview grid that can show 3 items on desktop, collapses safely */
-      .auditKv{
-        display:grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap:12px;
-      }
-      @media (max-width: 900px){
-        .auditKv{grid-template-columns:1fr}
       }
 
       .val{
@@ -202,13 +191,6 @@
         font-size:13px;
         word-break:break-all;
         color:rgba(234,240,255,.92);
-      }
-
-      /* ✅ NEW (surgical): timestamps must NOT break inside "Europe/Stockholm" */
-      .monoTime{
-        word-break:normal;
-        overflow-wrap:normal;
-        white-space:normal; /* allow wrap at spaces, not mid-word */
       }
 
       .row{
@@ -237,6 +219,8 @@
         line-height:1.6;
       }
 
+      /* ---------------------------- */
+      /* QR + links styling (unchanged) */
       .qrWrap{
         display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;
       }
@@ -253,14 +237,12 @@
         width:168px; height:168px;
         display:grid; place-items:center;
       }
-
-      /* ✅ CHANGE (surgical): do NOT force-stretch canvas/img to 168px (can cause blur/odd sizing).
-         We keep it crisp by letting the library set an integer size; we just center it. */
       #qrcode canvas, #qrcode img, #qrcode svg{
+        width:168px !important;
+        height:168px !important;
         display:block;
         image-rendering: pixelated;
       }
-
       .small{
         font-size:12px; color:var(--muted2); line-height:1.45;
         max-width:520px;
@@ -305,6 +287,7 @@
         gap:10px;
       }
 
+      /* Print adjustments */
       @media print{
         header, .actions, #warnBox, details.tech { display:none !important; }
         body{ background:#fff !important; color:#000 !important; }
@@ -312,7 +295,9 @@
         .pill, .statusBadge, .val { border-color:#ddd !important; background:#fff !important; }
         .lead, .note, .fine, .small, .footer { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
-        #qrcodeTap{ border-color:#ddd !important; }
+
+        /* Ensure QR and audit trail visible */
+        #qrcodeTap{ display:grid !important; border-color:#ddd !important; }
       }
     </style>
 
@@ -392,41 +377,15 @@
 
         <div id="warnBox" class="warnBox" role="status" aria-live="polite" aria-atomic="true"></div>
 
-        <!-- ✅ NEW (surgical): Audit trail-översikt högst upp för revisor/juridik (duplication only) -->
-        <div class="card" style="margin-top:14px" aria-label="Audit trail (översikt)">
-          <h3>Audit trail (översikt)</h3>
-          <div class="auditKv">
-            <div class="val">
-              <div class="label">Verifierings-ID</div>
-              <div class="row">
-                <div class="mono" id="auditHash">—</div>
-                <button class="copyBtn" id="copyHashTop" type="button">Kopiera</button>
-              </div>
-            </div>
-
-            <div class="val">
-              <div class="label">Kontroll genomförd (snapshot)</div>
-              <div class="mono monoTime" id="auditCheckedLocal">—</div>
-              <div class="mono monoTime" id="auditCheckedUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
-            </div>
-
-            <div class="val">
-              <div class="label">Verifieringslänk (live-kontroll)</div>
-              <div class="row">
-                <div class="mono" id="auditVerifyLink">—</div>
-                <button class="copyBtn" id="copyVerifyTop" type="button">Kopiera</button>
-              </div>
-              <div class="small" style="margin-top:8px">
-                Skanna/öppna för att kontrollera status mot Proofys register.
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <!-- ------------------------------------------------------- -->
+        <!-- NYTT / AUDIT TRAIL-BLOCK: högst upp inom grid -->
+        <!-- ------------------------------------------------------- -->
         <div class="grid">
+          <!-- Audit trail / Nyckeluppgifter -->
           <div class="card">
-            <h3>Sammanfattning</h3>
+            <h3>Nyckeluppgifter för granskning</h3>
             <div class="kv">
+              <!-- Verifierings-ID -->
               <div class="val">
                 <div class="label">Verifierings-ID</div>
                 <div class="row">
@@ -438,47 +397,90 @@
                 </div>
               </div>
 
+              <!-- Kontrolltid -->
               <div class="val">
                 <div class="label">Kontroll genomförd</div>
-                <div class="mono monoTime" id="checkedLocal">—</div>
-                <div class="mono monoTime" id="checkedUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
+                <div class="mono" id="checkedLocal">—</div>
+                <div class="mono" id="checkedUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
                 <div class="small" style="margin-top:8px">
                   Kontrolltiden avser <b>när detta intyg uppdaterades</b> (snapshot). Uppdatera vid behov.
                 </div>
               </div>
 
+              <!-- Status -->
               <div class="val">
                 <div class="label">Status hos Proofy vid kontrolltillfället</div>
                 <div class="mono" id="resultText">—</div>
                 <div class="small" id="legalLine" style="margin-top:8px">—</div>
               </div>
 
-              <div class="val">
-                <div class="label">Tidpunkt (om bekräftad)</div>
-                <div class="mono monoTime" id="regLocal">—</div>
-                <div class="mono monoTime" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
+              <!-- QR + verifieringslänk -->
+              <div class="val" style="display:flex; flex-direction:column; gap:12px;">
+                <div class="label">QR + verifieringslänk</div>
+
+                <!-- QR -->
+                <div class="qrWrap" style="margin-top:4px;">
+                  <div id="qrcodeTap" role="button" tabindex="0"
+                       aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
+                       title="Klicka för att kopiera verifieringslänk">
+                    <div id="qrcode" aria-label="QR-kod"></div>
+                  </div>
+
+                  <!-- Länk till verifiering -->
+                  <div style="flex:1; min-width:260px;">
+                    <div class="val" style="margin-bottom:12px">
+                      <div class="label">Verifieringslänk</div>
+                      <div class="row">
+                        <div class="mono" id="verifyLink">—</div>
+                        <button class="copyBtn" id="copyVerify" type="button">Kopiera</button>
+                      </div>
+                    </div>
+
+                    <div class="note">
+                      Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
 
-            <details class="tech" id="techDetails">
-              <summary>Teknisk information (valfritt)</summary>
-              <div class="techGrid">
-                <div class="val">
-                  <div class="label">Kontrollpunkt (valfritt)</div>
-                  <div class="mono" id="observedPoint">—</div>
-                  <div class="small" style="margin-top:6px">
-                    Visar vilken kontrollpunkt som användes vid kontrolltillfället. Kan underlätta felsökning.
-                  </div>
-                </div>
-                <div class="val">
-                  <div class="label">Registreringsreferens (valfri)</div>
-                  <div class="mono" id="registrationRef">—</div>
-                  <div class="small" style="margin-top:6px">
-                    En intern referens kopplad till en inskickad registrering. Behövs normalt inte i ärendet.
-                  </div>
-                </div>
+          <!-- ------------------------------------------------------- -->
+          <!-- Resten av sidan nedanför audit trail -->
+          <!-- ------------------------------------------------------- -->
+          <!-- Original kort: Sammanfattning / teknisk info / juridik osv -->
+          <div class="card">
+            <h3>Teknisk information + övrigt</h3>
+            <div class="kv">
+              <div class="val">
+                <div class="label">Tidpunkt (om bekräftad)</div>
+                <div class="mono" id="regLocal">—</div>
+                <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72)">—</div>
               </div>
-            </details>
+
+              <!-- Tekniskt valfritt -->
+              <div class="val" style="grid-column:1 / -1;">
+                <details class="tech" id="techDetails">
+                  <summary>Teknisk information (valfritt)</summary>
+                  <div class="techGrid">
+                    <div class="val">
+                      <div class="label">Kontrollpunkt (valfritt)</div>
+                      <div class="mono" id="observedPoint">—</div>
+                      <div class="small" style="margin-top:6px">
+                        Visar vilken kontrollpunkt som användes vid kontrolltillfället. Kan underlätta felsökning.
+                      </div>
+                    </div>
+                    <div class="val">
+                      <div class="label">Registreringsreferens (valfri)</div>
+                      <div class="mono" id="registrationRef">—</div>
+                      <div class="small" style="margin-top:6px">
+                        En intern referens kopplad till en inskickad registrering. Behövs normalt inte i ärendet.
+                      </div>
+                    </div>
+                  </div>
+                </details>
+              </div>
+            </div>
 
             <div class="fine">
               <b>Revisions-/juridisk tydlighet</b><br/>
@@ -495,47 +497,8 @@
               <div style="margin-top:6px">Kontakt: <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></div>
             </div>
           </div>
-
-          <div class="card">
-            <h3>Länkar &amp; QR</h3>
-            <div class="qrWrap">
-              <div>
-                <div class="label" style="margin-bottom:8px">QR-kod (snabb kontroll)</div>
-                <div id="qrcodeTap" role="button" tabindex="0" aria-label="QR-kod (klicka för att kopiera verifieringslänk)" title="Klicka för att kopiera verifieringslänk">
-                  <div id="qrcode" aria-label="QR-kod"></div>
-                </div>
-                <div class="small" style="margin-top:10px">
-                  Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
-                </div>
-              </div>
-
-              <div style="flex:1; min-width:260px;">
-                <div class="val" style="margin-bottom:12px">
-                  <div class="label">Länk till intyg</div>
-                  <div class="row">
-                    <div class="mono" id="certLink">—</div>
-                    <button class="copyBtn" id="copyCert" type="button">Kopiera</button>
-                  </div>
-                </div>
-
-                <div class="val">
-                  <div class="label">Verifieringslänk</div>
-                  <div class="row">
-                    <div class="mono" id="verifyLink">—</div>
-                    <button class="copyBtn" id="copyVerify" type="button">Kopiera</button>
-                  </div>
-                </div>
-
-                <div class="note">
-                  <b>Praktiskt tips:</b> Spara Verifierings-ID + intygslänk i ärendet vid fastställande.
-                  Dela verifieringslänk/QR vid intern kvalitetskontroll eller efterhandsgranskning.
-                </div>
-
-                <div class="small" id="techHint" style="margin-top:10px"></div>
-              </div>
-            </div>
-          </div>
         </div>
+        <!-- end grid -->
       </section>
     </main>
 
@@ -611,80 +574,51 @@
         }
       }
 
-      /* ✅ FIX (robust + self-check):
-         - Works with Proofy-build: new QRCode(el) + makeCode(...)
-         - Also works if library is option-based: new QRCode(el, opts)
-         - Never leaves blank white box without explanation */
+      /* ✅ FIX: renderQR now matches Proofy qr.min.js API (new QRCode(el) + makeCode) */
       function renderQR(text){
         const el = $("qrcode");
+        el.innerHTML = "";
+
         const payload = String(text || "").trim();
-
-        el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">Genererar QR…</div>';
-
         if (!payload){
           el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">Ingen länk att koda.</div>';
-          console.warn("[Proofy] QR: empty payload");
           return;
         }
 
         if (typeof window.QRCode !== "function"){
-          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR-bibliotek saknas.</div>';
-          console.warn("[Proofy] QR: window.QRCode not available");
+          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR kunde inte laddas.</div>';
           return;
         }
 
         try{
-          el.innerHTML = "";
+          const qr = new window.QRCode(el);
 
-          // Pass opts as second arg (harmless for 1-arg constructors, required for option-based variants)
-          const opts = {
-            width: 168,
-            height: 168,
-            colorDark: "#0b1220",
-            colorLight: "#ffffff"
-          };
+          // Use Proofy-build options
+          qr._htOption.width = 168;
+          qr._htOption.height = 168;
+          qr._htOption.colorDark = "#0b1220";
+          qr._htOption.colorLight = "#ffffff";
+          qr._htOption.quiet = 4;
+          qr._htOption.minScale = 4;
 
-          const qr = new window.QRCode(el, opts);
-
-          // Proofy-build exposes _htOption; option-based variants may ignore or differ
-          if (qr && qr._htOption){
-            qr._htOption.width = 168;
-            qr._htOption.height = 168;
-            qr._htOption.colorDark = "#0b1220";
-            qr._htOption.colorLight = "#ffffff";
-            qr._htOption.quiet = 4;
-            qr._htOption.minScale = 4;
-
-            if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null){
-              qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
-            }
+          // Proofy-build exposes QRCodeCorrectLevel, not QRCode.CorrectLevel
+          if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null){
+            qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
           }
 
-          if (qr && typeof qr.makeCode === "function"){
-            qr.makeCode(payload);
-          } else {
-            // If we can't find makeCode, fail loudly with explanation
-            throw new Error("QRCode instance saknar makeCode()");
-          }
+          qr.makeCode(payload);
 
-          // Self-check: ensure something was rendered
-          const rendered = el.querySelector("canvas, img, svg");
-          if (!rendered){
-            el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR kunde inte renderas.</div>';
-            console.warn("[Proofy] QR: makeCode ran but produced no canvas/img/svg");
-            return;
+          // Defensive: keep pixel-perfect size even if global CSS touches canvas
+          const canvas = el.querySelector("canvas");
+          if (canvas){
+            canvas.style.width = "168px";
+            canvas.style.height = "168px";
+            canvas.style.display = "block";
+            canvas.style.imageRendering = "pixelated";
           }
-
-          // Keep crisp rendering (do NOT force-scale size here; let library keep integer pixel grid)
-          if (rendered.tagName === "CANVAS"){
-            rendered.style.display = "block";
-            rendered.style.imageRendering = "pixelated";
-          }
-
         } catch (e){
-          console.error("[Proofy] QR render failed:", e);
+          console.error("QR render failed:", e);
           el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR-koden kunde inte visas.</div>';
-          console.warn("[Proofy] QR fallback shown");
         }
       }
 
@@ -755,30 +689,18 @@
 
         const certId = (url.searchParams.get("cert") || "").trim();
         const certLink = `${location.origin}${location.pathname}?hash=${encodeURIComponent(hash)}&checked=${checked}${certId ? `&cert=${encodeURIComponent(certId)}` : ""}`;
-
-        // ✅ Requirement: QR MUST point to verify link (live control / audit trail)
         const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
 
-        $("certLink").textContent = certLink;
+        // Updated: only verify link is used for QR + copy
         $("verifyLink").textContent = verifyLink;
-
-        // Audit trail (top) mirrors core fields
-        $("auditHash").textContent = safeText(hash, "—");
-        $("auditVerifyLink").textContent = verifyLink;
 
         $("btnOpenVerify").onclick = () => location.href = verifyLink;
         $("btnPrint").onclick = () => window.print();
         $("btnRefresh").onclick = () => run();
 
         $("copyHash").onclick = () => copyText(hash);
-        $("copyCert").onclick = () => copyText(certLink);
         $("copyVerify").onclick = () => copyText(verifyLink);
 
-        // Top audit copy buttons
-        $("copyHashTop").onclick = () => copyText(hash);
-        $("copyVerifyTop").onclick = () => copyText(verifyLink);
-
-        // QR render
         renderQR(verifyLink);
 
         const qrTap = $("qrcodeTap");
@@ -792,11 +714,8 @@
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
         };
 
-        // Timestamps (main + audit top)
         $("checkedLocal").textContent = fmtSe(checked);
         $("checkedUtc").textContent = fmtUtc(checked);
-        $("auditCheckedLocal").textContent = fmtSe(checked);
-        $("auditCheckedUtc").textContent = fmtUtc(checked);
 
         // Reset fields
         $("resultText").textContent = "Kontrollerar…";
@@ -808,9 +727,7 @@
         updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
 
         if (certId){
-          $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
-        } else {
-          $("techHint").textContent = "";
+          // not shown in audit block, but kept for tech hint if needed
         }
 
         if (!isValidBytes32Hex(hash)){
