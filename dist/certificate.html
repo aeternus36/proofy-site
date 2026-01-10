@@ -296,6 +296,14 @@
         .lead, .note, .fine, .small, .footer { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
 
+        /* ✅ Print/PDF: prioritize QR first on page 1 (audit-friendly) */
+        .grid{ display:flex !important; flex-direction:column !important; gap:14px !important; }
+        #cardLinks{ order:-1 !important; }
+        #cardSummary{ order:0 !important; }
+
+        /* Avoid splitting key cards across pages */
+        .card{ break-inside:avoid; page-break-inside:avoid; }
+
         /* Minimal print-säkring: QR ska synas tydligt i PDF/print */
         #qrcodeTap{ border-color:#ddd !important; }
         #qrcodeTap, #qrcode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
