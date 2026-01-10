@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
-  <!-- ✅ Added: QR library (same as certificate page) -->
+  <!-- ✅ QR library (same build as certificate) -->
   <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
   <style>
@@ -43,10 +43,13 @@
       margin-top:10px;
     }
 
+    /* UX: färre knappar – vi visar inte "Dela" som separat knapp (länken är klickbar för kopiering). */
     #shareSelfLinkBtn { display:none !important; }
+
+    /* UX: gör verify-knappen primär när redo (JS växlar klass) */
     #verifyBtn.primary { opacity: 1; }
 
-    /* ✅ Added: QR block (minimal, isolated IDs to avoid CSS collisions) */
+    /* ✅ QR block: match certificate.html (184x184 white tap card, 168x168 QR inside) */
     .selfLinkRow{
       display:flex;
       gap:12px;
@@ -54,20 +57,22 @@
       flex-wrap:wrap;
       margin-top:10px;
     }
-    #selfQRCard{
+    #selfQRTap{
       width:184px;
+      height:184px;
       border-radius:16px;
       border:1px solid rgba(255,255,255,.14);
       background:#ffffff;
-      padding:8px;
-      display:none; /* shown only when link is valid */
+      display:none; /* only when valid link */
+      place-items:center;
+      overflow:hidden;
+      cursor:pointer;
     }
     #selfQRCode{
       width:168px;
       height:168px;
       display:grid;
       place-items:center;
-      margin:0 auto;
     }
     #selfQRCode canvas, #selfQRCode img, #selfQRCode svg{
       width:168px !important;
@@ -75,16 +80,12 @@
       display:block;
       image-rendering: pixelated;
     }
-    #selfQRHelp{
-      font-size:12px;
-      opacity:.85;
-      margin-top:8px;
-    }
 
     @media print{
       header, .actions, #shareSelfLinkBtn, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
-      #selfQRCard{ display:block !important; border-color:#ddd !important; }
-      #selfQRCard, #selfQRCode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      /* keep QR visible in print */
+      #selfQRTap{ display:grid !important; border-color:#ddd !important; }
+      #selfQRTap, #selfQRCode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     }
   </style>
 </head>
@@ -172,7 +173,6 @@
             <div class="meta">Verifieringslänk (klicka för att kopiera)</div>
             <div class="small" style="margin-top:6px; opacity:.9;">Bra att dela med kollega/klient.</div>
 
-            <!-- ✅ Updated: selfLinkOut + QR side-by-side, wraps safely -->
             <div class="selfLinkRow">
               <div style="flex:1; min-width:260px;">
                 <div style="position:relative; margin-top:6px;">
@@ -206,13 +206,20 @@
 
                   <span id="selfLinkPill" class="pill" style="margin-top:8px;" aria-live="polite" aria-atomic="true" role="status"></span>
                 </div>
+
+                <!-- ✅ Helptext outside the white QR card (matches certificate layout) -->
+                <div class="small" id="selfQRHelp" style="margin-top:10px; opacity:.9; display:none;">
+                  Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
+                </div>
               </div>
 
-              <div id="selfQRCard" aria-label="QR-kod för verifieringslänk">
+              <!-- ✅ QR tap card: identical sizing/feel to certificate.html -->
+              <div id="selfQRTap"
+                   role="button"
+                   tabindex="0"
+                   aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
+                   title="Klicka för att kopiera verifieringslänk">
                 <div id="selfQRCode" aria-label="QR-kod"></div>
-                <div id="selfQRHelp" class="small" style="color:#0b1220;">
-                  Skanna med annan enhet för snabb kontroll.
-                </div>
               </div>
             </div>
 
@@ -444,9 +451,10 @@
   const copySelfLinkIconBtn = $("copySelfLinkIconBtn");
   const selfLinkPill = $("selfLinkPill");
 
-  // ✅ Added: QR elements
-  const selfQRCard = $("selfQRCard");
+  // ✅ QR elements
+  const selfQRTap = $("selfQRTap");
   const selfQRCode = $("selfQRCode");
+  const selfQRHelp = $("selfQRHelp");
 
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
@@ -493,6 +501,7 @@
   let opId = 0;
   let lastRun = null;
 
+  // Auto-run guard
   let autoRunTimer = null;
   let autoRanOnceFor = "";
 
@@ -824,9 +833,9 @@
     setTimeout(() => URL.revokeObjectURL(url), 1200);
   }
 
-  // ✅ Added: robust QR render (matches certificate page behavior)
+  /* ✅ QR render (same robustness as certificate: supports both APIs + self-check) */
   function renderSelfQR(link){
-    if (!selfQRCode || !selfQRCard) return;
+    if (!selfQRCode || !selfQRTap) return;
 
     const el = selfQRCode;
     el.innerHTML = "";
@@ -842,12 +851,13 @@
     };
 
     if (!payload){
-      selfQRCard.style.display = "none";
+      selfQRTap.style.display = "none";
+      if (selfQRHelp) selfQRHelp.style.display = "none";
       return;
     }
 
-    // show card early; if QR fails we show fallback text
-    selfQRCard.style.display = "block";
+    selfQRTap.style.display = "grid";
+    if (selfQRHelp) selfQRHelp.style.display = "block";
 
     if (typeof window.QRCode !== "function"){
       setFallback("QR kunde inte laddas.", "Proofy QR (verify): window.QRCode missing (qr.min.js not loaded?).");
@@ -912,6 +922,15 @@
     }
   }
 
+  async function readClipboardText(){
+    try{
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        return await navigator.clipboard.readText();
+      }
+    } catch {}
+    return "";
+  }
+
   function resetUI(){
     resultBox.style.display = "none";
     errorBox.style.display = "none";
@@ -966,7 +985,7 @@
     if (!ok){
       selfLinkOut.textContent = "—";
       applyCopyHover(selfLinkOut, copySelfLinkIconBtn, false);
-      if (selfQRCard) selfQRCard.style.display = "none";
+      renderSelfQR("");
       return;
     }
 
@@ -974,7 +993,6 @@
     selfLinkOut.textContent = link;
     applyCopyHover(selfLinkOut, copySelfLinkIconBtn, true);
 
-    // ✅ keep QR always in sync with the shareable verification link
     renderSelfQR(link);
   }
 
@@ -1059,19 +1077,17 @@
     scheduleAutoVerify("file");
   }
 
-  const urlId = getIdFromUrl();
+  const urlId = (() => {
+    const url = new URL(location.href);
+    return (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
+  })();
+
   if (isValidId(urlId)) {
     hashInput.value = urlId;
-    setParamsInUrl({ hash: urlId, checked: getCheckedFromUrl() || "" });
-  }
-
-  async function readClipboardText(){
-    try{
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        return await navigator.clipboard.readText();
-      }
-    } catch {}
-    return "";
+    setParamsInUrl({ hash: urlId, checked: (() => {
+      const url = new URL(location.href);
+      return (url.searchParams.get("checked") || "").trim();
+    })() || "" });
   }
 
   if (pasteIdBtn){
@@ -1088,7 +1104,7 @@
       hashInput.value = candidate;
 
       if (isValidId(candidate)) {
-        setParamsInUrl({ hash: candidate, checked: getCheckedFromUrl() || "" });
+        setParamsInUrl({ hash: candidate, checked: (new URL(location.href).searchParams.get("checked") || "").trim() || "" });
         showPill(idPill, "Klistrat ✓");
       } else {
         showPill(idPill, "Klistrat (kontrollera att det är hela ID:t)");
@@ -1132,9 +1148,22 @@
     });
   }
 
+  // ✅ Make QR tap copy link (same as certificate)
+  if (selfQRTap){
+    const doQrCopy = async () => {
+      const link = String(selfLinkOut?.textContent || "").trim();
+      if (!link || link === "—") return;
+      await copyWithPill({ text: link, pillEl: selfLinkPill, okText:"Länk kopierad ✅" });
+    };
+    selfQRTap.onclick = (e) => { e.preventDefault(); doQrCopy(); };
+    selfQRTap.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
+    };
+  }
+
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
-    if (isValidId(v)) setParamsInUrl({ hash: v, checked: getCheckedFromUrl() || "" });
+    if (isValidId(v)) setParamsInUrl({ hash: v, checked: (new URL(location.href).searchParams.get("checked") || "").trim() || "" });
     updateValidationUI();
     scheduleAutoVerify("typing");
   });
@@ -1213,6 +1242,7 @@
     });
   }
 
+  // verifyBtn click handler (unchanged)
   verifyBtn.addEventListener("click", async () => {
     if (busy) return;
 
