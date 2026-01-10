@@ -559,25 +559,52 @@
         }
       }
 
+      /* ✅ FIX: renderQR now matches Proofy qr.min.js API (new QRCode(el) + makeCode) */
       function renderQR(text){
         const el = $("qrcode");
         el.innerHTML = "";
+
+        const payload = String(text || "").trim();
+        if (!payload){
+          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">Ingen länk att koda.</div>';
+          return;
+        }
 
         if (typeof window.QRCode !== "function"){
           el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR kunde inte laddas.</div>';
           return;
         }
 
-        let level = undefined;
-        try{ level = window.QRCode?.CorrectLevel?.H; }catch{}
-        new window.QRCode(el, {
-          text,
-          width: 168,
-          height: 168,
-          colorDark: "#0b1220",
-          colorLight: "#ffffff",
-          correctLevel: level
-        });
+        try{
+          const qr = new window.QRCode(el);
+
+          // Use Proofy-build options
+          qr._htOption.width = 168;
+          qr._htOption.height = 168;
+          qr._htOption.colorDark = "#0b1220";
+          qr._htOption.colorLight = "#ffffff";
+          qr._htOption.quiet = 4;
+          qr._htOption.minScale = 4;
+
+          // Proofy-build exposes QRCodeCorrectLevel, not QRCode.CorrectLevel
+          if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null){
+            qr._htOption.correctLevel = window.QRCodeCorrectLevel.H;
+          }
+
+          qr.makeCode(payload);
+
+          // Defensive: keep pixel-perfect size even if global CSS touches canvas
+          const canvas = el.querySelector("canvas");
+          if (canvas){
+            canvas.style.width = "168px";
+            canvas.style.height = "168px";
+            canvas.style.display = "block";
+            canvas.style.imageRendering = "pixelated";
+          }
+        } catch (e){
+          console.error("QR render failed:", e);
+          el.innerHTML = '<div class="small" style="padding:10px;color:#0b1220">QR-koden kunde inte visas.</div>';
+        }
       }
 
       async function fetchJson(url, options){
