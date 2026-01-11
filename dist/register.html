@@ -92,6 +92,11 @@
       display:block;
       image-rendering: pixelated;
     }
+
+    /* NYTT: ingen radbrytning för tidfält */
+    .timeMono {
+      white-space: nowrap;
+    }
   </style>
 </head>
 
@@ -346,7 +351,7 @@
                   <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
                   <div class="meta" style="margin-top:10px;">Tidpunkt (om bekräftad)</div>
-                  <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="timeOut" class="mono timeMono" style="margin-top:8px;">—</div>
 
                   <div class="actions" style="margin-top:12px;">
                     <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering för ärendeakt</button>
@@ -751,6 +756,28 @@
     }
   }
 
+  // NYTT: exakt format med både Stockholm och UTC
+  function formatTimestampBoth(unixSeconds){
+    const n = Number(unixSeconds);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    try{
+      const dt = new Date(n * 1000);
+      const opts = {
+        year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit",
+        hour12:false
+      };
+      const seFormatter = new Intl.DateTimeFormat("sv-SE", {...opts, timeZone:"Europe/Stockholm"});
+      const utcFormatter = new Intl.DateTimeFormat("sv-SE", {...opts, timeZone:"UTC"});
+      const seStr = seFormatter.format(dt);
+      const utcStr = utcFormatter.format(dt);
+      return `${seStr} Europe/Stockholm · ${utcStr} UTC`;
+    } catch {
+      return null;
+    }
+  }
+
+  // Behåll nuvarande formatfunktion om någon annan del skulle använda den, men vår nya används för visning
   function formatUnixSe(unixSeconds){
     const n = Number(unixSeconds);
     if (!Number.isFinite(n) || n <= 0) return null;
@@ -981,6 +1008,7 @@
     node.style.imageRendering = "pixelated";
   }
 
+  // NYTT: bygg notering med nya tidsformat
   function buildNote(run){
     if (!run) return "—";
     const lines = [];
@@ -1138,7 +1166,7 @@
   fileInput.addEventListener("change", () => {
     setFile(fileInput.files?.[0] || null);
 
-    // UX: auto-start after file selection (reduce one click)
+    // UX: auto-start efter filval (reducera klick)
     setTimeout(() => {
       if (currentFile && !busy) createBtn.click();
     }, 400);
@@ -1224,6 +1252,7 @@
     setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
 
+  // NYTT: uppdaterad logik för att bearbeta status och tid
   function applyStatusToUI({ id, createdSe, data }){
     const sc = String(data?.statusCode || "");
     const st = String(data?.statusText || "");
@@ -1238,8 +1267,9 @@
     submitterOut.textContent = observedBlockNumber || (submittedBy || submitterOut.textContent || "—");
     debugOut.textContent = legal || (debugOut.textContent || "—");
 
-    const confirmedSe = confirmedAt ? formatUnixSe(confirmedAt) : null;
-    timeOut.textContent = confirmedSe || "—";
+    // NYTT: formatera med både SE och UTC
+    const both = confirmedAt ? formatTimestampBoth(confirmedAt) : null;
+    timeOut.textContent = both || "—";
 
     lastProofyStatusCode = sc || "";
     updateReceiptLabel();
@@ -1256,7 +1286,7 @@
         link: currentLink,
         createdSe,
         statusLine: st || "Bekräftad",
-        timeSe: confirmedSe,
+        timeSe: both,
         txHash: txHash,
         observedBlockNumber: observedBlockNumber
       };
@@ -1456,6 +1486,7 @@
     }
   });
 
+  // Manuell länk/QR
   function setManualState(id){
     const clean = (id || "").trim();
     if (!isIdFormat(clean)){
