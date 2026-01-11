@@ -62,6 +62,63 @@
       border: 1px solid rgba(255,255,255,.12) !important;
       color: rgba(234,240,255,.85) !important;
     }
+
+    /* ============================================================
+       ✅ QR FIX (matchar certificate/verify): 184px kort + 168px QR
+       Pixel-perfect, kan inte blåsa upp av global canvas/img CSS.
+       ============================================================ */
+
+    /* QR "kortet" (samma känsla som certifikatet) */
+    #qrTap, #manualQrTap{
+      width:184px !important;
+      height:184px !important;
+      padding:0 !important;
+      border-radius:16px !important;
+      border:1px solid rgba(255,255,255,.14) !important;
+      background: rgba(255,255,255,.06) !important; /* UI-lik bakgrund utanför vit QR */
+      display:grid !important;
+      place-items:center !important;
+      overflow:hidden !important;
+      cursor:pointer !important;
+      max-width:none !important;
+    }
+
+    /* Vit yta för QR (för bra scanning & print) */
+    #qrTap::before, #manualQrTap::before{
+      content:"";
+      position:absolute;
+      width:176px;
+      height:176px;
+      border-radius:14px;
+      background:#fff;
+      border:1px solid rgba(0,0,0,.10);
+      pointer-events:none;
+    }
+
+    /* Behövs för ::before-positionering */
+    #qrTap, #manualQrTap{ position:relative !important; }
+
+    /* Själva QR-container (168x168) */
+    #qrBox, #manualQrBox{
+      width:168px !important;
+      height:168px !important;
+      display:grid !important;
+      place-items:center !important;
+      background:transparent !important;
+      min-width:0 !important;
+      min-height:0 !important;
+    }
+
+    /* Tvinga exakt storlek även om global CSS säger width:100% */
+    #qrBox canvas, #qrBox img, #qrBox svg,
+    #manualQrBox canvas, #manualQrBox img, #manualQrBox svg{
+      width:168px !important;
+      height:168px !important;
+      max-width:none !important;
+      max-height:none !important;
+      display:block !important;
+      image-rendering: pixelated;
+    }
   </style>
 </head>
 
@@ -299,15 +356,7 @@
                        tabindex="0"
                        aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
                        title="Klicka för att kopiera verifieringslänk"
-                       style="
-                         display:none;
-                         border-radius:16px;
-                         padding:12px;
-                         background:#ffffff;
-                         border:1px solid rgba(255,255,255,.14);
-                         cursor:pointer;
-                         max-width: 100%;
-                       ">
+                       style="display:none;">
                     <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
                   </div>
 
@@ -417,15 +466,7 @@
                      tabindex="0"
                      aria-label="QR-kod manuell (klicka för att kopiera verifieringslänk)"
                      title="Klicka för att kopiera verifieringslänk"
-                     style="
-                       display:none;
-                       border-radius:16px;
-                       padding:12px;
-                       background:#ffffff;
-                       border:1px solid rgba(255,255,255,.14);
-                       cursor:pointer;
-                       max-width: 100%;
-                     ">
+                     style="display:none;">
                   <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
                 </div>
               </div>
@@ -864,14 +905,6 @@
     };
   }
 
-  function calcQrSize(targetEl){
-    const container = targetEl?.parentElement;
-    const maxByLayout = container ? (container.clientWidth - 24) : 280;
-    let size = Math.max(240, Math.min(360, maxByLayout || 280));
-    size = Math.floor(size / 4) * 4;
-    return size;
-  }
-
   function waitForQRCode(timeoutMs = 2000){
     return new Promise((resolve) => {
       const start = Date.now();
@@ -897,6 +930,7 @@
     });
   }
 
+  /* ✅ FIXED QR renderer: always 168px like certificate/verify (no auto scaling) */
   async function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -914,33 +948,56 @@
       return;
     }
 
-    const size = calcQrSize(targetEl);
+    const size = 168;
 
-    targetEl.style.minWidth = size + "px";
-    targetEl.style.minHeight = size + "px";
+    targetEl.style.width = size + "px";
+    targetEl.style.height = size + "px";
+    targetEl.style.minWidth = "0";
+    targetEl.style.minHeight = "0";
 
-    try {
-      const qr = new window.QRCode(targetEl, {
-        width: size,
-        height: size,
-        colorDark: "#0b1220",
-        colorLight: "#ffffff",
-        correctLevel: (window.QRCode?.CorrectLevel?.H ?? undefined)
-      });
+    try{
+      // Support both variants: Proofy-build (new QRCode(el) + _htOption) and option constructor
+      let qr = null;
 
-      if (qr && typeof qr.makeCode === "function") {
-        qr.makeCode(payload);
-      } else {
+      try{
+        qr = new window.QRCode(targetEl);
+        if (qr && qr._htOption){
+          qr._htOption.width = size;
+          qr._htOption.height = size;
+          qr._htOption.colorDark = "#0b1220";
+          qr._htOption.colorLight = "#ffffff";
+          qr._htOption.quiet = 4;
+          qr._htOption.minScale = 4;
+          const lvl =
+            (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) ? window.QRCodeCorrectLevel.H :
+            (window.QRCode?.CorrectLevel?.H ?? undefined);
+          if (lvl != null) qr._htOption.correctLevel = lvl;
+        }
+      }catch{
+        qr = null;
+      }
+
+      if (!qr || typeof qr.makeCode !== "function"){
         targetEl.innerHTML = "";
-        new window.QRCode(targetEl, {
-          text: payload,
+        const lvl = (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null)
+          ? window.QRCodeCorrectLevel.H
+          : (window.QRCode?.CorrectLevel?.H ?? undefined);
+
+        qr = new window.QRCode(targetEl, {
           width: size,
           height: size,
           colorDark: "#0b1220",
           colorLight: "#ffffff",
-          correctLevel: (window.QRCode?.CorrectLevel?.H ?? undefined)
+          correctLevel: lvl
         });
       }
+
+      if (!qr || typeof qr.makeCode !== "function"){
+        targetEl.innerHTML = `<div class="meta">QR-koden kunde inte visas.</div>`;
+        return;
+      }
+
+      qr.makeCode(payload);
     } catch (e){
       console.error("QR render failed:", e);
       targetEl.innerHTML = `<div class="meta">QR-koden kunde inte visas.</div>`;
@@ -1327,7 +1384,7 @@
 
       setPill("Skapat lokalt ✅");
 
-      if (qrTap) qrTap.style.display = "inline-block";
+      if (qrTap) qrTap.style.display = "grid";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
       applyCopyHover(idOut, copyIdIconBtn, true);
@@ -1368,7 +1425,7 @@
         linkOut.textContent = currentLink;
         linkOut.href = currentLink;
 
-        if (qrTap) qrTap.style.display = "inline-block";
+        if (qrTap) qrTap.style.display = "grid";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
       }
 
@@ -1384,7 +1441,7 @@
       }
 
       setPill("Skapat lokalt ✅");
-      setBusy(false); // <- detta kommer nu att gömma createBtn och visa nextStepBtn
+      setBusy(false);
 
     } catch (e){
       console.error(e);
@@ -1411,7 +1468,7 @@
         lastProofyStatusCode = "UNKNOWN";
         updateReceiptLabel();
 
-        if (qrTap) qrTap.style.display = "inline-block";
+        if (qrTap) qrTap.style.display = "grid";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
         attachQrCopy(qrTap, () => currentLink, copyLinkPill);
 
@@ -1453,7 +1510,7 @@
     manualLinkOut.textContent = link;
     manualLinkOut.href = link;
 
-    if (manualQrTap) manualQrTap.style.display = "inline-block";
+    if (manualQrTap) manualQrTap.style.display = "grid";
     requestAnimationFrame(() => renderQr(manualQrBox, link));
 
     manualCopyLinkBtn.disabled = false;
