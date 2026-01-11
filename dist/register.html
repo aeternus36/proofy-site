@@ -63,60 +63,33 @@
       color: rgba(234,240,255,.85) !important;
     }
 
-    /* ============================================================
-       ✅ QR FIX (matchar certificate/verify): 184px kort + 168px QR
-       Pixel-perfect, kan inte blåsa upp av global canvas/img CSS.
-       ============================================================ */
-
-    /* QR "kortet" (samma känsla som certifikatet) */
-    #qrTap, #manualQrTap{
-      width:184px !important;
-      height:184px !important;
-      padding:0 !important;
-      border-radius:16px !important;
-      border:1px solid rgba(255,255,255,.14) !important;
-      background: rgba(255,255,255,.06) !important; /* UI-lik bakgrund utanför vit QR */
-      display:grid !important;
-      place-items:center !important;
-      overflow:hidden !important;
-      cursor:pointer !important;
-      max-width:none !important;
+    /* ========= QR (matchar verify/certificate) ========= */
+    .proofyQrTap{
+      width:184px;
+      height:184px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
+      background:#ffffff;
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      cursor:pointer;
+      padding:0 !important; /* viktigt: ingen padding som gör QR "större" */
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
     }
-
-    /* Vit yta för QR (för bra scanning & print) */
-    #qrTap::before, #manualQrTap::before{
-      content:"";
-      position:absolute;
-      width:176px;
-      height:176px;
-      border-radius:14px;
-      background:#fff;
-      border:1px solid rgba(0,0,0,.10);
-      pointer-events:none;
+    .proofyQrBox{
+      width:168px;
+      height:168px;
+      display:grid;
+      place-items:center;
     }
-
-    /* Behövs för ::before-positionering */
-    #qrTap, #manualQrTap{ position:relative !important; }
-
-    /* Själva QR-container (168x168) */
-    #qrBox, #manualQrBox{
+    .proofyQrBox canvas,
+    .proofyQrBox img,
+    .proofyQrBox svg{
       width:168px !important;
       height:168px !important;
-      display:grid !important;
-      place-items:center !important;
-      background:transparent !important;
-      min-width:0 !important;
-      min-height:0 !important;
-    }
-
-    /* Tvinga exakt storlek även om global CSS säger width:100% */
-    #qrBox canvas, #qrBox img, #qrBox svg,
-    #manualQrBox canvas, #manualQrBox img, #manualQrBox svg{
-      width:168px !important;
-      height:168px !important;
-      max-width:none !important;
-      max-height:none !important;
-      display:block !important;
+      display:block;
       image-rendering: pixelated;
     }
   </style>
@@ -351,13 +324,15 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
+                  <!-- MATCH verify/certificate -->
                   <div id="qrTap"
+                       class="proofyQrTap"
                        role="button"
                        tabindex="0"
                        aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
                        title="Klicka för att kopiera verifieringslänk"
                        style="display:none;">
-                    <div id="qrBox" class="qrBox" aria-label="QR-kod"></div>
+                    <div id="qrBox" class="proofyQrBox" aria-label="QR-kod"></div>
                   </div>
 
                   <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
@@ -461,13 +436,15 @@
               <div>
                 <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
+                <!-- MATCH verify/certificate -->
                 <div id="manualQrTap"
+                     class="proofyQrTap"
                      role="button"
                      tabindex="0"
                      aria-label="QR-kod manuell (klicka för att kopiera verifieringslänk)"
                      title="Klicka för att kopiera verifieringslänk"
                      style="display:none;">
-                  <div id="manualQrBox" class="qrBox" aria-label="QR-kod (manuell)"></div>
+                  <div id="manualQrBox" class="proofyQrBox" aria-label="QR-kod (manuell)"></div>
                 </div>
               </div>
               <div style="min-width:240px; flex:1;">
@@ -905,6 +882,15 @@
     };
   }
 
+  // --- QR helpers (matchar certificate/verify) ---
+  function getCorrectLevelH(){
+    // Proofy qr.min.js exponerar QRCodeCorrectLevel (som på cert-sidan)
+    if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) return window.QRCodeCorrectLevel.H;
+    // Vissa builds exponerar QRCode.CorrectLevel
+    if (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) return window.QRCode.CorrectLevel.H;
+    return undefined;
+  }
+
   function waitForQRCode(timeoutMs = 2000){
     return new Promise((resolve) => {
       const start = Date.now();
@@ -930,7 +916,6 @@
     });
   }
 
-  /* ✅ FIXED QR renderer: always 168px like certificate/verify (no auto scaling) */
   async function renderQr(targetEl, text){
     if (!targetEl) return;
 
@@ -938,27 +923,22 @@
     targetEl.innerHTML = "";
 
     if (!payload || payload === "—") {
-      targetEl.innerHTML = `<div class="meta">Ingen länk att koda.</div>`;
+      targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">Ingen länk att koda.</div>`;
       return;
     }
 
     const ok = await waitForQRCode(2000);
     if (!ok) {
-      targetEl.innerHTML = `<div class="meta">QR kunde inte laddas.</div>`;
+      targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">QR kunde inte laddas.</div>`;
       return;
     }
 
-    const size = 168;
+    const size = 168; // FIX: samma som certificate/verify
 
-    targetEl.style.width = size + "px";
-    targetEl.style.height = size + "px";
-    targetEl.style.minWidth = "0";
-    targetEl.style.minHeight = "0";
-
-    try{
-      // Support both variants: Proofy-build (new QRCode(el) + _htOption) and option constructor
+    try {
+      const levelH = getCorrectLevelH();
+      // Skapa instans och generera
       let qr = null;
-
       try{
         qr = new window.QRCode(targetEl);
         if (qr && qr._htOption){
@@ -966,47 +946,32 @@
           qr._htOption.height = size;
           qr._htOption.colorDark = "#0b1220";
           qr._htOption.colorLight = "#ffffff";
-          qr._htOption.quiet = 4;
-          qr._htOption.minScale = 4;
-          const lvl =
-            (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) ? window.QRCodeCorrectLevel.H :
-            (window.QRCode?.CorrectLevel?.H ?? undefined);
-          if (lvl != null) qr._htOption.correctLevel = lvl;
+          if (levelH != null) qr._htOption.correctLevel = levelH;
         }
+        if (qr && typeof qr.makeCode === "function") qr.makeCode(payload);
       }catch{
         qr = null;
       }
 
-      if (!qr || typeof qr.makeCode !== "function"){
-        targetEl.innerHTML = "";
-        const lvl = (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null)
-          ? window.QRCodeCorrectLevel.H
-          : (window.QRCode?.CorrectLevel?.H ?? undefined);
-
-        qr = new window.QRCode(targetEl, {
+      if (!qr) {
+        new window.QRCode(targetEl, {
+          text: payload,
           width: size,
           height: size,
           colorDark: "#0b1220",
           colorLight: "#ffffff",
-          correctLevel: lvl
+          correctLevel: levelH
         });
       }
-
-      if (!qr || typeof qr.makeCode !== "function"){
-        targetEl.innerHTML = `<div class="meta">QR-koden kunde inte visas.</div>`;
-        return;
-      }
-
-      qr.makeCode(payload);
     } catch (e){
       console.error("QR render failed:", e);
-      targetEl.innerHTML = `<div class="meta">QR-koden kunde inte visas.</div>`;
+      targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">QR-koden kunde inte visas.</div>`;
       return;
     }
 
     const node = await waitForQrNode(targetEl, 3000);
     if (!node) {
-      targetEl.innerHTML = `<div class="meta">QR kunde inte visas. Testa uppdatera sidan.</div>`;
+      targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">QR kunde inte visas. Testa uppdatera sidan.</div>`;
       return;
     }
 
@@ -1441,7 +1406,7 @@
       }
 
       setPill("Skapat lokalt ✅");
-      setBusy(false);
+      setBusy(false); // <- detta kommer nu att gömma createBtn och visa nextStepBtn
 
     } catch (e){
       console.error(e);
