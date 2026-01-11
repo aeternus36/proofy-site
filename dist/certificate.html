@@ -26,6 +26,12 @@
         --radius:18px;
         --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+
+        /* ✅ QR: audit-safe men UI-integrerat */
+        --qr-dark:#0b1220;     /* Proofy-svart (inte “brand-gradient”) */
+        --qr-light:#ffffff;    /* måste vara ren vit för print/PDF */
+        --qr-frame: rgba(255,255,255,.10);
+        --qr-shadow: 0 14px 42px rgba(0,0,0,.35);
       }
       *{box-sizing:border-box}
       body{
@@ -224,15 +230,27 @@
       .qrWrap{
         display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;
       }
+
+      /* ✅ QR container: UI-integrerad men QR-yta är ren vit */
       #qrcodeTap{
         width:184px; height:184px;
-        border-radius:16px;
-        border:1px solid var(--border);
-        background:#ffffff;
+        border-radius:18px;
+        border:1px solid var(--qr-frame);
+        background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+        box-shadow: var(--qr-shadow);
         display:grid; place-items:center;
         overflow:hidden;
         cursor:pointer;
       }
+      /* Ren vit QR-yta innanför “glasramen” */
+      #qrcodeSurface{
+        width:176px; height:176px;
+        border-radius:16px;
+        background:var(--qr-light);
+        border:1px solid rgba(0,0,0,.10);
+        display:grid; place-items:center;
+      }
+
       #qrcode{
         width:168px; height:168px;
         display:grid; place-items:center;
@@ -243,6 +261,7 @@
         display:block;
         image-rendering: pixelated;
       }
+
       .small{
         font-size:12px; color:var(--muted2); line-height:1.45;
         max-width:520px;
@@ -287,6 +306,13 @@
         gap:10px;
       }
 
+      /* ✅ Stabil tidszon-radbrytning (aldrig Europe/S + tockholm) */
+      .tz{
+        white-space:nowrap;
+        word-break:normal;
+        overflow-wrap:normal;
+      }
+
       @media print{
         header, .actions, #warnBox, details.tech { display:none !important; }
         body{ background:#fff !important; color:#000 !important; }
@@ -297,8 +323,20 @@
 
         .auditTop{ display:flex !important; flex-direction:column !important; gap:14px !important; }
         .card{ break-inside:avoid; page-break-inside:avoid; }
-        #qrcodeTap{ border-color:#ddd !important; }
-        #qrcodeTap, #qrcode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+        #qrcodeTap{
+          box-shadow:none !important;
+          border-color:#ddd !important;
+          background:#fff !important;
+        }
+        #qrcodeSurface{
+          border-color:#ddd !important;
+          background:#fff !important;
+        }
+        #qrcodeTap, #qrcodeSurface, #qrcode{
+          -webkit-print-color-adjust:exact;
+          print-color-adjust:exact;
+        }
       }
     </style>
 
@@ -423,7 +461,9 @@
               <div>
                 <div class="label" style="margin-bottom:8px">QR-kod (snabb kontroll)</div>
                 <div id="qrcodeTap" role="button" tabindex="0" aria-label="QR-kod (klicka för att kopiera verifieringslänk)" title="Klicka för att kopiera verifieringslänk">
-                  <div id="qrcode" aria-label="QR-kod"></div>
+                  <div id="qrcodeSurface">
+                    <div id="qrcode" aria-label="QR-kod"></div>
+                  </div>
                 </div>
                 <div class="small" style="margin-top:10px">
                   Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
@@ -528,12 +568,16 @@
         if(!sec) return "—";
         try{
           const dt = new Date(sec*1000);
-          const tz = "Europe\u2060/Stockholm"; // prevents ugly wrap at "/"
-          return new Intl.DateTimeFormat("sv-SE", {
+          // ✅ håll tidszonen ihop (ingen radbrytning mitt i)
+          const tz = "Europe/Stockholm";
+          const se = new Intl.DateTimeFormat("sv-SE", {
             timeZone:"Europe/Stockholm",
             year:"numeric", month:"2-digit", day:"2-digit",
             hour:"2-digit", minute:"2-digit", second:"2-digit"
-          }).format(dt) + ` (${tz})`;
+          }).format(dt);
+
+          // wrap tz in a no-wrap span so it never splits
+          return `${se} (<span class="tz">${tz}</span>)`;
         }catch{
           return new Date(sec*1000).toLocaleString("sv-SE") + " (lokal)";
         }
@@ -611,7 +655,7 @@
             if (qr && qr._htOption){
               qr._htOption.width = 168;
               qr._htOption.height = 168;
-              qr._htOption.colorDark = "#0b1220";
+              qr._htOption.colorDark = getComputedStyle(document.documentElement).getPropertyValue("--qr-dark").trim() || "#0b1220";
               qr._htOption.colorLight = "#ffffff";
               qr._htOption.quiet = 4;
               qr._htOption.minScale = 4;
@@ -626,7 +670,7 @@
             const opts = {
               width: 168,
               height: 168,
-              colorDark: "#0b1220",
+              colorDark: (getComputedStyle(document.documentElement).getPropertyValue("--qr-dark").trim() || "#0b1220"),
               colorLight: "#ffffff",
               correctLevel: correctLevel
             };
@@ -751,7 +795,8 @@
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
         };
 
-        $("checkedLocal").textContent = fmtSe(checked);
+        // ✅ fmtSe returns HTML (tz wrapped), so we must use innerHTML here.
+        $("checkedLocal").innerHTML = fmtSe(checked);
         $("checkedUtc").textContent = fmtUtc(checked);
 
         // Reset fields
@@ -832,7 +877,7 @@
         }
 
         if (statusCode === "CONFIRMED" && confirmedAtUnix && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
-          $("regLocal").textContent = fmtSe(confirmedAtUnix);
+          $("regLocal").innerHTML = fmtSe(confirmedAtUnix);
           $("regUtc").textContent = fmtUtc(confirmedAtUnix);
           hideWarn();
           return;
