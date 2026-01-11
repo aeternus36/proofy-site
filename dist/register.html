@@ -108,6 +108,28 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* ======= KRITISKT: långa mono-fält får aldrig gå utanför rutor ======= */
+    #idOut, #linkOut, #manualLinkOut, #txOut, #submitterOut, #debugOut, #regStatusOut{
+      display:block;
+      max-width:100%;
+      white-space:nowrap;
+      overflow-x:auto;
+      overflow-y:hidden;
+      -webkit-overflow-scrolling:touch;
+      text-overflow:clip;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Flex-barn får krympa (annars kan långa strängar trycka ut layouten) */
+    .qrWrap > div{ min-width:0; }
+
+    /* Audit-prio på mobil: visa Status + Tidpunkt före QR (QR är hjälpmedel) */
+    @media (max-width: 560px){
+      .qrWrap{ flex-direction:column; }
+      .qrWrap > :first-child{ order:2; }
+      .qrWrap > :nth-child(2){ order:1; }
+    }
+
     /* Hjälp mobil: knappar ska inte trängas/hamna bakom flytande widget */
     .actionsRow .btn{ min-width:0; }
     @media (max-width: 560px){
@@ -120,6 +142,9 @@
         justify-content:center;
       }
     }
+
+    /* Undvik att chat-widget visuellt “äter” nederkant på mobil */
+    main{ padding-bottom: 96px; }
   </style>
 </head>
 
