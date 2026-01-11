@@ -93,30 +93,10 @@
       image-rendering: pixelated;
     }
 
-    /* ==== Mobilrobust: undvik att chat-widget täcker viktiga saker ==== */
-    main .wrap{
-      padding-bottom: 120px; /* extra luft för flytande widget */
+    /* NYTT: ingen radbrytning för tidfält */
+    .timeMono {
+      white-space: nowrap;
     }
-
-    /* ==== Mobilrobust: filinfo ska kunna brytas snyggt ==== */
-    #fileInfo{
-      overflow-wrap:anywhere;
-      word-break:break-word;
-    }
-
-    /* ==== TIDRAD: ska ALDRIG brytas konstigt eller klippas ==== */
-    /* mono i ert tema tenderar att bryta allt (bra för hash), men tidrad ska vara en rad + scroll */
-    #timeOut{
-      white-space: nowrap !important;
-      word-break: normal !important;
-      overflow-wrap: normal !important;
-      display:block;
-      max-width:100%;
-      overflow-x:auto;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 2px;
-    }
-    #timeOut::-webkit-scrollbar{ display:none; }
   </style>
 </head>
 
@@ -219,7 +199,6 @@
             <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
           </div>
 
-          <!-- PRIMÄR PLATS för Verifierings-ID (för notering i ärendet) -->
           <div id="localIdBox" style="display:none; margin-top:12px;">
             <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span> – för notering i ärendet</div>
 
@@ -279,39 +258,35 @@
             </div>
 
             <div style="margin-top:12px;">
+              <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span></div>
+              <div class="small hintline">Klicka i fältet för att kopiera.</div>
 
-              <!-- Dubblering borttagen: ID visas primärt i vänster "för notering i ärendet" -->
-              <div id="idDupBlock" style="display:none;">
-                <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span></div>
-                <div class="small hintline">Klicka i fältet för att kopiera.</div>
+              <div style="position:relative; margin-top:6px;">
+                <button type="button" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID" title="Kopiera"
+                        style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
+                  <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
+                </button>
 
-                <div style="position:relative; margin-top:6px;">
-                  <button type="button" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID" title="Kopiera"
-                          style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
-                    <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
-                  </button>
+                <div id="idOut"
+                     class="mono"
+                     tabindex="0"
+                     role="button"
+                     title="Klicka för att kopiera"
+                     aria-label="Verifierings-ID (klicka för att kopiera)"
+                     style="
+                       padding:10px 12px;
+                       border-radius:12px;
+                       border:1px solid rgba(255,255,255,.14);
+                       background:rgba(255,255,255,.03);
+                       cursor:pointer;
+                       padding-right:52px;
+                       user-select:text;
+                     ">—</div>
 
-                  <div id="idOut"
-                       class="mono"
-                       tabindex="0"
-                       role="button"
-                       title="Klicka för att kopiera"
-                       aria-label="Verifierings-ID (klicka för att kopiera)"
-                       style="
-                         padding:10px 12px;
-                         border-radius:12px;
-                         border:1px solid rgba(255,255,255,.14);
-                         background:rgba(255,255,255,.03);
-                         cursor:pointer;
-                         padding-right:52px;
-                         user-select:text;
-                       ">—</div>
-
-                  <span id="copyIdPill2" class="pill" style="display:none; margin-top:8px;"></span>
-                </div>
+                <span id="copyIdPill2" class="pill" style="display:none; margin-top:8px;"></span>
               </div>
 
-              <div class="meta" style="margin-top:0;">Delbar verifieringslänk</div>
+              <div class="meta" style="margin-top:12px;">Delbar verifieringslänk</div>
               <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
 
               <div style="position:relative; margin-top:6px;">
@@ -376,7 +351,7 @@
                   <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
                   <div class="meta" style="margin-top:10px;">Tidpunkt (om bekräftad)</div>
-                  <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="timeOut" class="mono timeMono" style="margin-top:8px;">—</div>
 
                   <div class="actions" style="margin-top:12px;">
                     <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering för ärendeakt</button>
@@ -692,7 +667,7 @@
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
 
-    // UX: När länk finns -> visa "Gå till verifiering" och göm "Skapa ..."
+    // UX: När länk finns -> visa "Gå till verifiering" och göm "Skapa ..." (ingen "Skapa nytt")
     if (nextStepBtn){
       if (currentLink && !busy){
         nextStepBtn.href = currentLink;
@@ -774,49 +749,43 @@
       return new Intl.DateTimeFormat("sv-SE", {
         timeZone:"Europe/Stockholm",
         year:"numeric", month:"2-digit", day:"2-digit",
-        hour:"2-digit", minute:"2-digit", second:"2-digit",
-        hourCycle:"h23"
+        hour:"2-digit", minute:"2-digit", second:"2-digit"
       }).format(new Date()) + " (Europe/Stockholm)";
     } catch {
       return new Date().toLocaleString("sv-SE");
     }
   }
 
-  // ====== TIDFORMAT enligt krav: "YYYY-MM-DD HH:mm:ss Europe/Stockholm · YYYY-MM-DD HH:mm:ss UTC" ======
-  function formatDateParts(date, timeZone){
+  // NYTT: exakt format med både Stockholm och UTC
+  function formatTimestampBoth(unixSeconds){
+    const n = Number(unixSeconds);
+    if (!Number.isFinite(n) || n <= 0) return null;
     try{
-      const fmt = new Intl.DateTimeFormat("sv-SE", {
-        timeZone,
+      const dt = new Date(n * 1000);
+      const opts = {
         year:"numeric", month:"2-digit", day:"2-digit",
         hour:"2-digit", minute:"2-digit", second:"2-digit",
-        hourCycle:"h23"
-      });
-      const parts = fmt.formatToParts(date);
-      const pick = (t) => (parts.find(p => p.type === t)?.value || "");
-      const y = pick("year");
-      const m = pick("month");
-      const d = pick("day");
-      const hh = pick("hour");
-      const mm = pick("minute");
-      const ss = pick("second");
-      if (!(y && m && d && hh && mm && ss)) return null;
-      return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+        hour12:false
+      };
+      const seFormatter = new Intl.DateTimeFormat("sv-SE", {...opts, timeZone:"Europe/Stockholm"});
+      const utcFormatter = new Intl.DateTimeFormat("sv-SE", {...opts, timeZone:"UTC"});
+      const seStr = seFormatter.format(dt);
+      const utcStr = utcFormatter.format(dt);
+      return `${seStr} Europe/Stockholm · ${utcStr} UTC`;
     } catch {
       return null;
     }
   }
 
-  function formatUnixDualLine(unixSeconds){
+  // Behåll nuvarande formatfunktion om någon annan del skulle använda den, men vår nya används för visning
+  function formatUnixSe(unixSeconds){
     const n = Number(unixSeconds);
     if (!Number.isFinite(n) || n <= 0) return null;
-    const dt = new Date(n * 1000);
-
-    const se = formatDateParts(dt, "Europe/Stockholm");
-    const utc = formatDateParts(dt, "UTC");
-    if (!se || !utc) return null;
-
-    // exakt format enligt krav (en rad)
-    return `${se} Europe/Stockholm · ${utc} UTC`;
+    try{
+      return new Date(n * 1000).toLocaleString("sv-SE");
+    } catch {
+      return null;
+    }
   }
 
   async function copyTextToClipboard(text){
@@ -942,17 +911,19 @@
 
   // --- QR helpers (matchar certificate/verify) ---
   function getCorrectLevelH(){
+    // Proofy qr.min.js exponerar QRCodeCorrectLevel (som på cert-sidan)
     if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) return window.QRCodeCorrectLevel.H;
+    // Vissa builds exponerar QRCode.CorrectLevel
     if (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) return window.QRCode.CorrectLevel.H;
     return undefined;
   }
 
   function waitForQRCode(timeoutMs = 2000){
-    return new Promise hooking => {
+    return new Promise((resolve) => {
       const start = Date.now();
       const tick = () => {
-        if (typeof window.QRCode === "function") return hooking(true);
-        if (Date.now() - start > timeoutMs) return hooking(false);
+        if (typeof window.QRCode === "function") return resolve(true);
+        if (Date.now() - start > timeoutMs) return resolve(false);
         requestAnimationFrame(tick);
       };
       tick();
@@ -989,10 +960,11 @@
       return;
     }
 
-    const size = 168;
+    const size = 168; // FIX: samma som certificate/verify
 
     try {
       const levelH = getCorrectLevelH();
+      // Skapa instans och generera
       let qr = null;
       try{
         qr = new window.QRCode(targetEl);
@@ -1036,6 +1008,7 @@
     node.style.imageRendering = "pixelated";
   }
 
+  // NYTT: bygg notering med nya tidsformat
   function buildNote(run){
     if (!run) return "—";
     const lines = [];
@@ -1045,7 +1018,7 @@
     lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
     if (run.createdSe) lines.push(`Skapat lokalt: ${run.createdSe}`);
     lines.push(`Status hos Proofy: ${run.statusLine || "—"}`);
-    if (run.timeLine) lines.push(`Tidpunkt (om bekräftad): ${run.timeLine}`);
+    if (run.timeSe) lines.push(`Tidpunkt (om bekräftad): ${run.timeSe}`);
     if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
     lines.push("");
@@ -1065,7 +1038,7 @@
     pollStartAt = Date.now();
     pollTxHash = txHash;
 
-    const maxMs = 120000;
+    const maxMs = 120000; // 2 min
     let attempt = 0;
 
     const tick = async () => {
@@ -1101,6 +1074,7 @@
         headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
         regStatusOut.textContent = "Kunde inte kontrolleras";
         timeOut.textContent = "—";
+        // fortsätt försöka ändå
       } else {
         const mined = !!txRes.data?.mined;
         if (!mined) {
@@ -1122,7 +1096,7 @@
             regStatusOut.textContent = "Kunde inte kontrolleras";
             timeOut.textContent = "—";
             debugOut.textContent = "Transaktionen blev mined men misslyckades (reverted). Ingen registrering kan påvisas för detta försök. Du kan försöka igen eller kontakta Proofy med txHash.";
-            return;
+            return; // stop polling
           }
 
           const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
@@ -1192,7 +1166,7 @@
   fileInput.addEventListener("change", () => {
     setFile(fileInput.files?.[0] || null);
 
-    // UX: auto-start after file selection (reduce one click)
+    // UX: auto-start efter filval (reducera klick)
     setTimeout(() => {
       if (currentFile && !busy) createBtn.click();
     }, 400);
@@ -1217,13 +1191,33 @@
 
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
-      await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Verifierings-ID kopierat ✅" });
+      await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
     });
     localIdOut.addEventListener("keydown", async (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Verifierings-ID kopierat ✅" });
+        await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
       }
+    });
+  }
+
+  if (idOut){
+    idOut.addEventListener("click", async () => {
+      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
+    });
+    idOut.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
+      }
+    });
+  }
+
+  if (copyIdIconBtn){
+    copyIdIconBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
     });
   }
 
@@ -1238,7 +1232,7 @@
   if (copyNoteBtn){
     copyNoteBtn.addEventListener("click", async () => {
       if (!lastRun) return;
-      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
+      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill });
     });
   }
 
@@ -1258,6 +1252,7 @@
     setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
   });
 
+  // NYTT: uppdaterad logik för att bearbeta status och tid
   function applyStatusToUI({ id, createdSe, data }){
     const sc = String(data?.statusCode || "");
     const st = String(data?.statusText || "");
@@ -1272,8 +1267,9 @@
     submitterOut.textContent = observedBlockNumber || (submittedBy || submitterOut.textContent || "—");
     debugOut.textContent = legal || (debugOut.textContent || "—");
 
-    const confirmedLine = confirmedAt ? formatUnixDualLine(confirmedAt) : null;
-    timeOut.textContent = confirmedLine || "—";
+    // NYTT: formatera med både SE och UTC
+    const both = confirmedAt ? formatTimestampBoth(confirmedAt) : null;
+    timeOut.textContent = both || "—";
 
     lastProofyStatusCode = sc || "";
     updateReceiptLabel();
@@ -1290,7 +1286,7 @@
         link: currentLink,
         createdSe,
         statusLine: st || "Bekräftad",
-        timeLine: confirmedLine,
+        timeSe: both,
         txHash: txHash,
         observedBlockNumber: observedBlockNumber
       };
@@ -1312,7 +1308,7 @@
         link: currentLink,
         createdSe,
         statusLine: st || (isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad"),
-        timeLine: null,
+        timeSe: null,
         txHash: txHash,
         observedBlockNumber: observedBlockNumber
       };
@@ -1330,7 +1326,7 @@
       link: currentLink,
       createdSe,
       statusLine: st || "Kunde inte kontrolleras",
-      timeLine: null,
+      timeSe: null,
       txHash: txHash,
       observedBlockNumber: observedBlockNumber
     };
@@ -1358,22 +1354,19 @@
 
       if (emptyState) emptyState.style.display = "none";
 
-      // Primär ID-plats (vänster)
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
-      // Auto-copy ID (minskar klick), men visar feedback endast i vänster pill
+      // UX: auto-copy Verifierings-ID when created (reduce one click)
       copyTextToClipboard(id).then((ok) => {
         if (ok) {
-          showPill(copyIdPill, "Verifierings-ID kopierat ✅");
+          showPill(copyIdPill, "Verifierings-ID kopierat");
           setTimeout(() => hidePill(copyIdPill), 1200);
         }
       });
 
       resultBox.style.display = "block";
-      // idOut finns men används inte visuellt (ingen dubblering)
-      if (idOut) idOut.textContent = id;
-
+      idOut.textContent = id;
       linkOut.textContent = currentLink;
       linkOut.href = currentLink;
 
@@ -1389,6 +1382,7 @@
       if (qrTap) qrTap.style.display = "grid";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
+      applyCopyHover(idOut, copyIdIconBtn, true);
       applyCopyHover(linkOut, copyLinkIconBtn, true);
 
       attachLongPressCopy(linkOut, () => currentLink, async () => {
@@ -1442,7 +1436,7 @@
       }
 
       setPill("Skapat lokalt ✅");
-      setBusy(false);
+      setBusy(false); // <- detta kommer nu att gömma createBtn och visa nextStepBtn
 
     } catch (e){
       console.error(e);
@@ -1479,7 +1473,7 @@
           link: currentLink,
           createdSe: nowSe(),
           statusLine: "Kunde inte kontrolleras",
-          timeLine: null,
+          timeSe: null,
           txHash: null,
           observedBlockNumber: null
         };
@@ -1492,6 +1486,7 @@
     }
   });
 
+  // Manuell länk/QR
   function setManualState(id){
     const clean = (id || "").trim();
     if (!isIdFormat(clean)){
