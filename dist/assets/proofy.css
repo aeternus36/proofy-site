@@ -1,40 +1,60 @@
-/* /assets/proofy.css */
+/* /assets/proofy.css  — HARDTEST / AUDIT SAFE */
 
 /* ---------- Base / reset ---------- */
 :root{
   --bg: #0b1220;
+
+  /* Panels */
   --panel: rgba(255,255,255,.04);
   --panel2: rgba(255,255,255,.06);
   --line: rgba(255,255,255,.10);
+
+  /* Text */
   --text: rgba(234,240,255,.92);
   --muted: rgba(169,183,211,.92);
   --muted2: rgba(234,240,255,.72);
 
+  /* Accent */
   --blue: rgba(110,168,255,.95);
   --mint: rgba(124,241,198,.85);
+
   --shadow: 0 18px 60px rgba(0,0,0,.45);
 
-  /* ✅ Widget safe space (0 by default, widget.js sets this dynamically) */
-  --proofy-widget-bottom: 0px;
-  --proofy-widget-right: 0px;
+  /* Space reserved so floating UI (chat button) never covers content */
+  --floating-ui-space: 118px;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 
-/* ✅ Hardtest: stoppa horisontell scroll pga fixed-element / long strings */
-html{ overflow-x:hidden; }
-body{ overflow-x:hidden; }
+html{
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 body{
   margin:0;
-  background: var(--bg);
   color:var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
   line-height:1.55;
 
-  /* ✅ Viktig fix: reservera bottenyta så widget-knappen aldrig täcker content */
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--proofy-widget-bottom));
+  /* AUDIT SAFE BACKGROUND:
+     - Completely static (no fixed overlays)
+     - Subtle gradients baked into background-image (scrolls normally)
+  */
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(900px 560px at 18% -10%, rgba(80,140,255,.18), transparent 62%),
+    radial-gradient(760px 520px at 92% 6%, rgba(120,241,198,.12), transparent 58%);
+  background-repeat: no-repeat;
+  background-attachment: scroll; /* IMPORTANT: never fixed */
+  background-position: 0 0, 100% 0;
+
+  /* Prevent horizontal “ghost scroll” */
+  overflow-x: hidden;
+
+  /* Safe area padding for notches + keep bottom content above floating button */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 img{ max-width:100%; height:auto; }
@@ -68,20 +88,31 @@ a:hover{ text-decoration:underline; }
   margin:0 auto;
 }
 
-main{ padding: 34px 0 60px; }
-section{ scroll-margin-top: 90px; }
+/* IMPORTANT:
+   Add bottom space so the floating chat button never covers content on mobile.
+*/
+main{
+  padding: 34px 0 calc(60px + var(--floating-ui-space));
+}
 
-/* ---------- Header ---------- */
+section{ scroll-margin-top: 96px; }
+
+/* ---------- Header (AUDIT SAFE) ---------- */
 header{
   position: sticky;
   top:0;
   z-index: 50;
-  backdrop-filter: blur(10px) saturate(140%);
-  background: rgba(11,18,32,.72);
-  border-bottom: 1px solid rgba(255,255,255,.06);
+
+  /* HARDTEST: avoid blur/backdrop-filter to prevent flicker/overlays */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  /* Solid-ish background for consistent screenshots/print */
+  background: rgba(11,18,32,.98);
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
-/* Stöd BOTH .nav och .navBar */
+/* Support BOTH .nav and .navBar */
 .nav,
 .navBar{
   display:flex;
@@ -91,10 +122,7 @@ header{
   padding: 14px 0;
 }
 
-/* OBS:
-   BRAND/LOGO definieras i header.css (laddas efter proofy.css)
-   så den blir konsekvent och “last-wins”.
-*/
+/* Brand (also defined in header.css later if you want “last wins”) */
 .brand{
   display:flex;
   align-items:center;
@@ -167,7 +195,7 @@ h2{
   background: rgba(255,255,255,.04);
   border-radius: 22px;
   box-shadow: var(--shadow);
-  overflow: hidden; /* viktigt: hindra spill */
+  overflow: hidden; /* important: prevent bleed */
 }
 
 .card.content{
@@ -196,6 +224,7 @@ h2{
   white-space: nowrap;
   cursor: pointer;
   user-select:none;
+  max-width: 100%;
 }
 .btn:hover{
   text-decoration:none;
@@ -235,6 +264,11 @@ h2{
   flex-wrap: wrap;
 }
 
+/* Make long action rows wrap cleanly on mobile */
+.actions > *{
+  max-width: 100%;
+}
+
 .pill{
   display:inline-flex;
   align-items:center;
@@ -256,7 +290,6 @@ h2{
   line-height: 1.45;
   color: rgba(234,240,255,.92);
 
-  /* ✅ Hardtest: aldrig overflow i mobil */
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
@@ -319,7 +352,7 @@ input:focus, textarea:focus{
 
 /* Footer */
 footer{
-  padding: 28px 0 50px;
+  padding: 28px 0 calc(50px + env(safe-area-inset-bottom));
   border-top: 1px solid rgba(255,255,255,.06);
   background: rgba(0,0,0,.12);
 }
@@ -340,18 +373,41 @@ footer{
 .links a{ color: rgba(234,240,255,.78); }
 .links a:hover{ color: rgba(234,240,255,.92); }
 
+/* ---------- Print / PDF (HARDTEST) ---------- */
+@media print{
+  /* Clean white paper-like output */
+  body{
+    background: #fff !important;
+    color: #000 !important;
+    background-image: none !important;
+  }
+
+  header{ position: static !important; background: #fff !important; border-bottom: 1px solid #ddd !important; }
+  a{ color:#000 !important; text-decoration: underline !important; }
+
+  .card{
+    box-shadow: none !important;
+    background: #fff !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* Hide chat widget in print if present */
+  .proofy-chat-btn,
+  .proofy-panel{
+    display:none !important;
+  }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 920px){
-  main{ padding: 26px 0 46px; }
+  main{ padding: 26px 0 calc(46px + var(--floating-ui-space)); }
   .pageTitle{ letter-spacing: -0.6px; }
   .lead{ font-size: 17px; }
-
   .grid2{ grid-template-columns: 1fr; }
 }
 
-/* ---------- Print: aldrig widget-padding ---------- */
-@media print{
-  body{
-    padding-bottom: 0 !important;
-  }
+@media (max-width: 560px){
+  :root{ --floating-ui-space: 134px; }
+  .wrap{ width: calc(100% - 24px); }
+  .btn{ width:auto; }
 }
