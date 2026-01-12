@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Skapa Verifierings-ID</title>
-  <meta name="description" content="Skapa ett Verifierings-ID (kontroll-ID) för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
+  <title>Proofy – Verifieringsintyg</title>
+  <meta name="description" content="Verifieringsintyg (snapshot) för ett Verifierings-ID. Kontroll mot Proofys register vid angiven kontrolltid." />
   <meta name="theme-color" content="#0b1220" />
   <meta name="robots" content="noindex" />
 
+  <!-- ✅ Matcha Proofy UI -->
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
@@ -23,42 +24,11 @@
       white-space:nowrap !important;
       border:0 !important;
     }
-    .actionsRow{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      align-items:center;
-    }
-    .actionsMetaRow{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-top:10px;
-      flex-wrap:wrap;
-    }
-    #copyIdBtn, #copyLinkBtn { display:none !important; }
-    #statusPill, #manualPill { margin-left:0 !important; }
-    .hintline{ margin-top:6px; opacity:.9; }
-    .navActions .btn.isCurrent{
-      pointer-events:none;
-      opacity:1;
-      border-color: rgba(255,255,255,.18);
-      background: rgba(255,255,255,.05);
-    }
 
-    .btn.softSecondary{
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.12);
-    }
+    /* Stabil tidszon-radbrytning */
+    .tz{ white-space:nowrap; }
 
-    #manualBuildBtn { display:none !important; }
-
-    #receiptBtn{
-      background: rgba(255,255,255,.04) !important;
-      border: 1px solid rgba(255,255,255,.12) !important;
-      color: rgba(234,240,255,.85) !important;
-    }
-
+    /* ✅ QR (matchar register/verify/certificate-stil) */
     .proofyQrTap{
       width:184px;
       height:184px;
@@ -87,7 +57,85 @@
       display:block;
       image-rendering: pixelated;
     }
+
+    /* Layout */
+    .heroTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .actionsRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
+    }
+    .statusBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.05);
+      font-weight:900;
+      min-width:200px;
+      justify-content:center;
+    }
+    .dot{ width:10px; height:10px; border-radius:999px; background: rgba(251,191,36, .95); }
+    .dot.good{ background: rgba(80,255,180,.95); }
+    .dot.bad{ background: rgba(255,80,80,.95); }
+
+    .hintline{ margin-top:6px; opacity:.9; }
+    .monoBlock{
+      display:block;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.03);
+      text-decoration:none;
+      cursor:pointer;
+      user-select:text;
+      word-break:break-all;
+    }
+
+    .warnBox{
+      margin-top:12px;
+      border:1px solid rgba(251,191,36,.35);
+      background:rgba(251,191,36,.08);
+      border-radius:16px;
+      padding:12px 14px;
+      display:none;
+    }
+    .warnBox.show{ display:block; }
+
+    @media print{
+      header, .actionsRow, #warnBox, #techDetails { display:none !important; }
+      a{ text-decoration:none !important; }
+      .proofyQrTap{ box-shadow:none !important; }
+      .monoBlock{ border-color:#ddd !important; background:#fff !important; }
+      .card{ box-shadow:none !important; }
+    }
   </style>
+
+  <!-- ✅ Om någon öppnar /certificate?…: redirecta hårt till /certificate.html?… -->
+  <script>
+    (function(){
+      try{
+        var p = location.pathname || "";
+        // Vanliga fel: /certificate eller /certificate/ eller /certificate.html.html osv.
+        if (p === "/certificate" || p === "/certificate/" || p.endsWith("/certificate")) {
+          var target = "/certificate.html" + (location.search || "") + (location.hash || "");
+          location.replace(target);
+        }
+      }catch(e){}
+    })();
+  </script>
+
+  <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 </head>
 
 <body>
@@ -102,9 +150,9 @@
       </a>
 
       <div class="navActions" id="navActionsDesktop">
-        <a class="btn isCurrent" aria-current="page">Skapa Verifierings-ID</a>
-        <a class="btn soft" href="/verify">Verifiera underlag</a>
-        <a class="btn soft" href="/pilot">Starta pilot</a>
+        <a class="btn soft" href="/register.html">Skapa Verifierings-ID</a>
+        <a class="btn soft" href="/verify.html">Verifiera underlag</a>
+        <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
@@ -114,16 +162,16 @@
         </summary>
 
         <nav class="mnavMenu" aria-label="Meny">
-          <a class="mnavLink" href="/register" aria-current="page">Skapa Verifierings-ID</a>
-          <a class="mnavLink" href="/verify">Verifiera underlag</a>
-          <a class="mnavLink" href="/pilot">Starta pilot</a>
+          <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
+          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
-            <a class="mnavLink" href="/security">Säkerhet</a>
-            <a class="mnavLink" href="/privacy">Integritet</a>
-            <a class="mnavLink" href="/terms">Villkor</a>
-            <a class="mnavLink" href="/cookies">Cookies</a>
+            <a class="mnavLink" href="/security.html">Säkerhet</a>
+            <a class="mnavLink" href="/privacy.html">Integritet</a>
+            <a class="mnavLink" href="/terms.html">Villkor</a>
+            <a class="mnavLink" href="/cookies.html">Cookies</a>
 
             <div class="mnavNote">Verifiering · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
@@ -136,751 +184,253 @@
 
 <main id="main">
   <div class="wrap">
-    <div class="badge">Verifiering · revision · granskning</div>
+    <div class="badge">Intyg · spårbarhet · byrå &amp; granskning</div>
 
-    <h1 class="pageTitle">Skapa Verifierings-ID</h1>
+    <div class="heroTop" style="margin-top:10px;">
+      <div>
+        <h1 class="pageTitle" style="margin-bottom:6px;">Verifieringsintyg</h1>
+        <p class="lead" style="margin-top:0;">
+          Detta intyg är ett <b>tekniskt underlag</b> (snapshot) som sammanfattar utfallet av en kontroll av ett
+          <b>Verifierings-ID</b> mot Proofys register vid angiven kontrolltid. Proofy lagrar <b>inte</b> dokumentinnehåll i registret.
+        </p>
+      </div>
 
-    <p class="lead">
-      Skapa ett Verifierings-ID <span class="meta">(kontroll-ID)</span> för den filversion som ska vara <b>referens</b> i ärendet.
-      <strong>Underlaget lämnar aldrig din dator.</strong>
-    </p>
+      <div class="statusBadge" id="statusBadge" title="Status hos Proofy vid kontrolltillfället">
+        <span class="dot" id="statusDot" aria-hidden="true"></span>
+        <span id="statusText">Kontrollerar…</span>
+      </div>
+    </div>
+
+    <div class="actionsRow" aria-label="Åtgärder">
+      <button class="btn primary" id="btnPrint" type="button">Skriv ut / Spara som PDF</button>
+      <button class="btn" id="btnRefresh" type="button">Uppdatera</button>
+      <a class="btn soft" id="btnOpenVerify" href="/verify.html">Öppna verifiering</a>
+    </div>
+
+    <div id="warnBox" class="warnBox" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <section aria-label="Skapa via fil">
-          <div style="font-weight:950; font-size:16px;">1. Välj referensunderlag</div>
-
-          <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:10px; cursor:pointer;">
-            Välj underlag (fil)
-          </label>
-          <input id="fileInput" type="file" style="display:none;" />
-
-          <div id="dropZone"
-               class="drop"
-               role="button"
-               tabindex="0"
-               aria-label="Dra och släpp underlag här, eller tryck för att välja fil"
-               style="margin-top:10px;">
-            Dra &amp; släpp underlag här<br />
-            <span class="small" style="opacity:.9;">Tryck här för att välja fil</span>
-          </div>
-
-          <div id="fileInfo"
-               class="meta"
-               style="margin-top:10px; padding:10px 12px; border-radius:12px; border:1px dashed rgba(255,255,255,.25); background:rgba(255,255,255,.04);">
-            Inget underlag valt.
-          </div>
-
-          <div class="actions" style="margin-top:14px;">
-            <div class="actionsRow" aria-label="Åtgärder">
-              <a class="btn primary" id="nextStepBtn" href="/verify">Gå till verifiering</a>
-              <button class="btn primary" id="createBtn" disabled>Skapa Verifierings-ID</button>
-
-              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Visa registreringsunderlag</a>
-            </div>
-
-            <div class="actionsMetaRow">
-              <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Välj underlag</span>
-            </div>
-
-            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
-            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
-          </div>
-
-          <div id="localIdBox" style="display:none; margin-top:12px;">
-            <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span> – för notering i ärendet</div>
-
-            <div id="localIdOut"
-                 class="mono"
-                 tabindex="0"
-                 role="button"
-                 aria-label="Verifierings-ID (klicka för att kopiera)"
-                 title="Klicka för att kopiera"
-                 style="
-                   margin-top:8px;
-                   padding:10px 12px;
-                   border-radius:12px;
-                   border:1px solid rgba(255,255,255,.14);
-                   background:rgba(255,255,255,.03);
-                   cursor:pointer;
-                   user-select:text;
-                 ">—</div>
-
-            <div class="small hintline">Klicka i fältet för att kopiera.</div>
-            <span id="copyIdPill" class="pill" style="display:none; margin-top:8px;"></span>
-          </div>
-
-          <p class="small" style="margin-top:12px; margin-bottom:0;">
-            De flesta vanliga filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).<br />
-            <b>Obs:</b> Ny export/omskanning/konvertering kan ge en annan filversion även om dokumentet “ser likadant ut”.
-          </p>
-        </section>
-
-        <section aria-label="Registreringsrapport">
-          <div style="font-weight:950; font-size:16px;">2. Registreringsrapport</div>
+        <!-- LEFT: Nyckeluppgifter -->
+        <section aria-label="Nyckeluppgifter">
+          <div style="font-weight:950; font-size:16px;">Nyckeluppgifter</div>
           <div class="hr"></div>
 
-          <div id="emptyState"
-               style="
-                 border:1px solid rgba(255,255,255,.10);
-                 background: rgba(255,255,255,.03);
-                 border-radius: 16px;
-                 padding: 12px 14px;
-               ">
-            <div style="font-weight:950; margin-bottom:6px;">Så används det i en byråprocess</div>
-            <div class="small">
-              1) Välj filversionen som ska vara <b>referens</b>.<br/>
-              2) Proofy skapar ett Verifierings-ID lokalt (<b>ingen uppladdning</b>).<br/>
-              3) Dela länk/QR till kollega, klient eller ärendeakt för senare kontroll.<br/><br/>
-              <b>QR är för skanning med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att skanna sin egen skärm med kameran.
-            </div>
+          <div class="meta">Verifierings-ID</div>
+          <div class="actionsRow" style="margin-top:6px;">
+            <div id="hashText" class="mono monoBlock" role="button" tabindex="0" title="Klicka för att kopiera">—</div>
+            <button class="btn" id="copyHash" type="button">Kopiera</button>
+          </div>
+          <div class="small hintline">
+            ID:t avser en specifik filversion. Ny export/omskanning/omkomprimering kan ge nytt ID även om underlaget ser likadant ut.
           </div>
 
-          <div id="resultBox" style="display:none; margin-top:12px;">
-            <div id="headline"
-                 role="status"
-                 aria-live="polite"
-                 aria-atomic="true"
-                 style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
-            </div>
+          <div style="margin-top:14px;"></div>
 
-            <div style="margin-top:12px;">
-              <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span></div>
-              <div class="small hintline">Klicka i fältet för att kopiera.</div>
-
-              <div style="position:relative; margin-top:6px;">
-                <button type="button" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID" title="Kopiera"
-                        style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
-                  <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
-                </button>
-
-                <div id="idOut"
-                     class="mono"
-                     tabindex="0"
-                     role="button"
-                     title="Klicka för att kopiera"
-                     aria-label="Verifierings-ID (klicka för att kopiera)"
-                     style="
-                       padding:10px 12px;
-                       border-radius:12px;
-                       border:1px solid rgba(255,255,255,.14);
-                       background:rgba(255,255,255,.03);
-                       cursor:pointer;
-                       padding-right:52px;
-                       user-select:text;
-                     ">—</div>
-
-                <span id="copyIdPill2" class="pill" style="display:none; margin-top:8px;"></span>
-              </div>
-
-              <div class="meta" style="margin-top:12px;">Delbar verifieringslänk</div>
-              <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
-
-              <div style="position:relative; margin-top:6px;">
-                <button type="button" id="copyLinkIconBtn" aria-label="Kopiera länk" title="Kopiera"
-                        style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
-                  <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
-                </button>
-
-                <a id="linkOut"
-                   class="mono"
-                   href="#"
-                   target="_blank"
-                   rel="noopener"
-                   title="Tryck för att öppna · Långtryck för att kopiera"
-                   aria-label="Delbar verifieringslänk"
-                   style="
-                     display:block;
-                     padding:10px 12px;
-                     border-radius:12px;
-                     border:1px solid rgba(255,255,255,.14);
-                     background:rgba(255,255,255,.03);
-                     cursor:pointer;
-                     padding-right:52px;
-                     user-select:text;
-                     text-decoration:none;
-                   ">—</a>
-
-                <span id="copyLinkPill" class="pill" style="display:none; margin-top:8px;"></span>
-              </div>
-
-              <p class="small" style="margin:10px 0 0; opacity:.95;">
-                <b>Obs:</b> Verifierings-ID och verifieringslänk skapas alltid lokalt.
-                För att kunna påvisa <b>bekräftelse</b> vid senare kontroll behöver status vara <b>Bekräftad</b>.
-                Om status är <i>“Inskickad – ej bekräftad”</i> eller <i>“Ej bekräftad”</i> kan du kontrollera igen via verifiering.
-              </p>
-
-              <div class="hr" style="margin-top:14px;"></div>
-
-              <div class="qrWrap" style="margin-top:12px;">
-                <div>
-                  <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
-
-                  <div id="qrTap"
-                       class="proofyQrTap"
-                       role="button"
-                       tabindex="0"
-                       aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
-                       title="Klicka för att kopiera verifieringslänk"
-                       style="display:none;">
-                    <div id="qrBox" class="proofyQrBox" aria-label="QR-kod"></div>
-                  </div>
-
-                  <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
-                    Skanna QR med <b>en annan enhet</b> (t.ex. klient/kollega).
-                    Klick på QR kopierar länken till urklipp.
-                  </div>
-                </div>
-
-                <div style="min-width:240px; flex:1;">
-                  <div class="meta">Status hos Proofy</div>
-                  <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
-
-                  <div class="meta" style="margin-top:10px;">Tidpunkt (om bekräftad)</div>
-                  <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
-
-                  <div class="actions" style="margin-top:12px;">
-                    <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering för ärendeakt</button>
-                    <span id="copyNotePill" class="pill" style="display:none;"></span>
-                  </div>
-
-                  <details style="margin-top:12px;">
-                    <summary>Extra uppgifter (valfritt)</summary>
-                    <p class="small" style="margin:10px 0 8px; opacity:.95;">
-                      Behövs normalt inte i ärendet, men kan hjälpa vid utredning vid behov.
-                    </p>
-
-                    <div class="hr"></div>
-
-                    <div class="meta">Registreringsreferens (valfritt)</div>
-                    <div id="txOut" class="mono" style="margin-top:8px;">—</div>
-
-                    <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfritt)</div>
-                    <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
-
-                    <div class="meta" style="margin-top:10px;">Meddelande (om något)</div>
-                    <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
-                  </details>
-                </div>
-              </div>
-            </div>
+          <div class="meta">Kontroll genomförd</div>
+          <div id="checkedLocal" class="mono monoBlock" style="margin-top:6px; cursor:default;" aria-live="polite">—</div>
+          <div id="checkedUtc" class="mono monoBlock" style="margin-top:8px; cursor:default; opacity:.78;" aria-live="polite">—</div>
+          <div class="small hintline">
+            Kontrolltiden avser <b>när detta intyg uppdaterades</b> (snapshot). Uppdatera vid behov.
           </div>
 
-          <div id="errorBox" style="display:none; margin-top:12px;" role="status" aria-live="polite" aria-atomic="true">
-            <div class="err">Tillfälligt problem</div>
-            <div id="errorMsg" class="mono" style="margin-top:8px;"></div>
+          <div style="margin-top:14px;"></div>
+
+          <div class="meta">Tidpunkt (om bekräftad)</div>
+          <div id="regLocal" class="mono monoBlock" style="margin-top:6px; cursor:default;">—</div>
+          <div id="regUtc" class="mono monoBlock" style="margin-top:8px; cursor:default; opacity:.78;">—</div>
+
+          <div style="margin-top:14px;"></div>
+
+          <div class="meta">Status hos Proofy vid kontrolltillfället</div>
+          <div id="resultText" class="mono monoBlock" style="margin-top:6px; cursor:default;">—</div>
+          <div id="legalLine" class="small" style="margin-top:8px; opacity:.95;">—</div>
+
+          <div class="hr" style="margin-top:14px;"></div>
+
+          <div class="small" style="margin-top:10px; opacity:.92;">
+            <b>Praktiskt tips:</b> Spara Verifierings-ID + intygslänk i ärendet vid fastställande.
+            Dela verifieringslänk/QR vid intern kvalitetskontroll eller efterhandsgranskning.
           </div>
+        </section>
+
+        <!-- RIGHT: Länkar & QR -->
+        <section aria-label="Länkar och QR">
+          <div style="font-weight:950; font-size:16px;">Länkar &amp; QR</div>
+          <div class="hr"></div>
+
+          <div class="meta" style="margin-bottom:8px;">QR-kod (snabb kontroll)</div>
+          <div id="qrTap" class="proofyQrTap" role="button" tabindex="0"
+               aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
+               title="Klicka för att kopiera verifieringslänk">
+            <div id="qrBox" class="proofyQrBox" aria-label="QR-kod"></div>
+          </div>
+          <div class="small" style="margin-top:10px; opacity:.9;">
+            Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
+          </div>
+
+          <div style="margin-top:14px;"></div>
+
+          <div class="meta">Verifieringslänk</div>
+          <div class="actionsRow" style="margin-top:6px;">
+            <a id="verifyLink" class="mono monoBlock" href="#" target="_blank" rel="noopener"
+               title="Tryck för att öppna · Långtryck för att kopiera">—</a>
+            <button class="btn" id="copyVerify" type="button">Kopiera</button>
+          </div>
+
+          <div style="margin-top:14px;"></div>
+
+          <div class="meta">Länk till intyg</div>
+          <div class="actionsRow" style="margin-top:6px;">
+            <a id="certLink" class="mono monoBlock" href="#" target="_blank" rel="noopener"
+               title="Tryck för att öppna · Långtryck för att kopiera">—</a>
+            <button class="btn" id="copyCert" type="button">Kopiera</button>
+          </div>
+
+          <div id="techHint" class="small" style="margin-top:10px; opacity:.9;"></div>
         </section>
 
       </div>
     </div>
 
-    <section style="margin-top:14px;">
-      <div class="card content">
-        <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
-        <p class="meta" style="margin:0 0 10px;">
-          Klistra in ett Verifierings-ID så skapar vi delbar länk och QR direkt.
-        </p>
+    <div class="card content" style="margin-top:14px;">
+      <div style="font-weight:950; font-size:16px;">Revisions-/juridisk tydlighet</div>
+      <div class="hr"></div>
 
-        <div class="grid2">
-          <div>
-            <label class="meta" for="manualId">Verifierings-ID</label>
-            <input id="manualId" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:8px" />
-
-            <div class="actions" style="margin-top:12px;">
-              <div class="actionsRow">
-                <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
-
-                <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
-                <a class="btn primary" id="manualVerifyBtn" href="/verify" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
-              </div>
-
-              <div class="actionsMetaRow">
-                <span id="manualPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Klistra in ID</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div class="meta">Delbar verifieringslänk</div>
-
-            <a id="manualLinkOut"
-               class="mono"
-               href="#"
-               target="_blank"
-               rel="noopener"
-               title="Tryck för att öppna · Långtryck för att kopiera"
-               style="
-                 display:block;
-                 margin-top:8px;
-                 padding:10px 12px;
-                 border-radius:12px;
-                 border:1px solid rgba(255,255,255,.14);
-                 background:rgba(255,255,255,.03);
-                 text-decoration:none;
-               ">—</a>
-
-            <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
-
-            <div class="qrWrap" style="margin-top:12px;">
-              <div>
-                <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
-
-                <div id="manualQrTap"
-                     class="proofyQrTap"
-                     role="button"
-                     tabindex="0"
-                     aria-label="QR-kod manuell (klicka för att kopiera verifieringslänk)"
-                     title="Klicka för att kopiera verifieringslänk"
-                     style="display:none;">
-                  <div id="manualQrBox" class="proofyQrBox" aria-label="QR-kod (manuell)"></div>
-                </div>
-              </div>
-              <div style="min-width:240px; flex:1;">
-                <div class="small" style="margin-top:0;">
-                  Bra när du fått ett ID i en notering och vill dela en länk snabbt.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="hr"></div>
-        <p class="small" style="margin:0;">
-          Proofy lagrar inte dokument. Verifiering bygger på att jämföra filversioner mot en tidigare fastställd referens.
-        </p>
+      <div class="small" style="opacity:.92; line-height:1.6;">
+        • Intyget redovisar status för kontrollvärdet i Proofys register vid kontrolltillfället.<br/>
+        • Tidpunkt anges endast när status är <b>bekräftad</b>.<br/>
+        • Tidpunkten avser när kontrollvärdet först blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
+        • Intyget ersätter inte e-signering, arkivering, behörighetsloggar, processkontroller eller juridisk rådgivning.<br/>
+        • Bevisvärde och relevans bedöms i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja).<br/>
+        • Intyget avser en <b>teknisk kontroll vid kontrolltillfället</b>. Utfallet kan ändras om registret uppdateras senare.
       </div>
-    </section>
+
+      <details id="techDetails" style="margin-top:12px;">
+        <summary style="cursor:pointer; font-weight:900;">Teknisk information (valfritt)</summary>
+
+        <div style="margin-top:10px;">
+          <div class="meta">Kontrollpunkt (valfritt)</div>
+          <div id="observedPoint" class="mono monoBlock" style="margin-top:6px; cursor:default;">—</div>
+          <div class="small hintline">Visar vilken kontrollpunkt som användes vid kontrolltillfället. Kan underlätta felsökning.</div>
+
+          <div style="margin-top:12px;"></div>
+
+          <div class="meta">Registreringsreferens (valfri)</div>
+          <div id="registrationRef" class="mono monoBlock" style="margin-top:6px; cursor:default;">—</div>
+          <div class="small hintline">Intern referens kopplad till inskickad registrering. Behövs normalt inte i ärendet.</div>
+        </div>
+      </details>
+
+      <div class="hr" style="margin-top:14px;"></div>
+
+      <div class="small" style="opacity:.9;">
+        <div><b>Integritet:</b> Verifierings-ID skapas lokalt från filen. Vid kontroll skickas endast kontrollvärdet – inte filen.</div>
+        <div style="margin-top:6px;">Kontakt: <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></div>
+      </div>
+    </div>
 
   </div>
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot">
-      <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
-        <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller tidsnotering och kontroll av filversioner. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
-        </div>
-      </div>
-      <div class="links">
-        <a href="/security">Säkerhet</a>
-        <a href="/privacy">Integritet</a>
-        <a href="/terms">Villkor</a>
-        <a href="/cookies">Cookies</a>
-        <a href="/#kontakt">Kontakt</a>
-      </div>
-    </div>
-  </div>
-</footer>
-
-<script src="/assets/qr.min.js?v=2026-01-03a"></script>
-
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const mainEl = $("main") || document.querySelector("main");
 
-  const fileInput = $("fileInput");
-  const dropZone = $("dropZone");
-  const fileInfo = $("fileInfo");
-
-  const createBtn = $("createBtn");
-  const nextStepBtn = $("nextStepBtn");
-  const copyIdBtn = $("copyIdBtn");
-  const copyLinkBtn = $("copyLinkBtn");
-  const receiptBtn = $("receiptBtn");
-  const statusPill = $("statusPill");
-
-  const localIdBox = $("localIdBox");
-  const localIdOut = $("localIdOut");
-  const copyIdPill = $("copyIdPill");
-
-  const emptyState = $("emptyState");
-  const resultBox = $("resultBox");
-  const headline = $("headline");
-  const idOut = $("idOut");
-  const linkOut = $("linkOut");
-  const qrTap = $("qrTap");
-  const qrBox = $("qrBox");
-  const regStatusOut = $("regStatusOut");
-  const timeOut = $("timeOut");
-  const submitterOut = $("submitterOut");
-  const txOut = $("txOut");
-  const debugOut = $("debugOut");
-  const copyIdIconBtn = $("copyIdIconBtn");
-  const copyIdPill2 = $("copyIdPill2");
-  const copyLinkIconBtn = $("copyLinkIconBtn");
-  const copyLinkPill = $("copyLinkPill");
-  const copyNoteBtn = $("copyNoteBtn");
-  const copyNotePill = $("copyNotePill");
-
-  const errorBox = $("errorBox");
-  const errorMsg = $("errorMsg");
-
-  const manualId = $("manualId");
-  const manualCopyLinkBtn = $("manualCopyLinkBtn");
-  const manualVerifyBtn = $("manualVerifyBtn");
-  const manualPill = $("manualPill");
-  const manualLinkOut = $("manualLinkOut");
-  const manualQrTap = $("manualQrTap");
-  const manualQrBox = $("manualQrBox");
-
-  let currentFile = null;
-  let currentId = null;
-  let currentLink = null;
-  let busy = false;
-  let opId = 0;
-  let lastRun = null;
-  let lastProofyStatusCode = "";
-
-  let manualCurrentLink = null;
-
-  let pollTimer = null;
-  let pollStartAt = 0;
-  let pollTxHash = null;
-
-  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-  function isRetryableStatus(status){
-    return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
+  function isValidBytes32Hex(s){
+    return typeof s === "string" && /^0x[0-9a-fA-F]{64}$/.test(s.trim());
   }
 
-  async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 25000){
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), timeoutMs);
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function fmtUtc(sec){
+    const n = Number(sec);
+    if (!Number.isFinite(n) || n <= 0) return "—";
+    const d = new Date(n * 1000);
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())} UTC`;
+  }
+
+  function fmtSeHtml(sec){
+    const n = Number(sec);
+    if (!Number.isFinite(n) || n <= 0) return "—";
     try{
-      const res = await fetch(url, { ...options, signal: controller.signal });
-      const data = await res.json().catch(() => ({}));
-      return { res, data, aborted:false };
-    } catch (e){
-      const aborted = (e && e.name === "AbortError");
-      return { res: null, data: {}, aborted };
-    } finally {
-      clearTimeout(t);
-    }
-  }
-
-  async function safeRegisterRequest(hash){
-    const attempts = 3;
-    const baseDelay = 650;
-
-    for (let i = 0; i < attempts; i++){
-      const { res, data, aborted } = await fetchJsonWithTimeout(
-        "/api/register",
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ hash })
-        },
-        25000
-      );
-
-      if (aborted && i < attempts - 1) {
-        const jitter = Math.floor(Math.random() * 180);
-        await sleep(baseDelay * (i + 1) + jitter);
-        continue;
-      }
-
-      if (res && res.ok && data && data.ok !== false) {
-        return { ok: true, res, data, attempt: i + 1 };
-      }
-
-      const status = res?.status || 0;
-      const retryable = isRetryableStatus(status);
-
-      if (i < attempts - 1 && retryable) {
-        const jitter = Math.floor(Math.random() * 180);
-        await sleep(baseDelay * (i + 1) + jitter);
-        continue;
-      }
-
-      return { ok: false, res, data, attempt: i + 1, aborted };
-    }
-
-    return { ok: false, res: null, data: {}, attempt: attempts, aborted:false };
-  }
-
-  async function safeGetJson(url){
-    const { res, data, aborted } = await fetchJsonWithTimeout(url, { method:"GET" }, 20000);
-    if (!res || !res.ok || aborted) return { ok:false, res, data, aborted };
-    return { ok:true, res, data, aborted:false };
-  }
-
-  function setAriaBusy(v){
-    try{
-      if (mainEl) mainEl.setAttribute("aria-busy", v ? "true" : "false");
-    } catch {}
-  }
-
-  function setPill(text){ statusPill.textContent = text; }
-  function setManualPill(text){ manualPill.textContent = text; }
-
-  function hidePill(p){
-    if (!p) return;
-    p.style.display = "none";
-    p.textContent = "";
-  }
-  function showPill(p, text){
-    if (!p) return;
-    p.style.display = "inline-flex";
-    p.textContent = text;
-  }
-
-  function updateReceiptLabel(){
-    if (!receiptBtn || !currentId) return;
-    if (lastProofyStatusCode === "CONFIRMED") {
-      receiptBtn.textContent = "Visa registreringsunderlag";
-    } else if (lastProofyStatusCode === "UNKNOWN") {
-      receiptBtn.textContent = "Öppna intyg (kunde inte kontrolleras)";
-    } else if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") {
-      receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
-    } else {
-      receiptBtn.textContent = "Öppna intyg (status ej bekräftad)";
-    }
-  }
-
-  function setBusy(v){
-    busy = v;
-    setAriaBusy(v);
-
-    createBtn.disabled = !currentFile || busy;
-    copyIdBtn.disabled = !currentId || busy;
-    copyLinkBtn.disabled = !currentLink || busy;
-
-    if (nextStepBtn){
-      if (currentLink && !busy){
-        nextStepBtn.href = currentLink;
-        nextStepBtn.style.display = "inline-flex";
-      } else {
-        nextStepBtn.style.display = "none";
-      }
-    }
-
-    if (createBtn){
-      if (currentLink && !busy){
-        createBtn.style.display = "none";
-      } else {
-        createBtn.style.display = "inline-flex";
-      }
-    }
-
-    if (receiptBtn){
-      if (currentId && !busy){
-        receiptBtn.href = `/certificate?hash=${encodeURIComponent(currentId)}`;
-        receiptBtn.style.display = "inline-flex";
-        updateReceiptLabel();
-      } else {
-        receiptBtn.style.display = "none";
-      }
-    }
-  }
-
-  function resetReport(){
-    if (resultBox) resultBox.style.display = "none";
-    if (errorBox) errorBox.style.display = "none";
-    if (errorMsg) errorMsg.textContent = "";
-    if (headline) headline.textContent = "";
-    if (idOut) idOut.textContent = "—";
-    if (linkOut) linkOut.textContent = "—";
-    if (linkOut) linkOut.href = "#";
-    if (qrBox) qrBox.innerHTML = "";
-    if (qrTap) qrTap.style.display = "none";
-    if (regStatusOut) regStatusOut.textContent = "—";
-    if (timeOut) timeOut.textContent = "—";
-    if (submitterOut) submitterOut.textContent = "—";
-    if (txOut) txOut.textContent = "—";
-    if (debugOut) debugOut.textContent = "—";
-    if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
-    if (copyLinkIconBtn) copyLinkIconBtn.style.display = "none";
-    hidePill(copyIdPill);
-    hidePill(copyIdPill2);
-    hidePill(copyLinkPill);
-    hidePill(copyNotePill);
-    if (copyNoteBtn) copyNoteBtn.style.display = "none";
-    lastRun = null;
-    lastProofyStatusCode = "";
-
-    if (emptyState) emptyState.style.display = "block";
-  }
-
-  function bytesToHex(bytes){
-    return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
-  }
-
-  async function sha256Hex(file){
-    await sleep(0);
-    const buf = await file.arrayBuffer();
-    const dig = await crypto.subtle.digest("SHA-256", buf);
-    return "0x" + bytesToHex(new Uint8Array(dig));
-  }
-
-  function isIdFormat(v){
-    return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
-  }
-
-  /* ✅ Canonical routes (utan .html) */
-  function buildVerifyLink(hash){
-    return `${location.origin}/verify?hash=${encodeURIComponent(hash)}`;
-  }
-
-  function nowSe(){
-    try{
-      return new Intl.DateTimeFormat("sv-SE", {
+      const dt = new Date(n * 1000);
+      const tz = "Europe/Stockholm";
+      const se = new Intl.DateTimeFormat("sv-SE", {
         timeZone:"Europe/Stockholm",
         year:"numeric", month:"2-digit", day:"2-digit",
         hour:"2-digit", minute:"2-digit", second:"2-digit"
-      }).format(new Date()) + " (Europe/Stockholm)";
+      }).format(dt);
+      return `${se} (<span class="tz">${tz}</span>)`;
     } catch {
-      return new Date().toLocaleString("sv-SE");
+      return new Date(n * 1000).toLocaleString("sv-SE") + " (lokal)";
     }
   }
 
-  function formatUnixSe(unixSeconds){
-    const n = Number(unixSeconds);
-    if (!Number.isFinite(n) || n <= 0) return null;
-    try{
-      return new Date(n * 1000).toLocaleString("sv-SE");
-    } catch {
-      return null;
+  function setStatus(code, label){
+    const dot = $("statusDot");
+    const badge = $("statusBadge");
+    if (!dot || !badge) return;
+
+    dot.classList.remove("good","bad");
+    badge.style.borderColor = "rgba(255,255,255,.14)";
+    badge.style.background = "rgba(255,255,255,.05)";
+
+    if (code === "CONFIRMED"){
+      dot.classList.add("good");
+      badge.style.borderColor = "rgba(80,255,180,.20)";
+      badge.style.background = "rgba(80,255,180,.06)";
+    } else if (code === "SUBMITTED_UNCONFIRMED"){
+      // warn default
+      badge.style.borderColor = "rgba(251,191,36,.22)";
+      badge.style.background = "rgba(251,191,36,.08)";
+    } else if (code === "NOT_CONFIRMED"){
+      dot.classList.add("bad");
+      badge.style.borderColor = "rgba(251,191,36,.22)";
+      badge.style.background = "rgba(251,191,36,.08)";
+    } else {
+      dot.classList.add("bad");
+      badge.style.borderColor = "rgba(255,80,80,.20)";
+      badge.style.background = "rgba(255,80,80,.06)";
     }
+
+    $("statusText").textContent = label;
+  }
+
+  function showWarn(html){
+    const box = $("warnBox");
+    box.innerHTML = html;
+    box.classList.add("show");
+  }
+  function hideWarn(){
+    const box = $("warnBox");
+    box.innerHTML = "";
+    box.classList.remove("show");
   }
 
   async function copyTextToClipboard(text){
     const t = String(text || "").trim();
     if (!t || t === "—") return false;
-
     try{
       await navigator.clipboard.writeText(t);
       return true;
-    } catch {
+    }catch{
       try{
         const ta = document.createElement("textarea");
         ta.value = t;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        ta.style.top = "0";
+        ta.style.position="fixed";
+        ta.style.left="-9999px";
+        ta.style.top="0";
         document.body.appendChild(ta);
         ta.focus();
         ta.select();
         const ok = document.execCommand("copy");
         document.body.removeChild(ta);
         return !!ok;
-      } catch {
+      }catch{
         return false;
       }
     }
-  }
-
-  async function copyWithFeedback({ text, pillEl, okText = "Kopierad ✓", failText = "Kunde inte kopiera" }){
-    showPill(pillEl, "Kopierar…");
-    const ok = await copyTextToClipboard(text);
-    showPill(pillEl, ok ? okText : failText);
-    setTimeout(() => hidePill(pillEl), 1400);
-    return ok;
-  }
-
-  function applyCopyHover(fieldEl, iconBtnEl, enabled){
-    if (!fieldEl) return;
-
-    if (!enabled){
-      fieldEl.onmouseenter = null;
-      fieldEl.onmouseleave = null;
-      fieldEl.onfocus = null;
-      fieldEl.onblur = null;
-      if (iconBtnEl) iconBtnEl.style.display = "none";
-      return;
-    }
-
-    const onEnter = () => {
-      if (iconBtnEl) iconBtnEl.style.display = "inline-flex";
-      fieldEl.style.outline = "1px solid rgba(255,255,255,.14)";
-      fieldEl.style.outlineOffset = "2px";
-      fieldEl.style.background = "rgba(255,255,255,.05)";
-    };
-
-    const onLeave = () => {
-      if (iconBtnEl) iconBtnEl.style.display = "none";
-      fieldEl.style.outline = "";
-      fieldEl.style.outlineOffset = "";
-      fieldEl.style.background = "rgba(255,255,255,.03)";
-    };
-
-    fieldEl.onmouseenter = onEnter;
-    fieldEl.onmouseleave = onLeave;
-
-    fieldEl.onfocus = () => {
-      if (iconBtnEl) iconBtnEl.style.display = "inline-flex";
-      fieldEl.style.outline = "2px solid rgba(120, 180, 255, .25)";
-      fieldEl.style.outlineOffset = "2px";
-    };
-    fieldEl.onblur = () => onLeave();
-  }
-
-  function attachOnce(el, key, fn){
-    if (!el) return;
-    const k = "proofy_" + key;
-    if (el.dataset && el.dataset[k] === "1") return;
-    if (el.dataset) el.dataset[k] = "1";
-    fn();
-  }
-
-  function attachLongPressCopyOnce(el, getText, onCopied){
-    if (!el) return;
-
-    attachOnce(el, "longpress", () => {
-      let t = null;
-      let longPressed = false;
-
-      const start = (e) => {
-        longPressed = false;
-        t = setTimeout(async () => {
-          longPressed = true;
-          e.preventDefault();
-          const ok = await copyTextToClipboard(getText());
-          if (ok && onCopied) onCopied();
-        }, 450);
-      };
-
-      const end = () => {
-        if (t) clearTimeout(t);
-        t = null;
-      };
-
-      el.addEventListener("touchstart", start, { passive: false });
-      el.addEventListener("touchend", end);
-      el.addEventListener("touchcancel", end);
-
-      el.addEventListener("mousedown", start);
-      el.addEventListener("mouseup", end);
-      el.addEventListener("mouseleave", end);
-
-      el.addEventListener("click", (e) => {
-        if (longPressed) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      });
-    });
-  }
-
-  function attachQrCopyOnce(qrTapEl, getLink, pillEl){
-    if (!qrTapEl) return;
-
-    attachOnce(qrTapEl, "qrcopy", () => {
-      const doCopy = async () => {
-        const link = getLink();
-        if (!link || link === "—") return;
-        await copyWithFeedback({ text: link, pillEl, okText: "Länk kopierad ✅" });
-      };
-      qrTapEl.onclick = (e) => { e.preventDefault(); doCopy(); };
-      qrTapEl.onkeydown = (e) => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
-      };
-    });
   }
 
   function getCorrectLevelH(){
@@ -901,7 +451,7 @@
     });
   }
 
-  function waitForQrNode(targetEl, timeoutMs = 3000){
+  function waitForQrNode(targetEl, timeoutMs = 2500){
     return new Promise((resolve) => {
       const start = Date.now();
       const tick = () => {
@@ -916,14 +466,10 @@
 
   async function renderQr(targetEl, text){
     if (!targetEl) return;
-
     const payload = String(text || "").trim();
     targetEl.innerHTML = "";
 
-    if (!payload || payload === "—") {
-      targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">Ingen länk att koda.</div>`;
-      return;
-    }
+    if (!payload || payload === "—") return;
 
     const ok = await waitForQRCode(2000);
     if (!ok) {
@@ -932,10 +478,10 @@
     }
 
     const size = 168;
-
-    try {
+    try{
       const levelH = getCorrectLevelH();
       let qr = null;
+
       try{
         qr = new window.QRCode(targetEl);
         if (qr && qr._htOption){
@@ -960,556 +506,226 @@
           correctLevel: levelH
         });
       }
-    } catch (e){
-      console.error("QR render failed:", e);
+    }catch(e){
       targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">QR-koden kunde inte visas.</div>`;
       return;
     }
 
-    const node = await waitForQrNode(targetEl, 3000);
-    if (!node) {
-      targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">QR kunde inte visas. Testa uppdatera sidan.</div>`;
+    const node = await waitForQrNode(targetEl, 2500);
+    if (node){
+      node.style.display = "block";
+      node.style.width = size + "px";
+      node.style.height = size + "px";
+      node.style.imageRendering = "pixelated";
+    }
+  }
+
+  async function fetchJson(url){
+    const sep = url.includes("?") ? "&" : "?";
+    const bustUrl = url + sep + "t=" + Date.now();
+    const r = await fetch(bustUrl, { cache:"no-store", credentials:"same-origin" });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data?.error || data?.detail || `HTTP ${r.status}`);
+    return data;
+  }
+
+  function safeText(v, fallback="—"){
+    const s = String(v ?? "").trim();
+    return s ? s : fallback;
+  }
+
+  function isMeaningful(v){
+    const s = String(v ?? "").trim();
+    if (!s || s === "—") return false;
+    if (/^0+$/.test(s)) return false;
+    return true;
+  }
+
+  function updateTechVisibility(observedPoint, registrationRef){
+    const details = $("techDetails");
+    if (!details) return;
+    const hasObs = isMeaningful(observedPoint);
+    const hasRef = isMeaningful(registrationRef);
+    if (!hasObs && !hasRef){
+      details.open = false;
+      details.style.display = "none";
       return;
     }
-
-    node.style.display = "block";
-    node.style.width = size + "px";
-    node.style.height = size + "px";
-    node.style.imageRendering = "pixelated";
+    details.style.display = "block";
+    details.open = true;
   }
 
-  function buildNote(run){
-    if (!run) return "—";
-    const lines = [];
-    lines.push("PROOFY – Notering för ärendeakt");
-    lines.push("");
-    lines.push(`Verifierings-ID: ${run.id || "—"}`);
-    lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
-    if (run.createdSe) lines.push(`Skapat lokalt: ${run.createdSe}`);
-    lines.push(`Status hos Proofy: ${run.statusLine || "—"}`);
-    if (run.timeSe) lines.push(`Tidpunkt (om bekräftad): ${run.timeSe}`);
-    if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
-    if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
-    lines.push("");
-    lines.push(`Noterad: ${nowSe()}`);
-    return lines.join("\n");
-  }
+  async function run(){
+    hideWarn();
 
-  function stopPolling(){
-    if (pollTimer) clearTimeout(pollTimer);
-    pollTimer = null;
-    pollStartAt = 0;
-    pollTxHash = null;
-  }
+    const url = new URL(location.href);
+    const hash = (url.searchParams.get("hash") || "").trim();
+    const tx = (url.searchParams.get("tx") || "").trim();
 
-  async function pollTxAndVerify(myOp, id, txHash, createdSe){
-    stopPolling();
-    pollStartAt = Date.now();
-    pollTxHash = txHash;
+    const checkedParam = (url.searchParams.get("checked") || "").trim();
+    const checked = (() => {
+      const n = Number(checkedParam);
+      if (Number.isFinite(n) && n > 0) return Math.floor(n);
+      return Math.floor(Date.now() / 1000);
+    })();
 
-    const maxMs = 120000;
-    let attempt = 0;
+    // ✅ HARDTEST: bygg alltid intygslänk mot /certificate.html (inte pathname)
+    const certPath = "/certificate.html";
+    const certLink = `${location.origin}${certPath}?hash=${encodeURIComponent(hash)}&checked=${checked}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`;
 
-    const tick = async () => {
-      if (myOp !== opId) return;
-      if (!pollTxHash || pollTxHash !== txHash) return;
+    // ✅ Verifieringslänk: inkluderar tx om det finns (för enkel spårning)
+    const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`;
 
-      const elapsed = Date.now() - pollStartAt;
-      if (elapsed > maxMs) {
-        stopPolling();
-        lastProofyStatusCode = "NOT_CONFIRMED";
-        updateReceiptLabel();
-        debugOut.textContent = "Kontroll av registreringen kunde inte slutföras inom tidsgränsen. Du kan kontrollera igen via verifiering senare.";
-        headline.style.borderColor = "rgba(251,191,36,.22)";
-        headline.style.background = "rgba(251,191,36,.08)";
-        headline.innerHTML = `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(kontrollen hann inte visa bekräftelse)</span>`;
-        regStatusOut.textContent = "Ej bekräftad";
-        timeOut.textContent = "—";
-        return;
-      }
+    $("btnOpenVerify").href = verifyLink;
+    $("btnPrint").onclick = () => window.print();
+    $("btnRefresh").onclick = () => run();
 
-      attempt++;
-      regStatusOut.textContent = "Kontroll pågår… (ej bekräftad)";
-      txOut.textContent = txHash || "—";
+    $("certLink").textContent = certLink;
+    $("certLink").href = certLink;
 
-      const txRes = await safeGetJson(`/api/tx?tx=${encodeURIComponent(txHash)}`);
-      if (myOp !== opId) return;
+    $("verifyLink").textContent = verifyLink;
+    $("verifyLink").href = verifyLink;
 
-      if (!txRes.ok || txRes.data?.ok === false) {
-        lastProofyStatusCode = "UNKNOWN";
-        updateReceiptLabel();
-        debugOut.textContent = "Status kunde inte kontrolleras just nu (tillfälligt fel vid kontroll). Ingen slutsats kan dras.";
-        headline.style.borderColor = "rgba(255,80,80,.20)";
-        headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
-        regStatusOut.textContent = "Kunde inte kontrolleras";
-        timeOut.textContent = "—";
-      } else {
-        const mined = !!txRes.data?.mined;
-        if (!mined) {
-          headline.style.borderColor = "rgba(255,255,255,.14)";
-          headline.style.background = "rgba(255,255,255,.05)";
-          headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
-        } else {
-          const st = String(txRes.data?.status || "");
-          const blockNo = txRes.data?.blockNumber || null;
+    // Klicka på hash för copy
+    const hashEl = $("hashText");
+    const copyHashBtn = $("copyHash");
+    const copyVerifyBtn = $("copyVerify");
+    const copyCertBtn = $("copyCert");
 
-          submitterOut.textContent = blockNo ? String(blockNo) : (submitterOut.textContent || "—");
-
-          if (st === "reverted") {
-            stopPolling();
-            lastProofyStatusCode = "UNKNOWN";
-            updateReceiptLabel();
-            headline.style.borderColor = "rgba(255,80,80,.20)";
-            headline.style.background = "rgba(255,80,80,.06)";
-            headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försöket misslyckades)</span>`;
-            regStatusOut.textContent = "Kunde inte kontrolleras";
-            timeOut.textContent = "—";
-            debugOut.textContent = "Försöket misslyckades. Ingen notering kan påvisas för detta försök. Du kan försöka igen eller kontakta Proofy och ange registreringsreferensen.";
-            return;
-          }
-
-          const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
-          if (myOp !== opId) return;
-
-          if (!ver.ok || ver.data?.ok === false) {
-            lastProofyStatusCode = "UNKNOWN";
-            updateReceiptLabel();
-            headline.style.borderColor = "rgba(255,80,80,.20)";
-            headline.style.background = "rgba(255,80,80,.06)";
-            headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(verifiering misslyckades)</span>`;
-            regStatusOut.textContent = "Kunde inte kontrolleras";
-            timeOut.textContent = "—";
-            debugOut.textContent = "Status kunde inte kontrolleras vid verifiering (tillfälligt fel). Ingen slutsats kan dras.";
-          } else {
-            applyStatusToUI({ id, createdSe, data: ver.data });
-
-            if (String(ver.data?.statusCode || "") === "CONFIRMED") {
-              stopPolling();
-              return;
-            }
-          }
-        }
-      }
-
-      const delay = Math.min(9000, 2200 + attempt * 350);
-      pollTimer = setTimeout(tick, delay);
+    const doCopy = async (text, label) => {
+      const ok = await copyTextToClipboard(text);
+      showWarn(ok
+        ? `<b>Kopierat:</b> ${label}`
+        : `<b>Kunde inte kopiera.</b> Markera och kopiera manuellt.`);
+      setTimeout(() => hideWarn(), 1200);
     };
 
-    tick();
-  }
-
-  function setFile(file){
-    stopPolling();
-
-    currentFile = file || null;
-    currentId = null;
-    currentLink = null;
-    lastProofyStatusCode = "";
-
-    resetReport();
-
-    if (localIdBox) localIdBox.style.display = "none";
-    if (localIdOut) localIdOut.textContent = "—";
-    hidePill(copyIdPill);
-
-    if (receiptBtn) receiptBtn.style.display = "none";
-    if (nextStepBtn) nextStepBtn.style.display = "none";
-    if (createBtn) createBtn.style.display = "inline-flex";
-    if (createBtn) createBtn.textContent = "Skapa Verifierings-ID";
-
-    if (!currentFile){
-      fileInfo.textContent = "Inget underlag valt.";
-      setPill("Välj underlag");
-      setBusy(false);
-      return;
-    }
-
-    const sizeMb = (currentFile.size/1024/1024);
-    const niceSize = (sizeMb < 10) ? sizeMb.toFixed(2) : sizeMb.toFixed(1);
-
-    fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
-
-    setPill("Redo att skapa");
-    setBusy(false);
-  }
-
-  fileInput.addEventListener("change", () => {
-    setFile(fileInput.files?.[0] || null);
-
-    setTimeout(() => {
-      if (currentFile && !busy) createBtn.click();
-    }, 400);
-  });
-
-  dropZone.addEventListener("click", () => fileInput.click());
-  dropZone.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      fileInput.click();
-    }
-  });
-
-  dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
-  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
-  dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("drag");
-    const f = e.dataTransfer?.files?.[0];
-    if (f) {
-      setFile(f);
-      setTimeout(() => {
-        if (currentFile && !busy) createBtn.click();
-      }, 200);
-    }
-  });
-
-  if (localIdOut){
-    localIdOut.addEventListener("click", async () => {
-      await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
-    });
-    localIdOut.addEventListener("keydown", async (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
-      }
-    });
-  }
-
-  if (idOut){
-    idOut.addEventListener("click", async () => {
-      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
-    });
-    idOut.addEventListener("keydown", async (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
-      }
-    });
-  }
-
-  if (copyIdIconBtn){
-    copyIdIconBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
-    });
-  }
-
-  if (copyLinkIconBtn){
-    copyLinkIconBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill });
-    });
-  }
-
-  if (copyNoteBtn){
-    copyNoteBtn.addEventListener("click", async () => {
-      if (!lastRun) return;
-      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill });
-    });
-  }
-
-  copyIdBtn.addEventListener("click", async () => {
-    if (!currentId) return;
-    setPill("Kopierar…");
-    const ok = await copyTextToClipboard(currentId);
-    setPill(ok ? "ID kopierat ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
-  });
-
-  copyLinkBtn.addEventListener("click", async () => {
-    if (!currentLink) return;
-    setPill("Kopierar…");
-    const ok = await copyTextToClipboard(currentLink);
-    setPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
-  });
-
-  function applyStatusToUI({ id, createdSe, data }){
-    const sc = String(data?.statusCode || "");
-    const st = String(data?.statusText || "");
-    const legal = String(data?.legalText || "");
-    const confirmedAt = data?.confirmedAtUnix ?? null;
-
-    const txHash = data?.submission?.txHash || null;
-    const submittedBy = data?.submission?.submittedBy || null;
-    const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
-
-    txOut.textContent = txHash || (txOut.textContent || "—");
-    submitterOut.textContent = observedBlockNumber || (submittedBy || submitterOut.textContent || "—");
-    debugOut.textContent = legal || (debugOut.textContent || "—");
-
-    const confirmedSe = confirmedAt ? formatUnixSe(confirmedAt) : null;
-    timeOut.textContent = confirmedSe || "—";
-
-    lastProofyStatusCode = sc || "";
-    updateReceiptLabel();
-
-    if (sc === "CONFIRMED") {
-      headline.style.borderColor = "rgba(80,255,180,.20)";
-      headline.style.background = "rgba(80,255,180,.06)";
-      headline.innerHTML = `<span class="ok">✅ Bekräftad</span> <span class="meta">(status hos Proofy vid kontrolltillfället)</span>`;
-      regStatusOut.textContent = st || "Bekräftad";
-
-      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-      lastRun = {
-        id,
-        link: currentLink,
-        createdSe,
-        statusLine: st || "Bekräftad",
-        timeSe: confirmedSe,
-        txHash: txHash,
-        observedBlockNumber: observedBlockNumber
+    if (hashEl){
+      hashEl.onclick = () => isValidBytes32Hex(hashEl.textContent) && doCopy(hashEl.textContent, "Verifierings-ID");
+      hashEl.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hashEl.click(); }
       };
-      return;
     }
 
-    if (sc === "NOT_CONFIRMED" || sc === "SUBMITTED_UNCONFIRMED") {
-      const isSubmitted = (sc === "SUBMITTED_UNCONFIRMED");
-      headline.style.borderColor = "rgba(251,191,36,.22)";
-      headline.style.background = "rgba(251,191,36,.08)";
-      headline.innerHTML = isSubmitted
-        ? `<span class="meta">⏳ Inskickad – ej bekräftad</span> <span class="meta">(kontroll pågår)</span>`
-        : `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde visas vid kontrolltillfället)</span>`;
-      regStatusOut.textContent = st || (isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad");
+    copyHashBtn.onclick = () => doCopy(hash, "Verifierings-ID");
+    copyVerifyBtn.onclick = () => doCopy(verifyLink, "Verifieringslänk");
+    copyCertBtn.onclick = () => doCopy(certLink, "Länk till intyg");
 
-      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-      lastRun = {
-        id,
-        link: currentLink,
-        createdSe,
-        statusLine: st || (isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad"),
-        timeSe: null,
-        txHash: txHash,
-        observedBlockNumber: observedBlockNumber
-      };
-      return;
-    }
+    // tider (snapshot)
+    $("checkedLocal").innerHTML = fmtSeHtml(checked);
+    $("checkedUtc").textContent = fmtUtc(checked);
 
-    headline.style.borderColor = "rgba(255,80,80,.20)";
-    headline.style.background = "rgba(255,80,80,.06)";
-    headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
-    regStatusOut.textContent = st || "Kunde inte kontrolleras";
+    // default
+    $("hashText").textContent = hash || "—";
+    $("resultText").textContent = "Kontrollerar…";
+    $("legalLine").textContent = "—";
+    $("regLocal").textContent = "—";
+    $("regUtc").textContent = "—";
+    $("observedPoint").textContent = "—";
+    $("registrationRef").textContent = "—";
+    updateTechVisibility("—", "—");
 
-    if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-    lastRun = {
-      id,
-      link: currentLink,
-      createdSe,
-      statusLine: st || "Kunde inte kontrolleras",
-      timeSe: null,
-      txHash: txHash,
-      observedBlockNumber: observedBlockNumber
+    // QR bygger på verifyLink
+    await renderQr($("qrBox"), verifyLink);
+
+    const qrTap = $("qrTap");
+    const doQrCopy = async () => doCopy(verifyLink, "Verifieringslänk");
+    qrTap.onclick = (e) => { e.preventDefault(); doQrCopy(); };
+    qrTap.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
     };
-  }
 
-  createBtn.addEventListener("click", async () => {
-    if (!currentFile || busy) return;
+    if (tx){
+      $("techHint").innerHTML = `Registreringsreferens i länk: <span class="mono">${tx}</span>`;
+    } else {
+      $("techHint").textContent = "";
+    }
 
-    const myOp = ++opId;
-    stopPolling();
-    setBusy(true);
-    resetReport();
-    setPill("Skapar Verifierings-ID…");
+    // validera hash
+    if (!isValidBytes32Hex(hash)){
+      setStatus("UNKNOWN", "Ogiltigt ID");
+      $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
+      $("resultText").textContent = "Kunde inte kontrollera: saknat/ogiltigt Verifierings-ID i URL.";
+      $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt Verifierings-ID.";
+      showWarn(`<b>Fel:</b> Intyget saknar giltigt Verifierings-ID i URL.<br/>Exempel: <span class="mono">/certificate.html?hash=0x...</span>`);
+      return;
+    }
 
+    // Hämta status
+    setStatus("SUBMITTED_UNCONFIRMED", "Kontrollerar…");
+    $("resultText").textContent = "Kontrollerar status hos Proofy…";
+
+    let v;
     try{
-      const createdSe = nowSe();
+      // tx är valfritt; API kan ignorera
+      const u = `/api/verify?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`;
+      v = await fetchJson(u);
+    }catch(e){
+      setStatus("UNKNOWN", "Kunde inte kontrolleras");
+      $("resultText").textContent = "Kunde inte kontrolleras vid kontrolltillfället.";
+      $("legalLine").textContent = "Detta är ett tekniskt fel. Ingen slutsats kan dras om bekräftelse.";
+      showWarn(`<b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>Försök igen eller öppna verifiering: <a href="${verifyLink}">${verifyLink}</a>`);
+      return;
+    }
 
-      const id = await sha256Hex(currentFile);
-      if (myOp !== opId) return;
+    const statusCode = safeText(v?.statusCode, "UNKNOWN");
+    const statusText = safeText(v?.statusText, "Kunde inte kontrolleras");
+    const legalText  = safeText(v?.legalText, "");
+    const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
-      if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt Verifierings-ID.");
+    // tech
+    const observedPoint = safeText(v?.evidence?.observedBlockNumber, "—");
+    const registrationRef = safeText(v?.submission?.txHash, "—");
+    $("observedPoint").textContent = observedPoint;
+    $("registrationRef").textContent = registrationRef;
+    updateTechVisibility(observedPoint, registrationRef);
 
-      currentId = id;
-      currentLink = buildVerifyLink(id);
+    // badge
+    if (statusCode === "CONFIRMED") setStatus("CONFIRMED", "Bekräftad");
+    else if (statusCode === "SUBMITTED_UNCONFIRMED") setStatus("SUBMITTED_UNCONFIRMED", "Inskickad – ej bekräftad");
+    else if (statusCode === "NOT_CONFIRMED") setStatus("NOT_CONFIRMED", "Ej bekräftad");
+    else setStatus("UNKNOWN", "Kunde inte kontrolleras");
 
-      if (emptyState) emptyState.style.display = "none";
+    $("resultText").textContent = statusText;
 
-      localIdBox.style.display = "block";
-      localIdOut.textContent = id;
-
-      copyTextToClipboard(id).then((ok) => {
-        if (ok) {
-          showPill(copyIdPill, "Verifierings-ID kopierat");
-          setTimeout(() => hidePill(copyIdPill), 1200);
-        }
-      });
-
-      resultBox.style.display = "block";
-      idOut.textContent = id;
-      linkOut.textContent = currentLink;
-      linkOut.href = currentLink;
-
-      if (receiptBtn){
-        receiptBtn.href = `/certificate?hash=${encodeURIComponent(id)}`;
-        receiptBtn.style.display = "inline-flex";
-        lastProofyStatusCode = "NOT_CONFIRMED";
-        updateReceiptLabel();
-      }
-
-      setPill("Skapat lokalt ✅");
-
-      if (qrTap) qrTap.style.display = "grid";
-      requestAnimationFrame(() => renderQr(qrBox, currentLink));
-
-      applyCopyHover(idOut, copyIdIconBtn, true);
-      applyCopyHover(linkOut, copyLinkIconBtn, true);
-
-      attachLongPressCopyOnce(linkOut, () => currentLink, async () => {
-        await copyWithFeedback({ text: currentLink, pillEl: copyLinkPill, okText: "Länk kopierad ✅" });
-      });
-
-      attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
-
-      setBusy(false);
-
-      setPill("Skickar in… (ej bekräftad)");
-      regStatusOut.textContent = "Skickar in… (ej bekräftad)";
-      timeOut.textContent = "—";
-      headline.style.borderColor = "rgba(255,255,255,.14)";
-      headline.style.background = "rgba(255,255,255,.05)";
-      headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
-
-      const reg = await safeRegisterRequest(id);
-      if (myOp !== opId) return;
-
-      if (!reg.ok){
-        const msg = "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade lokalt. Försök igen senare eller kontakta Proofy och ange Verifierings-ID.";
-        throw new Error(msg);
-      }
-
-      const data = reg.data || {};
-      applyStatusToUI({ id, createdSe, data });
-
-      const txHash = data?.submission?.txHash || null;
-      if (txHash) {
-        currentLink = `${buildVerifyLink(id)}&tx=${encodeURIComponent(txHash)}`;
-
-        linkOut.textContent = currentLink;
-        linkOut.href = currentLink;
-
-        if (qrTap) qrTap.style.display = "grid";
-        requestAnimationFrame(() => renderQr(qrBox, currentLink));
-      }
-
-      if (txHash) {
-        headline.style.borderColor = "rgba(255,255,255,.14)";
-        headline.style.background = "rgba(255,255,255,.05)";
-        headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
-        regStatusOut.textContent = "Inskickad – ej bekräftad";
-        pollTxAndVerify(myOp, id, txHash, createdSe);
+    // legal line
+    if (legalText){
+      $("legalLine").textContent = legalText;
+    } else {
+      if (statusCode === "CONFIRMED"){
+        $("legalLine").textContent = "Status är bekräftad vid kontrolltillfället.";
+      } else if (statusCode === "SUBMITTED_UNCONFIRMED"){
+        $("legalLine").textContent = "En registrering är inskickad men ännu ej bekräftad. Intyget visar inte 'bekräftad' innan bekräftelse finns.";
+      } else if (statusCode === "NOT_CONFIRMED"){
+        $("legalLine").textContent = "Ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
       } else {
-        debugOut.textContent = debugOut.textContent || "Ingen registreringsreferens kunde visas. Du kan kontrollera via verifiering senare.";
+        $("legalLine").textContent = "Status kunde inte kontrolleras vid kontrolltillfället. Ingen slutsats kan dras om bekräftelse.";
       }
-
-      setPill("Skapat lokalt ✅");
-      setBusy(false);
-
-    } catch (e){
-      console.error(e);
-      if (myOp !== opId) return;
-
-      errorBox.style.display = "block";
-      errorMsg.textContent = (e?.message || "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade.");
-
-      if (currentId && currentLink){
-        resultBox.style.display = "block";
-        if (emptyState) emptyState.style.display = "none";
-
-        regStatusOut.textContent = "Kunde inte kontrolleras (ej bekräftad)";
-        timeOut.textContent = "—";
-
-        headline.style.borderColor = "rgba(255,80,80,.20)";
-        headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(ID/länk är skapade lokalt)</span>`;
-
-        debugOut.textContent = errorMsg.textContent;
-        txOut.textContent = "—";
-        submitterOut.textContent = "—";
-
-        lastProofyStatusCode = "UNKNOWN";
-        updateReceiptLabel();
-
-        if (qrTap) qrTap.style.display = "grid";
-        requestAnimationFrame(() => renderQr(qrBox, currentLink));
-        attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
-
-        if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-        lastRun = lastRun || {
-          id: currentId,
-          link: currentLink,
-          createdSe: nowSe(),
-          statusLine: "Kunde inte kontrolleras",
-          timeSe: null,
-          txHash: null,
-          observedBlockNumber: null
-        };
-
-        setBusy(false);
-      }
-
-      setPill("Skapat lokalt ✅");
-      setBusy(false);
-    }
-  });
-
-  function setManualState(id){
-    const clean = (id || "").trim();
-    if (!/^0x[0-9a-fA-F]{64}$/.test(clean)){
-      manualCurrentLink = null;
-      manualLinkOut.textContent = "—";
-      manualLinkOut.href = "#";
-      manualQrBox.innerHTML = "";
-      if (manualQrTap) manualQrTap.style.display = "none";
-      manualCopyLinkBtn.disabled = true;
-      manualVerifyBtn.href = "/verify";
-      manualVerifyBtn.style.pointerEvents = "none";
-      manualVerifyBtn.style.opacity = ".55";
-      setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
-      return null;
     }
 
-    const link = buildVerifyLink(clean);
-    manualCurrentLink = link;
+    // confirmed time
+    if (statusCode === "CONFIRMED" && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
+      $("regLocal").innerHTML = fmtSeHtml(confirmedAtUnix);
+      $("regUtc").textContent = fmtUtc(confirmedAtUnix);
+      return;
+    }
 
-    manualLinkOut.textContent = link;
-    manualLinkOut.href = link;
+    $("regLocal").textContent = "—";
+    $("regUtc").textContent = "—";
 
-    if (manualQrTap) manualQrTap.style.display = "grid";
-    requestAnimationFrame(() => renderQr(manualQrBox, link));
+    if (statusCode === "SUBMITTED_UNCONFIRMED"){
+      showWarn(`<b>Inskickad – ej bekräftad.</b><br/>Intyget kan inte redovisa bekräftelse innan status är bekräftad.`);
+      return;
+    }
+    if (statusCode === "NOT_CONFIRMED"){
+      showWarn(`<b>Ej bekräftad.</b><br/>Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/Verifierings-ID används och uppdatera vid behov.`);
+      return;
+    }
 
-    manualCopyLinkBtn.disabled = false;
-    manualVerifyBtn.href = link;
-    manualVerifyBtn.style.pointerEvents = "auto";
-    manualVerifyBtn.style.opacity = "1";
-    setManualPill("Redo ✅");
-
-    return link;
+    showWarn(`<b>Kunde inte kontrolleras.</b><br/>Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.`);
   }
 
-  attachLongPressCopyOnce(manualLinkOut, () => manualCurrentLink, async () => {
-    if (!manualCurrentLink) return;
-    setManualPill("Länk kopierad ✅");
-    setTimeout(() => setManualPill("Redo ✅"), 1200);
-  });
-  attachQrCopyOnce(manualQrTap, () => manualCurrentLink, manualPill);
-
-  manualId.addEventListener("input", () => setManualState(manualId.value));
-
-  manualCopyLinkBtn.addEventListener("click", async () => {
-    const link = setManualState(manualId.value);
-    if (!link) return;
-    const ok = await copyTextToClipboard(link);
-    setManualPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
-    setTimeout(() => setManualPill("Redo ✅"), 1200);
-  });
-
-  resetReport();
-  setFile(null);
-  setBusy(false);
-  setManualState("");
+  run();
 })();
 </script>
 
