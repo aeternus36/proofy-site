@@ -46,9 +46,6 @@
       background: rgba(255,255,255,.05);
     }
 
-    /* VIKTIGT: ta inte bort via CSS – JS visar denna när länken finns */
-    /* #nextStepBtn { display:none; } */
-
     .btn.softSecondary{
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.12);
@@ -56,14 +53,12 @@
 
     #manualBuildBtn { display:none !important; }
 
-    /* UX: sekundär handling – ska inte konkurrera med verifiering */
     #receiptBtn{
       background: rgba(255,255,255,.04) !important;
       border: 1px solid rgba(255,255,255,.12) !important;
       color: rgba(234,240,255,.85) !important;
     }
 
-    /* ========= QR (matchar verify/certificate) ========= */
     .proofyQrTap{
       width:184px;
       height:184px;
@@ -74,7 +69,7 @@
       place-items:center;
       overflow:hidden;
       cursor:pointer;
-      padding:0 !important; /* viktigt: ingen padding som gör QR "större" */
+      padding:0 !important;
       -webkit-tap-highlight-color: transparent;
       user-select:none;
     }
@@ -108,8 +103,8 @@
 
       <div class="navActions" id="navActionsDesktop">
         <a class="btn isCurrent" aria-current="page">Skapa Verifierings-ID</a>
-        <a class="btn soft" href="/verify.html">Verifiera underlag</a>
-        <a class="btn soft" href="/pilot.html">Starta pilot</a>
+        <a class="btn soft" href="/verify">Verifiera underlag</a>
+        <a class="btn soft" href="/pilot">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
       </div>
 
@@ -119,16 +114,16 @@
         </summary>
 
         <nav class="mnavMenu" aria-label="Meny">
-          <a class="mnavLink" href="/register.html" aria-current="page">Skapa Verifierings-ID</a>
-          <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
-          <a class="mnavLink" href="/pilot.html">Starta pilot</a>
+          <a class="mnavLink" href="/register" aria-current="page">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/verify">Verifiera underlag</a>
+          <a class="mnavLink" href="/pilot">Starta pilot</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
 
           <div class="mnavMeta">
-            <a class="mnavLink" href="/security.html">Säkerhet</a>
-            <a class="mnavLink" href="/privacy.html">Integritet</a>
-            <a class="mnavLink" href="/terms.html">Villkor</a>
-            <a class="mnavLink" href="/cookies.html">Cookies</a>
+            <a class="mnavLink" href="/security">Säkerhet</a>
+            <a class="mnavLink" href="/privacy">Integritet</a>
+            <a class="mnavLink" href="/terms">Villkor</a>
+            <a class="mnavLink" href="/cookies">Cookies</a>
 
             <div class="mnavNote">Verifiering · revision · granskning</div>
             <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
@@ -153,7 +148,6 @@
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <!-- LEFT -->
         <section aria-label="Skapa via fil">
           <div style="font-weight:950; font-size:16px;">1. Välj referensunderlag</div>
 
@@ -180,7 +174,7 @@
 
           <div class="actions" style="margin-top:14px;">
             <div class="actionsRow" aria-label="Åtgärder">
-              <a class="btn primary" id="nextStepBtn" href="/verify.html">Gå till verifiering</a>
+              <a class="btn primary" id="nextStepBtn" href="/verify">Gå till verifiering</a>
               <button class="btn primary" id="createBtn" disabled>Skapa Verifierings-ID</button>
 
               <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Visa registreringsunderlag</a>
@@ -223,7 +217,6 @@
           </p>
         </section>
 
-        <!-- RIGHT -->
         <section aria-label="Registreringsrapport">
           <div style="font-weight:950; font-size:16px;">2. Registreringsrapport</div>
           <div class="hr"></div>
@@ -324,7 +317,6 @@
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
-                  <!-- MATCH verify/certificate -->
                   <div id="qrTap"
                        class="proofyQrTap"
                        role="button"
@@ -384,7 +376,6 @@
       </div>
     </div>
 
-    <!-- Manual -->
     <section style="margin-top:14px;">
       <div class="card content">
         <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
@@ -402,7 +393,7 @@
                 <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
 
                 <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
-                <a class="btn primary" id="manualVerifyBtn" href="/verify.html" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
+                <a class="btn primary" id="manualVerifyBtn" href="/verify" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
               </div>
 
               <div class="actionsMetaRow">
@@ -436,7 +427,6 @@
               <div>
                 <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
-                <!-- MATCH verify/certificate -->
                 <div id="manualQrTap"
                      class="proofyQrTap"
                      role="button"
@@ -477,10 +467,10 @@
         </div>
       </div>
       <div class="links">
-        <a href="/security.html">Säkerhet</a>
-        <a href="/privacy.html">Integritet</a>
-        <a href="/terms.html">Villkor</a>
-        <a href="/cookies.html">Cookies</a>
+        <a href="/security">Säkerhet</a>
+        <a href="/privacy">Integritet</a>
+        <a href="/terms">Villkor</a>
+        <a href="/cookies">Cookies</a>
         <a href="/#kontakt">Kontakt</a>
       </div>
     </div>
@@ -547,13 +537,11 @@
   let lastRun = null;
   let lastProofyStatusCode = "";
 
-  // polling state
+  let manualCurrentLink = null;
+
   let pollTimer = null;
   let pollStartAt = 0;
   let pollTxHash = null;
-
-  // one-time listener guards (för att undvika att samma listeners staplas)
-  const once = new WeakSet();
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -616,7 +604,6 @@
     return { ok: false, res: null, data: {}, attempt: attempts, aborted:false };
   }
 
-  // safe GET helper (for /api/tx and /api/verify)
   async function safeGetJson(url){
     const { res, data, aborted } = await fetchJsonWithTimeout(url, { method:"GET" }, 20000);
     if (!res || !res.ok || aborted) return { ok:false, res, data, aborted };
@@ -660,12 +647,10 @@
     busy = v;
     setAriaBusy(v);
 
-    // enable/disable
     createBtn.disabled = !currentFile || busy;
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
 
-    // UX: När länk finns -> visa "Gå till verifiering" och göm "Skapa ..."
     if (nextStepBtn){
       if (currentLink && !busy){
         nextStepBtn.href = currentLink;
@@ -683,10 +668,9 @@
       }
     }
 
-    // receipt as secondary
     if (receiptBtn){
       if (currentId && !busy){
-        receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(currentId)}`;
+        receiptBtn.href = `/certificate?hash=${encodeURIComponent(currentId)}`;
         receiptBtn.style.display = "inline-flex";
         updateReceiptLabel();
       } else {
@@ -738,8 +722,9 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
   }
 
+  /* ✅ Canonical routes (utan .html) */
   function buildVerifyLink(hash){
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}`;
+    return `${location.origin}/verify?hash=${encodeURIComponent(hash)}`;
   }
 
   function nowSe(){
@@ -761,17 +746,6 @@
       return new Date(n * 1000).toLocaleString("sv-SE");
     } catch {
       return null;
-    }
-  }
-
-  async function clipboardLikelyAllowed(){
-    // Undvik att trigga permissions-popups i onödan (t.ex. auto-copy efter skapande)
-    try{
-      if (!navigator.permissions || !navigator.clipboard) return false;
-      const p = await navigator.permissions.query({ name: "clipboard-write" });
-      return p && (p.state === "granted");
-    } catch {
-      return false;
     }
   }
 
@@ -846,62 +820,69 @@
     fieldEl.onblur = () => onLeave();
   }
 
+  function attachOnce(el, key, fn){
+    if (!el) return;
+    const k = "proofy_" + key;
+    if (el.dataset && el.dataset[k] === "1") return;
+    if (el.dataset) el.dataset[k] = "1";
+    fn();
+  }
+
   function attachLongPressCopyOnce(el, getText, onCopied){
-    if (!el || once.has(el)) return;
-    once.add(el);
+    if (!el) return;
 
-    let t = null;
-    let longPressed = false;
+    attachOnce(el, "longpress", () => {
+      let t = null;
+      let longPressed = false;
 
-    const start = (e) => {
-      longPressed = false;
-      t = setTimeout(async () => {
-        longPressed = true;
-        e.preventDefault();
-        const ok = await copyTextToClipboard(getText());
-        if (ok && onCopied) onCopied();
-      }, 450);
-    };
+      const start = (e) => {
+        longPressed = false;
+        t = setTimeout(async () => {
+          longPressed = true;
+          e.preventDefault();
+          const ok = await copyTextToClipboard(getText());
+          if (ok && onCopied) onCopied();
+        }, 450);
+      };
 
-    const end = () => {
-      if (t) clearTimeout(t);
-      t = null;
-    };
+      const end = () => {
+        if (t) clearTimeout(t);
+        t = null;
+      };
 
-    el.addEventListener("touchstart", start, { passive: false });
-    el.addEventListener("touchend", end);
-    el.addEventListener("touchcancel", end);
+      el.addEventListener("touchstart", start, { passive: false });
+      el.addEventListener("touchend", end);
+      el.addEventListener("touchcancel", end);
 
-    el.addEventListener("mousedown", start);
-    el.addEventListener("mouseup", end);
-    el.addEventListener("mouseleave", end);
+      el.addEventListener("mousedown", start);
+      el.addEventListener("mouseup", end);
+      el.addEventListener("mouseleave", end);
 
-    el.addEventListener("click", (e) => {
-      if (longPressed) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      el.addEventListener("click", (e) => {
+        if (longPressed) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      });
     });
   }
 
   function attachQrCopyOnce(qrTapEl, getLink, pillEl){
     if (!qrTapEl) return;
-    const key = qrTapEl; // same element guard
-    if (once.has(key)) return;
-    once.add(key);
 
-    const doCopy = async () => {
-      const link = getLink();
-      if (!link || link === "—") return;
-      await copyWithFeedback({ text: link, pillEl, okText: "Länk kopierad ✅" });
-    };
-    qrTapEl.onclick = (e) => { e.preventDefault(); doCopy(); };
-    qrTapEl.onkeydown = (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
-    };
+    attachOnce(qrTapEl, "qrcopy", () => {
+      const doCopy = async () => {
+        const link = getLink();
+        if (!link || link === "—") return;
+        await copyWithFeedback({ text: link, pillEl, okText: "Länk kopierad ✅" });
+      };
+      qrTapEl.onclick = (e) => { e.preventDefault(); doCopy(); };
+      qrTapEl.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+      };
+    });
   }
 
-  // --- QR helpers (matchar certificate/verify) ---
   function getCorrectLevelH(){
     if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) return window.QRCodeCorrectLevel.H;
     if (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) return window.QRCode.CorrectLevel.H;
@@ -1063,7 +1044,6 @@
         headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
         regStatusOut.textContent = "Kunde inte kontrolleras";
         timeOut.textContent = "—";
-        // fortsätt försöka ändå
       } else {
         const mined = !!txRes.data?.mined;
         if (!mined) {
@@ -1157,7 +1137,6 @@
   fileInput.addEventListener("change", () => {
     setFile(fileInput.files?.[0] || null);
 
-    // UX: auto-start after file selection (reduce one click)
     setTimeout(() => {
       if (currentFile && !busy) createBtn.click();
     }, 400);
@@ -1177,7 +1156,12 @@
     e.preventDefault();
     dropZone.classList.remove("drag");
     const f = e.dataTransfer?.files?.[0];
-    if (f) setFile(f);
+    if (f) {
+      setFile(f);
+      setTimeout(() => {
+        if (currentFile && !busy) createBtn.click();
+      }, 200);
+    }
   });
 
   if (localIdOut){
@@ -1346,15 +1330,11 @@
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
-      // VIKTIGT (UX): auto-copy bara om permission redan är GRANTED (annars triggas popup som känns “skumt”)
-      clipboardLikelyAllowed().then((allowed) => {
-        if (!allowed) return;
-        copyTextToClipboard(id).then((ok) => {
-          if (ok) {
-            showPill(copyIdPill, "Verifierings-ID kopierat");
-            setTimeout(() => hidePill(copyIdPill), 1200);
-          }
-        });
+      copyTextToClipboard(id).then((ok) => {
+        if (ok) {
+          showPill(copyIdPill, "Verifierings-ID kopierat");
+          setTimeout(() => hidePill(copyIdPill), 1200);
+        }
       });
 
       resultBox.style.display = "block";
@@ -1363,7 +1343,7 @@
       linkOut.href = currentLink;
 
       if (receiptBtn){
-        receiptBtn.href = `/certificate.html?hash=${encodeURIComponent(id)}`;
+        receiptBtn.href = `/certificate?hash=${encodeURIComponent(id)}`;
         receiptBtn.style.display = "inline-flex";
         lastProofyStatusCode = "NOT_CONFIRMED";
         updateReceiptLabel();
@@ -1385,7 +1365,6 @@
 
       setBusy(false);
 
-      // Register submit
       setPill("Skickar in… (ej bekräftad)");
       regStatusOut.textContent = "Skickar in… (ej bekräftad)";
       timeOut.textContent = "—";
@@ -1404,7 +1383,6 @@
       const data = reg.data || {};
       applyStatusToUI({ id, createdSe, data });
 
-      // om txHash finns -> uppdatera länken/QR så verify.html får tx
       const txHash = data?.submission?.txHash || null;
       if (txHash) {
         currentLink = `${buildVerifyLink(id)}&tx=${encodeURIComponent(txHash)}`;
@@ -1416,7 +1394,6 @@
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
       }
 
-      // polling bara om txHash finns
       if (txHash) {
         headline.style.borderColor = "rgba(255,255,255,.14)";
         headline.style.background = "rgba(255,255,255,.05)";
@@ -1480,13 +1457,14 @@
 
   function setManualState(id){
     const clean = (id || "").trim();
-    if (!isIdFormat(clean)){
+    if (!/^0x[0-9a-fA-F]{64}$/.test(clean)){
+      manualCurrentLink = null;
       manualLinkOut.textContent = "—";
       manualLinkOut.href = "#";
       manualQrBox.innerHTML = "";
       if (manualQrTap) manualQrTap.style.display = "none";
       manualCopyLinkBtn.disabled = true;
-      manualVerifyBtn.href = "/verify.html";
+      manualVerifyBtn.href = "/verify";
       manualVerifyBtn.style.pointerEvents = "none";
       manualVerifyBtn.style.opacity = ".55";
       setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
@@ -1494,6 +1472,8 @@
     }
 
     const link = buildVerifyLink(clean);
+    manualCurrentLink = link;
+
     manualLinkOut.textContent = link;
     manualLinkOut.href = link;
 
@@ -1509,12 +1489,12 @@
     return link;
   }
 
-  // attach once: long-press copy for manual link + qr copy
-  attachLongPressCopyOnce(manualLinkOut, () => manualLinkOut.textContent, async () => {
+  attachLongPressCopyOnce(manualLinkOut, () => manualCurrentLink, async () => {
+    if (!manualCurrentLink) return;
     setManualPill("Länk kopierad ✅");
     setTimeout(() => setManualPill("Redo ✅"), 1200);
   });
-  attachQrCopyOnce(manualQrTap, () => manualLinkOut.textContent, manualPill);
+  attachQrCopyOnce(manualQrTap, () => manualCurrentLink, manualPill);
 
   manualId.addEventListener("input", () => setManualState(manualId.value));
 
