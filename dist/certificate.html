@@ -2,8 +2,7 @@
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
-    <!-- viewport-fit=cover för safe-area på mobiler -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#0b1220" />
     <title>Proofy – Verifieringsintyg</title>
@@ -27,7 +26,7 @@
         --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 
-        /* QR */
+        /* QR (audit-safe) */
         --qr-dark:#0b1220;
         --qr-light:#ffffff;
         --qr-frame: rgba(255,255,255,.10);
@@ -43,18 +42,8 @@
         color:var(--text);
         font-family:var(--sans);
       }
+
       a{color:inherit}
-
-      /* Viktigt: ge sidan bottenutrymme så fixed widget inte täcker innehåll */
-      main{
-        max-width:1100px;
-        margin:0 auto;
-        padding:10px 18px 48px;
-
-        /* extra botten-padding för chat-knapp/panel + safe-area */
-        padding-bottom: calc(48px + 110px + env(safe-area-inset-bottom, 0px));
-      }
-
       .skip{
         position:absolute; left:-9999px; top:auto;
         width:1px; height:1px; overflow:hidden;
@@ -70,6 +59,14 @@
         outline: 2px solid rgba(110,168,255,.55);
         outline-offset: 3px;
         border-radius: 14px;
+      }
+
+      /* Viktigt: reservera lite extra bottenutrymme på just intygssidan också
+         (utöver global lösning i proofy.css) */
+      main{
+        max-width:1100px;
+        margin:0 auto;
+        padding:10px 18px calc(48px + var(--proofy-fab-space, 0px));
       }
 
       .pill{
@@ -194,17 +191,8 @@
         color:rgba(234,240,255,.92);
       }
 
-      /* MOBIL-FIX: låt copy-knappen hoppa ner vid behov istället för att överlappa */
       .row{
-        display:flex;
-        align-items:flex-start;
-        justify-content:space-between;
-        gap:10px;
-        flex-wrap:wrap;         /* <-- viktigt */
-      }
-      .row .mono{
-        flex: 1 1 220px;        /* <-- ger utrymme */
-        min-width: 0;           /* <-- hindrar overflow */
+        display:flex; align-items:center; justify-content:space-between; gap:10px;
       }
 
       .copyBtn{
@@ -258,6 +246,7 @@
         border:1px solid rgba(0,0,0,.10);
         display:grid; place-items:center;
       }
+
       #qrcode{
         width:168px; height:168px;
         display:grid; place-items:center;
@@ -347,6 +336,22 @@
     </style>
 
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
+
+    <!-- ✅ HARDTEST: Canonical redirect om någon öppnar /certificate (men undvik loop/flimmer) -->
+    <script>
+      (function(){
+        try{
+          var p = location.pathname || "";
+          // Endast exakt /certificate eller /certificate/ (inte "endsWith", för att undvika oväntade matcher)
+          if (p === "/certificate" || p === "/certificate/") {
+            // enkel loop-säkring
+            if (sessionStorage.getItem("__proofy_cert_redirected") === "1") return;
+            sessionStorage.setItem("__proofy_cert_redirected","1");
+            location.replace("/certificate.html" + (location.search || "") + (location.hash || ""));
+          }
+        }catch(e){}
+      })();
+    </script>
   </head>
 
   <body>
@@ -773,6 +778,7 @@
 
         $("certLink").textContent = certLink;
         $("verifyLink").textContent = verifyLink;
+
         $("btnOpenVerify").href = verifyLink;
 
         $("btnPrint").onclick = () => window.print();
@@ -885,16 +891,25 @@
         $("regUtc").textContent = "—";
 
         if (statusCode === "SUBMITTED_UNCONFIRMED"){
-          showWarn(`<b>Inskickad – ej bekräftad.</b><br/>Intyget kan inte redovisa bekräftelse innan status är bekräftad.`);
+          showWarn(`
+            <b>Inskickad – ej bekräftad.</b><br/>
+            Intyget kan inte redovisa bekräftelse innan status är bekräftad.
+          `);
           return;
         }
 
         if (statusCode === "NOT_CONFIRMED"){
-          showWarn(`<b>Ej bekräftad.</b><br/>Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/Verifierings-ID används och uppdatera vid behov.`);
+          showWarn(`
+            <b>Ej bekräftad.</b><br/>
+            Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/Verifierings-ID används och uppdatera vid behov.
+          `);
           return;
         }
 
-        showWarn(`<b>Kunde inte kontrolleras.</b><br/>Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.`);
+        showWarn(`
+          <b>Kunde inte kontrolleras.</b><br/>
+          Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.
+        `);
       }
 
       run();
