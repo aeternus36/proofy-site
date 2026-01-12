@@ -2,12 +2,13 @@
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
+    <!-- viewport-fit=cover för safe-area på mobiler -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#0b1220" />
     <title>Proofy – Verifieringsintyg</title>
 
-    <!-- Bas-styling som register/verify -->
+    <!-- Bas-styling -->
     <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
     <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
@@ -26,15 +27,11 @@
         --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 
-        /* QR (audit-safe) */
+        /* QR */
         --qr-dark:#0b1220;
         --qr-light:#ffffff;
         --qr-frame: rgba(255,255,255,.10);
         --qr-shadow: 0 14px 42px rgba(0,0,0,.35);
-
-        /* ✅ Mobil-safe bottenyta så fixed widget aldrig täcker innehåll */
-        --safe-bottom: env(safe-area-inset-bottom, 0px);
-        --chat-safe: calc(120px + var(--safe-bottom));
       }
 
       *{box-sizing:border-box}
@@ -45,12 +42,19 @@
                     var(--bg);
         color:var(--text);
         font-family:var(--sans);
+      }
+      a{color:inherit}
 
-        /* ✅ Reservyta under allt innehåll */
-        padding-bottom: var(--chat-safe);
+      /* Viktigt: ge sidan bottenutrymme så fixed widget inte täcker innehåll */
+      main{
+        max-width:1100px;
+        margin:0 auto;
+        padding:10px 18px 48px;
+
+        /* extra botten-padding för chat-knapp/panel + safe-area */
+        padding-bottom: calc(48px + 110px + env(safe-area-inset-bottom, 0px));
       }
 
-      a{color:inherit}
       .skip{
         position:absolute; left:-9999px; top:auto;
         width:1px; height:1px; overflow:hidden;
@@ -66,12 +70,6 @@
         outline: 2px solid rgba(110,168,255,.55);
         outline-offset: 3px;
         border-radius: 14px;
-      }
-
-      main{
-        max-width:1100px;
-        margin:0 auto;
-        padding:10px 18px 48px;
       }
 
       .pill{
@@ -196,17 +194,17 @@
         color:rgba(234,240,255,.92);
       }
 
-      /* ✅ Mobil: låt copy-knapp hoppa rad vid behov, aldrig överlappa */
+      /* MOBIL-FIX: låt copy-knappen hoppa ner vid behov istället för att överlappa */
       .row{
         display:flex;
         align-items:flex-start;
         justify-content:space-between;
         gap:10px;
-        flex-wrap:wrap;
+        flex-wrap:wrap;         /* <-- viktigt */
       }
       .row .mono{
-        flex: 1 1 220px;
-        min-width: 0;
+        flex: 1 1 220px;        /* <-- ger utrymme */
+        min-width: 0;           /* <-- hindrar overflow */
       }
 
       .copyBtn{
@@ -260,7 +258,6 @@
         border:1px solid rgba(0,0,0,.10);
         display:grid; place-items:center;
       }
-
       #qrcode{
         width:168px; height:168px;
         display:grid; place-items:center;
@@ -322,18 +319,9 @@
         overflow-wrap:normal;
       }
 
-      /* ✅ Print: göm allt som kan störa PDF (inkl chat-widget) */
       @media print{
         header, .actions, #warnBox, details.tech { display:none !important; }
-
-        /* Chat widget (oavsett om den laddas eller inte) */
-        .proofy-chat-btn, .proofy-panel { display:none !important; }
-
-        body{
-          padding-bottom: 0 !important;
-          background:#fff !important;
-          color:#000 !important;
-        }
+        body{ background:#fff !important; color:#000 !important; }
         .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
         .pill, .statusBadge, .val { border-color:#ddd !important; background:#fff !important; }
         .lead, .note, .fine, .small, .footer { color:#111 !important; }
@@ -359,18 +347,6 @@
     </style>
 
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
-
-    <!-- ✅ HARDTEST: Canonical redirect om någon öppnar /certificate?... -->
-    <script>
-      (function(){
-        try{
-          var p = location.pathname || "";
-          if (p === "/certificate" || p === "/certificate/" || p.endsWith("/certificate")) {
-            location.replace("/certificate.html" + (location.search || "") + (location.hash || ""));
-          }
-        }catch(e){}
-      })();
-    </script>
   </head>
 
   <body>
@@ -783,8 +759,8 @@
 
         const url = new URL(location.href);
         const hash = (url.searchParams.get("hash") || "").trim();
-        const tx = (url.searchParams.get("tx") || "").trim();     // valfritt, för hardtest-spårning
-        const certId = (url.searchParams.get("cert") || "").trim(); // valfritt
+        const tx = (url.searchParams.get("tx") || "").trim();
+        const certId = (url.searchParams.get("cert") || "").trim();
 
         const checkedParam = (url.searchParams.get("checked") || "").trim();
         const checked = (() => {
@@ -792,13 +768,11 @@
           return Number.isFinite(n) && n > 0 ? Math.floor(n) : nowSeconds();
         })();
 
-        // ✅ HARDTEST: bygg alltid mot canonical fil
         const certLink = `${location.origin}/certificate.html?hash=${encodeURIComponent(hash)}&checked=${checked}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}${certId ? `&cert=${encodeURIComponent(certId)}` : ""}`;
         const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`;
 
         $("certLink").textContent = certLink;
         $("verifyLink").textContent = verifyLink;
-
         $("btnOpenVerify").href = verifyLink;
 
         $("btnPrint").onclick = () => window.print();
@@ -911,78 +885,22 @@
         $("regUtc").textContent = "—";
 
         if (statusCode === "SUBMITTED_UNCONFIRMED"){
-          showWarn(`
-            <b>Inskickad – ej bekräftad.</b><br/>
-            Intyget kan inte redovisa bekräftelse innan status är bekräftad.
-          `);
+          showWarn(`<b>Inskickad – ej bekräftad.</b><br/>Intyget kan inte redovisa bekräftelse innan status är bekräftad.`);
           return;
         }
 
         if (statusCode === "NOT_CONFIRMED"){
-          showWarn(`
-            <b>Ej bekräftad.</b><br/>
-            Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/Verifierings-ID används och uppdatera vid behov.
-          `);
+          showWarn(`<b>Ej bekräftad.</b><br/>Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/Verifierings-ID används och uppdatera vid behov.`);
           return;
         }
 
-        showWarn(`
-          <b>Kunde inte kontrolleras.</b><br/>
-          Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.
-        `);
+        showWarn(`<b>Kunde inte kontrolleras.</b><br/>Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.`);
       }
 
       run();
     </script>
 
     <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
-
-    <!-- ✅ Chat-widget: dynamisk last + aldrig i print/PDF -->
-    <script>
-      (function(){
-        function hideChatNow(){
-          try{
-            var btn = document.querySelector(".proofy-chat-btn");
-            var panel = document.querySelector(".proofy-panel");
-            if (btn) btn.style.display = "none";
-            if (panel) panel.style.display = "none";
-          }catch(e){}
-        }
-
-        function loadChatIfAllowed(){
-          // Om vi redan är i print-läge: ladda inte alls.
-          try{
-            if (window.matchMedia && window.matchMedia("print").matches) {
-              hideChatNow();
-              return;
-            }
-          }catch(e){}
-
-          if (document.getElementById("proofy-chat-script")) return;
-
-          var s = document.createElement("script");
-          s.id = "proofy-chat-script";
-          s.src = "/chat-widget.js?v=2026-01-03a";
-          s.defer = true;
-          document.body.appendChild(s);
-        }
-
-        window.addEventListener("beforeprint", hideChatNow);
-        window.addEventListener("afterprint", function(){ /* inget: widget dyker upp igen vid normal vy */ });
-
-        // matchMedia-print för vissa mobiler/browsers
-        try{
-          var mql = window.matchMedia && window.matchMedia("print");
-          if (mql){
-            var onChange = function(e){ if (e.matches) hideChatNow(); };
-            if (mql.addEventListener) mql.addEventListener("change", onChange);
-            else if (mql.addListener) mql.addListener(onChange);
-          }
-        }catch(e){}
-
-        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", loadChatIfAllowed);
-        else loadChatIfAllowed();
-      })();
-    </script>
+    <script src="/chat-widget.js?v=2026-01-03a" defer></script>
   </body>
 </html>
