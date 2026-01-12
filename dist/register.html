@@ -547,6 +547,9 @@
   let lastRun = null;
   let lastProofyStatusCode = "";
 
+  // manual state (för att slippa re-attach på varje input)
+  let manualCurrentLink = null;
+
   // polling state
   let pollTimer = null;
   let pollStartAt = 0;
@@ -662,7 +665,7 @@
     copyIdBtn.disabled = !currentId || busy;
     copyLinkBtn.disabled = !currentLink || busy;
 
-    // UX: När länk finns -> visa "Gå till verifiering" och göm "Skapa ..." (ingen "Skapa nytt")
+    // UX: När länk finns -> visa "Gå till verifiering" och göm "Skapa ..."
     if (nextStepBtn){
       if (currentLink && !busy){
         nextStepBtn.href = currentLink;
@@ -832,61 +835,73 @@
     fieldEl.onblur = () => onLeave();
   }
 
-  function attachLongPressCopy(el, getText, onCopied){
+  // ---- attach-once helpers (fixar att input/poll inte bygger på sig lyssnare) ----
+  function attachOnce(el, key, fn){
+    if (!el) return;
+    const k = "proofy_" + key;
+    if (el.dataset && el.dataset[k] === "1") return;
+    if (el.dataset) el.dataset[k] = "1";
+    fn();
+  }
+
+  function attachLongPressCopyOnce(el, getText, onCopied){
     if (!el) return;
 
-    let t = null;
-    let longPressed = false;
+    attachOnce(el, "longpress", () => {
+      let t = null;
+      let longPressed = false;
 
-    const start = (e) => {
-      longPressed = false;
-      t = setTimeout(async () => {
-        longPressed = true;
-        e.preventDefault();
-        const ok = await copyTextToClipboard(getText());
-        if (ok && onCopied) onCopied();
-      }, 450);
-    };
+      const start = (e) => {
+        longPressed = false;
+        t = setTimeout(async () => {
+          longPressed = true;
+          e.preventDefault();
+          const ok = await copyTextToClipboard(getText());
+          if (ok && onCopied) onCopied();
+        }, 450);
+      };
 
-    const end = () => {
-      if (t) clearTimeout(t);
-      t = null;
-    };
+      const end = () => {
+        if (t) clearTimeout(t);
+        t = null;
+      };
 
-    el.addEventListener("touchstart", start, { passive: false });
-    el.addEventListener("touchend", end);
-    el.addEventListener("touchcancel", end);
+      el.addEventListener("touchstart", start, { passive: false });
+      el.addEventListener("touchend", end);
+      el.addEventListener("touchcancel", end);
 
-    el.addEventListener("mousedown", start);
-    el.addEventListener("mouseup", end);
-    el.addEventListener("mouseleave", end);
+      el.addEventListener("mousedown", start);
+      el.addEventListener("mouseup", end);
+      el.addEventListener("mouseleave", end);
 
-    el.addEventListener("click", (e) => {
-      if (longPressed) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      el.addEventListener("click", (e) => {
+        if (longPressed) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      });
     });
   }
 
-  function attachQrCopy(qrTapEl, getLink, pillEl){
+  function attachQrCopyOnce(qrTapEl, getLink, pillEl){
     if (!qrTapEl) return;
-    const doCopy = async () => {
-      const link = getLink();
-      if (!link || link === "—") return;
-      await copyWithFeedback({ text: link, pillEl, okText: "Länk kopierad ✅" });
-    };
-    qrTapEl.onclick = (e) => { e.preventDefault(); doCopy(); };
-    qrTapEl.onkeydown = (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
-    };
+
+    attachOnce(qrTapEl, "qrcopy", () => {
+      const doCopy = async () => {
+        const link = getLink();
+        if (!link || link === "—") return;
+        await copyWithFeedback({ text: link, pillEl, okText: "Länk kopierad ✅" });
+      };
+      qrTapEl.onclick = (e) => { e.preventDefault(); doCopy(); };
+      qrTapEl.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+      };
+    });
   }
 
   // --- QR helpers (matchar certificate/verify) ---
   function getCorrectLevelH(){
-    // Proofy qr.min.js exponerar QRCodeCorrectLevel (som på cert-sidan)
     if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) return window.QRCodeCorrectLevel.H;
-    // Vissa builds exponerar QRCode.CorrectLevel
     if (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) return window.QRCode.CorrectLevel.H;
     return undefined;
   }
@@ -933,11 +948,10 @@
       return;
     }
 
-    const size = 168; // FIX: samma som certificate/verify
+    const size = 168;
 
     try {
       const levelH = getCorrectLevelH();
-      // Skapa instans och generera
       let qr = null;
       try{
         qr = new window.QRCode(targetEl);
@@ -1019,6 +1033,7 @@
 
       const elapsed = Date.now() - pollStartAt;
       if (elapsed > maxMs) {
+        stopPolling();
         lastProofyStatusCode = "NOT_CONFIRMED";
         updateReceiptLabel();
         debugOut.textContent = "Kontroll av registreringen kunde inte slutföras inom tidsgränsen. Du kan kontrollera igen via verifiering senare.";
@@ -1060,6 +1075,7 @@
           submitterOut.textContent = blockNo ? String(blockNo) : (submitterOut.textContent || "—");
 
           if (st === "reverted") {
+            stopPolling();
             lastProofyStatusCode = "UNKNOWN";
             updateReceiptLabel();
             headline.style.borderColor = "rgba(255,80,80,.20)";
@@ -1068,7 +1084,7 @@
             regStatusOut.textContent = "Kunde inte kontrolleras";
             timeOut.textContent = "—";
             debugOut.textContent = "Försöket misslyckades. Ingen notering kan påvisas för detta försök. Du kan försöka igen eller kontakta Proofy och ange registreringsreferensen.";
-            return; // stop polling
+            return;
           }
 
           const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
@@ -1087,6 +1103,7 @@
             applyStatusToUI({ id, createdSe, data: ver.data });
 
             if (String(ver.data?.statusCode || "") === "CONFIRMED") {
+              stopPolling();
               return;
             }
           }
@@ -1138,7 +1155,7 @@
   fileInput.addEventListener("change", () => {
     setFile(fileInput.files?.[0] || null);
 
-    // UX: auto-start after file selection (reduce one click)
+    // UX: auto-start after file selection
     setTimeout(() => {
       if (currentFile && !busy) createBtn.click();
     }, 400);
@@ -1158,7 +1175,13 @@
     e.preventDefault();
     dropZone.classList.remove("drag");
     const f = e.dataTransfer?.files?.[0];
-    if (f) setFile(f);
+    if (f) {
+      setFile(f);
+      // valfritt: starta direkt även på drop (matchar filval)
+      setTimeout(() => {
+        if (currentFile && !busy) createBtn.click();
+      }, 200);
+    }
   });
 
   if (localIdOut){
@@ -1327,7 +1350,7 @@
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
 
-      // UX: auto-copy Verifierings-ID when created (reduce one click)
+      // Auto-copy efter klick (gest) – kan trigga permission-prompt, men är UX-vinst.
       copyTextToClipboard(id).then((ok) => {
         if (ok) {
           showPill(copyIdPill, "Verifierings-ID kopierat");
@@ -1355,11 +1378,12 @@
       applyCopyHover(idOut, copyIdIconBtn, true);
       applyCopyHover(linkOut, copyLinkIconBtn, true);
 
-      attachLongPressCopy(linkOut, () => currentLink, async () => {
+      // Viktigt: attach bara en gång (annars dubblas listeners vid flera körningar)
+      attachLongPressCopyOnce(linkOut, () => currentLink, async () => {
         await copyWithFeedback({ text: currentLink, pillEl: copyLinkPill, okText: "Länk kopierad ✅" });
       });
 
-      attachQrCopy(qrTap, () => currentLink, copyLinkPill);
+      attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
 
       setBusy(false);
 
@@ -1406,7 +1430,7 @@
       }
 
       setPill("Skapat lokalt ✅");
-      setBusy(false); // <- detta kommer nu att gömma createBtn och visa nextStepBtn
+      setBusy(false); // göm createBtn, visa nextStepBtn när länk finns
 
     } catch (e){
       console.error(e);
@@ -1435,7 +1459,7 @@
 
         if (qrTap) qrTap.style.display = "grid";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
-        attachQrCopy(qrTap, () => currentLink, copyLinkPill);
+        attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
 
         if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
         lastRun = lastRun || {
@@ -1459,6 +1483,7 @@
   function setManualState(id){
     const clean = (id || "").trim();
     if (!isIdFormat(clean)){
+      manualCurrentLink = null;
       manualLinkOut.textContent = "—";
       manualLinkOut.href = "#";
       manualQrBox.innerHTML = "";
@@ -1472,6 +1497,8 @@
     }
 
     const link = buildVerifyLink(clean);
+    manualCurrentLink = link;
+
     manualLinkOut.textContent = link;
     manualLinkOut.href = link;
 
@@ -1484,14 +1511,16 @@
     manualVerifyBtn.style.opacity = "1";
     setManualPill("Redo ✅");
 
-    attachLongPressCopy(manualLinkOut, () => link, async () => {
-      setManualPill("Länk kopierad ✅");
-      setTimeout(() => setManualPill("Redo ✅"), 1200);
-    });
-
-    attachQrCopy(manualQrTap, () => link, manualPill);
     return link;
   }
+
+  // attach manual copy/QR endast en gång (fixar re-attach vid varje input)
+  attachLongPressCopyOnce(manualLinkOut, () => manualCurrentLink, async () => {
+    if (!manualCurrentLink) return;
+    setManualPill("Länk kopierad ✅");
+    setTimeout(() => setManualPill("Redo ✅"), 1200);
+  });
+  attachQrCopyOnce(manualQrTap, () => manualCurrentLink, manualPill);
 
   manualId.addEventListener("input", () => setManualState(manualId.value));
 
