@@ -1,197 +1,89 @@
-/* proofy-chat-widget.js
-   Audit-safe, mobile-safe, single-init chat widget
-*/
 (() => {
   function init() {
     if (window.__proofyChatWidgetInit) return;
     window.__proofyChatWidgetInit = true;
 
-    // Mark document so pages can reserve space
-    document.documentElement.classList.add("has-proofy-chat");
+    // ✅ Reservera plats längst ner så content inte hamnar under "Fråga oss"
+    // 96px funkar väl för knappens höjd + marginaler (och safe-area adderas i CSS)
+    try {
+      document.documentElement.style.setProperty("--proofy-fab-space", "96px");
+    } catch {}
 
     const chatHistory = [];
     let isOpen = false;
 
-    /* =========================
-       Inject CSS (once)
-       ========================= */
     if (!document.getElementById("proofy-chat-style")) {
       const style = document.createElement("style");
       style.id = "proofy-chat-style";
       style.textContent = `
-:root{
-  --proofy-chat-safe: calc(110px + env(safe-area-inset-bottom, 0px));
-}
+      /* ✅ Widget ska aldrig störa utskrift */
+      @media print{
+        .proofy-chat-btn,.proofy-panel{display:none!important}
+        :root{ --proofy-fab-space: 0px !important; }
+      }
 
-/* Reserve space so content is never covered */
-html.has-proofy-chat body{
-  padding-bottom: var(--proofy-chat-safe);
-}
+      .proofy-chat-btn{
+        position:fixed;
+        bottom:calc(20px + env(safe-area-inset-bottom, 0px));
+        right:20px;
+        z-index:9999;
+        padding:12px 16px;
+        border-radius:999px;
+        border:none;
+        cursor:pointer;
+        background:linear-gradient(135deg,#6ee7b7,#3b82f6);
+        color:#0b1020;
+        font-weight:800;
+        box-shadow:0 10px 30px rgba(0,0,0,.25);
+      }
 
-/* Chat launcher button */
-.proofy-chat-btn{
-  position:fixed;
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  right:20px;
-  z-index:9999;
-  padding:12px 16px;
-  border-radius:999px;
-  border:none;
-  cursor:pointer;
-  background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-  color:#0b1020;
-  font-weight:800;
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
-}
+      .proofy-panel{
+        position:fixed;
+        bottom:calc(86px + env(safe-area-inset-bottom, 0px));
+        right:20px;
+        z-index:9999;
+        width:min(380px, calc(100vw - 40px));
+        height:min(560px, calc(100vh - 140px));
+        background:rgba(10,16,32,.92);
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:18px;
+        overflow:hidden;
+        box-shadow:0 20px 60px rgba(0,0,0,.45);
+        backdrop-filter: blur(10px);
+        display:none;
+        font-family:system-ui;
+        color:#eaf1ff;
+      }
 
-/* Chat panel */
-.proofy-panel{
-  position:fixed;
-  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
-  right:20px;
-  z-index:9999;
-  width:min(380px, calc(100vw - 40px));
-  height:min(560px, calc(100vh - 140px));
-  background:rgba(10,16,32,.94);
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:18px;
-  overflow:hidden;
-  box-shadow:0 20px 60px rgba(0,0,0,.45);
-  backdrop-filter: blur(10px);
-  display:none;
-  font-family:system-ui;
-  color:#eaf1ff;
-}
-
-/* Header */
-.proofy-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px;
-  border-bottom:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.03);
-}
-.proofy-title{
-  font-weight:900;
-  font-size:14px;
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-.proofy-dot{
-  width:10px;
-  height:10px;
-  border-radius:999px;
-  background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-  box-shadow:0 0 0 3px rgba(110,231,183,.12);
-}
-.proofy-x{
-  width:34px;
-  height:34px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.04);
-  color:#eaf1ff;
-  cursor:pointer;
-}
-
-/* Body */
-.proofy-body{
-  padding:12px;
-  height:calc(100% - 56px - 64px);
-  overflow:auto;
-}
-.proofy-msg{
-  margin:10px 0;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.proofy-msg.user{ align-items:flex-end; }
-.proofy-msg.assistant{ align-items:flex-start; }
-
-.proofy-bubble{
-  max-width:85%;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.04);
-  line-height:1.35;
-  font-size:13px;
-  white-space:pre-wrap;
-}
-.proofy-msg.user .proofy-bubble{
-  background:rgba(59,130,246,.20);
-  border-color:rgba(59,130,246,.25);
-}
-
-/* CTAs */
-.proofy-ctas{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  max-width:85%;
-}
-.proofy-cta{
-  display:inline-flex;
-  align-items:center;
-  padding:9px 12px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:#eaf1ff;
-  text-decoration:none;
-  font-weight:900;
-  font-size:12px;
-  cursor:pointer;
-}
-.proofy-cta:hover{ background:rgba(255,255,255,.10); }
-
-/* Footer */
-.proofy-footer{
-  display:flex;
-  gap:8px;
-  padding:10px;
-  border-top:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.02);
-}
-.proofy-input{
-  flex:1;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.20);
-  color:#eaf1ff;
-  outline:none;
-}
-.proofy-send{
-  padding:10px 14px;
-  border-radius:12px;
-  border:none;
-  cursor:pointer;
-  background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-  color:#0b1020;
-  font-weight:900;
-}
-
-/* Small screens */
-@media (max-width:420px){
-  .proofy-chat-btn{ right:12px; }
-  .proofy-panel{ right:12px; }
-}
+      .proofy-header{
+        display:flex;align-items:center;justify-content:space-between;
+        padding:12px;border-bottom:1px solid rgba(255,255,255,.08);
+        background:rgba(255,255,255,.03);
+      }
+      .proofy-title{font-weight:900;font-size:14px;display:flex;gap:10px;align-items:center;}
+      .proofy-dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(135deg,#6ee7b7,#3b82f6);box-shadow:0 0 0 3px rgba(110,231,183,.12);}
+      .proofy-x{width:34px;height:34px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:#eaf1ff;cursor:pointer;}
+      .proofy-body{padding:12px;height:calc(100% - 56px - 64px);overflow:auto;}
+      .proofy-msg{margin:10px 0;display:flex;flex-direction:column;gap:8px;}
+      .proofy-msg.user{align-items:flex-end;}
+      .proofy-msg.assistant{align-items:flex-start;}
+      .proofy-bubble{max-width:85%;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);line-height:1.35;font-size:13px;white-space:pre-wrap;}
+      .proofy-msg.user .proofy-bubble{background:rgba(59,130,246,.20);border-color:rgba(59,130,246,.25);}
+      .proofy-ctas{display:flex;gap:8px;flex-wrap:wrap;max-width:85%;}
+      .proofy-cta{display:inline-flex;align-items:center;padding:9px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#eaf1ff;text-decoration:none;font-weight:900;font-size:12px;cursor:pointer;}
+      .proofy-cta:hover{background:rgba(255,255,255,.10);}
+      .proofy-footer{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);}
+      .proofy-input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);color:#eaf1ff;outline:none;}
+      .proofy-send{padding:10px 14px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(135deg,#6ee7b7,#3b82f6);color:#0b1020;font-weight:900;}
       `;
       document.head.appendChild(style);
     }
 
-    /* =========================
-       Create button & panel
-       ========================= */
     let button = document.querySelector(".proofy-chat-btn");
     if (!button) {
       button = document.createElement("button");
       button.className = "proofy-chat-btn";
-      button.textContent = "Fråga oss";
+      button.innerText = "Fråga oss";
       document.body.appendChild(button);
     }
 
@@ -200,16 +92,16 @@ html.has-proofy-chat body{
       panel = document.createElement("div");
       panel.className = "proofy-panel";
       panel.innerHTML = `
-        <div class="proofy-header">
-          <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
-          <button class="proofy-x" aria-label="Stäng">✕</button>
-        </div>
-        <div class="proofy-body"><div id="proofy-messages"></div></div>
-        <div class="proofy-footer">
-          <input class="proofy-input" placeholder="Skriv en fråga…" />
-          <button class="proofy-send">Skicka</button>
-        </div>
-      `;
+      <div class="proofy-header">
+        <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
+        <button class="proofy-x" aria-label="Stäng">✕</button>
+      </div>
+      <div class="proofy-body"><div id="proofy-messages"></div></div>
+      <div class="proofy-footer">
+        <input class="proofy-input" placeholder="Skriv en fråga..." />
+        <button class="proofy-send">Skicka</button>
+      </div>
+    `;
       document.body.appendChild(panel);
     }
 
@@ -217,7 +109,6 @@ html.has-proofy-chat body{
     const input = panel.querySelector(".proofy-input");
     const sendBtn = panel.querySelector(".proofy-send");
     const closeBtn = panel.querySelector(".proofy-x");
-
     if (!msgRoot || !input || !sendBtn || !closeBtn) return;
 
     function toggle(open) {
@@ -225,32 +116,119 @@ html.has-proofy-chat body{
       panel.style.display = isOpen ? "block" : "none";
       if (isOpen) input.focus();
     }
-
     button.onclick = () => toggle(true);
     closeBtn.onclick = () => toggle(false);
+
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && isOpen) toggle(false);
     });
 
     function addMessage(role, text) {
-      const w = document.createElement("div");
-      w.className = `proofy-msg ${role}`;
-      const b = document.createElement("div");
-      b.className = "proofy-bubble";
-      b.textContent = text || "";
-      w.appendChild(b);
-      msgRoot.appendChild(w);
-      panel.querySelector(".proofy-body").scrollTop =
-        panel.querySelector(".proofy-body").scrollHeight;
-      return w;
+      const wrapper = document.createElement("div");
+      wrapper.className = `proofy-msg ${role}`;
+      const bubble = document.createElement("div");
+      bubble.className = "proofy-bubble";
+      bubble.textContent = String(text || "");
+      wrapper.appendChild(bubble);
+      msgRoot.appendChild(wrapper);
+      const body = panel.querySelector(".proofy-body");
+      body.scrollTop = body.scrollHeight;
+      return wrapper;
+    }
+
+    function normalizeUrl(u) {
+      const s = String(u || "").trim();
+      if (!s) return "";
+      try {
+        const abs = new URL(s, location.origin);
+        if (abs.origin === location.origin) return abs.pathname + abs.search + abs.hash;
+        return abs.href;
+      } catch {
+        return s;
+      }
+    }
+
+    async function copyTextToClipboard(text) {
+      const t = String(text || "").trim();
+      if (!t) return false;
+      try {
+        await navigator.clipboard.writeText(t);
+        return true;
+      } catch {
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = t;
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          ta.style.top = "0";
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          return !!ok;
+        } catch {
+          return false;
+        }
+      }
+    }
+
+    function addCtas(wrapper, ctas) {
+      if (!Array.isArray(ctas) || !ctas.length) return;
+      const row = document.createElement("div");
+      row.className = "proofy-ctas";
+
+      ctas.slice(0, 3).forEach((c) => {
+        if (!c?.label) return;
+
+        if (c.action === "prompt" && c.prompt) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "proofy-cta";
+          b.textContent = c.label;
+          b.onclick = () => {
+            input.value = String(c.prompt || "");
+            input.focus();
+          };
+          row.appendChild(b);
+          return;
+        }
+
+        if (c.url) {
+          const a = document.createElement("a");
+          a.className = "proofy-cta";
+          a.href = normalizeUrl(c.url);
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = c.label;
+          row.appendChild(a);
+        }
+      });
+
+      if (row.childElementCount) wrapper.appendChild(row);
+    }
+
+    function stripKnownLinks(text) {
+      let t = String(text || "");
+      t = t.replace(/https?:\/\/[^\s)]+\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
+      t = t.replace(/\/(register\.html|verify\.html|index\.html)(\?[^\s)]*)?/gi, "");
+      t = t.replace(/\n{3,}/g, "\n\n").trim();
+      return t || "—";
+    }
+
+    function extractCopyableNote(text) {
+      const t = String(text || "").trim();
+      if (!t) return null;
+      if (!/^PROOFY\s*–\s*Verifieringsnotering/i.test(t)) return null;
+      return t;
     }
 
     async function send(text) {
-      const t = String(text || "").trim();
-      if (!t) return;
+      const trimmed = (text || "").trim();
+      if (!trimmed) return;
 
-      addMessage("user", t);
-      chatHistory.push({ role: "user", content: t });
+      addMessage("user", trimmed);
+      chatHistory.push({ role: "user", content: trimmed });
       input.value = "";
 
       const loading = addMessage("assistant", "…");
@@ -263,16 +241,43 @@ html.has-proofy-chat body{
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: chatHistory }),
         });
-        const data = await res.json().catch(() => null);
-        const answer =
-          data?.answer?.trim() ||
-          "Tekniskt fel. Mejla kontakt@proofy.se.";
 
+        const rawText = await res.text();
+        let data = null;
+        try { data = JSON.parse(rawText); } catch {}
+
+        const rawAnswer =
+          (data && typeof data.answer === "string" && data.answer.trim())
+            ? data.answer.trim()
+            : `Kunde inte läsa svaret. Status ${res.status}. Mejla kontakt@proofy.se.`;
+
+        const answer = stripKnownLinks(rawAnswer);
         loading.querySelector(".proofy-bubble").textContent = answer;
+
+        const baseCtas = Array.isArray(data?.ctas) ? data.ctas : [];
+        addCtas(loading, baseCtas);
+
+        const maybeNote = extractCopyableNote(answer);
+        if (maybeNote) {
+          const row = document.createElement("div");
+          row.className = "proofy-ctas";
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "proofy-cta";
+          b.textContent = "Kopiera notering";
+          b.onclick = async () => {
+            const ok = await copyTextToClipboard(maybeNote);
+            b.textContent = ok ? "Kopierad ✓" : "Kunde inte kopiera";
+            setTimeout(() => { b.textContent = "Kopiera notering"; }, 1400);
+          };
+          row.appendChild(b);
+          loading.appendChild(row);
+        }
+
         chatHistory.push({ role: "assistant", content: answer });
-      } catch {
+      } catch (e) {
         loading.querySelector(".proofy-bubble").textContent =
-          "Tekniskt fel. Mejla kontakt@proofy.se.";
+          "Tekniskt fel just nu. Mejla kontakt@proofy.se så hjälper vi dig.";
       } finally {
         sendBtn.disabled = false;
         input.disabled = false;
@@ -288,16 +293,32 @@ html.has-proofy-chat body{
       }
     });
 
-    /* Initial message */
-    addMessage(
+    const hello = addMessage(
       "assistant",
-      "Hej! Välj ett alternativ eller skriv kort vad du behöver hjälp med."
+      "Hej! Välj ett alternativ, eller skriv kort vad du vill göra i ärendet."
     );
+
+    addCtas(hello, [
+      { label: "Skapa Verifierings-ID", url: "/register.html" },
+      { label: "Verifiera underlag", url: "/verify.html" },
+      {
+        label: "Skapa verifieringsnotering",
+        action: "prompt",
+        prompt:
+          "Skapa en klistra-in-notering för revisionsfilen.\n" +
+          "Krav: börja med rubriken 'PROOFY – Verifieringsnotering'. Neutral byråton. Max 10 rader.\n" +
+          "Fyll i med platshållare om fakta saknas:\n" +
+          "- Verifierings-ID: [Verifierings-ID]\n" +
+          "- Underlag/filnamn: [filnamn]\n" +
+          "- Resultat: [Oförändrat underlag / Avvikelse]\n" +
+          "- Registreringsstatus: [Registrerad / Ej registrerad / Okänt]\n" +
+          "- Registreringstid (om känd): [datum/tid]\n" +
+          "- Verifiering genomförd: [datum/tid]\n" +
+          "Avsluta med avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet.",
+      },
+    ]);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();
