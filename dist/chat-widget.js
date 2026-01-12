@@ -1,190 +1,138 @@
 (() => {
   function init() {
-    // ✅ Hardtest: undvik dubbel-init om scriptet råkar laddas flera gånger
     if (window.__proofyChatWidgetInit) return;
     window.__proofyChatWidgetInit = true;
 
     const chatHistory = [];
     let isOpen = false;
 
-    // --------- CSS (inject once) ----------
+    // Inject CSS once
     if (!document.getElementById("proofy-chat-style")) {
       const style = document.createElement("style");
       style.id = "proofy-chat-style";
       style.textContent = `
-/* === Proofy Chat Widget (hardtest-safe) === */
+      :root{
+        --proofy-safe-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        --proofy-safe-right:  calc(16px + env(safe-area-inset-right, 0px));
+      }
+      /* Reserve a bit of space so the floating bubble doesn't cover important UI */
+      body.__proofy-has-chat{
+        padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
+      }
 
-@media print{
-  .proofy-chat-btn, .proofy-panel{ display:none !important; }
-}
+      .proofy-chat-btn{
+        position:fixed;
+        right: var(--proofy-safe-right);
+        bottom: var(--proofy-safe-bottom);
+        z-index: 2147483000;
+        padding: 12px 16px;
+        border-radius: 999px;
+        border: none;
+        cursor: pointer;
+        background: linear-gradient(135deg,#6ee7b7,#3b82f6);
+        color: #0b1020;
+        font-weight: 900;
+        box-shadow: 0 10px 30px rgba(0,0,0,.25);
+        -webkit-tap-highlight-color: transparent;
+      }
+      .proofy-chat-btn:active{ transform: translateY(1px); }
 
-.proofy-chat-btn{
-  position:fixed;
+      .proofy-panel{
+        position:fixed;
+        right: var(--proofy-safe-right);
+        bottom: calc(var(--proofy-safe-bottom) + 66px);
+        z-index: 2147483001;
+        width: min(380px, calc(100vw - 32px));
+        height: min(560px, calc(100vh - 140px));
+        background: rgba(10,16,32,.94);
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,.45);
+        display: none;
+        font-family: system-ui;
+        color: #eaf1ff;
+      }
 
-  /* ✅ Safe-area + stabil placering */
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
-  right:  calc(env(safe-area-inset-right,  0px) + 16px);
+      /* Blur only when supported */
+      @supports ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))){
+        .proofy-panel{
+          -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
+        }
+      }
+      /* Firefox Android can glitch with blur; disable there */
+      @-moz-document url-prefix(){
+        .proofy-panel{ backdrop-filter:none !important; }
+      }
 
-  z-index:9999;
-  padding:12px 16px;
-  border-radius:999px;
-  border:none;
-  cursor:pointer;
-  background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-  color:#0b1020;
-  font-weight:800;
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.proofy-panel{
-  position:fixed;
-
-  /* ✅ panel ovanför knappen, med safe-area */
-  right:  calc(env(safe-area-inset-right,  0px) + 16px);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
-
-  z-index:9999;
-  width:min(380px, calc(100vw - 32px));
-
-  /* ✅ dvh för mobil (minskar “flimmer/hopp”) */
-  height:min(560px, calc(100dvh - 140px));
-  height:min(560px, calc(100vh  - 140px));
-
-  background:rgba(10,16,32,.92);
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:18px;
-  overflow:hidden;
-  box-shadow:0 20px 60px rgba(0,0,0,.45);
-  backdrop-filter: blur(10px);
-  display:none;
-  font-family:system-ui;
-  color:#eaf1ff;
-}
-
-.proofy-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px;
-  border-bottom:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.03);
-}
-
-.proofy-title{
-  font-weight:900;
-  font-size:14px;
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-
-.proofy-dot{
-  width:10px;
-  height:10px;
-  border-radius:999px;
-  background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-  box-shadow:0 0 0 3px rgba(110,231,183,.12);
-}
-
-.proofy-x{
-  width:34px;
-  height:34px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.04);
-  color:#eaf1ff;
-  cursor:pointer;
-}
-
-.proofy-body{
-  padding:12px;
-  height:calc(100% - 56px - 64px);
-  overflow:auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.proofy-msg{
-  margin:10px 0;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.proofy-msg.user{ align-items:flex-end; }
-.proofy-msg.assistant{ align-items:flex-start; }
-
-.proofy-bubble{
-  max-width:85%;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.04);
-  line-height:1.35;
-  font-size:13px;
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  word-break:break-word;
-}
-
-.proofy-msg.user .proofy-bubble{
-  background:rgba(59,130,246,.20);
-  border-color:rgba(59,130,246,.25);
-}
-
-.proofy-ctas{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  max-width:85%;
-}
-
-.proofy-cta{
-  display:inline-flex;
-  align-items:center;
-  padding:9px 12px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:#eaf1ff;
-  text-decoration:none;
-  font-weight:900;
-  font-size:12px;
-  cursor:pointer;
-}
-.proofy-cta:hover{ background:rgba(255,255,255,.10); }
-
-.proofy-footer{
-  display:flex;
-  gap:8px;
-  padding:10px;
-  border-top:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.02);
-}
-
-.proofy-input{
-  flex:1;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.20);
-  color:#eaf1ff;
-  outline:none;
-}
-
-.proofy-send{
-  padding:10px 14px;
-  border-radius:12px;
-  border:none;
-  cursor:pointer;
-  background:linear-gradient(135deg,#6ee7b7,#3b82f6);
-  color:#0b1020;
-  font-weight:900;
-}
+      .proofy-header{
+        display:flex;align-items:center;justify-content:space-between;
+        padding:12px;border-bottom:1px solid rgba(255,255,255,.08);
+        background:rgba(255,255,255,.03);
+      }
+      .proofy-title{font-weight:900;font-size:14px;display:flex;gap:10px;align-items:center;}
+      .proofy-dot{
+        width:10px;height:10px;border-radius:999px;
+        background:linear-gradient(135deg,#6ee7b7,#3b82f6);
+        box-shadow:0 0 0 3px rgba(110,231,183,.12);
+      }
+      .proofy-x{
+        width:34px;height:34px;border-radius:12px;
+        border:1px solid rgba(255,255,255,.10);
+        background:rgba(255,255,255,.04);
+        color:#eaf1ff;cursor:pointer;
+      }
+      .proofy-body{padding:12px;height:calc(100% - 56px - 64px);overflow:auto;}
+      .proofy-msg{margin:10px 0;display:flex;flex-direction:column;gap:8px;}
+      .proofy-msg.user{align-items:flex-end;}
+      .proofy-msg.assistant{align-items:flex-start;}
+      .proofy-bubble{
+        max-width:85%;
+        padding:10px 12px;
+        border-radius:14px;
+        border:1px solid rgba(255,255,255,.10);
+        background:rgba(255,255,255,.04);
+        line-height:1.35;
+        font-size:13px;
+        white-space:pre-wrap;
+        overflow-wrap:anywhere;
+        word-break:break-word;
+      }
+      .proofy-msg.user .proofy-bubble{background:rgba(59,130,246,.20);border-color:rgba(59,130,246,.25);}
+      .proofy-ctas{display:flex;gap:8px;flex-wrap:wrap;max-width:85%;}
+      .proofy-cta{
+        display:inline-flex;align-items:center;
+        padding:9px 12px;border-radius:999px;
+        border:1px solid rgba(255,255,255,.14);
+        background:rgba(255,255,255,.06);
+        color:#eaf1ff;text-decoration:none;
+        font-weight:900;font-size:12px;cursor:pointer;
+      }
+      .proofy-cta:hover{background:rgba(255,255,255,.10);}
+      .proofy-footer{
+        display:flex;gap:8px;padding:10px;
+        border-top:1px solid rgba(255,255,255,.08);
+        background:rgba(255,255,255,.02);
+      }
+      .proofy-input{
+        flex:1;padding:10px 12px;border-radius:12px;
+        border:1px solid rgba(255,255,255,.12);
+        background:rgba(0,0,0,.20);color:#eaf1ff;outline:none;
+      }
+      .proofy-send{
+        padding:10px 14px;border-radius:12px;border:none;
+        cursor:pointer;background:linear-gradient(135deg,#6ee7b7,#3b82f6);
+        color:#0b1020;font-weight:900;
+      }
       `;
       document.head.appendChild(style);
     }
 
-    // --------- Ensure button exists ----------
+    // Mark body so it gets safe padding
+    document.body.classList.add("__proofy-has-chat");
+
+    // Create button once
     let button = document.querySelector(".proofy-chat-btn");
     if (!button) {
       button = document.createElement("button");
@@ -194,22 +142,22 @@
       document.body.appendChild(button);
     }
 
-    // --------- Ensure panel exists ----------
+    // Create panel once
     let panel = document.querySelector(".proofy-panel");
     if (!panel) {
       panel = document.createElement("div");
       panel.className = "proofy-panel";
       panel.innerHTML = `
-        <div class="proofy-header">
-          <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
-          <button class="proofy-x" type="button" aria-label="Stäng">✕</button>
-        </div>
-        <div class="proofy-body"><div id="proofy-messages"></div></div>
-        <div class="proofy-footer">
-          <input class="proofy-input" placeholder="Skriv en fråga..." />
-          <button class="proofy-send" type="button">Skicka</button>
-        </div>
-      `;
+      <div class="proofy-header">
+        <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
+        <button class="proofy-x" aria-label="Stäng" type="button">✕</button>
+      </div>
+      <div class="proofy-body"><div id="proofy-messages"></div></div>
+      <div class="proofy-footer">
+        <input class="proofy-input" placeholder="Skriv en fråga..." />
+        <button class="proofy-send" type="button">Skicka</button>
+      </div>
+    `;
       document.body.appendChild(panel);
     }
 
@@ -217,36 +165,16 @@
     const input = panel.querySelector(".proofy-input");
     const sendBtn = panel.querySelector(".proofy-send");
     const closeBtn = panel.querySelector(".proofy-x");
-
     if (!msgRoot || !input || !sendBtn || !closeBtn) return;
-
-    // ✅ Layout-safe: reservera bottenyta så content inte hamnar under knappen
-    function updateReservedSpace() {
-      try {
-        const r = button.getBoundingClientRect();
-        const bottomGap = 16; // matchar CSS (bottom inset)
-        const reserved = Math.ceil(r.height + bottomGap + 8); // lite extra buffert
-        document.documentElement.style.setProperty("--proofy-widget-bottom", `${reserved}px`);
-      } catch {
-        // fallback
-        document.documentElement.style.setProperty("--proofy-widget-bottom", `92px`);
-      }
-    }
-
-    updateReservedSpace();
-    window.addEventListener("resize", updateReservedSpace, { passive: true });
-    window.addEventListener("orientationchange", () => setTimeout(updateReservedSpace, 150), { passive: true });
 
     function toggle(open) {
       isOpen = open ?? !isOpen;
       panel.style.display = isOpen ? "block" : "none";
       if (isOpen) input.focus();
     }
-
     button.onclick = () => toggle(true);
     closeBtn.onclick = () => toggle(false);
 
-    // ✅ ESC stänger
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && isOpen) toggle(false);
     });
@@ -259,10 +187,8 @@
       bubble.textContent = String(text || "");
       wrapper.appendChild(bubble);
       msgRoot.appendChild(wrapper);
-
       const body = panel.querySelector(".proofy-body");
       body.scrollTop = body.scrollHeight;
-
       return wrapper;
     }
 
@@ -309,7 +235,6 @@
       const row = document.createElement("div");
       row.className = "proofy-ctas";
 
-      // max 3
       ctas.slice(0, 3).forEach((c) => {
         if (!c?.label) return;
 
@@ -385,7 +310,6 @@
             : `Kunde inte läsa svaret. Status ${res.status}. Mejla kontakt@proofy.se.`;
 
         const answer = stripKnownLinks(rawAnswer);
-
         loading.querySelector(".proofy-bubble").textContent = answer;
 
         const baseCtas = Array.isArray(data?.ctas) ? data.ctas : [];
@@ -427,7 +351,6 @@
       }
     });
 
-    // start
     const hello = addMessage(
       "assistant",
       "Hej! Välj ett alternativ, eller skriv kort vad du vill göra i ärendet."
@@ -454,6 +377,9 @@
     ]);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
 })();
