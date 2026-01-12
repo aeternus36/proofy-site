@@ -1,413 +1,371 @@
-/* /assets/proofy.css  — HARDTEST / AUDIT SAFE */
+/* proofy.css — mobile hardtest safe
+   Goals:
+   - Remove scroll "blue band"/flicker on Android browsers by avoiding large sticky/fixed + backdrop-filter combos
+   - Keep glass look, but degrade safely when blur is unsupported or causes issues
+   - Ensure long hashes/links wrap cleanly
+   - Reserve space so floating chat button never covers important content
+*/
 
-/* ---------- Base / reset ---------- */
 :root{
-  --bg: #0b1220;
+  --bg0:#070b16;
+  --bg1:#081a33;
+  --bg2:#0b2746;
 
-  /* Panels */
-  --panel: rgba(255,255,255,.04);
-  --panel2: rgba(255,255,255,.06);
-  --line: rgba(255,255,255,.10);
+  --card: rgba(255,255,255,.06);
+  --card2: rgba(255,255,255,.04);
+  --stroke: rgba(255,255,255,.10);
+  --stroke2: rgba(255,255,255,.14);
 
-  /* Text */
-  --text: rgba(234,240,255,.92);
-  --muted: rgba(169,183,211,.92);
-  --muted2: rgba(234,240,255,.72);
+  --text:#eaf1ff;
+  --muted: rgba(234,241,255,.72);
+  --muted2: rgba(234,241,255,.55);
 
-  /* Accent */
-  --blue: rgba(110,168,255,.95);
-  --mint: rgba(124,241,198,.85);
+  --accentA:#6ee7b7;
+  --accentB:#3b82f6;
 
-  --shadow: 0 18px 60px rgba(0,0,0,.45);
+  --shadow: 0 20px 60px rgba(0,0,0,.45);
+  --shadow2: 0 12px 34px rgba(0,0,0,.35);
 
-  /* Space reserved so floating UI (chat button) never covers content */
-  --floating-ui-space: 118px;
+  --r16:16px;
+  --r18:18px;
+  --r22:22px;
+
+  --pad: 16px;
+  --container: 980px;
+
+  /* Space reserved for floating "Fråga oss" so it never blocks content */
+  --floating-safe: 108px;
 }
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-
-html{
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
+/* ---------- reset ---------- */
+*{box-sizing:border-box}
+html,body{height:100%}
 body{
   margin:0;
   color:var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  line-height:1.55;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.35;
+  /* Hardtest safe background: NO fixed pseudo blur layers */
+  background:
+    radial-gradient(1200px 700px at 20% -10%, rgba(59,130,246,.35), transparent 60%),
+    radial-gradient(900px 600px at 85% 10%, rgba(110,231,183,.20), transparent 55%),
+    linear-gradient(180deg, var(--bg1), var(--bg0) 55%, #050711);
+  background-repeat:no-repeat;
+  background-attachment:scroll; /* important for Android: avoid background-attachment:fixed */
+  overflow-x:hidden;
 
-  /* AUDIT SAFE BACKGROUND:
-     - Completely static (no fixed overlays)
-     - Subtle gradients baked into background-image (scrolls normally)
-  */
-  background-color: var(--bg);
-  background-image:
-    radial-gradient(900px 560px at 18% -10%, rgba(80,140,255,.18), transparent 62%),
-    radial-gradient(760px 520px at 92% 6%, rgba(120,241,198,.12), transparent 58%);
-  background-repeat: no-repeat;
-  background-attachment: scroll; /* IMPORTANT: never fixed */
-  background-position: 0 0, 100% 0;
-
-  /* Prevent horizontal “ghost scroll” */
-  overflow-x: hidden;
-
-  /* Safe area padding for notches + keep bottom content above floating button */
-  padding-bottom: env(safe-area-inset-bottom);
+  /* reserve for chat button + phone safe area */
+  padding-bottom: calc(var(--floating-safe) + env(safe-area-inset-bottom, 0px));
 }
 
-img{ max-width:100%; height:auto; }
-a{ color: rgba(180,210,255,.98); text-decoration:none; }
-a:hover{ text-decoration:underline; }
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+button,input,select,textarea{font:inherit}
+::selection{background:rgba(59,130,246,.35)}
 
-.skip{
-  position:absolute;
-  left:-9999px;
-  top:auto;
-  width:1px;
-  height:1px;
+/* ---------- layout ---------- */
+.pf-container{
+  max-width:var(--container);
+  margin:0 auto;
+  padding: 18px var(--pad) 28px;
+}
+
+.pf-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding: 14px var(--pad);
+  margin: 0 auto;
+  max-width:var(--container);
+
+  /* Hardtest safe: NOT sticky by default (sticky + blur often causes banding on Android) */
+  position:relative;
+}
+
+.pf-brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+.pf-logo{
+  width:44px;height:44px;border-radius:14px;
+  background: linear-gradient(135deg, rgba(110,231,183,.22), rgba(59,130,246,.22));
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 24px rgba(0,0,0,.25);
+  display:grid;place-items:center;
+  flex:0 0 auto;
+}
+.pf-logo span{
+  font-weight:900;
+  letter-spacing:.02em;
+}
+.pf-brand h1{
+  margin:0;
+  font-size:22px;
+  font-weight:900;
+  letter-spacing:.01em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* simple menu button */
+.pf-menu-btn{
+  width:56px;height:48px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color:var(--text);
+  box-shadow: 0 10px 28px rgba(0,0,0,.20);
+}
+
+/* ---------- hero / certificate ---------- */
+.pf-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding: 10px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  color: rgba(234,241,255,.80);
+  font-weight:800;
+  letter-spacing:.02em;
+}
+
+.pf-card{
+  margin-top:14px;
+  border-radius: var(--r22);
+  border:1px solid rgba(255,255,255,.10);
+  background: var(--card2);
+  box-shadow: var(--shadow);
   overflow:hidden;
 }
-.skip:focus{
-  left:12px;
-  top:12px;
-  width:auto;
-  height:auto;
-  padding:10px 12px;
-  border-radius:12px;
-  background: rgba(255,255,255,.10);
-  border:1px solid var(--line);
-  color: var(--text);
-  z-index:9999;
+
+.pf-card-inner{
+  padding: 22px;
 }
 
-/* ---------- Layout ---------- */
-.wrap{
-  width:min(1120px, calc(100% - 32px));
-  margin:0 auto;
+.pf-title{
+  margin: 6px 0 12px;
+  font-size: clamp(30px, 7vw, 54px);
+  font-weight: 1000;
+  letter-spacing: -0.02em;
 }
 
-/* IMPORTANT:
-   Add bottom space so the floating chat button never covers content on mobile.
-*/
-main{
-  padding: 34px 0 calc(60px + var(--floating-ui-space));
-}
-
-section{ scroll-margin-top: 96px; }
-
-/* ---------- Header (AUDIT SAFE) ---------- */
-header{
-  position: sticky;
-  top:0;
-  z-index: 50;
-
-  /* HARDTEST: avoid blur/backdrop-filter to prevent flicker/overlays */
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-
-  /* Solid-ish background for consistent screenshots/print */
-  background: rgba(11,18,32,.98);
-  border-bottom: 1px solid rgba(255,255,255,.08);
-}
-
-/* Support BOTH .nav and .navBar */
-.nav,
-.navBar{
+.pf-status-pill{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  padding: 14px 0;
-}
-
-/* Brand (also defined in header.css later if you want “last wins”) */
-.brand{
-  display:flex;
-  align-items:center;
+  justify-content:center;
   gap:10px;
+  padding: 14px 16px;
+  border-radius: 999px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
   font-weight: 950;
-  letter-spacing: .2px;
-  color: var(--text);
-  text-decoration:none;
 }
-.brand:hover{ text-decoration:none; }
-
-.navActions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
+.pf-status-dot{
+  width:11px;height:11px;border-radius:999px;
+  background: linear-gradient(135deg, var(--accentA), #22c55e);
+  box-shadow: 0 0 0 4px rgba(110,231,183,.10);
 }
 
-/* ---------- Typography ---------- */
-.badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding: 9px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.05);
-  color: var(--muted2);
-  font-weight: 800;
-  font-size: 13px;
-}
-
-.pageTitle{
-  margin: 18px 0 10px;
-  font-size: clamp(30px, 4.3vw, 52px);
-  line-height: 1.05;
-  letter-spacing: -0.9px;
-}
-
-.lead{
-  margin: 0;
-  max-width: 78ch;
-  font-size: 18px;
-  color: rgba(234,240,255,.86);
-}
-
-h2{
-  margin: 0 0 10px;
-  font-size: 22px;
-  letter-spacing: -.2px;
-}
-
-.small{
-  font-size: 13px;
-  color: rgba(169,183,211,.92);
-}
-
-.meta{
-  font-size: 13px;
-  color: rgba(169,183,211,.92);
-  font-weight: 800;
-}
-
-.ok{ color: rgba(124,241,198,.95); font-weight: 950; }
-.err{ color: rgba(255,160,160,.96); font-weight: 950; }
-
-/* ---------- Components ---------- */
-.card{
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-  border-radius: 22px;
-  box-shadow: var(--shadow);
-  overflow: hidden; /* important: prevent bleed */
-}
-
-.card.content{
-  padding: 18px;
-}
-
-.hr{
-  height:1px;
-  background: rgba(255,255,255,.10);
-  margin: 14px 0;
-}
-
-/* Buttons */
-.btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  color: rgba(234,240,255,.92);
-  text-decoration:none;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  user-select:none;
-  max-width: 100%;
-}
-.btn:hover{
-  text-decoration:none;
-  background: rgba(255,255,255,.07);
-  border-color: rgba(255,255,255,.16);
-}
-.btn:active{ transform: translateY(1px); }
-
-.btn.primary{
-  border: none;
-  color: #08101e;
-  background: linear-gradient(135deg, var(--blue), var(--mint));
-}
-.btn.primary:hover{ filter: brightness(1.02); }
-
-.btn.soft{
-  background: rgba(110,168,255,.10);
-  border-color: rgba(110,168,255,.25);
-}
-
-.btn.ghost{
-  background: transparent;
-  border-color: rgba(255,255,255,.12);
-}
-
-/* ---------- Layout helpers ---------- */
-.grid2{
+.pf-actions{
   display:grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 14px;
-}
-
-.actions{
-  display:flex;
-  align-items:center;
+  grid-template-columns: 1fr;
   gap:10px;
-  flex-wrap: wrap;
+  margin-top: 14px;
 }
 
-/* Make long action rows wrap cleanly on mobile */
-.actions > *{
-  max-width: 100%;
+@media (min-width: 520px){
+  .pf-actions{grid-template-columns: 1fr 1fr}
+  .pf-actions .pf-action-primary{grid-column: 1 / -1}
 }
 
-.pill{
+.pf-btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  color: rgba(234,240,255,.86);
-  font-weight: 900;
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-
-/* Monospace fields (IDs/links) */
-.mono{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: rgba(234,240,255,.92);
-
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  white-space: normal;
-  max-width: 100%;
-}
-
-/* Drop zone */
-.drop{
-  border: 1px dashed rgba(255,255,255,.20);
-  background: rgba(255,255,255,.03);
-  border-radius: 14px;
-  padding: 12px 14px;
-  color: rgba(234,240,255,.82);
-}
-.drop.drag{
-  border-color: rgba(110,168,255,.45);
-  background: rgba(110,168,255,.10);
-}
-
-/* QR block layout */
-.qrWrap{
-  display:flex;
-  gap: 14px;
-  align-items:flex-start;
-  flex-wrap: wrap;
-}
-
-/* Target element that holds the QR canvas (do NOT scale canvas with CSS) */
-.qrBox{
-  max-width: 100%;
-}
-
-/* IMPORTANT: Never CSS-scale the QR canvas */
-.qrBox canvas{
-  display:block;
-  width: auto !important;
-  height: auto !important;
-  max-width: none !important;
-  max-height: none !important;
-  transform: none !important;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
-
-/* Inputs */
-input, textarea{
+  gap:10px;
   width:100%;
-  padding: 12px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
-  color: rgba(234,240,255,.92);
-  outline: none;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  font-weight: 950;
+  letter-spacing:.01em;
+  text-decoration:none;
+  cursor:pointer;
+  box-shadow: var(--shadow2);
+  -webkit-tap-highlight-color: transparent;
 }
-input::placeholder, textarea::placeholder{ color: rgba(169,183,211,.62); }
-input:focus, textarea:focus{
-  border-color: rgba(110,168,255,.45);
-  box-shadow: 0 0 0 3px rgba(110,168,255,.12);
+.pf-btn:active{transform: translateY(1px)}
+.pf-btn-primary{
+  background: linear-gradient(135deg, rgba(110,231,183,.95), rgba(59,130,246,.85));
+  color:#081225;
+  border: none;
+}
+.pf-btn-ghost{
+  background: rgba(255,255,255,.04);
 }
 
-/* Footer */
-footer{
-  padding: 28px 0 calc(50px + env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(255,255,255,.06);
-  background: rgba(0,0,0,.12);
+.pf-section{
+  margin-top: 16px;
+  border-radius: var(--r22);
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  overflow:hidden;
 }
 
-.foot{
+.pf-section-h{
+  padding: 18px 22px 10px;
+  font-weight: 950;
+  letter-spacing:.08em;
+  color: rgba(234,241,255,.60);
+}
+
+.pf-grid{
+  display:grid;
+  gap:12px;
+  padding: 0 22px 22px;
+}
+@media(min-width: 720px){
+  .pf-grid{grid-template-columns: 1fr 1fr}
+}
+
+.pf-item{
+  border-radius: 18px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.16);
+  padding: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.22);
+}
+
+.pf-item h3{
+  margin:0 0 10px;
+  font-size: 14px;
+  font-weight: 950;
+  color: rgba(234,241,255,.70);
+}
+
+.pf-row{
   display:flex;
-  justify-content:space-between;
-  gap: 16px;
+  gap:12px;
   align-items:flex-start;
-  flex-wrap:wrap;
+  justify-content:space-between;
 }
 
-.links{
-  display:flex;
-  gap: 12px;
-  flex-wrap:wrap;
+.pf-mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 15px;
+  letter-spacing: .02em;
+  color: rgba(234,241,255,.92);
+  /* Hardtest for long hashes/urls */
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  line-height: 1.45;
 }
-.links a{ color: rgba(234,240,255,.78); }
-.links a:hover{ color: rgba(234,240,255,.92); }
 
-/* ---------- Print / PDF (HARDTEST) ---------- */
-@media print{
-  /* Clean white paper-like output */
-  body{
-    background: #fff !important;
-    color: #000 !important;
-    background-image: none !important;
+.pf-copy{
+  flex:0 0 auto;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  font-weight: 950;
+  cursor:pointer;
+  min-width: 108px;
+  text-align:center;
+}
+
+/* QR block */
+.pf-qr-wrap{
+  display:grid;
+  gap: 10px;
+}
+.pf-qr{
+  width:min(320px, 100%);
+  aspect-ratio:1/1;
+  border-radius: 22px;
+  background:#fff;
+  padding: 10px;
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow: 0 14px 36px rgba(0,0,0,.35);
+}
+.pf-help{
+  color: rgba(234,241,255,.55);
+  font-weight:700;
+}
+
+/* Long text blocks */
+.pf-prose{
+  padding: 18px 22px 22px;
+  color: rgba(234,241,255,.70);
+  font-size: 18px;
+  line-height: 1.55;
+}
+.pf-prose b,strong{color: rgba(234,241,255,.92)}
+.pf-prose h2{
+  margin: 18px 0 10px;
+  font-size: 14px;
+  letter-spacing:.10em;
+  color: rgba(234,241,255,.60);
+}
+.pf-prose ul{
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+.pf-prose li{margin: 8px 0}
+
+/* Footer note */
+.pf-footer{
+  padding: 18px 22px 22px;
+  color: rgba(234,241,255,.60);
+  font-weight: 750;
+}
+.pf-footer a{color: rgba(234,241,255,.78)}
+
+/* ---------- glass blur: safe fallback ---------- */
+/* Use blur only on small cards; avoid applying blur on big sticky/fixed containers */
+@supports ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))){
+  .pf-card,
+  .pf-section,
+  .pf-item{
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
   }
+}
 
-  header{ position: static !important; background: #fff !important; border-bottom: 1px solid #ddd !important; }
-  a{ color:#000 !important; text-decoration: underline !important; }
-
-  .card{
-    box-shadow: none !important;
-    background: #fff !important;
-    border: 1px solid #ddd !important;
-  }
-
-  /* Hide chat widget in print if present */
-  .proofy-chat-btn,
-  .proofy-panel{
-    display:none !important;
+/* Firefox Android can still be glitchy with backdrop-filter. Kill blur there. */
+@-moz-document url-prefix(){
+  .pf-card,
+  .pf-section,
+  .pf-item{
+    backdrop-filter: none !important;
   }
 }
 
-/* ---------- Responsive ---------- */
-@media (max-width: 920px){
-  main{ padding: 26px 0 calc(46px + var(--floating-ui-space)); }
-  .pageTitle{ letter-spacing: -0.6px; }
-  .lead{ font-size: 17px; }
-  .grid2{ grid-template-columns: 1fr; }
+/* Reduce motion: less “floaty” */
+@media (prefers-reduced-motion: reduce){
+  .pf-btn:active{transform:none}
 }
 
-@media (max-width: 560px){
-  :root{ --floating-ui-space: 134px; }
-  .wrap{ width: calc(100% - 24px); }
-  .btn{ width:auto; }
+/* ---------- hardtest safety: avoid accidental horizontal bands ---------- */
+/* Ensure nothing creates a compositing layer across viewport */
+.pf-card,
+.pf-section,
+.pf-item{
+  transform: translateZ(0); /* stabilize repaint without sticky/fixed */
+}
+
+/* ---------- small screens ---------- */
+@media (max-width: 380px){
+  .pf-brand h1{font-size:20px}
+  .pf-card-inner{padding:18px}
+  .pf-prose{font-size:17px}
+  .pf-copy{min-width: 96px}
 }
