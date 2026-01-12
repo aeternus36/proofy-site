@@ -4,14 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera underlag</title>
-  <meta name="description" content="Kontroll av om ett underlag motsvarar en filversion som registrerats hos Proofy." />
+  <meta name="description" content="Kontroll av om ett underlag motsvarar en version som tidigare noterats i Proofys register." />
   <meta name="theme-color" content="#0b1220" />
   <meta name="robots" content="noindex" />
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
-  <!-- ✅ QR library (same build as certificate) -->
   <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
   <style>
@@ -27,7 +26,8 @@
       border:0 !important;
     }
 
-    #idPill, #selfLinkPill, #statusPill, #copyIdPill, #copyFileHashPill, #copySummaryPill { display:none; }
+    /* Visas endast vid behov (JS) */
+    #idPill, #selfLinkPill, #statusPill, #copySummaryPill { display:none; }
 
     .actionsRow{
       display:flex;
@@ -43,13 +43,7 @@
       margin-top:10px;
     }
 
-    /* UX: färre knappar – vi visar inte "Dela" som separat knapp (länken är klickbar för kopiering). */
-    #shareSelfLinkBtn { display:none !important; }
-
-    /* UX: gör verify-knappen primär när redo (JS växlar klass) */
-    #verifyBtn.primary { opacity: 1; }
-
-    /* ✅ QR block: match certificate.html (184x184 white tap card, 168x168 QR inside) */
+    /* ✅ QR block: matchar befintlig layout */
     .selfLinkRow{
       display:flex;
       gap:12px;
@@ -82,7 +76,7 @@
     }
 
     @media print{
-      header, .actions, #shareSelfLinkBtn, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
+      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
       /* keep QR visible in print */
       #selfQRTap{ display:grid !important; border-color:#ddd !important; }
       #selfQRTap, #selfQRCode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
@@ -141,8 +135,8 @@
     <h1 class="pageTitle">Verifiera underlag</h1>
 
     <p class="lead">
-      Kontrollera om underlaget är samma filversion som den som tidigare <b>fastställdes som referens</b>.
-      <strong>Kontrollen görs lokalt i din webbläsare. Proofy tar inte emot själva underlaget som fil.</strong>
+      Kontrollera om ett underlag motsvarar samma version som tidigare <b>noterats i Proofys register</b>.
+      <strong>Kontrollen sker lokalt. Underlaget lämnar inte din dator.</strong>
     </p>
 
     <div class="card content" style="margin-top:14px;">
@@ -152,10 +146,10 @@
           <div style="font-weight:950; font-size:16px;">1. Ange Verifierings-ID</div>
 
           <label class="meta" for="hashInput" style="margin-top:8px;">Verifierings-ID (sparat i ärendet)</label>
-          <input id="hashInput" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:6px" />
+          <input id="hashInput" type="text" placeholder="—" autocomplete="off" spellcheck="false" style="margin-top:6px" />
 
           <div class="small" style="margin-top:8px">
-            ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
+            ID:t fylls i automatiskt om du öppnat sidan via kontrolllänk.
           </div>
 
           <div class="actions" style="margin-top:10px;">
@@ -169,73 +163,12 @@
             </div>
           </div>
 
-          <div style="margin-top:12px;">
-            <div class="meta">Verifieringslänk (klicka för att kopiera)</div>
-            <div class="small" style="margin-top:6px; opacity:.9;">Bra att dela med kollega/klient.</div>
-
-            <div class="selfLinkRow">
-              <div style="flex:1; min-width:260px;">
-                <div style="position:relative; margin-top:6px;">
-                  <button type="button" id="copySelfLinkIconBtn"
-                    aria-label="Kopiera verifieringslänk" title="Kopiera"
-                    style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px;
-                           border-radius:10px; border:1px solid rgba(255,255,255,.14);
-                           background:rgba(255,255,255,.06); cursor:pointer;">
-                    <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
-                  </button>
-
-                  <div id="selfLinkOut"
-                    class="mono"
-                    tabindex="0"
-                    role="button"
-                    title="Klicka för att kopiera"
-                    aria-label="Verifieringslänk (klicka för att kopiera)"
-                    style="
-                      padding:8px 10px;
-                      border-radius:12px;
-                      border:1px solid rgba(255,255,255,.14);
-                      background:rgba(255,255,255,.03);
-                      cursor:pointer;
-                      padding-right:52px;
-                      user-select:text;
-                      overflow-wrap:anywhere;
-                      word-break:break-word;
-                      font-size:13px;
-                      line-height:1.3;
-                    ">—</div>
-
-                  <span id="selfLinkPill" class="pill" style="margin-top:8px;" aria-live="polite" aria-atomic="true" role="status"></span>
-                </div>
-
-                <!-- ✅ Helptext outside the white QR card (matches certificate layout) -->
-                <div class="small" id="selfQRHelp" style="margin-top:10px; opacity:.9; display:none;">
-                  Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
-                </div>
-              </div>
-
-              <!-- ✅ QR tap card: identical sizing/feel to certificate.html -->
-              <div id="selfQRTap"
-                   role="button"
-                   tabindex="0"
-                   aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
-                   title="Klicka för att kopiera verifieringslänk">
-                <div id="selfQRCode" aria-label="QR-kod"></div>
-              </div>
-            </div>
-
-            <div class="actions" style="margin-top:10px;">
-              <div class="actionsRow">
-                <button class="btn" id="shareSelfLinkBtn" type="button" style="display:none;">Dela</button>
-              </div>
-            </div>
-          </div>
-
           <div class="hr"></div>
 
-          <div style="font-weight:950; font-size:16px;">2. Välj underlag att verifiera</div>
+          <div style="font-weight:950; font-size:16px;">2. Välj underlag att kontrollera</div>
 
           <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:8px; cursor:pointer;">
-            Välj underlag (fil)
+            Välj underlag
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
@@ -243,7 +176,7 @@
                aria-label="Dra och släpp underlag här, eller tryck för att välja fil"
                style="margin-top:10px;">
             Dra &amp; släpp underlag här<br />
-            <span class="small" style="opacity:.9;">Tryck här för att välja fil</span>
+            <span class="small" style="opacity:.9;">Tryck här för att välja underlag</span>
           </div>
 
           <div id="fileInfo"
@@ -254,8 +187,8 @@
 
           <div class="actions" style="margin-top:14px">
             <div class="actionsRow">
-              <button class="btn soft" id="verifyBtn" disabled>Verifiera</button>
-              <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Förbered verifiering</span>
+              <button class="btn soft" id="verifyBtn" disabled>Kontrollera</button>
+              <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Förbered kontroll</span>
             </div>
           </div>
 
@@ -268,15 +201,68 @@
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            <b>Auto:</b> Verifiering startar automatiskt när både ID och fil finns (ingen uppladdning).<br/>
-            <b>Tips:</b> Om underlaget har exporterats om, skannats om eller sparats på nytt kan det räknas som en annan filversion
-            även om det “ser likadant ut”.
+            Resultatet kan skilja sig om underlaget har skapats om, sparats på nytt eller valts fel.
           </p>
+
+          <div class="hr"></div>
+
+          <!-- Flyttat ned hit: Länk & QR (sekundärt) -->
+          <div class="meta">Länk för kontroll (klicka för att kopiera)</div>
+          <div class="small" style="margin-top:6px; opacity:.9;">Kan delas vid intern kontroll eller granskning.</div>
+
+          <div class="selfLinkRow">
+            <div style="flex:1; min-width:260px;">
+              <div style="position:relative; margin-top:6px;">
+                <button type="button" id="copySelfLinkIconBtn"
+                  aria-label="Kopiera länk för kontroll" title="Kopiera"
+                  style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px;
+                         border-radius:10px; border:1px solid rgba(255,255,255,.14);
+                         background:rgba(255,255,255,.06); cursor:pointer;">
+                  <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
+                </button>
+
+                <div id="selfLinkOut"
+                  class="mono"
+                  tabindex="0"
+                  role="button"
+                  title="Klicka för att kopiera"
+                  aria-label="Länk för kontroll (klicka för att kopiera)"
+                  style="
+                    padding:8px 10px;
+                    border-radius:12px;
+                    border:1px solid rgba(255,255,255,.14);
+                    background:rgba(255,255,255,.03);
+                    cursor:pointer;
+                    padding-right:52px;
+                    user-select:text;
+                    overflow-wrap:anywhere;
+                    word-break:break-word;
+                    font-size:13px;
+                    line-height:1.3;
+                  ">—</div>
+
+                <span id="selfLinkPill" class="pill" style="margin-top:8px;" aria-live="polite" aria-atomic="true" role="status"></span>
+              </div>
+
+              <div class="small" id="selfQRHelp" style="margin-top:10px; opacity:.9; display:none;">
+                Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar länken.
+              </div>
+            </div>
+
+            <div id="selfQRTap"
+                 role="button"
+                 tabindex="0"
+                 aria-label="QR-kod (klicka för att kopiera länken)"
+                 title="Klicka för att kopiera länken">
+              <div id="selfQRCode" aria-label="QR-kod"></div>
+            </div>
+          </div>
+
         </section>
 
-        <section aria-label="Verifieringsresultat">
+        <section aria-label="Resultat">
           <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
-            <div style="font-weight:950; font-size:16px;">Verifieringsresultat</div>
+            <div style="font-weight:950; font-size:16px;">Resultat</div>
             <div class="meta" id="reportMeta" style="opacity:.85; display:none;">Rapport</div>
           </div>
           <div class="hr"></div>
@@ -286,8 +272,15 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
+            <!-- ✅ Kontrolltid synlig i själva resultatet (för skärmdump/ärendeakt) -->
             <div style="margin-top:12px;">
-              <div class="meta">Status hos Proofy</div>
+              <div class="meta">Kontroll genomförd</div>
+              <div id="outCheckedSe" class="mono" style="margin-top:6px;">—</div>
+              <div id="outCheckedUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
+            </div>
+
+            <div style="margin-top:12px;">
+              <div class="meta">Status vid kontrolltillfället</div>
               <div id="outRegStatus" class="mono" style="margin-top:6px;">—</div>
 
               <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:10px;">
@@ -309,7 +302,7 @@
 
               <div class="actions" style="margin-top:12px;">
                 <div class="actionsRow">
-                  <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna verifieringsintyg</a>
+                  <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
                   <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
                   <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
                 </div>
@@ -319,101 +312,27 @@
                 </div>
               </div>
 
-              <details style="margin-top:12px;">
-                <summary>Detaljer (valfritt)</summary>
+              <!-- ✅ Juridisk avgränsning synlig nära resultat -->
+              <p class="meta" style="margin-top:14px; opacity:.9;">
+                Proofy avgör inte om ett dokument är korrekt, giltigt eller äkta.
+                Kontrollen avser endast om samma underlag användes vid tidigare notering.
+              </p>
 
-                <div style="margin-top:12px;">
-                  <div class="meta">Verifierings-ID</div>
-                  <div class="small" style="margin-top:6px; opacity:.9;">Klicka i fältet för att kopiera.</div>
+              <div class="hr" style="margin-top:14px;"></div>
 
-                  <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
-                    <button type="button" id="copyIdIconBtn" aria-label="Kopiera Verifierings-ID" title="Kopiera"
-                            style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
-                      <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
-                    </button>
-
-                    <div id="outHash"
-                         class="mono"
-                         tabindex="0"
-                         role="button"
-                         title="Klicka för att kopiera"
-                         aria-label="Verifierings-ID (klicka för att kopiera)"
-                         style="
-                           padding:8px 10px;
-                           border-radius:12px;
-                           border:1px solid rgba(255,255,255,.14);
-                           background:rgba(255,255,255,.03);
-                           cursor:pointer;
-                           padding-right:52px;
-                           user-select:text;
-                           overflow-wrap:anywhere;
-                           word-break:break-word;
-                           font-size:13px;
-                           line-height:1.3;
-                         ">—</div>
-
-                    <span id="copyIdPill" class="pill" style="margin-top:8px;"> </span>
-                  </div>
-
-                  <div class="meta" style="margin-top:12px;">Filens kontrollvärde (valfritt)</div>
-                  <div class="small" style="margin-top:6px; opacity:.9;">Klicka i fältet för att kopiera.</div>
-
-                  <div class="copyFieldWrap" style="position:relative; margin-top:6px;">
-                    <button type="button" id="copyFileHashIconBtn" aria-label="Kopiera kontrollvärde" title="Kopiera"
-                            style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
-                      <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
-                    </button>
-
-                    <div id="outFileHash"
-                         class="mono"
-                         tabindex="0"
-                         role="button"
-                         title="Klicka för att kopiera"
-                         aria-label="Filens kontrollvärde (klicka för att kopiera)"
-                         style="
-                           padding:8px 10px;
-                           border-radius:12px;
-                           border:1px solid rgba(255,255,255,.14);
-                           background:rgba(255,255,255,.03);
-                           cursor:pointer;
-                           padding-right:52px;
-                           user-select:text;
-                           overflow-wrap:anywhere;
-                           word-break:break-word;
-                           font-size:13px;
-                           line-height:1.3;
-                         ">—</div>
-
-                    <span id="copyFileHashPill" class="pill" style="margin-top:8px;"> </span>
-                  </div>
-
-                  <div class="hr" style="margin-top:14px;"></div>
-
-                  <div class="meta" style="margin-top:12px; opacity:.85;">
-                    Not: Proofy visar om filversionen är samma eller inte. Det säger inget om innehållets saklighet.
-                  </div>
-                </div>
-
-                <div class="hr" style="margin-top:14px;"></div>
-
-                <div class="meta">Notering (för dokumentation)</div>
-                <pre class="mono" id="summaryOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
-              </details>
+              <div class="meta">Notering (för dokumentation)</div>
+              <pre class="mono" id="summaryOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
             </div>
           </div>
 
           <div id="errorBox" style="display:none;">
-            <div class="err">Verifiering kunde inte genomföras</div>
+            <div class="err">Kontrollen kunde inte genomföras</div>
             <div id="errorMsg" class="mono" style="margin-top:8px"></div>
           </div>
         </section>
 
       </div>
     </div>
-
-    <p class="meta" style="margin-top:14px">
-      Proofy avgör inte om innehållet är korrekt – endast om underlaget är oförändrat jämfört med referensen.
-    </p>
   </div>
 </main>
 
@@ -424,7 +343,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+          Proofy tillhandahåller teknisk kontroll av underlag. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets giltighet.
         </div>
       </div>
       <div class="links">
@@ -451,7 +370,6 @@
   const copySelfLinkIconBtn = $("copySelfLinkIconBtn");
   const selfLinkPill = $("selfLinkPill");
 
-  // ✅ QR elements
   const selfQRTap = $("selfQRTap");
   const selfQRCode = $("selfQRCode");
   const selfQRHelp = $("selfQRHelp");
@@ -470,8 +388,6 @@
 
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
-  const outHash = $("outHash");
-  const outFileHash = $("outFileHash");
   const outRegStatus = $("outRegStatus");
   const outRegSe = $("outRegSe");
   const outRegUtc = $("outRegUtc");
@@ -480,12 +396,6 @@
   const outExplain = $("outExplain");
   const outExplainTitle = $("outExplainTitle");
   const outExplainBody = $("outExplainBody");
-
-  const copyIdIconBtn = $("copyIdIconBtn");
-  const copyIdPill = $("copyIdPill");
-
-  const copyFileHashIconBtn = $("copyFileHashIconBtn");
-  const copyFileHashPill = $("copyFileHashPill");
 
   const copySummaryBtn = $("copySummaryBtn");
   const copySummaryPill = $("copySummaryPill");
@@ -496,12 +406,15 @@
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
+  // NEW: kontrolltid synlig i resultat
+  const outCheckedSe = $("outCheckedSe");
+  const outCheckedUtc = $("outCheckedUtc");
+
   let currentFile = null;
   let busy = false;
   let opId = 0;
   let lastRun = null;
 
-  // Auto-run guard
   let autoRunTimer = null;
   let autoRanOnceFor = "";
 
@@ -597,16 +510,6 @@
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
-  function getIdFromUrl(){
-    const url = new URL(location.href);
-    return (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
-  }
-
-  function getCheckedFromUrl(){
-    const url = new URL(location.href);
-    return (url.searchParams.get("checked") || "").trim();
-  }
-
   function setParamsInUrl({ hash, checked }){
     const url = new URL(location.href);
 
@@ -658,63 +561,35 @@
     }
   }
 
+  // Statusnormalisering behålls, men UI visar bara 3 texter
   function normalizeVerifyModel(data){
     const sc = String(data?.statusCode || "");
     const st = String(data?.statusText || "") || "Kunde inte kontrolleras";
     const legal = String(data?.legalText || "");
     const confirmedAtUnix = (data?.confirmedAtUnix != null) ? Number(data.confirmedAtUnix) : null;
-    const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
-    const txHash = data?.submission?.txHash || null;
 
     if (!sc) {
       const exists = (typeof data?.exists === "boolean") ? data.exists : null;
       const ts = data?.timestamp ? Number(data.timestamp) : 0;
       if (exists === true || ts > 0) {
-        return {
-          ok: true,
-          statusCode: "CONFIRMED",
-          statusText: "Bekräftad",
-          legalText: legal,
-          confirmedAtUnix: ts > 0 ? ts : confirmedAtUnix,
-          observedBlockNumber,
-          txHash
-        };
+        return { statusCode:"CONFIRMED", statusText:"Bekräftad", legalText: legal, confirmedAtUnix: ts > 0 ? ts : confirmedAtUnix };
       }
       if (exists === false) {
-        return {
-          ok: true,
-          statusCode: "NOT_CONFIRMED",
-          statusText: "Ej bekräftad",
-          legalText: legal,
-          confirmedAtUnix: null,
-          observedBlockNumber,
-          txHash
-        };
+        return { statusCode:"NOT_CONFIRMED", statusText:"Ej bekräftad", legalText: legal, confirmedAtUnix: null };
       }
-      return {
-        ok: false,
-        statusCode: "UNKNOWN",
-        statusText: "Kunde inte kontrolleras",
-        legalText: legal,
-        confirmedAtUnix: null,
-        observedBlockNumber,
-        txHash
-      };
+      return { statusCode:"UNKNOWN", statusText:"Kunde inte kontrolleras", legalText: legal, confirmedAtUnix: null };
     }
 
     return {
-      ok: data?.ok !== false,
       statusCode: sc,
       statusText: st,
       legalText: legal,
-      confirmedAtUnix: Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0 ? confirmedAtUnix : null,
-      observedBlockNumber,
-      txHash
+      confirmedAtUnix: Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0 ? confirmedAtUnix : null
     };
   }
 
-  async function fetchVerify(hash){
-    const r = await fetch(`/api/verify?hash=${encodeURIComponent(hash)}`, { method:"GET" });
+  async function fetchVerify(id){
+    const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}`, { method:"GET" });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return { ok:false, data:j, status:r.status };
     return { ok:true, data:j, status:r.status };
@@ -722,30 +597,22 @@
 
   function buildSummaryText(run){
     if (!run) return "—";
-
     const lines = [];
-    lines.push("PROOFY – Verifieringsnotering");
+    lines.push("PROOFY – Notering");
     lines.push("");
-
-    lines.push(`Verifiering genomförd: ${run.verifySe || "—"}`);
-    if (run.verifyUtc) lines.push(`Verifiering genomförd (UTC): ${run.verifyUtc}`);
+    lines.push(`Kontroll genomförd: ${run.verifySe || "—"}`);
+    if (run.verifyUtc) lines.push(`Kontroll genomförd (UTC): ${run.verifyUtc}`);
     lines.push("");
-
-    lines.push(`Verifierings-ID: ${run.refHash || "—"}`);
+    lines.push(`Verifierings-ID: ${run.refId || "—"}`);
     if (run.fileName) lines.push(`Underlag: ${run.fileName}`);
-    if (run.fileSizeMb != null) lines.push(`Filstorlek: ${run.fileSizeMb} MB`);
     lines.push("");
-
-    lines.push(`Resultat: ${run.match ? "OFÖRÄNDRAT (samma filversion)" : "AVVIKELSE (annan filversion)"}`);
+    lines.push(`Resultat: ${run.match ? "Oförändrat (samma version)" : "Avvikelse (annan version)"}`);
     lines.push("");
-
-    lines.push(`Status hos Proofy: ${run.proofyStatusText || "Kunde inte kontrolleras"}`);
-    if (run.confirmedSe) lines.push(`Tidpunkt (om bekräftad) – SE: ${run.confirmedSe}`);
+    lines.push(`Status vid kontrolltillfället: ${run.statusText || "Kunde inte kontrolleras"}`);
+    if (run.confirmedSe) lines.push(`Tidpunkt (om bekräftad) – Sverige: ${run.confirmedSe}`);
     if (run.confirmedUtc) lines.push(`Tidpunkt (om bekräftad) – UTC: ${run.confirmedUtc}`);
-
-    if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
-    if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
-
+    lines.push("");
+    lines.push("Detta är ett tekniskt kontrollunderlag och uttalar sig inte om dokumentets innehåll, giltighet eller äkthet.");
     return lines.join("\n");
   }
 
@@ -833,7 +700,6 @@
     setTimeout(() => URL.revokeObjectURL(url), 1200);
   }
 
-  /* ✅ QR render (same robustness as certificate: supports both APIs + self-check) */
   function renderSelfQR(link){
     if (!selfQRCode || !selfQRTap) return;
 
@@ -842,12 +708,11 @@
 
     const payload = String(link || "").trim();
 
-    const setFallback = (msg, warn) => {
+    const setFallback = (msg) => {
       el.innerHTML =
         '<div class="small" style="padding:10px;color:#0b1220;text-align:center;line-height:1.35">' +
         msg +
         "</div>";
-      if (warn) console.warn(warn);
     };
 
     if (!payload){
@@ -860,7 +725,7 @@
     if (selfQRHelp) selfQRHelp.style.display = "block";
 
     if (typeof window.QRCode !== "function"){
-      setFallback("QR kunde inte laddas.", "Proofy QR (verify): window.QRCode missing (qr.min.js not loaded?).");
+      setFallback("QR kunde inte visas.");
       return;
     }
 
@@ -879,8 +744,6 @@
           qr._htOption.height = 168;
           qr._htOption.colorDark = "#0b1220";
           qr._htOption.colorLight = "#ffffff";
-          qr._htOption.quiet = 4;
-          qr._htOption.minScale = 4;
           if (correctLevel != null) qr._htOption.correctLevel = correctLevel;
         }
       }catch{
@@ -900,7 +763,7 @@
       }
 
       if (!qr || typeof qr.makeCode !== "function"){
-        setFallback("QR-koden kunde inte visas.", "Proofy QR (verify): no makeCode().");
+        setFallback("QR kunde inte visas.");
         return;
       }
 
@@ -908,7 +771,7 @@
 
       const node = el.querySelector("canvas, img, svg");
       if (!node){
-        setFallback("QR-koden kunde inte visas.", "Proofy QR (verify): produced no canvas/img/svg.");
+        setFallback("QR kunde inte visas.");
         return;
       }
 
@@ -916,9 +779,8 @@
       node.style.height = "168px";
       node.style.display = "block";
       node.style.imageRendering = "pixelated";
-    }catch(e){
-      setFallback("QR-koden kunde inte visas.", "Proofy QR (verify): render failed: " + (e && e.message ? e.message : String(e)));
-      console.error("QR render failed:", e);
+    }catch{
+      setFallback("QR kunde inte visas.");
     }
   }
 
@@ -936,36 +798,25 @@
     errorBox.style.display = "none";
     errorMsg.textContent = "";
     if (openCertBtn) openCertBtn.style.display = "none";
-
-    if (reportMeta) {
-      reportMeta.style.display = "none";
-      reportMeta.textContent = "Rapport";
-    }
-
-    if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
-    if (copyIdPill) copyIdPill.style.display = "none";
-
-    if (copyFileHashIconBtn) copyFileHashIconBtn.style.display = "none";
-    if (copyFileHashPill) copyFileHashPill.style.display = "none";
+    if (reportMeta) { reportMeta.style.display = "none"; reportMeta.textContent = "Rapport"; }
 
     if (copySummaryBtn) copySummaryBtn.style.display = "none";
     if (copySummaryPill) copySummaryPill.style.display = "none";
-
     if (downloadReportBtn) downloadReportBtn.style.display = "none";
 
     if (summaryOut) summaryOut.textContent = "—";
     lastRun = null;
 
-    outHash.textContent = "—";
-    outFileHash.textContent = "—";
     outRegStatus.textContent = "—";
     outRegSe.textContent = "—";
     outRegUtc.textContent = "—";
 
+    if (outCheckedSe) outCheckedSe.textContent = "—";
+    if (outCheckedUtc) outCheckedUtc.textContent = "—";
+
     resultHeadline.textContent = "";
     outExplainTitle.textContent = "";
     outExplainBody.textContent = "";
-
     setExplainTone(null);
   }
 
@@ -973,7 +824,7 @@
     busy = v;
     verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
     setVerifyBtnTone(!verifyBtn.disabled);
-    verifyBtn.textContent = busy ? "Verifierar…" : (lastRun ? "Verifiera igen" : "Verifiera");
+    verifyBtn.textContent = busy ? "Kontrollerar…" : (lastRun ? "Kontrollera igen" : "Kontrollera");
   }
 
   function updateSelfLinkUI(){
@@ -992,7 +843,6 @@
     const link = buildSelfLink(id);
     selfLinkOut.textContent = link;
     applyCopyHover(selfLinkOut, copySelfLinkIconBtn, true);
-
     renderSelfQR(link);
   }
 
@@ -1001,20 +851,19 @@
     const okId = isValidId(id);
 
     if (clearIdBtn) clearIdBtn.disabled = !id;
-
     updateSelfLinkUI();
 
     if (!id && !currentFile){
       hideAlert();
-      setStatus("Förbered verifiering");
+      setStatus("Förbered kontroll");
       setBusy(false);
       return;
     }
 
     if (!id){
       showAlert(
-        "⚠️ Ange Verifierings-ID för att kunna verifiera",
-        "Klistra in ID eller öppna verifieringslänken du fått.",
+        "⚠️ Ange Verifierings-ID för att kunna kontrollera",
+        "Klistra in Verifierings-ID eller öppna kontrolllänken du fått.",
         "err"
       );
       setStatus("Ange Verifierings-ID");
@@ -1025,7 +874,7 @@
     if (!okId){
       showAlert(
         "⚠️ Verifierings-ID verkar inte stämma",
-        "Kontrollera att du kopierat hela ID:t. Det brukar börja med 0x och vara en lång rad.",
+        "Kontrollera att du kopierat hela Verifierings-ID:t utan att något saknas.",
         "err"
       );
       setStatus("Åtgärd krävs");
@@ -1041,11 +890,11 @@
       return;
     }
 
-    setStatus("Redo (startar automatiskt)");
+    setStatus("Redo");
     setBusy(false);
   }
 
-  function scheduleAutoVerify(reason){
+  function scheduleAutoVerify(){
     if (busy) return;
     const id = (hashInput.value || "").trim();
     if (!isValidId(id) || !currentFile) return;
@@ -1058,7 +907,6 @@
       if (busy) return;
       const id2 = (hashInput.value || "").trim();
       if (!isValidId(id2) || !currentFile) return;
-
       autoRanOnceFor = key;
       verifyBtn.click();
     }, 260);
@@ -1067,14 +915,12 @@
   function setFile(file){
     currentFile = file || null;
     if (currentFile){
-      const mb = (currentFile.size/1024/1024);
-      const nice = (mb < 10) ? mb.toFixed(2) : mb.toFixed(1);
-      fileInfo.textContent = `Valt underlag: ${currentFile.name} (${nice} MB)`;
+      fileInfo.textContent = `Valt underlag: ${currentFile.name}`;
     } else {
       fileInfo.textContent = "Inget underlag valt.";
     }
     updateValidationUI();
-    scheduleAutoVerify("file");
+    scheduleAutoVerify();
   }
 
   const urlId = (() => {
@@ -1097,21 +943,19 @@
         showPill(idPill, "Inget i urklipp");
         return;
       }
-
       const m = txt.match(/0x[0-9a-fA-F]{64}/);
       const candidate = (m ? m[0] : txt).trim();
-
       hashInput.value = candidate;
 
       if (isValidId(candidate)) {
         setParamsInUrl({ hash: candidate, checked: (new URL(location.href).searchParams.get("checked") || "").trim() || "" });
         showPill(idPill, "Klistrat ✓");
       } else {
-        showPill(idPill, "Klistrat (kontrollera att det är hela ID:t)");
+        showPill(idPill, "Klistrat (kontrollera att du fått med hela)");
       }
 
       updateValidationUI();
-      scheduleAutoVerify("paste");
+      scheduleAutoVerify();
       hashInput.focus();
       hashInput.setSelectionRange(hashInput.value.length, hashInput.value.length);
     });
@@ -1148,7 +992,6 @@
     });
   }
 
-  // ✅ Make QR tap copy link (same as certificate)
   if (selfQRTap){
     const doQrCopy = async () => {
       const link = String(selfLinkOut?.textContent || "").trim();
@@ -1165,7 +1008,7 @@
     const v = hashInput.value.trim();
     if (isValidId(v)) setParamsInUrl({ hash: v, checked: (new URL(location.href).searchParams.get("checked") || "").trim() || "" });
     updateValidationUI();
-    scheduleAutoVerify("typing");
+    scheduleAutoVerify();
   });
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
@@ -1186,44 +1029,6 @@
     });
   }
 
-  if (outHash) {
-    outHash.addEventListener("click", async () => {
-      await copyWithPill({ text: outHash.textContent, pillEl: copyIdPill });
-    });
-    outHash.addEventListener("keydown", async (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        await copyWithPill({ text: outHash.textContent, pillEl: copyIdPill });
-      }
-    });
-  }
-  if (copyIdIconBtn) {
-    copyIdIconBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await copyWithPill({ text: outHash.textContent, pillEl: copyIdPill });
-    });
-  }
-
-  if (outFileHash) {
-    outFileHash.addEventListener("click", async () => {
-      await copyWithPill({ text: outFileHash.textContent, pillEl: copyFileHashPill });
-    });
-    outFileHash.addEventListener("keydown", async (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        await copyWithPill({ text: outFileHash.textContent, pillEl: copyFileHashPill });
-      }
-    });
-  }
-  if (copyFileHashIconBtn) {
-    copyFileHashIconBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await copyWithPill({ text: outFileHash.textContent, pillEl: copyFileHashPill });
-    });
-  }
-
   if (copySummaryBtn) {
     copySummaryBtn.addEventListener("click", async () => {
       if (!lastRun) return;
@@ -1236,23 +1041,21 @@
     downloadReportBtn.addEventListener("click", () => {
       if (!lastRun) return;
       const txt = buildSummaryText(lastRun);
-      const safeId = String(lastRun.refHash || "proofy").slice(0, 12);
-      const fn = `proofy-notering-${safeId}.txt`;
+      const fn = `proofy-notering.txt`;
       downloadTextFile(fn, txt);
     });
   }
 
-  // verifyBtn click handler (unchanged)
   verifyBtn.addEventListener("click", async () => {
     if (busy) return;
 
     resetUI();
 
-    const refHash = hashInput.value.trim();
-    if (!isValidId(refHash)) {
+    const refId = hashInput.value.trim();
+    if (!isValidId(refId)) {
       showAlert(
-        "⚠️ Verifiering kan inte starta",
-        "Verifierings-ID saknas eller verkar inte stämma. Kontrollera att du kopierat hela ID:t.",
+        "⚠️ Kontroll kan inte starta",
+        "Verifierings-ID saknas eller verkar inte stämma. Kontrollera att du kopierat hela Verifierings-ID:t.",
         "err"
       );
       setStatus("Åtgärd krävs");
@@ -1261,8 +1064,8 @@
     }
     if (!currentFile) {
       showAlert(
-        "⚠️ Välj ett underlag att verifiera",
-        "Välj filen du vill kontrollera. Underlaget lämnar aldrig din dator.",
+        "⚠️ Välj ett underlag att kontrollera",
+        "Välj underlaget du vill kontrollera. Underlaget lämnar aldrig din dator.",
         "err"
       );
       setStatus("Välj underlag");
@@ -1270,99 +1073,91 @@
     }
 
     const checkedEpoch = Math.floor(Date.now() / 1000);
-    setParamsInUrl({ hash: refHash, checked: checkedEpoch });
+    setParamsInUrl({ hash: refId, checked: checkedEpoch });
 
-    const verifySeFixed = fmtSeEpoch(checkedEpoch);
-    const verifyUtcFixed = fmtUtcEpoch(checkedEpoch);
+    const checkedSe = fmtSeEpoch(checkedEpoch);
+    const checkedUtc = fmtUtcEpoch(checkedEpoch);
 
-    setStatus("Verifierar…");
+    setStatus("Kontrollerar…");
     setBusy(true);
 
     const myOp = ++opId;
 
     try{
-      const fileHash = await makeControlValue(currentFile);
+      const localId = await makeControlValue(currentFile);
       if (myOp !== opId) return;
 
-      const match = (fileHash.toLowerCase() === refHash.toLowerCase());
+      const match = (localId.toLowerCase() === refId.toLowerCase());
 
-      const verifyRes = await fetchVerify(refHash);
+      const verifyRes = await fetchVerify(refId);
       if (myOp !== opId) return;
 
       resultBox.style.display = "block";
       if (reportMeta) {
         reportMeta.style.display = "block";
-        reportMeta.textContent = `Verifiering genomförd: ${verifySeFixed}`;
+        reportMeta.textContent = `Kontroll genomförd: ${checkedSe}`;
       }
 
-      outHash.textContent = refHash;
-      outFileHash.textContent = fileHash;
-
-      applyCopyHover(outHash, copyIdIconBtn, true);
-      applyCopyHover(outFileHash, copyFileHashIconBtn, true);
+      // kontrolltid i resultat
+      if (outCheckedSe) outCheckedSe.textContent = checkedSe;
+      if (outCheckedUtc) outCheckedUtc.textContent = checkedUtc;
 
       if (match) {
         resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
         resultHeadline.style.background = "rgba(80,255,180,.06)";
-        resultHeadline.innerHTML = `<span class="ok">✅ Oförändrat underlag</span> <span class="meta">(samma filversion som referensen)</span>`;
+        resultHeadline.innerHTML = `<span class="ok">✅ Oförändrat</span> <span class="meta">(samma version)</span>`;
       } else {
         resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
         resultHeadline.style.background = "rgba(255,80,80,.06)";
-        resultHeadline.innerHTML = `<span class="err">⚠️ Avvikelse</span> <span class="meta">(annan filversion än referensen)</span>`;
+        resultHeadline.innerHTML = `<span class="err">⚠️ Avvikelse</span> <span class="meta">(annan version)</span>`;
       }
 
       setExplainTone(match);
 
+      // Standardförklaringar utan tekniska ord
       if (match) {
-        outExplainTitle.textContent = "Underlaget motsvarar referensen.";
-        outExplainBody.textContent =
-          "Det betyder att det är samma filversion som referensen. Detta säger inget om innehållets saklighet – endast att filversionen är densamma.";
+        outExplainTitle.textContent = "Underlaget motsvarar den tidigare noterade versionen.";
+        outExplainBody.textContent = "Detta säger inget om dokumentets innehåll, endast att versionen stämmer överens.";
       } else {
-        outExplainTitle.textContent = "Underlaget motsvarar inte referensen.";
-        outExplainBody.textContent =
-          "Det betyder att det är en annan filversion än referensen. Vanliga orsaker är ny export, ny skanning, konvertering eller att fel fil valts.";
+        outExplainTitle.textContent = "Underlaget motsvarar inte den tidigare noterade versionen.";
+        outExplainBody.textContent = "Detta kan bero på att fel underlag valts eller att underlaget har skapats om eller sparats på nytt.";
       }
 
-      let proofyStatusCode = "UNKNOWN";
-      let proofyStatusText = "Kunde inte kontrolleras";
-      let legalText = "";
+      let statusCode = "UNKNOWN";
+      let statusText = "Kunde inte kontrolleras";
       let confirmedAtUnix = null;
-      let observedBlockNumber = null;
-      let txHash = null;
 
       if (!verifyRes.ok) {
-        outRegStatus.textContent = "Kunde inte kontrolleras";
+        statusText = "Kunde inte kontrolleras";
+        outRegStatus.textContent = statusText;
         outRegSe.textContent = "—";
         outRegUtc.textContent = "—";
       } else {
         const norm = normalizeVerifyModel(verifyRes.data || {});
-        proofyStatusCode = norm.statusCode || "UNKNOWN";
-        proofyStatusText = norm.statusText || "Kunde inte kontrolleras";
-        legalText = norm.legalText || "";
+        statusCode = norm.statusCode || "UNKNOWN";
+
+        // UI visar bara 3 tillstånd (för att undvika gråzoner)
+        if (statusCode === "CONFIRMED") statusText = "Bekräftad";
+        else if (statusCode === "NOT_CONFIRMED") statusText = "Ej bekräftad";
+        else statusText = "Kunde inte kontrolleras";
+
         confirmedAtUnix = norm.confirmedAtUnix;
-        observedBlockNumber = norm.observedBlockNumber;
-        txHash = norm.txHash;
 
-        outRegStatus.textContent = proofyStatusText;
-
-        const confirmedSeRaw = confirmedAtUnix ? formatUnixSe(confirmedAtUnix) : null;
-        outRegSe.textContent = confirmedSeRaw ? (confirmedSeRaw + " (Europe/Stockholm)") : "—";
+        outRegStatus.textContent = statusText;
+        outRegSe.textContent = confirmedAtUnix ? (formatUnixSe(confirmedAtUnix) + " (Europe/Stockholm)") : "—";
         outRegUtc.textContent = confirmedAtUnix ? fmtUtcEpoch(confirmedAtUnix) : "—";
 
-        if (proofyStatusCode === "NOT_CONFIRMED") {
+        // Förklaringar vid ej bekräftad / okänd
+        if (statusText === "Ej bekräftad") {
           outExplainTitle.textContent = match
-            ? "Underlaget motsvarar referensen – men ingen bekräftelse kunde konstateras."
-            : "Avvikelse – och ingen bekräftelse kunde konstateras.";
-          outExplainBody.textContent =
-            legalText || "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett negativt påstående om framtida bekräftelse.";
-        } else if (proofyStatusCode === "UNKNOWN") {
+            ? "Versionen stämmer – men ingen notering kunde konstateras vid kontrolltillfället."
+            : "Avvikelse – och ingen notering kunde konstateras vid kontrolltillfället.";
+          outExplainBody.textContent = "Kontrollera att rätt Verifierings-ID används och försök igen vid behov.";
+        } else if (statusText === "Kunde inte kontrolleras") {
           outExplainTitle.textContent = match
-            ? "Underlaget motsvarar referensen – men status kunde inte kontrolleras."
-            : "Avvikelse – och status kunde inte kontrolleras.";
-          outExplainBody.textContent =
-            legalText || "Status kunde inte kontrolleras på grund av tekniskt fel. Ingen slutsats kan dras om bekräftelse.";
-        } else if (proofyStatusCode === "CONFIRMED") {
-          if (legalText) outExplainBody.textContent = outExplainBody.textContent + " " + legalText;
+            ? "Versionen stämmer – men status kunde inte kontrolleras vid kontrolltillfället."
+            : "Avvikelse – och status kunde inte kontrolleras vid kontrolltillfället.";
+          outExplainBody.textContent = "Detta är ett tillfälligt fel. Försök igen.";
         }
       }
 
@@ -1370,25 +1165,19 @@
       const confirmedUtc = confirmedAtUnix ? fmtUtcEpoch(confirmedAtUnix) : null;
 
       if (openCertBtn) {
-        openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refHash)}&checked=${encodeURIComponent(String(checkedEpoch))}`;
+        openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refId)}&checked=${encodeURIComponent(String(checkedEpoch))}`;
         openCertBtn.style.display = "inline-flex";
       }
 
       lastRun = {
-        refHash,
+        refId,
         match,
         fileName: currentFile?.name || "",
-        fileSizeMb: currentFile ? (currentFile.size/1024/1024).toFixed(2) : null,
-
-        proofyStatusCode,
-        proofyStatusText,
+        statusText,
         confirmedSe,
         confirmedUtc,
-        observedBlockNumber,
-        txHash,
-
-        verifySe: verifySeFixed,
-        verifyUtc: verifyUtcFixed
+        verifySe: checkedSe,
+        verifyUtc: checkedUtc
       };
 
       const summaryText = buildSummaryText(lastRun);
@@ -1399,7 +1188,7 @@
 
       hideAlert();
 
-      setStatus("Verifiering klar ✅");
+      setStatus("Klar ✅");
       setBusy(false);
 
     } catch (e){
@@ -1415,7 +1204,7 @@
   resetUI();
   setFile(null);
   updateValidationUI();
-  scheduleAutoVerify("init");
+  scheduleAutoVerify();
 })();
 </script>
 
