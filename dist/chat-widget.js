@@ -14,10 +14,14 @@
       :root{
         --proofy-safe-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
         --proofy-safe-right:  calc(16px + env(safe-area-inset-right, 0px));
+        /* Default reserved space for the floating button (pages may use this) */
+        --proofy-fab-space: 108px;
       }
-      /* Reserve a bit of space so the floating bubble doesn't cover important UI */
+
+      /* Reserve a bit of space so the floating bubble doesn't cover last content.
+         NOTE: true collision avoidance is handled by JS (see avoidOverlap). */
       body.__proofy-has-chat{
-        padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
+        padding-bottom: calc(var(--proofy-fab-space) + env(safe-area-inset-bottom, 0px)) !important;
       }
 
       .proofy-chat-btn{
@@ -34,6 +38,7 @@
         font-weight: 900;
         box-shadow: 0 10px 30px rgba(0,0,0,.25);
         -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
       }
       .proofy-chat-btn:active{ transform: translateY(1px); }
 
@@ -125,12 +130,25 @@
         cursor:pointer;background:linear-gradient(135deg,#6ee7b7,#3b82f6);
         color:#0b1020;font-weight:900;
       }
+
+      /* PRINT/PDF: widget must never appear or affect evidence layout */
+      @media print{
+        .proofy-chat-btn, .proofy-panel{ display:none !important; }
+        body.__proofy-has-chat{ padding-bottom: 0 !important; }
+        :root{ --proofy-fab-space: 0px !important; }
+      }
       `;
       document.head.appendChild(style);
     }
 
     // Mark body so it gets safe padding
     document.body.classList.add("__proofy-has-chat");
+
+    // Ensure pages can reserve space consistently (they may use var(--proofy-fab-space))
+    // Keep this conservative: it represents the *minimum* reserved space.
+    try {
+      document.documentElement.style.setProperty("--proofy-fab-space", "108px");
+    } catch {}
 
     // Create button once
     let button = document.querySelector(".proofy-chat-btn");
@@ -139,6 +157,7 @@
       button.className = "proofy-chat-btn";
       button.type = "button";
       button.innerText = "Fråga oss";
+      button.setAttribute("aria-label", "Öppna Proofy Assist");
       document.body.appendChild(button);
     }
 
@@ -147,6 +166,8 @@
     if (!panel) {
       panel = document.createElement("div");
       panel.className = "proofy-panel";
+      panel.setAttribute("role", "dialog");
+      panel.setAttribute("aria-label", "Proofy Assist");
       panel.innerHTML = `
       <div class="proofy-header">
         <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
@@ -167,9 +188,107 @@
     const closeBtn = panel.querySelector(".proofy-x");
     if (!msgRoot || !input || !sendBtn || !closeBtn) return;
 
+    // === HARDTEST: avoid covering important CTAs / controls on small screens ===
+    // Strategy: if the floating button overlaps an interactive element in the viewport,
+    // translate the button (and panel) upwards until the overlap is gone.
+    const INTERACTIVE_SELECTOR =
+      'button, a[href], input, select, textarea, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])';
+
+    let currentLiftPx = 0;
+
+    function rectsOverlap(a, b) {
+      return !(
+        a.right <= b.left ||
+        a.left >= b.right ||
+        a.bottom <= b.top ||
+        a.top >= b.bottom
+      );
+    }
+
+    function computeRequiredLift(btnRect) {
+      // Scan interactive elements that are visible and could be blocked by the button.
+      const candidates = Array.from(document.querySelectorAll(INTERACTIVE_SELECTOR))
+        .filter((el) => {
+          if (!el || el === button) return false;
+          if (panel.contains(el)) return false;
+          const r = el.getBoundingClientRect();
+          // Must be in viewport and have size
+          if (r.width < 12 || r.height < 12) return false;
+          if (r.bottom < 0 || r.top > window.innerHeight) return false;
+          if (r.right < 0 || r.left > window.innerWidth) return false;
+
+          // Only care about things near where the button sits (bottom-right zone)
+          const nearBottom = r.bottom > window.innerHeight - 260;
+          const nearRight = r.right > window.innerWidth - 260;
+          return nearBottom && nearRight;
+        });
+
+      let lift = 0;
+
+      for (const el of candidates) {
+        const r = el.getBoundingClientRect();
+        if (!rectsOverlap(btnRect, r)) continue;
+
+        // Lift enough so button top clears element bottom (with margin)
+        const margin = 12;
+        const needed = (btnRect.bottom - r.top) + margin;
+        lift = Math.max(lift, needed);
+      }
+
+      // Cap lift so button never leaves the viewport completely
+      const maxLift = Math.max(0, window.innerHeight - btnRect.height - 24);
+      return Math.min(lift, maxLift);
+    }
+
+    function applyLift(px) {
+      currentLiftPx = px;
+      const t = px ? `translateY(${-px}px)` : "";
+      button.style.transform = t;
+      // Panel should move with the button so its anchor remains consistent.
+      panel.style.transform = t;
+    }
+
+    function avoidOverlap() {
+      // Disable in print and when hidden elements not laid out.
+      if (window.matchMedia && window.matchMedia("print").matches) return;
+      if (!button || !document.body.contains(button)) return;
+
+      // Only enforce on narrow screens; on desktop it's less risky and could feel "jumpy".
+      const narrow = window.innerWidth <= 420;
+
+      if (!narrow) {
+        if (currentLiftPx) applyLift(0);
+        return;
+      }
+
+      // Reset first, then measure.
+      if (currentLiftPx) applyLift(0);
+
+      const btnRect = button.getBoundingClientRect();
+      const lift = computeRequiredLift(btnRect);
+      if (lift > 0) applyLift(lift);
+    }
+
+    // Throttle to animation frame
+    let rafPending = false;
+    function scheduleAvoidOverlap() {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        rafPending = false;
+        avoidOverlap();
+      });
+    }
+
+    window.addEventListener("scroll", scheduleAvoidOverlap, { passive: true });
+    window.addEventListener("resize", scheduleAvoidOverlap);
+    // Some mobile browsers change viewport height when address bar collapses/expands.
+    window.addEventListener("orientationchange", scheduleAvoidOverlap);
+
     function toggle(open) {
       isOpen = open ?? !isOpen;
       panel.style.display = isOpen ? "block" : "none";
+      scheduleAvoidOverlap();
       if (isOpen) input.focus();
     }
     button.onclick = () => toggle(true);
@@ -339,6 +458,7 @@
       } finally {
         sendBtn.disabled = false;
         input.disabled = false;
+        scheduleAvoidOverlap();
         if (isOpen) input.focus();
       }
     }
@@ -375,6 +495,10 @@
           "Avsluta med avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet.",
       },
     ]);
+
+    // Initial overlap pass after layout is stable
+    setTimeout(scheduleAvoidOverlap, 0);
+    setTimeout(scheduleAvoidOverlap, 300);
   }
 
   if (document.readyState === "loading") {
