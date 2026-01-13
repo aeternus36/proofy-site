@@ -274,9 +274,12 @@
 
             <!-- ✅ Kontrolltid synlig i själva resultatet (för skärmdump/ärendeakt) -->
             <div style="margin-top:12px;">
-              <div class="meta">Kontroll genomförd</div>
+              <div class="meta">Kontrolltid (denna visning)</div>
               <div id="outCheckedSe" class="mono" style="margin-top:6px;">—</div>
               <div id="outCheckedUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
+              <div class="small" style="margin-top:8px; opacity:.9;">
+                Tidpunkten genereras i webbläsaren och kan vara fel om systemklockan är fel. Den utgör inte extern tidsstämpling.
+              </div>
             </div>
 
             <div style="margin-top:12px;">
@@ -285,11 +288,11 @@
 
               <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:10px;">
                 <div>
-                  <div class="meta">Tidpunkt (om bekräftad) – Sverige</div>
+                  <div class="meta">Tidpunkt (endast om bekräftad) – Sverige</div>
                   <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
                 </div>
                 <div>
-                  <div class="meta">Tidpunkt (om bekräftad) – UTC</div>
+                  <div class="meta">Tidpunkt (endast om bekräftad) – UTC</div>
                   <div id="outRegUtc" class="mono" style="margin-top:6px;">—</div>
                 </div>
               </div>
@@ -555,13 +558,17 @@
     const n = Number(unixSeconds);
     if (!Number.isFinite(n) || n <= 0) return null;
     try{
-      return new Date(n * 1000).toLocaleString("sv-SE");
+      return new Intl.DateTimeFormat("sv-SE", {
+        timeZone:"Europe/Stockholm",
+        year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit"
+      }).format(new Date(n * 1000));
     } catch {
       return null;
     }
   }
 
-  // Statusnormalisering behålls, men UI visar bara 3 texter
+  // Statusnormalisering behålls, men UI visar tydliga tillstånd inkl. "Inskickad – ej bekräftad"
   function normalizeVerifyModel(data){
     const sc = String(data?.statusCode || "");
     const st = String(data?.statusText || "") || "Kunde inte kontrolleras";
@@ -589,7 +596,7 @@
   }
 
   async function fetchVerify(id){
-    const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}`, { method:"GET" });
+    const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}&t=${Date.now()}`, { method:"GET", cache:"no-store" });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return { ok:false, data:j, status:r.status };
     return { ok:true, data:j, status:r.status };
@@ -600,17 +607,18 @@
     const lines = [];
     lines.push("PROOFY – Notering");
     lines.push("");
-    lines.push(`Kontroll genomförd: ${run.verifySe || "—"}`);
-    if (run.verifyUtc) lines.push(`Kontroll genomförd (UTC): ${run.verifyUtc}`);
+    lines.push(`Kontrolltid (denna visning): ${run.verifySe || "—"}`);
+    if (run.verifyUtc) lines.push(`Kontrolltid (denna visning, UTC): ${run.verifyUtc}`);
+    lines.push("Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
     lines.push("");
     lines.push(`Verifierings-ID: ${run.refId || "—"}`);
     if (run.fileName) lines.push(`Underlag: ${run.fileName}`);
     lines.push("");
-    lines.push(`Resultat: ${run.match ? "Oförändrat (samma version)" : "Avvikelse (annan version)"}`);
+    lines.push(`Resultat (filversion): ${run.match ? "Oförändrat (samma version)" : "Avvikelse (annan version)"}`);
     lines.push("");
     lines.push(`Status vid kontrolltillfället: ${run.statusText || "Kunde inte kontrolleras"}`);
-    if (run.confirmedSe) lines.push(`Tidpunkt (om bekräftad) – Sverige: ${run.confirmedSe}`);
-    if (run.confirmedUtc) lines.push(`Tidpunkt (om bekräftad) – UTC: ${run.confirmedUtc}`);
+    if (run.confirmedSe) lines.push(`Tidpunkt (endast om bekräftad) – Sverige: ${run.confirmedSe}`);
+    if (run.confirmedUtc) lines.push(`Tidpunkt (endast om bekräftad) – UTC: ${run.confirmedUtc}`);
     lines.push("");
     lines.push("Detta är ett tekniskt kontrollunderlag och uttalar sig inte om dokumentets innehåll, giltighet eller äkthet.");
     return lines.join("\n");
@@ -895,21 +903,8 @@
   }
 
   function scheduleAutoVerify(){
-    if (busy) return;
-    const id = (hashInput.value || "").trim();
-    if (!isValidId(id) || !currentFile) return;
-
-    const key = `${id}::${currentFile.name}::${currentFile.size}::${currentFile.lastModified}`;
-    if (autoRanOnceFor === key) return;
-
-    if (autoRunTimer) clearTimeout(autoRunTimer);
-    autoRunTimer = setTimeout(() => {
-      if (busy) return;
-      const id2 = (hashInput.value || "").trim();
-      if (!isValidId(id2) || !currentFile) return;
-      autoRanOnceFor = key;
-      verifyBtn.click();
-    }, 260);
+    /* KRITISKT: inga automatiska kontroller i auditläge */
+    return;
   }
 
   function setFile(file){
@@ -1046,6 +1041,31 @@
     });
   }
 
+  function setResultHeadline(match){
+    resultHeadline.textContent = "";
+    const left = document.createElement("span");
+    const right = document.createElement("span");
+    right.className = "meta";
+
+    if (match) {
+      left.className = "ok";
+      left.textContent = "✅ Oförändrat";
+      right.textContent = "(samma version)";
+      resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
+      resultHeadline.style.background = "rgba(80,255,180,.06)";
+    } else {
+      left.className = "err";
+      left.textContent = "⚠️ Avvikelse";
+      right.textContent = "(annan version)";
+      resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
+      resultHeadline.style.background = "rgba(255,80,80,.06)";
+    }
+
+    resultHeadline.appendChild(left);
+    resultHeadline.appendChild(document.createTextNode(" "));
+    resultHeadline.appendChild(right);
+  }
+
   verifyBtn.addEventListener("click", async () => {
     if (busy) return;
 
@@ -1095,31 +1115,20 @@
       resultBox.style.display = "block";
       if (reportMeta) {
         reportMeta.style.display = "block";
-        reportMeta.textContent = `Kontroll genomförd: ${checkedSe}`;
+        reportMeta.textContent = `Kontrolltid (denna visning): ${checkedSe}`;
       }
 
-      // kontrolltid i resultat
       if (outCheckedSe) outCheckedSe.textContent = checkedSe;
       if (outCheckedUtc) outCheckedUtc.textContent = checkedUtc;
 
-      if (match) {
-        resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
-        resultHeadline.style.background = "rgba(80,255,180,.06)";
-        resultHeadline.innerHTML = `<span class="ok">✅ Oförändrat</span> <span class="meta">(samma version)</span>`;
-      } else {
-        resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
-        resultHeadline.style.background = "rgba(255,80,80,.06)";
-        resultHeadline.innerHTML = `<span class="err">⚠️ Avvikelse</span> <span class="meta">(annan version)</span>`;
-      }
-
+      setResultHeadline(match);
       setExplainTone(match);
 
-      // Standardförklaringar utan tekniska ord
       if (match) {
-        outExplainTitle.textContent = "Underlaget motsvarar den tidigare noterade versionen.";
-        outExplainBody.textContent = "Detta säger inget om dokumentets innehåll, endast att versionen stämmer överens.";
+        outExplainTitle.textContent = "Underlaget motsvarar den tidigare noterade filversionen.";
+        outExplainBody.textContent = "Detta säger inget om dokumentets innehåll, endast att kontrollvärdet för filversionen stämmer överens.";
       } else {
-        outExplainTitle.textContent = "Underlaget motsvarar inte den tidigare noterade versionen.";
+        outExplainTitle.textContent = "Underlaget motsvarar inte den tidigare noterade filversionen.";
         outExplainBody.textContent = "Detta kan bero på att fel underlag valts eller att underlaget har skapats om eller sparats på nytt.";
       }
 
@@ -1136,8 +1145,8 @@
         const norm = normalizeVerifyModel(verifyRes.data || {});
         statusCode = norm.statusCode || "UNKNOWN";
 
-        // UI visar bara 3 tillstånd (för att undvika gråzoner)
         if (statusCode === "CONFIRMED") statusText = "Bekräftad";
+        else if (statusCode === "SUBMITTED_UNCONFIRMED") statusText = "Inskickad – ej bekräftad";
         else if (statusCode === "NOT_CONFIRMED") statusText = "Ej bekräftad";
         else statusText = "Kunde inte kontrolleras";
 
@@ -1147,11 +1156,15 @@
         outRegSe.textContent = confirmedAtUnix ? (formatUnixSe(confirmedAtUnix) + " (Europe/Stockholm)") : "—";
         outRegUtc.textContent = confirmedAtUnix ? fmtUtcEpoch(confirmedAtUnix) : "—";
 
-        // Förklaringar vid ej bekräftad / okänd
-        if (statusText === "Ej bekräftad") {
+        if (statusText === "Inskickad – ej bekräftad") {
           outExplainTitle.textContent = match
-            ? "Versionen stämmer – men ingen notering kunde konstateras vid kontrolltillfället."
-            : "Avvikelse – och ingen notering kunde konstateras vid kontrolltillfället.";
+            ? "Versionen stämmer – men registrering är inskickad och ännu ej bekräftad vid kontrolltillfället."
+            : "Avvikelse – och registrering är inskickad men ännu ej bekräftad vid kontrolltillfället.";
+          outExplainBody.textContent = "Intyget visar inte “bekräftad” innan bekräftelse finns.";
+        } else if (statusText === "Ej bekräftad") {
+          outExplainTitle.textContent = match
+            ? "Versionen stämmer – men ingen bekräftad notering kunde konstateras vid kontrolltillfället."
+            : "Avvikelse – och ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
           outExplainBody.textContent = "Kontrollera att rätt Verifierings-ID används och försök igen vid behov.";
         } else if (statusText === "Kunde inte kontrolleras") {
           outExplainTitle.textContent = match
@@ -1200,7 +1213,6 @@
     }
   });
 
-  // Init
   resetUI();
   setFile(null);
   updateValidationUI();
