@@ -76,7 +76,7 @@
     }
 
     @media print{
-      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
+      header, .mnav, .navActions { display:none !important; }
       /* keep QR visible in print */
       #selfQRTap{ display:grid !important; border-color:#ddd !important; }
       #selfQRTap, #selfQRCode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
@@ -187,7 +187,7 @@
 
           <div class="actions" style="margin-top:14px">
             <div class="actionsRow">
-              <button class="btn soft" id="verifyBtn" disabled>Kontrollera</button>
+              <button class="btn soft" id="verifyBtn" type="button" disabled>Kontrollera</button>
               <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Förbered kontroll</span>
             </div>
           </div>
@@ -426,7 +426,9 @@
   }
 
   function buildSelfLink(id){
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(id)}`;
+    const url = new URL(location.href);
+    const checked = (url.searchParams.get("checked") || "").trim();
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(id)}${checked ? `&checked=${encodeURIComponent(checked)}` : ""}`;
   }
 
   function showPill(el, text, ms = 1400){
