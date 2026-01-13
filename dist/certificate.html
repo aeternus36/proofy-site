@@ -31,6 +31,9 @@
         --qr-light:#ffffff;
         --qr-frame: rgba(255,255,255,.10);
         --qr-shadow: 0 14px 42px rgba(0,0,0,.35);
+
+        /* ✅ FIX: reservera bottenutrymme för flytande chat/FAB (”Fråga oss”) */
+        --proofy-fab-space: 112px; /* justera vid behov (96–128 brukar vara bra) */
       }
 
       *{box-sizing:border-box}
@@ -81,7 +84,7 @@
       main{
         max-width:1100px;
         margin:0 auto;
-        padding:10px 18px calc(48px + var(--proofy-fab-space, 0px));
+        padding:10px 18px calc(48px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom, 0px));
       }
 
       .pill{
@@ -378,11 +381,14 @@
       (function(){
         try{
           var p = location.pathname || "";
-          // Endast exakt /certificate eller /certificate/ (inte "endsWith", för att undvika oväntade matcher)
+          // Endast exakt /certificate eller /certificate/
           if (p === "/certificate" || p === "/certificate/") {
-            // enkel loop-säkring
-            if (sessionStorage.getItem("__proofy_cert_redirected") === "1") return;
-            sessionStorage.setItem("__proofy_cert_redirected","1");
+            // ✅ loop/flimmer-säkring med tidsfönster (inte permanent lås)
+            var k = "__proofy_cert_redirect_ts";
+            var last = Number(sessionStorage.getItem(k) || "0");
+            var now = Date.now();
+            if (now - last < 1500) return;
+            sessionStorage.setItem(k, String(now));
             location.replace("/certificate.html" + (location.search || "") + (location.hash || ""));
           }
         }catch(e){}
