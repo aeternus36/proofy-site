@@ -38,9 +38,7 @@
 
       *{box-sizing:border-box}
 
-      /* ✅ FIX: stoppa “färg/overlay-band” från globala lager i proofy.css
-         - Lås sidans bakgrund här
-         - Slå av eventuella html/body pseudo-element (vanlig källa till dubbel-gradient/overlay på mobil) */
+      /* ✅ FIX: stoppa “färg/overlay-band” från globala lager i proofy.css */
       html{
         background: var(--bg) !important;
       }
@@ -79,8 +77,6 @@
         border-radius: 14px;
       }
 
-      /* Viktigt: reservera lite extra bottenutrymme på just intygssidan också
-         (utöver global lösning i proofy.css) */
       main{
         max-width:1100px;
         margin:0 auto;
@@ -348,7 +344,6 @@
 
       @media print{
         header, .actions, details.tech { display:none !important; }
-        /* VIKTIGT: warnBox MÅSTE få vara med i print (status/avgränsning kan vara avgörande) */
         body{ background:#fff !important; color:#000 !important; }
         .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
         .pill, .statusBadge, .val, .statusMeta { border-color:#ddd !important; background:#fff !important; }
@@ -376,21 +371,57 @@
 
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
-    <!-- ✅ HARDTEST: Canonical redirect om någon öppnar /certificate (men undvik loop/flimmer) -->
+    <!-- ✅ HARDTEST (super-tajt):
+         - Redirectar /certificate och /certificate/ → /certificate.html
+         - Behåller query + hash
+         - Om någon skickar fragment som #hash=0x... eller #tx=... så konverteras det till query-params
+         - Tidsbaserad loop-säkring för att undvika flimmer -->
     <script>
       (function(){
         try{
           var p = location.pathname || "";
-          // Endast exakt /certificate eller /certificate/
-          if (p === "/certificate" || p === "/certificate/") {
-            // ✅ loop/flimmer-säkring med tidsfönster (inte permanent lås)
-            var k = "__proofy_cert_redirect_ts";
-            var last = Number(sessionStorage.getItem(k) || "0");
-            var now = Date.now();
-            if (now - last < 1500) return;
-            sessionStorage.setItem(k, String(now));
-            location.replace("/certificate.html" + (location.search || "") + (location.hash || ""));
+          if (p !== "/certificate" && p !== "/certificate/") return;
+
+          var tsKey = "__proofy_cert_redirect_ts";
+          var last = Number(sessionStorage.getItem(tsKey) || "0");
+          var now = Date.now();
+          if (now - last < 1500) return;
+          sessionStorage.setItem(tsKey, String(now));
+
+          // Starta med befintliga query-parametrar
+          var params = new URLSearchParams(location.search || "");
+
+          // Plocka upp parametrar från fragment om de finns (#hash=...&tx=... etc)
+          var rawHash = (location.hash || "").replace(/^#/, "");
+          if (rawHash) {
+            // Stöd både "#hash=0x.." och "#?hash=0x.." och "#/hash=0x.."
+            rawHash = rawHash.replace(/^[?\/]+/, "");
+            var fragParams = new URLSearchParams(rawHash);
+
+            // Kopiera in viktiga keys om de saknas i query
+            var keys = ["hash","tx","cert","checked"];
+            for (var i=0; i<keys.length; i++){
+              var k = keys[i];
+              if (!params.has(k) && fragParams.has(k)){
+                params.set(k, fragParams.get(k));
+              }
+            }
+
+            // Om någon skickar bara "0x..." i fragment (utan key), tolka som hash
+            if (!params.has("hash") && /^0x[0-9a-fA-F]{64}$/.test(rawHash.trim())) {
+              params.set("hash", rawHash.trim());
+            }
           }
+
+          var qs = params.toString();
+          var target = "/certificate.html" + (qs ? ("?" + qs) : "");
+          // Behåll hash-fragmentet (för ankare) endast om det INTE är parametrar
+          // (om det ser ut som "hash=..." så har vi redan konverterat det)
+          if (location.hash && !/^(#\s*[?\/]?hash=|#\s*[?\/]?tx=|#\s*[?\/]?cert=|#\s*[?\/]?checked=)/i.test(location.hash)) {
+            target += location.hash;
+          }
+
+          location.replace(target);
         }catch(e){}
       })();
     </script>
