@@ -6,9 +6,6 @@
     const chatHistory = [];
     let isOpen = false;
 
-    // Track prior body overflow to restore reliably
-    let prevBodyOverflow = "";
-
     // Inject CSS once
     if (!document.getElementById("proofy-chat-style")) {
       const style = document.createElement("style");
@@ -43,14 +40,8 @@
         box-shadow: 0 10px 30px rgba(0,0,0,.25);
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
-
-        /* Use a variable for lift so :active doesn't conflict with inline transforms */
-        --proofy-lift: 0px;
-        transform: translateY(calc(-1 * var(--proofy-lift)));
       }
-      .proofy-chat-btn:active{
-        transform: translateY(calc(-1 * var(--proofy-lift) + 1px));
-      }
+      .proofy-chat-btn:active{ transform: translateY(1px); }
 
       /* Optional scrim to make overlay intent clear (reduces accidental double-actions) */
       .proofy-scrim{
@@ -76,10 +67,6 @@
         display: none;
         font-family: system-ui;
         color: #eaf1ff;
-
-        /* Use the same lift variable technique */
-        --proofy-lift: 0px;
-        transform: translateY(calc(-1 * var(--proofy-lift)));
       }
 
       /* HARDTEST: no blur/backdrop-filter (prevents flicker / inconsistent rendering) */
@@ -157,8 +144,16 @@
     // Mark body (no layout side-effects beyond safe-area)
     document.body.classList.add("__proofy-has-chat");
 
-    // IMPORTANT: Do NOT override --proofy-fab-space here.
-    // Single source of truth is the CSS variable.
+    // ✅ HARDTEST: do NOT override CSS' single source of truth.
+    // Only set a fallback if the variable is missing/empty.
+    try {
+      const cs = getComputedStyle(document.documentElement)
+        .getPropertyValue("--proofy-fab-space")
+        .trim();
+      if (!cs) {
+        document.documentElement.style.setProperty("--proofy-fab-space", "118px");
+      }
+    } catch {}
 
     // Create scrim once
     let scrim = document.querySelector(".proofy-scrim");
@@ -187,7 +182,6 @@
       panel.className = "proofy-panel";
       panel.setAttribute("role", "dialog");
       panel.setAttribute("aria-label", "Proofy Assist");
-      panel.setAttribute("aria-modal", "true");
       panel.innerHTML = `
       <div class="proofy-header">
         <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
@@ -210,7 +204,7 @@
 
     // === HARDTEST: avoid covering important CTAs / controls on small screens ===
     // Strategy: if the floating button overlaps an interactive element in the viewport,
-    // lift the button (and panel) upwards until the overlap is gone.
+    // translate the button (and panel) upwards until the overlap is gone.
     const INTERACTIVE_SELECTOR =
       'button, a[href], input, select, textarea, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])';
 
@@ -225,30 +219,19 @@
       );
     }
 
-    function isElementActionable(el) {
-      if (!el) return false;
-      // Do not assume too much; only filter obvious non-actionable cases
-      if (el.hasAttribute("disabled")) return false;
-      const cs = window.getComputedStyle(el);
-      if (cs.display === "none" || cs.visibility === "hidden") return false;
-      if (cs.pointerEvents === "none") return false;
-      return true;
-    }
-
     function computeRequiredLift(btnRect) {
+      // ✅ HARDTEST: Do NOT restrict to "near bottom" only.
+      // Any overlapped interactive element in the viewport matters (e.g. CTA row).
       const candidates = Array.from(document.querySelectorAll(INTERACTIVE_SELECTOR))
         .filter((el) => {
           if (!el || el === button) return false;
           if (panel.contains(el)) return false;
-          if (!isElementActionable(el)) return false;
-
           const r = el.getBoundingClientRect();
+          // Must be in viewport and have size
           if (r.width < 12 || r.height < 12) return false;
           if (r.bottom < 0 || r.top > window.innerHeight) return false;
           if (r.right < 0 || r.left > window.innerWidth) return false;
-
-          const nearBottom = r.bottom > window.innerHeight - 280;
-          return nearBottom;
+          return true;
         });
 
       let lift = 0;
@@ -257,28 +240,30 @@
         const r = el.getBoundingClientRect();
         if (!rectsOverlap(btnRect, r)) continue;
 
+        // Lift enough so button clears the element (with margin)
         const margin = 12;
         const needed = (btnRect.bottom - r.top) + margin;
         lift = Math.max(lift, needed);
       }
 
+      // Cap lift so button never leaves the viewport completely
       const maxLift = Math.max(0, window.innerHeight - btnRect.height - 24);
       return Math.min(lift, maxLift);
     }
 
     function applyLift(px) {
       currentLiftPx = px;
-
-      // Use CSS variable to avoid transform conflicts with :active
-      const v = px ? `${px}px` : "0px";
-      button.style.setProperty("--proofy-lift", v);
-      panel.style.setProperty("--proofy-lift", v);
+      const t = px ? `translateY(${-px}px)` : "";
+      button.style.transform = t;
+      panel.style.transform = t;
     }
 
     function avoidOverlap() {
+      // Disable in print and when hidden elements not laid out.
       if (window.matchMedia && window.matchMedia("print").matches) return;
       if (!button || !document.body.contains(button)) return;
 
+      // Only enforce on narrow screens; on desktop it's less risky and could feel "jumpy".
       const narrow = window.innerWidth <= 420;
 
       if (!narrow) {
@@ -286,6 +271,7 @@
         return;
       }
 
+      // Reset first, then measure.
       if (currentLiftPx) applyLift(0);
 
       const btnRect = button.getBoundingClientRect();
@@ -293,6 +279,7 @@
       if (lift > 0) applyLift(lift);
     }
 
+    // Throttle to animation frame
     let rafPending = false;
     function scheduleAvoidOverlap() {
       if (rafPending) return;
@@ -307,53 +294,15 @@
     window.addEventListener("resize", scheduleAvoidOverlap);
     window.addEventListener("orientationchange", scheduleAvoidOverlap);
 
-    function lockBodyScroll(lock) {
-      try {
-        if (lock) {
-          prevBodyOverflow = document.body.style.overflow || "";
-          document.body.style.overflow = "hidden";
-        } else {
-          document.body.style.overflow = prevBodyOverflow;
-          prevBodyOverflow = "";
-        }
-      } catch {}
-    }
-
-    function trapFocus(e) {
-      if (!isOpen) return;
-      if (e.key !== "Tab") return;
-
-      const focusables = panel.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (!focusables || !focusables.length) return;
-
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-
-      if (e.shiftKey) {
-        if (document.activeElement === first || document.activeElement === panel) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-
     function toggle(open) {
       isOpen = open ?? !isOpen;
       panel.style.display = isOpen ? "block" : "none";
       scrim.style.display = isOpen ? "block" : "none";
 
+      // When open, make it explicit that panel is overlay; avoid underlying accidental clicks.
       if (isOpen) {
-        lockBodyScroll(true);
         input.focus();
       } else {
-        lockBodyScroll(false);
         button.focus();
       }
 
@@ -368,9 +317,6 @@
       if (e.key === "Escape" && isOpen) toggle(false);
     });
 
-    // Focus trap only while open
-    panel.addEventListener("keydown", trapFocus);
-
     function addMessage(role, text) {
       const wrapper = document.createElement("div");
       wrapper.className = `proofy-msg ${role}`;
@@ -384,16 +330,15 @@
       return wrapper;
     }
 
-    function normalizeUrlSameOriginOnly(u) {
+    function normalizeUrl(u) {
       const s = String(u || "").trim();
       if (!s) return "";
       try {
         const abs = new URL(s, location.origin);
-        // HARD RULE: only allow same-origin links in widget CTAs
-        if (abs.origin !== location.origin) return "";
-        return abs.pathname + abs.search + abs.hash;
+        if (abs.origin === location.origin) return abs.pathname + abs.search + abs.hash;
+        return abs.href;
       } catch {
-        return "";
+        return s;
       }
     }
 
@@ -445,13 +390,9 @@
         }
 
         if (c.url) {
-          const href = normalizeUrlSameOriginOnly(c.url);
-          // Do not render external/invalid links
-          if (!href) return;
-
           const a = document.createElement("a");
           a.className = "proofy-cta";
-          a.href = href;
+          a.href = normalizeUrl(c.url);
           a.target = "_blank";
           a.rel = "noopener noreferrer";
           a.textContent = c.label;
@@ -570,7 +511,7 @@
           "- Registreringsstatus: [Registrerad / Ej registrerad / Okänt]\n" +
           "- Registreringstid (om känd): [datum/tid]\n" +
           "- Verifiering genomförd: [datum/tid]\n" +
-          "Avsluta med avgränsning: Proofy avser filversion (tekniskts`nisk fingeravtryck), inte innehållets riktighet.",
+          "Avsluta med avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet.",
       },
     ]);
 
