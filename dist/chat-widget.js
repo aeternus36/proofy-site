@@ -14,6 +14,7 @@
       :root{
         --proofy-safe-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
         --proofy-safe-right:  calc(16px + env(safe-area-inset-right, 0px));
+
         /* Single source of truth for reserved space (pages use this in main padding) */
         --proofy-fab-space: 108px;
       }
@@ -40,8 +41,7 @@
         box-shadow: 0 10px 30px rgba(0,0,0,.25);
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
-        /* IMPORTANT: keep visual active transform separate from lift transform */
-        transition: transform 140ms ease;
+        will-change: auto; /* avoid jitter from transforms */
       }
       .proofy-chat-btn:active{ transform: translateY(1px); }
 
@@ -69,7 +69,6 @@
         display: none;
         font-family: system-ui;
         color: #eaf1ff;
-        transition: transform 140ms ease;
       }
 
       /* HARDTEST: no blur/backdrop-filter (prevents flicker / inconsistent rendering) */
@@ -147,14 +146,13 @@
     // Mark body (no layout side-effects beyond safe-area)
     document.body.classList.add("__proofy-has-chat");
 
-    // ✅ Do NOT override CSS' single source of truth.
     // Only set a fallback if the variable is missing/empty.
     try {
       const cs = getComputedStyle(document.documentElement)
         .getPropertyValue("--proofy-fab-space")
         .trim();
       if (!cs) {
-        document.documentElement.style.setProperty("--proofy-fab-space", "118px");
+        document.documentElement.style.setProperty("--proofy-fab-space", "108px");
       }
     } catch {}
 
@@ -205,135 +203,13 @@
     const closeBtn = panel.querySelector(".proofy-x");
     if (!msgRoot || !input || !sendBtn || !closeBtn) return;
 
-    // === Overlap-avoidance (stabil, utan att krocka med :active-transform) ===
-    // Instead of using element.style.transform (which fights with :active),
-    // we move elements by setting their bottom offset via CSS variables.
-    // This avoids jitter, preserves press feedback, and is deterministic.
-
-    const BASE_BTN_BOTTOM = "var(--proofy-safe-bottom)";
-    const BASE_PANEL_BOTTOM = "calc(var(--proofy-safe-bottom) + 66px)";
-
-    function setLiftPx(px) {
-      const lift = Math.max(0, Math.floor(px || 0));
-      button.style.bottom = lift ? `calc(${BASE_BTN_BOTTOM} + ${lift}px)` : BASE_BTN_BOTTOM;
-      panel.style.bottom = lift ? `calc(${BASE_PANEL_BOTTOM} + ${lift}px)` : BASE_PANEL_BOTTOM;
-    }
-
-    let currentLiftPx = 0;
-
-    // Only consider truly interactive & visible elements
-    const INTERACTIVE_SELECTOR =
-      'button, a[href], input, select, textarea, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])';
-
-    function rectsOverlap(a, b) {
-      return !(
-        a.right <= b.left ||
-        a.left >= b.right ||
-        a.bottom <= b.top ||
-        a.top >= b.bottom
-      );
-    }
-
-    function isVisibleInteractive(el) {
-      if (!el) return false;
-      if (el === button) return false;
-      if (panel.contains(el)) return false;
-
-      // Ignore hidden/disabled elements
-      const cs = getComputedStyle(el);
-      if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
-
-      // Skip elements not actually clickable
-      if (el.matches("button, input, select, textarea") && el.disabled) return false;
-
-      const r = el.getBoundingClientRect();
-      if (r.width < 12 || r.height < 12) return false;
-
-      // In viewport?
-      if (r.bottom < 0 || r.top > window.innerHeight) return false;
-      if (r.right < 0 || r.left > window.innerWidth) return false;
-
-      return true;
-    }
-
-    function computeRequiredLift(btnRect) {
-      const candidates = Array.from(document.querySelectorAll(INTERACTIVE_SELECTOR))
-        .filter(isVisibleInteractive);
-
-      let lift = 0;
-
-      for (const el of candidates) {
-        const r = el.getBoundingClientRect();
-        if (!rectsOverlap(btnRect, r)) continue;
-
-        // Lift enough so button clears the element (with margin)
-        const margin = 12;
-        const needed = (btnRect.bottom - r.top) + margin;
-        lift = Math.max(lift, needed);
-      }
-
-      // Cap lift so button never leaves the viewport completely
-      const maxLift = Math.max(0, window.innerHeight - btnRect.height - 24);
-      return Math.min(lift, maxLift);
-    }
-
-    function avoidOverlap() {
-      // Disable in print and when hidden elements not laid out.
-      if (window.matchMedia && window.matchMedia("print").matches) return;
-      if (!button || !document.body.contains(button)) return;
-
-      // Keep it conservative: only enforce on narrow screens (mobile).
-      const narrow = window.innerWidth <= 420;
-      if (!narrow) {
-        if (currentLiftPx) {
-          currentLiftPx = 0;
-          setLiftPx(0);
-        }
-        return;
-      }
-
-      // Measure at base position first for deterministic lift
-      if (currentLiftPx) {
-        currentLiftPx = 0;
-        setLiftPx(0);
-      }
-
-      const btnRect = button.getBoundingClientRect();
-      const lift = computeRequiredLift(btnRect);
-
-      if (lift !== currentLiftPx) {
-        currentLiftPx = lift;
-        setLiftPx(lift);
-      }
-    }
-
-    // Throttle to animation frame
-    let rafPending = false;
-    function scheduleAvoidOverlap() {
-      if (rafPending) return;
-      rafPending = true;
-      requestAnimationFrame(() => {
-        rafPending = false;
-        avoidOverlap();
-      });
-    }
-
-    window.addEventListener("scroll", scheduleAvoidOverlap, { passive: true });
-    window.addEventListener("resize", scheduleAvoidOverlap);
-    window.addEventListener("orientationchange", scheduleAvoidOverlap);
-
     function toggle(open) {
       isOpen = open ?? !isOpen;
       panel.style.display = isOpen ? "block" : "none";
       scrim.style.display = isOpen ? "block" : "none";
 
-      if (isOpen) {
-        input.focus();
-      } else {
-        button.focus();
-      }
-
-      scheduleAvoidOverlap();
+      if (isOpen) input.focus();
+      else button.focus();
     }
 
     button.onclick = () => toggle(true);
@@ -504,7 +380,6 @@
       } finally {
         sendBtn.disabled = false;
         input.disabled = false;
-        scheduleAvoidOverlap();
         if (isOpen) input.focus();
       }
     }
@@ -541,10 +416,6 @@
           "Avsluta med avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet.",
       },
     ]);
-
-    // Initial overlap pass after layout is stable
-    setTimeout(scheduleAvoidOverlap, 0);
-    setTimeout(scheduleAvoidOverlap, 300);
   }
 
   if (document.readyState === "loading") {
