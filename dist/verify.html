@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- PROOFY HARDTEST VERIFY v2026-01-13 -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -75,11 +76,39 @@
       image-rendering: pixelated;
     }
 
+    /* ✅ HARDTEST: audit-version visas diskret (på mobil/utan devtools) */
+    #auditVerifyVersion{
+      display:none;
+      margin-top:10px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.04);
+      color:rgba(234,240,255,.78);
+      font-size:12px;
+      line-height:1.35;
+    }
+    #auditVerifyVersion .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color:rgba(234,240,255,.92);
+      word-break:break-word;
+      overflow-wrap:anywhere;
+    }
+
     @media print{
-      header, .mnav, .navActions { display:none !important; }
+      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
       /* keep QR visible in print */
       #selfQRTap{ display:grid !important; border-color:#ddd !important; }
       #selfQRTap, #selfQRCode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+      /* audit-version får vara med i print (bevis på exakt filversion) */
+      #auditVerifyVersion{
+        display:block !important;
+        border-color:#ddd !important;
+        background:#fff !important;
+        color:#111 !important;
+      }
+      #auditVerifyVersion .mono{ color:#000 !important; }
     }
   </style>
 </head>
@@ -187,7 +216,7 @@
 
           <div class="actions" style="margin-top:14px">
             <div class="actionsRow">
-              <button class="btn soft" id="verifyBtn" type="button" disabled>Kontrollera</button>
+              <button class="btn soft" id="verifyBtn" disabled>Kontrollera</button>
               <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Förbered kontroll</span>
             </div>
           </div>
@@ -270,6 +299,12 @@
           <div id="resultBox" style="display:none;">
             <div id="resultHeadline"
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
+            </div>
+
+            <!-- ✅ HARDTEST: versionsbevis (synligt på mobil) -->
+            <div id="auditVerifyVersion">
+              <div class="meta" style="opacity:.9;">Audit-version (verify.html)</div>
+              <div class="mono" id="auditVerifyVersionValue">—</div>
             </div>
 
             <!-- ✅ Kontrolltid synlig i själva resultatet (för skärmdump/ärendeakt) -->
@@ -364,6 +399,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  /* ✅ HARDTEST VERSION STAMP (single source of truth) */
+  const PROOFY_VERIFY_HARDTEST_VERSION = "PROOFY HARDTEST VERIFY v2026-01-13";
+
   const hashInput = $("hashInput");
   const pasteIdBtn = $("pasteIdBtn");
   const clearIdBtn = $("clearIdBtn");
@@ -413,6 +451,10 @@
   const outCheckedSe = $("outCheckedSe");
   const outCheckedUtc = $("outCheckedUtc");
 
+  // NEW: audit-version synlig (mobilbevis)
+  const auditVerifyVersion = $("auditVerifyVersion");
+  const auditVerifyVersionValue = $("auditVerifyVersionValue");
+
   let currentFile = null;
   let busy = false;
   let opId = 0;
@@ -426,9 +468,7 @@
   }
 
   function buildSelfLink(id){
-    const url = new URL(location.href);
-    const checked = (url.searchParams.get("checked") || "").trim();
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(id)}${checked ? `&checked=${encodeURIComponent(checked)}` : ""}`;
+    return `${location.origin}/verify.html?hash=${encodeURIComponent(id)}`;
   }
 
   function showPill(el, text, ms = 1400){
@@ -608,6 +648,8 @@
     if (!run) return "—";
     const lines = [];
     lines.push("PROOFY – Notering");
+    lines.push("");
+    lines.push(`Audit-version (verify.html): ${PROOFY_VERIFY_HARDTEST_VERSION}`);
     lines.push("");
     lines.push(`Kontrolltid (denna visning): ${run.verifySe || "—"}`);
     if (run.verifyUtc) lines.push(`Kontrolltid (denna visning, UTC): ${run.verifyUtc}`);
@@ -823,6 +865,9 @@
 
     if (outCheckedSe) outCheckedSe.textContent = "—";
     if (outCheckedUtc) outCheckedUtc.textContent = "—";
+
+    if (auditVerifyVersion) auditVerifyVersion.style.display = "none";
+    if (auditVerifyVersionValue) auditVerifyVersionValue.textContent = "—";
 
     resultHeadline.textContent = "";
     outExplainTitle.textContent = "";
@@ -1115,6 +1160,13 @@
       if (myOp !== opId) return;
 
       resultBox.style.display = "block";
+
+      /* ✅ HARDTEST: visa audit-version när resultat visas */
+      if (auditVerifyVersion && auditVerifyVersionValue){
+        auditVerifyVersionValue.textContent = PROOFY_VERIFY_HARDTEST_VERSION;
+        auditVerifyVersion.style.display = "block";
+      }
+
       if (reportMeta) {
         reportMeta.style.display = "block";
         reportMeta.textContent = `Kontrolltid (denna visning): ${checkedSe}`;
