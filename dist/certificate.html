@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- CERT-HARDTEST v2026-01-13 / overlay-fix + audit 5/5 -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
@@ -31,14 +32,13 @@
         --qr-light:#ffffff;
         --qr-frame: rgba(255,255,255,.10);
         --qr-shadow: 0 14px 42px rgba(0,0,0,.35);
-
-        /* ✅ FIX: reservera bottenutrymme för flytande chat/FAB (”Fråga oss”) */
-        --proofy-fab-space: 112px; /* justera vid behov (96–128 brukar vara bra) */
       }
 
       *{box-sizing:border-box}
 
-      /* ✅ FIX: stoppa “färg/overlay-band” från globala lager i proofy.css */
+      /* ✅ FIX: stoppa “färg/overlay-band” från globala lager i proofy.css
+         - Lås sidans bakgrund här
+         - Slå av eventuella html/body pseudo-element (vanlig källa till dubbel-gradient/overlay på mobil) */
       html{
         background: var(--bg) !important;
       }
@@ -77,10 +77,12 @@
         border-radius: 14px;
       }
 
+      /* Viktigt: reservera lite extra bottenutrymme på just intygssidan också
+         (utöver global lösning i proofy.css) */
       main{
         max-width:1100px;
         margin:0 auto;
-        padding:10px 18px calc(48px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom, 0px));
+        padding:10px 18px calc(48px + var(--proofy-fab-space, 0px));
       }
 
       .pill{
@@ -371,57 +373,16 @@
 
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
-    <!-- ✅ HARDTEST (super-tajt):
-         - Redirectar /certificate och /certificate/ → /certificate.html
-         - Behåller query + hash
-         - Om någon skickar fragment som #hash=0x... eller #tx=... så konverteras det till query-params
-         - Tidsbaserad loop-säkring för att undvika flimmer -->
+    <!-- ✅ HARDTEST: Canonical redirect om någon öppnar /certificate (men undvik loop/flimmer) -->
     <script>
       (function(){
         try{
           var p = location.pathname || "";
-          if (p !== "/certificate" && p !== "/certificate/") return;
-
-          var tsKey = "__proofy_cert_redirect_ts";
-          var last = Number(sessionStorage.getItem(tsKey) || "0");
-          var now = Date.now();
-          if (now - last < 1500) return;
-          sessionStorage.setItem(tsKey, String(now));
-
-          // Starta med befintliga query-parametrar
-          var params = new URLSearchParams(location.search || "");
-
-          // Plocka upp parametrar från fragment om de finns (#hash=...&tx=... etc)
-          var rawHash = (location.hash || "").replace(/^#/, "");
-          if (rawHash) {
-            // Stöd både "#hash=0x.." och "#?hash=0x.." och "#/hash=0x.."
-            rawHash = rawHash.replace(/^[?\/]+/, "");
-            var fragParams = new URLSearchParams(rawHash);
-
-            // Kopiera in viktiga keys om de saknas i query
-            var keys = ["hash","tx","cert","checked"];
-            for (var i=0; i<keys.length; i++){
-              var k = keys[i];
-              if (!params.has(k) && fragParams.has(k)){
-                params.set(k, fragParams.get(k));
-              }
-            }
-
-            // Om någon skickar bara "0x..." i fragment (utan key), tolka som hash
-            if (!params.has("hash") && /^0x[0-9a-fA-F]{64}$/.test(rawHash.trim())) {
-              params.set("hash", rawHash.trim());
-            }
+          if (p === "/certificate" || p === "/certificate/") {
+            if (sessionStorage.getItem("__proofy_cert_redirected") === "1") return;
+            sessionStorage.setItem("__proofy_cert_redirected","1");
+            location.replace("/certificate.html" + (location.search || "") + (location.hash || ""));
           }
-
-          var qs = params.toString();
-          var target = "/certificate.html" + (qs ? ("?" + qs) : "");
-          // Behåll hash-fragmentet (för ankare) endast om det INTE är parametrar
-          // (om det ser ut som "hash=..." så har vi redan konverterat det)
-          if (location.hash && !/^(#\s*[?\/]?hash=|#\s*[?\/]?tx=|#\s*[?\/]?cert=|#\s*[?\/]?checked=)/i.test(location.hash)) {
-            target += location.hash;
-          }
-
-          location.replace(target);
         }catch(e){}
       })();
     </script>
@@ -478,6 +439,13 @@
         <div class="heroTop">
           <div>
             <h1>Verifieringsintyg</h1>
+
+            <div class="small" style="margin-top:10px; max-width:86ch;">
+              <b>Begränsning och metod:</b>
+              Intyget avser en <b>teknisk kontroll av filversion</b> (Verifierings-ID/kontrollvärde) mot Proofys register vid kontrolltillfället.
+              Intyget uttalar sig inte om dokumentets innehåll, riktighet, behörighet, signaturers äkthet eller juridiska giltighet.
+              Kontrolltiden i denna visning genereras i webbläsaren (enhetens klocka) och är inte extern tidsstämpling.
+            </div>
           </div>
 
           <div class="statusArea" aria-label="Status och kontrolltid">
@@ -539,6 +507,11 @@
               <b>Praktiskt tips:</b> Spara Verifierings-ID + intygslänk i ärendet vid fastställande.
               Dela verifieringslänk/QR vid intern kvalitetskontroll eller efterhandsgranskning.
             </div>
+
+            <div class="small" style="margin-top:10px; opacity:.95;">
+              <b>Viktigt för revision:</b> Detta intyg visar status för Verifierings-ID i Proofys register <b>vid kontrolltillfället</b>.
+              Bevisvärde bedöms i sitt sammanhang (process, åtkomst, versionskedja och övrig dokumentation).
+            </div>
           </div>
 
           <div class="card" id="cardLinks">
@@ -598,6 +571,14 @@
             • Intyget avser en <b>teknisk kontroll vid kontrolltillfället</b>. Utfallet kan ändras om registret uppdateras senare.
           </div>
 
+          <div class="fine" style="margin-top:12px;">
+            <b>Definitioner (kort)</b><br/>
+            • <b>Verifierings-ID:</b> kryptografiskt kontrollvärde för en specifik filversion.<br/>
+            • <b>Kontrolltillfälle:</b> när denna sida kontrollerar status mot Proofys register.<br/>
+            • <b>Bekräftad:</b> status där Proofy kan redovisa bekräftelse och tidpunkt i registret.<br/>
+            • <b>Kontrolltid (denna visning):</b> baserad på enhetens systemklocka, ej extern tidskälla.
+          </div>
+
           <details class="tech" id="techDetails">
             <summary>Teknisk information (valfritt)</summary>
             <div class="techGrid">
@@ -627,6 +608,9 @@
     </main>
 
     <script>
+      // ✅ HARDTEST version (spårbarhet)
+      const CERT_HARDTEST_VERSION = "CERT-HARDTEST v2026-01-13";
+
       const $ = (id) => document.getElementById(id);
 
       function isValidBytes32Hex(s){
@@ -886,12 +870,16 @@
         $("registrationRef").textContent = "—";
         updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
 
+        // ✅ Spårbar “hardtest-stämpel” i techHint om inget annat hint finns
+        const techHintEl = $("techHint");
+        if (techHintEl && !techHintEl.textContent.trim() && !certId && !tx){
+          techHintEl.textContent = `Audit-version: ${CERT_HARDTEST_VERSION}`;
+        }
+
         if (certId){
-          $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
+          techHintEl.innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
         } else if (tx){
-          $("techHint").innerHTML = `Registreringsreferens: <span class="mono">${tx}</span>`;
-        } else {
-          $("techHint").textContent = "";
+          techHintEl.innerHTML = `Registreringsreferens: <span class="mono">${tx}</span>`;
         }
 
         if (!isValidBytes32Hex(hash)){
