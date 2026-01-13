@@ -14,14 +14,15 @@
       :root{
         --proofy-safe-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
         --proofy-safe-right:  calc(16px + env(safe-area-inset-right, 0px));
-        /* Default reserved space for the floating button (pages may use this) */
+        /* Single source of truth for reserved space (pages use this in main padding) */
         --proofy-fab-space: 108px;
       }
 
-      /* Reserve a bit of space so the floating bubble doesn't cover last content.
-         NOTE: true collision avoidance is handled by JS (see avoidOverlap). */
+      /* IMPORTANT:
+         Do NOT add body padding here. Pages reserve space via --proofy-fab-space in CSS (e.g. main padding).
+         This avoids double/triple spacing and print side-effects. */
       body.__proofy-has-chat{
-        padding-bottom: calc(var(--proofy-fab-space) + env(safe-area-inset-bottom, 0px)) !important;
+        padding-bottom: env(safe-area-inset-bottom) !important;
       }
 
       .proofy-chat-btn{
@@ -42,6 +43,15 @@
       }
       .proofy-chat-btn:active{ transform: translateY(1px); }
 
+      /* Optional scrim to make overlay intent clear (reduces accidental double-actions) */
+      .proofy-scrim{
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.28);
+        z-index: 2147483000;
+        display: none;
+      }
+
       .proofy-panel{
         position:fixed;
         right: var(--proofy-safe-right);
@@ -49,7 +59,7 @@
         z-index: 2147483001;
         width: min(380px, calc(100vw - 32px));
         height: min(560px, calc(100vh - 140px));
-        background: rgba(10,16,32,.94);
+        background: rgba(10,16,32,.96);
         border: 1px solid rgba(255,255,255,.10);
         border-radius: 18px;
         overflow: hidden;
@@ -59,17 +69,7 @@
         color: #eaf1ff;
       }
 
-      /* Blur only when supported */
-      @supports ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))){
-        .proofy-panel{
-          -webkit-backdrop-filter: blur(10px);
-          backdrop-filter: blur(10px);
-        }
-      }
-      /* Firefox Android can glitch with blur; disable there */
-      @-moz-document url-prefix(){
-        .proofy-panel{ backdrop-filter:none !important; }
-      }
+      /* HARDTEST: no blur/backdrop-filter (prevents flicker / inconsistent rendering) */
 
       .proofy-header{
         display:flex;align-items:center;justify-content:space-between;
@@ -133,22 +133,31 @@
 
       /* PRINT/PDF: widget must never appear or affect evidence layout */
       @media print{
-        .proofy-chat-btn, .proofy-panel{ display:none !important; }
-        body.__proofy-has-chat{ padding-bottom: 0 !important; }
+        .proofy-chat-btn, .proofy-panel, .proofy-scrim{ display:none !important; }
         :root{ --proofy-fab-space: 0px !important; }
+        body.__proofy-has-chat{ padding-bottom: 0 !important; }
       }
       `;
       document.head.appendChild(style);
     }
 
-    // Mark body so it gets safe padding
+    // Mark body (no layout side-effects beyond safe-area)
     document.body.classList.add("__proofy-has-chat");
 
-    // Ensure pages can reserve space consistently (they may use var(--proofy-fab-space))
-    // Keep this conservative: it represents the *minimum* reserved space.
+    // Ensure pages can reserve space consistently (pages use var(--proofy-fab-space))
     try {
-      document.documentElement.style.setProperty("--proofy-fab-space", "108px");
+      // Match proofy.css default; override if widget needs slightly more on some pages.
+      document.documentElement.style.setProperty("--proofy-fab-space", "118px");
     } catch {}
+
+    // Create scrim once
+    let scrim = document.querySelector(".proofy-scrim");
+    if (!scrim) {
+      scrim = document.createElement("div");
+      scrim.className = "proofy-scrim";
+      scrim.setAttribute("aria-hidden", "true");
+      document.body.appendChild(scrim);
+    }
 
     // Create button once
     let button = document.querySelector(".proofy-chat-btn");
@@ -217,10 +226,9 @@
           if (r.bottom < 0 || r.top > window.innerHeight) return false;
           if (r.right < 0 || r.left > window.innerWidth) return false;
 
-          // Only care about things near where the button sits (bottom-right zone)
-          const nearBottom = r.bottom > window.innerHeight - 260;
-          const nearRight = r.right > window.innerWidth - 260;
-          return nearBottom && nearRight;
+          // Only care about elements near the bottom area (wrap can place CTAs not "near right")
+          const nearBottom = r.bottom > window.innerHeight - 280;
+          return nearBottom;
         });
 
       let lift = 0;
@@ -229,7 +237,7 @@
         const r = el.getBoundingClientRect();
         if (!rectsOverlap(btnRect, r)) continue;
 
-        // Lift enough so button top clears element bottom (with margin)
+        // Lift enough so button clears the element (with margin)
         const margin = 12;
         const needed = (btnRect.bottom - r.top) + margin;
         lift = Math.max(lift, needed);
@@ -244,7 +252,6 @@
       currentLiftPx = px;
       const t = px ? `translateY(${-px}px)` : "";
       button.style.transform = t;
-      // Panel should move with the button so its anchor remains consistent.
       panel.style.transform = t;
     }
 
@@ -282,17 +289,26 @@
 
     window.addEventListener("scroll", scheduleAvoidOverlap, { passive: true });
     window.addEventListener("resize", scheduleAvoidOverlap);
-    // Some mobile browsers change viewport height when address bar collapses/expands.
     window.addEventListener("orientationchange", scheduleAvoidOverlap);
 
     function toggle(open) {
       isOpen = open ?? !isOpen;
       panel.style.display = isOpen ? "block" : "none";
+      scrim.style.display = isOpen ? "block" : "none";
+
+      // When open, make it explicit that panel is overlay; avoid underlying accidental clicks.
+      if (isOpen) {
+        input.focus();
+      } else {
+        button.focus();
+      }
+
       scheduleAvoidOverlap();
-      if (isOpen) input.focus();
     }
+
     button.onclick = () => toggle(true);
     closeBtn.onclick = () => toggle(false);
+    scrim.onclick = () => toggle(false);
 
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && isOpen) toggle(false);
