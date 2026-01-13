@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="sv">
 <head>
@@ -24,10 +23,19 @@
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-10a" />
 
   <style>
-    html, body { background: #0b1220 !important; }
-    body { background-image: none !important; }
-    main::before{ content:none !important; }
-    main{ background: transparent !important; }
+    /* AUDIT/HARDTEST:
+       Begränsa visuella overrides till skärm så print/PDF inte förstörs av !important. */
+    @media screen{
+      html, body { background: #0b1220 !important; }
+      body { background-image: none !important; }
+      main::before{ content:none !important; }
+      main{ background: transparent !important; }
+    }
+
+    @media print{
+      html, body { background:#fff !important; }
+      body{ background-image:none !important; }
+    }
 
     /* status-pill ska vara tyst tills vi behöver visa något */
     #demoStatus { display:none; }
@@ -36,13 +44,10 @@
     .heroCard{
       padding:18px;
       margin-top:14px;
-
-      /* 5/5 polish: pyttelite bättre djup/kontrast utan layoutförändring */
       border-color: rgba(255,255,255,.10);
       background: rgba(255,255,255,.035);
     }
 
-    /* lite bättre rytm i texten i hero */
     .heroCard .small { color: rgba(234,240,255,.86); }
     .heroCard .hr { opacity: .95; }
 
@@ -54,7 +59,6 @@
       margin-top:10px;
     }
 
-    /* “B2B-badges” utan emojis – mer revisionsmässigt */
     .proofyPills{
       display:flex;
       gap:10px;
@@ -74,7 +78,6 @@
       display:inline-block;
     }
 
-    /* Noteringsruta */
     .noteBox{
       border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.03);
@@ -99,7 +102,6 @@
       align-items:center;
     }
 
-    /* grid fallback (om proofy.css skulle ändras) */
     .grid3{
       display:grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -116,14 +118,12 @@
     }
     .tile b{ display:block; margin-bottom:6px; }
 
-    /* 5/5: diskret, premium fokus för tangentbord (påverkar inte mus) */
     a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible{
       outline: 2px solid rgba(120,180,255,.55);
       outline-offset: 3px;
       border-radius: 12px;
     }
 
-    /* 5/5: håll CTA-raden stabil på små skärmar utan “hopp” */
     .heroCtas{
       display:flex;
       gap:10px;
@@ -144,7 +144,7 @@
 </head>
 
 <body>
-<a class="skip" href="#top">Hoppa till innehåll</a>
+<a class="skip" href="#main">Hoppa till innehåll</a>
 
 <header>
   <div class="wrap">
@@ -182,7 +182,7 @@
   </div>
 </header>
 
-<main id="top">
+<main id="main">
   <div class="wrap">
     <div class="badge">För redovisningsbyråer · revision · granskning</div>
 
@@ -194,13 +194,13 @@
       Proofy gör det möjligt <strong>utan att lagra filinnehåll</strong>.
     </p>
 
-    <!-- 5/5: juridisk/revisions-positionering (kort, sakligt, utan “sälj”) -->
+    <!-- EN (1) auktoritativ avgränsning. Inga dubletter på resten av sidan. -->
     <p class="small" style="margin-top:10px; max-width:92ch;">
-      <b>Professionell användning:</b> Proofy används som <b>tekniskt verifieringsunderlag</b> i dokumentation och intern kontroll.
-      Tjänsten visar endast om en fil <b>matchar en fastställd referens</b> och ersätter inte professionellt omdöme, internkontroll, revision eller juridisk bedömning.
+      <b>Avgränsning (viktig):</b> Proofy är ett <b>tekniskt verifieringsunderlag</b> för filversioner (tekniskt fingeravtryck).
+      Tjänsten visar endast om en fil <b>matchar en fastställd referens</b> vid kontroll.
+      Proofy ersätter inte professionellt omdöme, internkontroll, revision, arkivering, e-signering eller juridisk bedömning.
     </p>
 
-    <!-- HERO: lugnare, tydligare CTA-hierarki -->
     <div class="card heroCard">
       <div class="heroCtas" style="margin-top:12px;">
         <a class="btn primary" href="#kontakt">Boka kort demo</a>
@@ -229,20 +229,14 @@
         (t.ex. intern kvalitetskontroll eller efterhandsgranskning).
       </p>
 
-      <p class="small" style="margin-top:10px; margin-bottom:0;">
-        Proofy är ett tekniskt verifieringsunderlag och utgör inte e-signering, arkivering eller juridisk rådgivning.
-      </p>
-
       <div class="hr"></div>
 
-      <!-- Snabb åtkomst till verktyg (flyttad från översta CTA-raden för lugnare first impression) -->
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
         <a class="btn" href="/verify.html">Verifiera underlag</a>
       </div>
     </div>
 
-    <!-- Tydlig “användning i byråprocess” + notering att klistra in -->
     <section id="anvandning" style="margin-top:28px;">
       <h2>Tydlig användning i byråprocess (kortfattat)</h2>
 
@@ -254,11 +248,11 @@
           </div>
           <div class="tile">
             <b>Begränsning</b>
-            <span class="small">Proofy bedömer inte innehållets riktighet och ersätter inte professionellt omdöme, internkontroll, revision eller juridisk bedömning.</span>
+            <span class="small">Se avgränsningen högst upp på sidan (gäller hela tjänsten).</span>
           </div>
           <div class="tile">
             <b>Dataminimering</b>
-            <span class="small">Filen lämnar inte datorn via Proofys funktion; endast Verifierings-ID och registreringstid hanteras i registret.</span>
+            <span class="small">Filen lämnar inte datorn via Proofys funktion; endast Verifierings-ID och relevanta kontrolluppgifter hanteras i registret.</span>
           </div>
         </div>
 
@@ -305,7 +299,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           </div>
           <div class="tile">
             <b>Vad Proofy inte är</b>
-            <span class="small">Inte arkivering, inte e-signering och inte juridisk rådgivning. Proofy är ett tekniskt komplement för spårbarhet.</span>
+            <span class="small">Se avgränsningen högst upp på sidan (gäller hela tjänsten).</span>
           </div>
         </div>
 
@@ -318,10 +312,6 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
 
           <p>
             2) Om underlaget behöver styrkas senare verifierar ni filen på några sekunder och ser om den är <strong>oförändrad</strong> jämfört med referensen.
-          </p>
-
-          <p class="small" style="margin:10px 0 0;">
-            Proofy lagrar inte filinnehåll och ersätter inte juridisk bedömning – det är ett tekniskt stöd för spårbarhet och efterhandskontroll.
           </p>
         </div>
 
@@ -343,7 +333,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            Passar när ni behöver ett objektivt sätt att visa att ett underlag (en fil) inte ändrats efter ett visst datum. Inte avsett för arkivering eller e-signering.
+            Passar när ni behöver ett objektivt sätt att visa att ett underlag (en fil) inte ändrats efter ett visst datum.
           </p>
         </div>
       </div>
@@ -423,10 +413,6 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           </div>
         </form>
 
-        <div class="hr"></div>
-        <p class="small" style="margin:0;">
-          OBS: Proofy är en digital tjänst för teknisk verifiering och spårbarhet. Vi ersätter inte juridisk rådgivning eller revision.
-        </p>
       </div>
     </section>
 
@@ -439,9 +425,6 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
       <div>
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
-        </div>
       </div>
       <div class="links">
         <a href="/security.html">Säkerhet</a>
@@ -467,7 +450,6 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
         await navigator.clipboard.writeText(text);
         return true;
       }
-      // fallback
       const ta = document.createElement("textarea");
       ta.value = text;
       ta.setAttribute("readonly", "");
@@ -496,7 +478,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
     });
   }
 
-  // Demoformulär (oförändrad logik, bara behåller robustheten)
+  // Demoformulär
   const form = document.getElementById("demoForm");
   if (!form) return;
 
@@ -641,7 +623,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
 
       setStatus("Skickat ✅ Vi återkommer inom 1 arbetsdag.", "ok");
       form.reset();
-      setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
+      disableForm(false);
 
     } catch (err){
       setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se.", "err");
