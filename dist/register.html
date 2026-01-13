@@ -36,7 +36,6 @@
       margin-top:10px;
       flex-wrap:wrap;
     }
-    #copyIdBtn, #copyLinkBtn { display:none !important; }
     #statusPill, #manualPill { margin-left:0 !important; }
     .hintline{ margin-top:6px; opacity:.9; }
     .navActions .btn.isCurrent{
@@ -46,17 +45,17 @@
       background: rgba(255,255,255,.05);
     }
 
-    .btn.softSecondary{
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.12);
-    }
-
-    #manualBuildBtn { display:none !important; }
-
+    /* CTA-prio: nästa steg ska inte konkurrera med "Skapa" */
+    #nextStepBtn{ display:none; }
     #receiptBtn{
       background: rgba(255,255,255,.04) !important;
       border: 1px solid rgba(255,255,255,.12) !important;
       color: rgba(234,240,255,.85) !important;
+    }
+
+    .btn.softSecondary{
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.12);
     }
 
     .proofyQrTap{
@@ -86,6 +85,29 @@
       height:168px !important;
       display:block;
       image-rendering: pixelated;
+    }
+
+    /* Noteringsblock */
+    .noteBox{
+      margin-top:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.03);
+      border-radius:14px;
+      padding:12px;
+    }
+    .noteActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:10px;
+    }
+
+    @media print{
+      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
+      /* QR får vara med i print */
+      #qrTap, #manualQrTap { display:grid !important; border-color:#ddd !important; }
+      #qrTap, #qrBox, #manualQrTap, #manualQrBox{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     }
   </style>
 </head>
@@ -174,18 +196,17 @@
 
           <div class="actions" style="margin-top:14px;">
             <div class="actionsRow" aria-label="Åtgärder">
-              <a class="btn primary" id="nextStepBtn" href="/verify">Gå till verifiering</a>
+              <!-- ✅ Endast en primär CTA innan resultat finns -->
               <button class="btn primary" id="createBtn" disabled>Skapa Verifierings-ID</button>
 
-              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Visa registreringsunderlag</a>
+              <!-- Sekundära, visas när ID finns -->
+              <a class="btn soft" id="nextStepBtn" href="/verify">Öppna verifiering</a>
+              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
             </div>
 
             <div class="actionsMetaRow">
               <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Välj underlag</span>
             </div>
-
-            <button class="btn" id="copyIdBtn" disabled>Kopiera ID</button>
-            <button class="btn" id="copyLinkBtn" disabled>Kopiera länk</button>
           </div>
 
           <div id="localIdBox" style="display:none; margin-top:12px;">
@@ -334,15 +355,32 @@
                 </div>
 
                 <div style="min-width:240px; flex:1;">
-                  <div class="meta">Status hos Proofy</div>
+                  <!-- Kontrolltid synlig för revisionsspår -->
+                  <div class="meta">Kontrolltid (denna visning)</div>
+                  <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="checkedUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
+                  <div class="small" style="margin-top:8px; opacity:.9;">
+                    Tidpunkten genereras i webbläsaren och kan vara fel om systemklockan är fel. Den utgör inte extern tidsstämpling.
+                  </div>
+
+                  <div class="meta" style="margin-top:12px;">Status hos Proofy</div>
                   <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
-                  <div class="meta" style="margin-top:10px;">Tidpunkt (om bekräftad)</div>
+                  <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
 
                   <div class="actions" style="margin-top:12px;">
                     <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering för ärendeakt</button>
+                    <button class="btn soft" id="downloadNoteBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
                     <span id="copyNotePill" class="pill" style="display:none;"></span>
+                  </div>
+
+                  <div class="noteBox" id="noteBox" style="display:none;">
+                    <div class="meta">Notering (för dokumentation)</div>
+                    <pre class="mono" id="noteOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
+                    <p class="meta" style="margin:10px 0 0; opacity:.9;">
+                      Proofy avgör inte om ett dokument är korrekt, giltigt eller äkta. Kontrollen avser endast filversion (tekniskt fingeravtryck).
+                    </p>
                   </div>
 
                   <details style="margin-top:12px;">
@@ -390,8 +428,6 @@
 
             <div class="actions" style="margin-top:12px;">
               <div class="actionsRow">
-                <button class="btn" id="manualBuildBtn" type="button">Skapa länk &amp; QR</button>
-
                 <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
                 <a class="btn primary" id="manualVerifyBtn" href="/verify" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
               </div>
@@ -463,7 +499,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller tidsnotering och kontroll av filversioner. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+          Proofy tillhandahåller teknisk kontroll av filversioner. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -490,8 +526,6 @@
 
   const createBtn = $("createBtn");
   const nextStepBtn = $("nextStepBtn");
-  const copyIdBtn = $("copyIdBtn");
-  const copyLinkBtn = $("copyLinkBtn");
   const receiptBtn = $("receiptBtn");
   const statusPill = $("statusPill");
 
@@ -516,7 +550,13 @@
   const copyLinkIconBtn = $("copyLinkIconBtn");
   const copyLinkPill = $("copyLinkPill");
   const copyNoteBtn = $("copyNoteBtn");
+  const downloadNoteBtn = $("downloadNoteBtn");
   const copyNotePill = $("copyNotePill");
+  const noteBox = $("noteBox");
+  const noteOut = $("noteOut");
+
+  const checkedSeOut = $("checkedSeOut");
+  const checkedUtcOut = $("checkedUtcOut");
 
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
@@ -532,11 +572,12 @@
   let currentFile = null;
   let currentId = null;
   let currentLink = null;
+  let currentCheckedEpoch = null;
+
   let busy = false;
   let opId = 0;
   let lastRun = null;
   let lastProofyStatusCode = "";
-
   let manualCurrentLink = null;
 
   let pollTimer = null;
@@ -544,6 +585,26 @@
   let pollTxHash = null;
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  function setAriaBusy(v){
+    try{
+      if (mainEl) mainEl.setAttribute("aria-busy", v ? "true" : "false");
+    } catch {}
+  }
+
+  function setPill(text){ statusPill.textContent = text; }
+  function setManualPill(text){ manualPill.textContent = text; }
+
+  function hidePill(p){
+    if (!p) return;
+    p.style.display = "none";
+    p.textContent = "";
+  }
+  function showPill(p, text){
+    if (!p) return;
+    p.style.display = "inline-flex";
+    p.textContent = text;
+  }
 
   function isRetryableStatus(status){
     return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
@@ -610,103 +671,6 @@
     return { ok:true, res, data, aborted:false };
   }
 
-  function setAriaBusy(v){
-    try{
-      if (mainEl) mainEl.setAttribute("aria-busy", v ? "true" : "false");
-    } catch {}
-  }
-
-  function setPill(text){ statusPill.textContent = text; }
-  function setManualPill(text){ manualPill.textContent = text; }
-
-  function hidePill(p){
-    if (!p) return;
-    p.style.display = "none";
-    p.textContent = "";
-  }
-  function showPill(p, text){
-    if (!p) return;
-    p.style.display = "inline-flex";
-    p.textContent = text;
-  }
-
-  function updateReceiptLabel(){
-    if (!receiptBtn || !currentId) return;
-    if (lastProofyStatusCode === "CONFIRMED") {
-      receiptBtn.textContent = "Visa registreringsunderlag";
-    } else if (lastProofyStatusCode === "UNKNOWN") {
-      receiptBtn.textContent = "Öppna intyg (kunde inte kontrolleras)";
-    } else if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") {
-      receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
-    } else {
-      receiptBtn.textContent = "Öppna intyg (status ej bekräftad)";
-    }
-  }
-
-  function setBusy(v){
-    busy = v;
-    setAriaBusy(v);
-
-    createBtn.disabled = !currentFile || busy;
-    copyIdBtn.disabled = !currentId || busy;
-    copyLinkBtn.disabled = !currentLink || busy;
-
-    if (nextStepBtn){
-      if (currentLink && !busy){
-        nextStepBtn.href = currentLink;
-        nextStepBtn.style.display = "inline-flex";
-      } else {
-        nextStepBtn.style.display = "none";
-      }
-    }
-
-    if (createBtn){
-      if (currentLink && !busy){
-        createBtn.style.display = "none";
-      } else {
-        createBtn.style.display = "inline-flex";
-      }
-    }
-
-    if (receiptBtn){
-      if (currentId && !busy){
-        receiptBtn.href = `/certificate?hash=${encodeURIComponent(currentId)}`;
-        receiptBtn.style.display = "inline-flex";
-        updateReceiptLabel();
-      } else {
-        receiptBtn.style.display = "none";
-      }
-    }
-  }
-
-  function resetReport(){
-    if (resultBox) resultBox.style.display = "none";
-    if (errorBox) errorBox.style.display = "none";
-    if (errorMsg) errorMsg.textContent = "";
-    if (headline) headline.textContent = "";
-    if (idOut) idOut.textContent = "—";
-    if (linkOut) linkOut.textContent = "—";
-    if (linkOut) linkOut.href = "#";
-    if (qrBox) qrBox.innerHTML = "";
-    if (qrTap) qrTap.style.display = "none";
-    if (regStatusOut) regStatusOut.textContent = "—";
-    if (timeOut) timeOut.textContent = "—";
-    if (submitterOut) submitterOut.textContent = "—";
-    if (txOut) txOut.textContent = "—";
-    if (debugOut) debugOut.textContent = "—";
-    if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
-    if (copyLinkIconBtn) copyLinkIconBtn.style.display = "none";
-    hidePill(copyIdPill);
-    hidePill(copyIdPill2);
-    hidePill(copyLinkPill);
-    hidePill(copyNotePill);
-    if (copyNoteBtn) copyNoteBtn.style.display = "none";
-    lastRun = null;
-    lastProofyStatusCode = "";
-
-    if (emptyState) emptyState.style.display = "block";
-  }
-
   function bytesToHex(bytes){
     return [...bytes].map(b => b.toString(16).padStart(2,"0")).join("");
   }
@@ -722,31 +686,44 @@
     return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
   }
 
-  /* ✅ Canonical routes (utan .html) */
-  function buildVerifyLink(hash){
-    return `${location.origin}/verify?hash=${encodeURIComponent(hash)}`;
+  function pad2(n){ return String(n).padStart(2,"0"); }
+
+  function fmtUtcEpochSec(sec){
+    const n = Number(sec);
+    if (!Number.isFinite(n) || n <= 0) return "—";
+    const d = new Date(n * 1000);
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())} UTC`;
   }
 
-  function nowSe(){
+  function fmtSeEpochSec(sec){
+    const n = Number(sec);
+    if (!Number.isFinite(n) || n <= 0) return "—";
     try{
       return new Intl.DateTimeFormat("sv-SE", {
         timeZone:"Europe/Stockholm",
         year:"numeric", month:"2-digit", day:"2-digit",
         hour:"2-digit", minute:"2-digit", second:"2-digit"
-      }).format(new Date()) + " (Europe/Stockholm)";
+      }).format(new Date(n * 1000)) + " (Europe/Stockholm)";
     } catch {
-      return new Date().toLocaleString("sv-SE");
+      return new Date(n * 1000).toLocaleString("sv-SE") + " (lokal)";
     }
   }
 
-  function formatUnixSe(unixSeconds){
-    const n = Number(unixSeconds);
-    if (!Number.isFinite(n) || n <= 0) return null;
-    try{
-      return new Date(n * 1000).toLocaleString("sv-SE");
-    } catch {
-      return null;
-    }
+  /* ✅ Canonical routes (utan .html) + kontrolltid i länkar */
+  function buildVerifyLink(hash, checkedEpoch, txHash){
+    const p = new URL(`${location.origin}/verify`);
+    p.searchParams.set("hash", hash);
+    if (checkedEpoch) p.searchParams.set("checked", String(checkedEpoch));
+    if (txHash) p.searchParams.set("tx", txHash);
+    return p.toString();
+  }
+
+  function buildCertLink(hash, checkedEpoch, txHash){
+    const p = new URL(`${location.origin}/certificate`);
+    p.searchParams.set("hash", hash);
+    if (checkedEpoch) p.searchParams.set("checked", String(checkedEpoch));
+    if (txHash) p.searchParams.set("tx", txHash);
+    return p.toString();
   }
 
   async function copyTextToClipboard(text){
@@ -961,7 +938,6 @@
         });
       }
     } catch (e){
-      console.error("QR render failed:", e);
       targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">QR-koden kunde inte visas.</div>`;
       return;
     }
@@ -978,20 +954,39 @@
     node.style.imageRendering = "pixelated";
   }
 
+  function downloadTextFile(filename, text){
+    const blob = new Blob([String(text || "")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1200);
+  }
+
   function buildNote(run){
     if (!run) return "—";
     const lines = [];
     lines.push("PROOFY – Notering för ärendeakt");
     lines.push("");
     lines.push(`Verifierings-ID: ${run.id || "—"}`);
+    if (run.fileName) lines.push(`Referensunderlag: ${run.fileName}`);
+    lines.push("");
+    lines.push(`Kontrolltid (denna visning): ${run.checkedSe || "—"}`);
+    lines.push(`Kontrolltid (denna visning, UTC): ${run.checkedUtc || "—"}`);
+    lines.push("Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
+    lines.push("");
     lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
-    if (run.createdSe) lines.push(`Skapat lokalt: ${run.createdSe}`);
-    lines.push(`Status hos Proofy: ${run.statusLine || "—"}`);
-    if (run.timeSe) lines.push(`Tidpunkt (om bekräftad): ${run.timeSe}`);
+    lines.push(`Länk till intyg: ${run.certLink || "—"}`);
+    lines.push("");
+    lines.push(`Status hos Proofy vid kontrolltillfället: ${run.statusLine || "—"}`);
+    if (run.timeSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.timeSe}`);
     if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
     lines.push("");
-    lines.push(`Noterad: ${nowSe()}`);
+    lines.push("Detta är ett tekniskt kontrollunderlag och uttalar sig inte om dokumentets innehåll, giltighet eller äkthet.");
     return lines.join("\n");
   }
 
@@ -1002,101 +997,88 @@
     pollTxHash = null;
   }
 
-  async function pollTxAndVerify(myOp, id, txHash, createdSe){
-    stopPolling();
-    pollStartAt = Date.now();
-    pollTxHash = txHash;
+  function updateReceiptLabel(){
+    if (!receiptBtn || !currentId) return;
+    if (lastProofyStatusCode === "CONFIRMED") {
+      receiptBtn.textContent = "Öppna intyg";
+    } else if (lastProofyStatusCode === "UNKNOWN") {
+      receiptBtn.textContent = "Öppna intyg (kunde inte kontrolleras)";
+    } else if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") {
+      receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
+    } else {
+      receiptBtn.textContent = "Öppna intyg";
+    }
+  }
 
-    const maxMs = 120000;
-    let attempt = 0;
+  function setBusy(v){
+    busy = v;
+    setAriaBusy(v);
 
-    const tick = async () => {
-      if (myOp !== opId) return;
-      if (!pollTxHash || pollTxHash !== txHash) return;
+    createBtn.disabled = !currentFile || busy;
 
-      const elapsed = Date.now() - pollStartAt;
-      if (elapsed > maxMs) {
-        stopPolling();
-        lastProofyStatusCode = "NOT_CONFIRMED";
-        updateReceiptLabel();
-        debugOut.textContent = "Kontroll av registreringen kunde inte slutföras inom tidsgränsen. Du kan kontrollera igen via verifiering senare.";
-        headline.style.borderColor = "rgba(251,191,36,.22)";
-        headline.style.background = "rgba(251,191,36,.08)";
-        headline.innerHTML = `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(kontrollen hann inte visa bekräftelse)</span>`;
-        regStatusOut.textContent = "Ej bekräftad";
-        timeOut.textContent = "—";
-        return;
-      }
-
-      attempt++;
-      regStatusOut.textContent = "Kontroll pågår… (ej bekräftad)";
-      txOut.textContent = txHash || "—";
-
-      const txRes = await safeGetJson(`/api/tx?tx=${encodeURIComponent(txHash)}`);
-      if (myOp !== opId) return;
-
-      if (!txRes.ok || txRes.data?.ok === false) {
-        lastProofyStatusCode = "UNKNOWN";
-        updateReceiptLabel();
-        debugOut.textContent = "Status kunde inte kontrolleras just nu (tillfälligt fel vid kontroll). Ingen slutsats kan dras.";
-        headline.style.borderColor = "rgba(255,80,80,.20)";
-        headline.style.background = "rgba(255,80,80,.06)";
-        headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
-        regStatusOut.textContent = "Kunde inte kontrolleras";
-        timeOut.textContent = "—";
+    /* CTA-regel:
+       - När ID finns: visa "Öppna verifiering" som sekundär och göm create
+       - Annars: visa create */
+    if (nextStepBtn){
+      if (currentLink && !busy){
+        nextStepBtn.href = currentLink;
+        nextStepBtn.style.display = "inline-flex";
       } else {
-        const mined = !!txRes.data?.mined;
-        if (!mined) {
-          headline.style.borderColor = "rgba(255,255,255,.14)";
-          headline.style.background = "rgba(255,255,255,.05)";
-          headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
-        } else {
-          const st = String(txRes.data?.status || "");
-          const blockNo = txRes.data?.blockNumber || null;
-
-          submitterOut.textContent = blockNo ? String(blockNo) : (submitterOut.textContent || "—");
-
-          if (st === "reverted") {
-            stopPolling();
-            lastProofyStatusCode = "UNKNOWN";
-            updateReceiptLabel();
-            headline.style.borderColor = "rgba(255,80,80,.20)";
-            headline.style.background = "rgba(255,80,80,.06)";
-            headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försöket misslyckades)</span>`;
-            regStatusOut.textContent = "Kunde inte kontrolleras";
-            timeOut.textContent = "—";
-            debugOut.textContent = "Försöket misslyckades. Ingen notering kan påvisas för detta försök. Du kan försöka igen eller kontakta Proofy och ange registreringsreferensen.";
-            return;
-          }
-
-          const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
-          if (myOp !== opId) return;
-
-          if (!ver.ok || ver.data?.ok === false) {
-            lastProofyStatusCode = "UNKNOWN";
-            updateReceiptLabel();
-            headline.style.borderColor = "rgba(255,80,80,.20)";
-            headline.style.background = "rgba(255,80,80,.06)";
-            headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(verifiering misslyckades)</span>`;
-            regStatusOut.textContent = "Kunde inte kontrolleras";
-            timeOut.textContent = "—";
-            debugOut.textContent = "Status kunde inte kontrolleras vid verifiering (tillfälligt fel). Ingen slutsats kan dras.";
-          } else {
-            applyStatusToUI({ id, createdSe, data: ver.data });
-
-            if (String(ver.data?.statusCode || "") === "CONFIRMED") {
-              stopPolling();
-              return;
-            }
-          }
-        }
+        nextStepBtn.style.display = "none";
       }
+    }
 
-      const delay = Math.min(9000, 2200 + attempt * 350);
-      pollTimer = setTimeout(tick, delay);
-    };
+    if (createBtn){
+      createBtn.style.display = (currentLink && !busy) ? "none" : "inline-flex";
+    }
 
-    tick();
+    if (receiptBtn){
+      if (currentId && !busy){
+        const certLink = buildCertLink(currentId, currentCheckedEpoch, (pollTxHash || ""));
+        receiptBtn.href = certLink;
+        receiptBtn.style.display = "inline-flex";
+        updateReceiptLabel();
+      } else {
+        receiptBtn.style.display = "none";
+      }
+    }
+  }
+
+  function resetReport(){
+    if (resultBox) resultBox.style.display = "none";
+    if (errorBox) errorBox.style.display = "none";
+    if (errorMsg) errorMsg.textContent = "";
+    if (headline) headline.textContent = "";
+    if (idOut) idOut.textContent = "—";
+    if (linkOut) linkOut.textContent = "—";
+    if (linkOut) linkOut.href = "#";
+    if (qrBox) qrBox.innerHTML = "";
+    if (qrTap) qrTap.style.display = "none";
+    if (regStatusOut) regStatusOut.textContent = "—";
+    if (timeOut) timeOut.textContent = "—";
+    if (submitterOut) submitterOut.textContent = "—";
+    if (txOut) txOut.textContent = "—";
+    if (debugOut) debugOut.textContent = "—";
+    if (checkedSeOut) checkedSeOut.textContent = "—";
+    if (checkedUtcOut) checkedUtcOut.textContent = "—";
+
+    if (copyIdIconBtn) copyIdIconBtn.style.display = "none";
+    if (copyLinkIconBtn) copyLinkIconBtn.style.display = "none";
+    hidePill(copyIdPill);
+    hidePill(copyIdPill2);
+    hidePill(copyLinkPill);
+    hidePill(copyNotePill);
+
+    if (copyNoteBtn) copyNoteBtn.style.display = "none";
+    if (downloadNoteBtn) downloadNoteBtn.style.display = "none";
+    if (noteBox) noteBox.style.display = "none";
+    if (noteOut) noteOut.textContent = "—";
+
+    lastRun = null;
+    lastProofyStatusCode = "";
+    pollTxHash = null;
+
+    if (emptyState) emptyState.style.display = "block";
   }
 
   function setFile(file){
@@ -1105,6 +1087,7 @@
     currentFile = file || null;
     currentId = null;
     currentLink = null;
+    currentCheckedEpoch = null;
     lastProofyStatusCode = "";
 
     resetReport();
@@ -1135,11 +1118,8 @@
   }
 
   fileInput.addEventListener("change", () => {
+    /* ✅ Audit-säkert: inga automatiska registreringar vid filval */
     setFile(fileInput.files?.[0] || null);
-
-    setTimeout(() => {
-      if (currentFile && !busy) createBtn.click();
-    }, 400);
   });
 
   dropZone.addEventListener("click", () => fileInput.click());
@@ -1156,12 +1136,7 @@
     e.preventDefault();
     dropZone.classList.remove("drag");
     const f = e.dataTransfer?.files?.[0];
-    if (f) {
-      setFile(f);
-      setTimeout(() => {
-        if (currentFile && !busy) createBtn.click();
-      }, 200);
-    }
+    if (f) setFile(f);
   });
 
   if (localIdOut){
@@ -1207,27 +1182,21 @@
   if (copyNoteBtn){
     copyNoteBtn.addEventListener("click", async () => {
       if (!lastRun) return;
-      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill });
+      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
     });
   }
 
-  copyIdBtn.addEventListener("click", async () => {
-    if (!currentId) return;
-    setPill("Kopierar…");
-    const ok = await copyTextToClipboard(currentId);
-    setPill(ok ? "ID kopierat ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
-  });
+  if (downloadNoteBtn){
+    downloadNoteBtn.addEventListener("click", () => {
+      if (!lastRun) return;
+      const txt = buildNote(lastRun);
+      downloadTextFile("proofy-notering.txt", txt);
+      showPill(copyNotePill, "Nerladdad ✅");
+      setTimeout(() => hidePill(copyNotePill), 1200);
+    });
+  }
 
-  copyLinkBtn.addEventListener("click", async () => {
-    if (!currentLink) return;
-    setPill("Kopierar…");
-    const ok = await copyTextToClipboard(currentLink);
-    setPill(ok ? "Länk kopierad ✅" : "Kunde inte kopiera");
-    setTimeout(() => setPill(currentFile ? "Redo att skapa" : "Välj underlag"), 1400);
-  });
-
-  function applyStatusToUI({ id, createdSe, data }){
+  function applyStatusToUI({ id, createdSe, checkedEpoch, data }){
     const sc = String(data?.statusCode || "");
     const st = String(data?.statusText || "");
     const legal = String(data?.legalText || "");
@@ -1241,7 +1210,7 @@
     submitterOut.textContent = observedBlockNumber || (submittedBy || submitterOut.textContent || "—");
     debugOut.textContent = legal || (debugOut.textContent || "—");
 
-    const confirmedSe = confirmedAt ? formatUnixSe(confirmedAt) : null;
+    const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
     timeOut.textContent = confirmedSe || "—";
 
     lastProofyStatusCode = sc || "";
@@ -1252,21 +1221,7 @@
       headline.style.background = "rgba(80,255,180,.06)";
       headline.innerHTML = `<span class="ok">✅ Bekräftad</span> <span class="meta">(status hos Proofy vid kontrolltillfället)</span>`;
       regStatusOut.textContent = st || "Bekräftad";
-
-      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-      lastRun = {
-        id,
-        link: currentLink,
-        createdSe,
-        statusLine: st || "Bekräftad",
-        timeSe: confirmedSe,
-        txHash: txHash,
-        observedBlockNumber: observedBlockNumber
-      };
-      return;
-    }
-
-    if (sc === "NOT_CONFIRMED" || sc === "SUBMITTED_UNCONFIRMED") {
+    } else if (sc === "NOT_CONFIRMED" || sc === "SUBMITTED_UNCONFIRMED") {
       const isSubmitted = (sc === "SUBMITTED_UNCONFIRMED");
       headline.style.borderColor = "rgba(251,191,36,.22)";
       headline.style.background = "rgba(251,191,36,.08)";
@@ -1274,35 +1229,137 @@
         ? `<span class="meta">⏳ Inskickad – ej bekräftad</span> <span class="meta">(kontroll pågår)</span>`
         : `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(ingen bekräftelse kunde visas vid kontrolltillfället)</span>`;
       regStatusOut.textContent = st || (isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad");
-
-      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-      lastRun = {
-        id,
-        link: currentLink,
-        createdSe,
-        statusLine: st || (isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad"),
-        timeSe: null,
-        txHash: txHash,
-        observedBlockNumber: observedBlockNumber
-      };
-      return;
+    } else {
+      headline.style.borderColor = "rgba(255,80,80,.20)";
+      headline.style.background = "rgba(255,80,80,.06)";
+      headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
+      regStatusOut.textContent = st || "Kunde inte kontrolleras";
     }
 
-    headline.style.borderColor = "rgba(255,80,80,.20)";
-    headline.style.background = "rgba(255,80,80,.06)";
-    headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
-    regStatusOut.textContent = st || "Kunde inte kontrolleras";
+    /* Notering + knappar */
+    const verifyLink = currentLink || "—";
+    const certLink = buildCertLink(id, checkedEpoch, txHash || "");
 
-    if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
     lastRun = {
       id,
-      link: currentLink,
+      link: verifyLink,
+      certLink,
+      fileName: currentFile?.name || "",
       createdSe,
-      statusLine: st || "Kunde inte kontrolleras",
-      timeSe: null,
+      checkedSe: fmtSeEpochSec(checkedEpoch),
+      checkedUtc: fmtUtcEpochSec(checkedEpoch),
+      statusLine: regStatusOut.textContent || "—",
+      timeSe: confirmedSe,
       txHash: txHash,
       observedBlockNumber: observedBlockNumber
     };
+
+    if (noteOut) noteOut.textContent = buildNote(lastRun);
+    if (noteBox) noteBox.style.display = "block";
+    if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
+    if (downloadNoteBtn) downloadNoteBtn.style.display = "inline-flex";
+  }
+
+  async function pollTxAndVerify(myOp, id, txHash, createdSe, checkedEpoch){
+    stopPolling();
+    pollStartAt = Date.now();
+    pollTxHash = txHash;
+
+    const maxMs = 120000;
+    let attempt = 0;
+
+    const tick = async () => {
+      if (myOp !== opId) return;
+      if (!pollTxHash || pollTxHash !== txHash) return;
+
+      const elapsed = Date.now() - pollStartAt;
+      if (elapsed > maxMs) {
+        stopPolling();
+        lastProofyStatusCode = "NOT_CONFIRMED";
+        updateReceiptLabel();
+        debugOut.textContent = "Kontroll av registreringen kunde inte slutföras inom tidsgränsen. Du kan kontrollera igen via verifiering senare.";
+        headline.style.borderColor = "rgba(251,191,36,.22)";
+        headline.style.background = "rgba(251,191,36,.08)";
+        headline.innerHTML = `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(kontrollen hann inte visa bekräftelse)</span>`;
+        regStatusOut.textContent = "Ej bekräftad";
+        timeOut.textContent = "—";
+        /* uppdatera notering */
+        applyStatusToUI({ id, createdSe, checkedEpoch, data: { statusCode:"NOT_CONFIRMED", statusText:"Ej bekräftad" } });
+        return;
+      }
+
+      attempt++;
+      regStatusOut.textContent = "Kontroll pågår… (ej bekräftad)";
+      txOut.textContent = txHash || "—";
+
+      const txRes = await safeGetJson(`/api/tx?tx=${encodeURIComponent(txHash)}`);
+      if (myOp !== opId) return;
+
+      if (!txRes.ok || txRes.data?.ok === false) {
+        lastProofyStatusCode = "UNKNOWN";
+        updateReceiptLabel();
+        debugOut.textContent = "Status kunde inte kontrolleras just nu (tillfälligt fel vid kontroll). Ingen slutsats kan dras.";
+        headline.style.borderColor = "rgba(255,80,80,.20)";
+        headline.style.background = "rgba(255,80,80,.06)";
+        headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försök igen senare)</span>`;
+        regStatusOut.textContent = "Kunde inte kontrolleras";
+        timeOut.textContent = "—";
+        applyStatusToUI({ id, createdSe, checkedEpoch, data: { statusCode:"UNKNOWN", statusText:"Kunde inte kontrolleras" } });
+      } else {
+        const mined = !!txRes.data?.mined;
+        if (!mined) {
+          headline.style.borderColor = "rgba(255,255,255,.14)";
+          headline.style.background = "rgba(255,255,255,.05)";
+          headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
+        } else {
+          const st = String(txRes.data?.status || "");
+          const blockNo = txRes.data?.blockNumber || null;
+
+          submitterOut.textContent = blockNo ? String(blockNo) : (submitterOut.textContent || "—");
+
+          if (st === "reverted") {
+            stopPolling();
+            lastProofyStatusCode = "UNKNOWN";
+            updateReceiptLabel();
+            headline.style.borderColor = "rgba(255,80,80,.20)";
+            headline.style.background = "rgba(255,80,80,.06)";
+            headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(försöket misslyckades)</span>`;
+            regStatusOut.textContent = "Kunde inte kontrolleras";
+            timeOut.textContent = "—";
+            debugOut.textContent = "Försöket misslyckades. Ingen notering kan påvisas för detta försök. Du kan försöka igen eller kontakta Proofy och ange registreringsreferensen.";
+            applyStatusToUI({ id, createdSe, checkedEpoch, data: { statusCode:"UNKNOWN", statusText:"Kunde inte kontrolleras" } });
+            return;
+          }
+
+          const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
+          if (myOp !== opId) return;
+
+          if (!ver.ok || ver.data?.ok === false) {
+            lastProofyStatusCode = "UNKNOWN";
+            updateReceiptLabel();
+            headline.style.borderColor = "rgba(255,80,80,.20)";
+            headline.style.background = "rgba(255,80,80,.06)";
+            headline.innerHTML = `<span class="err">⚠️ Kunde inte kontrolleras</span> <span class="meta">(verifiering misslyckades)</span>`;
+            regStatusOut.textContent = "Kunde inte kontrolleras";
+            timeOut.textContent = "—";
+            debugOut.textContent = "Status kunde inte kontrolleras vid verifiering (tillfälligt fel). Ingen slutsats kan dras.";
+            applyStatusToUI({ id, createdSe, checkedEpoch, data: { statusCode:"UNKNOWN", statusText:"Kunde inte kontrolleras" } });
+          } else {
+            applyStatusToUI({ id, createdSe, checkedEpoch, data: ver.data });
+
+            if (String(ver.data?.statusCode || "") === "CONFIRMED") {
+              stopPolling();
+              return;
+            }
+          }
+        }
+      }
+
+      const delay = Math.min(9000, 2200 + attempt * 350);
+      pollTimer = setTimeout(tick, delay);
+    };
+
+    tick();
   }
 
   createBtn.addEventListener("click", async () => {
@@ -1315,7 +1372,13 @@
     setPill("Skapar Verifierings-ID…");
 
     try{
-      const createdSe = nowSe();
+      const checkedEpoch = Math.floor(Date.now() / 1000);
+      currentCheckedEpoch = checkedEpoch;
+
+      if (checkedSeOut) checkedSeOut.textContent = fmtSeEpochSec(checkedEpoch);
+      if (checkedUtcOut) checkedUtcOut.textContent = fmtUtcEpochSec(checkedEpoch);
+
+      const createdSe = fmtSeEpochSec(checkedEpoch);
 
       const id = await sha256Hex(currentFile);
       if (myOp !== opId) return;
@@ -1323,7 +1386,7 @@
       if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt Verifierings-ID.");
 
       currentId = id;
-      currentLink = buildVerifyLink(id);
+      currentLink = buildVerifyLink(id, checkedEpoch, null);
 
       if (emptyState) emptyState.style.display = "none";
 
@@ -1343,10 +1406,16 @@
       linkOut.href = currentLink;
 
       if (receiptBtn){
-        receiptBtn.href = `/certificate?hash=${encodeURIComponent(id)}`;
+        receiptBtn.href = buildCertLink(id, checkedEpoch, null);
         receiptBtn.style.display = "inline-flex";
         lastProofyStatusCode = "NOT_CONFIRMED";
         updateReceiptLabel();
+      }
+
+      /* Visa sekundära CTA efter skapande */
+      if (nextStepBtn){
+        nextStepBtn.href = currentLink;
+        nextStepBtn.style.display = "inline-flex";
       }
 
       setPill("Skapat lokalt ✅");
@@ -1365,6 +1434,7 @@
 
       setBusy(false);
 
+      /* Skicka in */
       setPill("Skickar in… (ej bekräftad)");
       regStatusOut.textContent = "Skickar in… (ej bekräftad)";
       timeOut.textContent = "—";
@@ -1381,25 +1451,30 @@
       }
 
       const data = reg.data || {};
-      applyStatusToUI({ id, createdSe, data });
+      applyStatusToUI({ id, createdSe, checkedEpoch, data });
 
       const txHash = data?.submission?.txHash || null;
       if (txHash) {
-        currentLink = `${buildVerifyLink(id)}&tx=${encodeURIComponent(txHash)}`;
+        pollTxHash = txHash;
+        currentLink = buildVerifyLink(id, checkedEpoch, txHash);
 
         linkOut.textContent = currentLink;
         linkOut.href = currentLink;
 
         if (qrTap) qrTap.style.display = "grid";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
-      }
 
-      if (txHash) {
+        if (nextStepBtn){
+          nextStepBtn.href = currentLink;
+          nextStepBtn.style.display = "inline-flex";
+        }
+
         headline.style.borderColor = "rgba(255,255,255,.14)";
         headline.style.background = "rgba(255,255,255,.05)";
         headline.textContent = "⏳ Inskickad – ej bekräftad (kontroll pågår)";
         regStatusOut.textContent = "Inskickad – ej bekräftad";
-        pollTxAndVerify(myOp, id, txHash, createdSe);
+
+        pollTxAndVerify(myOp, id, txHash, createdSe, checkedEpoch);
       } else {
         debugOut.textContent = debugOut.textContent || "Ingen registreringsreferens kunde visas. Du kan kontrollera via verifiering senare.";
       }
@@ -1408,12 +1483,12 @@
       setBusy(false);
 
     } catch (e){
-      console.error(e);
       if (myOp !== opId) return;
 
       errorBox.style.display = "block";
       errorMsg.textContent = (e?.message || "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade.");
 
+      /* Om ID/länk redan finns, lämna rapporten synlig och skapa notering */
       if (currentId && currentLink){
         resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
@@ -1436,16 +1511,15 @@
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
         attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
 
-        if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-        lastRun = lastRun || {
+        const checkedEpoch = currentCheckedEpoch || Math.floor(Date.now()/1000);
+        const createdSe = fmtSeEpochSec(checkedEpoch);
+
+        applyStatusToUI({
           id: currentId,
-          link: currentLink,
-          createdSe: nowSe(),
-          statusLine: "Kunde inte kontrolleras",
-          timeSe: null,
-          txHash: null,
-          observedBlockNumber: null
-        };
+          createdSe,
+          checkedEpoch,
+          data: { statusCode:"UNKNOWN", statusText:"Kunde inte kontrolleras" }
+        });
 
         setBusy(false);
       }
@@ -1455,6 +1529,7 @@
     }
   });
 
+  /* MANUELL ID -> länk + QR */
   function setManualState(id){
     const clean = (id || "").trim();
     if (!/^0x[0-9a-fA-F]{64}$/.test(clean)){
@@ -1471,7 +1546,8 @@
       return null;
     }
 
-    const link = buildVerifyLink(clean);
+    const checkedEpoch = Math.floor(Date.now() / 1000);
+    const link = buildVerifyLink(clean, checkedEpoch, null);
     manualCurrentLink = link;
 
     manualLinkOut.textContent = link;
@@ -1506,6 +1582,7 @@
     setTimeout(() => setManualPill("Redo ✅"), 1200);
   });
 
+  /* Init */
   resetReport();
   setFile(null);
   setBusy(false);
