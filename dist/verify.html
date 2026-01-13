@@ -1,5 +1,4 @@
 <!doctype html>
-<!-- PROOFY HARDTEST VERIFY v2026-01-13 -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -76,7 +75,7 @@
       image-rendering: pixelated;
     }
 
-    /* ✅ HARDTEST: audit-version visas diskret (på mobil/utan devtools) */
+    /* ✅ Debug-info (neutral) – visas bara vid ?debug=1 */
     #auditVerifyVersion{
       display:none;
       margin-top:10px;
@@ -101,9 +100,8 @@
       #selfQRTap{ display:grid !important; border-color:#ddd !important; }
       #selfQRTap, #selfQRCode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
-      /* audit-version får vara med i print (bevis på exakt filversion) */
+      /* Debug/version ska bara vara med om debug är aktivt (JS sätter display) */
       #auditVerifyVersion{
-        display:block !important;
         border-color:#ddd !important;
         background:#fff !important;
         color:#111 !important;
@@ -301,9 +299,9 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- ✅ HARDTEST: versionsbevis (synligt på mobil) -->
+            <!-- ✅ Systemversion – endast debug -->
             <div id="auditVerifyVersion">
-              <div class="meta" style="opacity:.9;">Audit-version (verify.html)</div>
+              <div class="meta" style="opacity:.9;">Systemversion (verify.html)</div>
               <div class="mono" id="auditVerifyVersionValue">—</div>
             </div>
 
@@ -352,8 +350,8 @@
 
               <!-- ✅ Juridisk avgränsning synlig nära resultat -->
               <p class="meta" style="margin-top:14px; opacity:.9;">
-                Proofy avgör inte om ett dokument är korrekt, giltigt eller äkta.
-                Kontrollen avser endast om samma underlag användes vid tidigare notering.
+                Proofy lämnar ingen bedömning av dokumentets innehåll, riktighet, giltighet eller äkthet.
+                Kontrollen avser endast filversion (tekniskt fingeravtryck) och status i Proofys register vid kontrolltillfället.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
@@ -381,7 +379,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk kontroll av underlag. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets giltighet.
+          Proofy tillhandahåller teknisk kontroll av filversioner. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets giltighet.
         </div>
       </div>
       <div class="links">
@@ -399,8 +397,11 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  /* ✅ HARDTEST VERSION STAMP (single source of truth) */
-  const PROOFY_VERIFY_HARDTEST_VERSION = "PROOFY HARDTEST VERIFY v2026-01-13";
+  /* Systemversion (neutral). Visas bara vid ?debug=1 */
+  const PROOFY_VERIFY_BUILD = "verify-2026-01-13a";
+
+  const urlForDebug = new URL(location.href);
+  const DEBUG = urlForDebug.searchParams.get("debug") === "1";
 
   const hashInput = $("hashInput");
   const pasteIdBtn = $("pasteIdBtn");
@@ -447,11 +448,11 @@
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
-  // NEW: kontrolltid synlig i resultat
+  // kontrolltid synlig i resultat
   const outCheckedSe = $("outCheckedSe");
   const outCheckedUtc = $("outCheckedUtc");
 
-  // NEW: audit-version synlig (mobilbevis)
+  // systemversion (debug)
   const auditVerifyVersion = $("auditVerifyVersion");
   const auditVerifyVersionValue = $("auditVerifyVersionValue");
 
@@ -460,15 +461,15 @@
   let opId = 0;
   let lastRun = null;
 
-  let autoRunTimer = null;
-  let autoRanOnceFor = "";
-
   function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
   }
 
   function buildSelfLink(id){
-    return `${location.origin}/verify.html?hash=${encodeURIComponent(id)}`;
+    const u = new URL(`${location.origin}/verify.html`);
+    u.searchParams.set("hash", id);
+    if (DEBUG) u.searchParams.set("debug", "1"); // bevarar debug vid behov, annars inte
+    return u.toString();
   }
 
   function showPill(el, text, ms = 1400){
@@ -569,6 +570,10 @@
     if (checked) url.searchParams.set("checked", String(checked));
     else url.searchParams.delete("checked");
 
+    // behåll debug om det finns
+    if (DEBUG) url.searchParams.set("debug", "1");
+    else url.searchParams.delete("debug");
+
     history.replaceState({}, "", url.toString());
   }
 
@@ -610,7 +615,6 @@
     }
   }
 
-  // Statusnormalisering behålls, men UI visar tydliga tillstånd inkl. "Inskickad – ej bekräftad"
   function normalizeVerifyModel(data){
     const sc = String(data?.statusCode || "");
     const st = String(data?.statusText || "") || "Kunde inte kontrolleras";
@@ -647,24 +651,34 @@
   function buildSummaryText(run){
     if (!run) return "—";
     const lines = [];
-    lines.push("PROOFY – Notering");
+
+    lines.push("PROOFY – Verifieringsnotering");
     lines.push("");
-    lines.push(`Audit-version (verify.html): ${PROOFY_VERIFY_HARDTEST_VERSION}`);
-    lines.push("");
-    lines.push(`Kontrolltid (denna visning): ${run.verifySe || "—"}`);
-    if (run.verifyUtc) lines.push(`Kontrolltid (denna visning, UTC): ${run.verifyUtc}`);
-    lines.push("Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
-    lines.push("");
+
     lines.push(`Verifierings-ID: ${run.refId || "—"}`);
-    if (run.fileName) lines.push(`Underlag: ${run.fileName}`);
+    if (run.fileName) lines.push(`Underlag/filnamn: ${run.fileName}`);
+
     lines.push("");
-    lines.push(`Resultat (filversion): ${run.match ? "Oförändrat (samma version)" : "Avvikelse (annan version)"}`);
+    lines.push(`Kontrolltid (denna visning – webbläsarens klocka): ${run.verifySe || "—"}`);
+    if (run.verifyUtc) lines.push(`Kontrolltid (UTC): ${run.verifyUtc}`);
+    lines.push("Obs: Kontrolltid genereras i webbläsaren och utgör inte extern tidsstämpling.");
+
     lines.push("");
-    lines.push(`Status vid kontrolltillfället: ${run.statusText || "Kunde inte kontrolleras"}`);
-    if (run.confirmedSe) lines.push(`Tidpunkt (endast om bekräftad) – Sverige: ${run.confirmedSe}`);
-    if (run.confirmedUtc) lines.push(`Tidpunkt (endast om bekräftad) – UTC: ${run.confirmedUtc}`);
+    lines.push(`Resultat (filversion): ${run.match ? "Oförändrat underlag (samma filversion)" : "Avvikelse (annan filversion)"}`);
+
     lines.push("");
-    lines.push("Detta är ett tekniskt kontrollunderlag och uttalar sig inte om dokumentets innehåll, giltighet eller äkthet.");
+    lines.push(`Registreringsstatus vid kontrolltillfället: ${run.statusText || "Kunde inte kontrolleras"}`);
+    if (run.confirmedSe) lines.push(`Registreringstid (om bekräftad) – Sverige: ${run.confirmedSe}`);
+    if (run.confirmedUtc) lines.push(`Registreringstid (om bekräftad) – UTC: ${run.confirmedUtc}`);
+
+    if (DEBUG) {
+      lines.push("");
+      lines.push(`Systemversion: ${PROOFY_VERIFY_BUILD}`);
+    }
+
+    lines.push("");
+    lines.push("Avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet, giltighet eller äkthet.");
+
     return lines.join("\n");
   }
 
@@ -949,11 +963,6 @@
     setBusy(false);
   }
 
-  function scheduleAutoVerify(){
-    /* KRITISKT: inga automatiska kontroller i auditläge */
-    return;
-  }
-
   function setFile(file){
     currentFile = file || null;
     if (currentFile){
@@ -962,7 +971,6 @@
       fileInfo.textContent = "Inget underlag valt.";
     }
     updateValidationUI();
-    scheduleAutoVerify();
   }
 
   const urlId = (() => {
@@ -997,7 +1005,6 @@
       }
 
       updateValidationUI();
-      scheduleAutoVerify();
       hashInput.focus();
       hashInput.setSelectionRange(hashInput.value.length, hashInput.value.length);
     });
@@ -1007,7 +1014,6 @@
     clearIdBtn.addEventListener("click", () => {
       hashInput.value = "";
       setParamsInUrl({ hash: "", checked: "" });
-      autoRanOnceFor = "";
       showPill(idPill, "Rensat");
       updateValidationUI();
       hashInput.focus();
@@ -1050,7 +1056,6 @@
     const v = hashInput.value.trim();
     if (isValidId(v)) setParamsInUrl({ hash: v, checked: (new URL(location.href).searchParams.get("checked") || "").trim() || "" });
     updateValidationUI();
-    scheduleAutoVerify();
   });
 
   fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
@@ -1083,7 +1088,7 @@
     downloadReportBtn.addEventListener("click", () => {
       if (!lastRun) return;
       const txt = buildSummaryText(lastRun);
-      const fn = `proofy-notering.txt`;
+      const fn = `proofy-verifieringsnotering.txt`;
       downloadTextFile(fn, txt);
     });
   }
@@ -1097,13 +1102,13 @@
     if (match) {
       left.className = "ok";
       left.textContent = "✅ Oförändrat";
-      right.textContent = "(samma version)";
+      right.textContent = "(samma filversion)";
       resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
       resultHeadline.style.background = "rgba(80,255,180,.06)";
     } else {
       left.className = "err";
       left.textContent = "⚠️ Avvikelse";
-      right.textContent = "(annan version)";
+      right.textContent = "(annan filversion)";
       resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
       resultHeadline.style.background = "rgba(255,80,80,.06)";
     }
@@ -1161,10 +1166,14 @@
 
       resultBox.style.display = "block";
 
-      /* ✅ HARDTEST: visa audit-version när resultat visas */
+      /* Systemversion visas endast i debug-läge */
       if (auditVerifyVersion && auditVerifyVersionValue){
-        auditVerifyVersionValue.textContent = PROOFY_VERIFY_HARDTEST_VERSION;
-        auditVerifyVersion.style.display = "block";
+        if (DEBUG) {
+          auditVerifyVersionValue.textContent = PROOFY_VERIFY_BUILD;
+          auditVerifyVersion.style.display = "block";
+        } else {
+          auditVerifyVersion.style.display = "none";
+        }
       }
 
       if (reportMeta) {
@@ -1179,11 +1188,11 @@
       setExplainTone(match);
 
       if (match) {
-        outExplainTitle.textContent = "Underlaget motsvarar den tidigare noterade filversionen.";
-        outExplainBody.textContent = "Detta säger inget om dokumentets innehåll, endast att kontrollvärdet för filversionen stämmer överens.";
+        outExplainTitle.textContent = "Filversionen stämmer med Verifierings-ID.";
+        outExplainBody.textContent = "Kontrollen avser filversion (tekniskt fingeravtryck) och säger inget om dokumentets innehåll eller giltighet.";
       } else {
-        outExplainTitle.textContent = "Underlaget motsvarar inte den tidigare noterade filversionen.";
-        outExplainBody.textContent = "Detta kan bero på att fel underlag valts eller att underlaget har skapats om eller sparats på nytt.";
+        outExplainTitle.textContent = "Filversionen avviker från Verifierings-ID.";
+        outExplainBody.textContent = "Det kan bero på att fel underlag valts eller att filen har skapats om/sparats på nytt (t.ex. ny export, omskanning eller omkomprimering).";
       }
 
       let statusCode = "UNKNOWN";
@@ -1212,19 +1221,19 @@
 
         if (statusText === "Inskickad – ej bekräftad") {
           outExplainTitle.textContent = match
-            ? "Versionen stämmer – men registrering är inskickad och ännu ej bekräftad vid kontrolltillfället."
-            : "Avvikelse – och registrering är inskickad men ännu ej bekräftad vid kontrolltillfället.";
-          outExplainBody.textContent = "Intyget visar inte “bekräftad” innan bekräftelse finns.";
+            ? "Filversionen stämmer – registrering är inskickad men ännu ej bekräftad vid kontrolltillfället."
+            : "Filversionen avviker – registrering är inskickad men ännu ej bekräftad vid kontrolltillfället.";
+          outExplainBody.textContent = "En inskickad registrering innebär inte bekräftelse. Status blir “Bekräftad” först när bekräftelse finns i registret.";
         } else if (statusText === "Ej bekräftad") {
           outExplainTitle.textContent = match
-            ? "Versionen stämmer – men ingen bekräftad notering kunde konstateras vid kontrolltillfället."
-            : "Avvikelse – och ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
+            ? "Filversionen stämmer – men ingen bekräftad notering kunde konstateras vid kontrolltillfället."
+            : "Filversionen avviker – och ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
           outExplainBody.textContent = "Kontrollera att rätt Verifierings-ID används och försök igen vid behov.";
         } else if (statusText === "Kunde inte kontrolleras") {
           outExplainTitle.textContent = match
-            ? "Versionen stämmer – men status kunde inte kontrolleras vid kontrolltillfället."
-            : "Avvikelse – och status kunde inte kontrolleras vid kontrolltillfället.";
-          outExplainBody.textContent = "Detta är ett tillfälligt fel. Försök igen.";
+            ? "Filversionen stämmer – men status kunde inte kontrolleras vid kontrolltillfället."
+            : "Filversionen avviker – och status kunde inte kontrolleras vid kontrolltillfället.";
+          outExplainBody.textContent = "Detta kan vara ett tillfälligt tekniskt fel. Försök igen.";
         }
       }
 
@@ -1232,7 +1241,11 @@
       const confirmedUtc = confirmedAtUnix ? fmtUtcEpoch(confirmedAtUnix) : null;
 
       if (openCertBtn) {
-        openCertBtn.href = `/certificate.html?hash=${encodeURIComponent(refId)}&checked=${encodeURIComponent(String(checkedEpoch))}`;
+        const certUrl = new URL(`${location.origin}/certificate.html`);
+        certUrl.searchParams.set("hash", refId);
+        certUrl.searchParams.set("checked", String(checkedEpoch));
+        if (DEBUG) certUrl.searchParams.set("debug", "1");
+        openCertBtn.href = certUrl.toString();
         openCertBtn.style.display = "inline-flex";
       }
 
@@ -1267,10 +1280,20 @@
     }
   });
 
+  // init
   resetUI();
   setFile(null);
   updateValidationUI();
-  scheduleAutoVerify();
+
+  // visa debug-rad vid laddning om debug=1 (även innan första kontroll)
+  if (auditVerifyVersion && auditVerifyVersionValue) {
+    if (DEBUG) {
+      auditVerifyVersionValue.textContent = PROOFY_VERIFY_BUILD;
+      // visas först när resultat visas (efter kontroll), men vi kan förbereda värdet här
+    } else {
+      auditVerifyVersion.style.display = "none";
+    }
+  }
 })();
 </script>
 
