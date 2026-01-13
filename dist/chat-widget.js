@@ -40,6 +40,8 @@
         box-shadow: 0 10px 30px rgba(0,0,0,.25);
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
+        /* IMPORTANT: keep visual active transform separate from lift transform */
+        transition: transform 140ms ease;
       }
       .proofy-chat-btn:active{ transform: translateY(1px); }
 
@@ -67,6 +69,7 @@
         display: none;
         font-family: system-ui;
         color: #eaf1ff;
+        transition: transform 140ms ease;
       }
 
       /* HARDTEST: no blur/backdrop-filter (prevents flicker / inconsistent rendering) */
@@ -144,7 +147,7 @@
     // Mark body (no layout side-effects beyond safe-area)
     document.body.classList.add("__proofy-has-chat");
 
-    // ✅ HARDTEST: do NOT override CSS' single source of truth.
+    // ✅ Do NOT override CSS' single source of truth.
     // Only set a fallback if the variable is missing/empty.
     try {
       const cs = getComputedStyle(document.documentElement)
@@ -202,13 +205,25 @@
     const closeBtn = panel.querySelector(".proofy-x");
     if (!msgRoot || !input || !sendBtn || !closeBtn) return;
 
-    // === HARDTEST: avoid covering important CTAs / controls on small screens ===
-    // Strategy: if the floating button overlaps an interactive element in the viewport,
-    // translate the button (and panel) upwards until the overlap is gone.
-    const INTERACTIVE_SELECTOR =
-      'button, a[href], input, select, textarea, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])';
+    // === Overlap-avoidance (stabil, utan att krocka med :active-transform) ===
+    // Instead of using element.style.transform (which fights with :active),
+    // we move elements by setting their bottom offset via CSS variables.
+    // This avoids jitter, preserves press feedback, and is deterministic.
+
+    const BASE_BTN_BOTTOM = "var(--proofy-safe-bottom)";
+    const BASE_PANEL_BOTTOM = "calc(var(--proofy-safe-bottom) + 66px)";
+
+    function setLiftPx(px) {
+      const lift = Math.max(0, Math.floor(px || 0));
+      button.style.bottom = lift ? `calc(${BASE_BTN_BOTTOM} + ${lift}px)` : BASE_BTN_BOTTOM;
+      panel.style.bottom = lift ? `calc(${BASE_PANEL_BOTTOM} + ${lift}px)` : BASE_PANEL_BOTTOM;
+    }
 
     let currentLiftPx = 0;
+
+    // Only consider truly interactive & visible elements
+    const INTERACTIVE_SELECTOR =
+      'button, a[href], input, select, textarea, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])';
 
     function rectsOverlap(a, b) {
       return !(
@@ -219,20 +234,31 @@
       );
     }
 
+    function isVisibleInteractive(el) {
+      if (!el) return false;
+      if (el === button) return false;
+      if (panel.contains(el)) return false;
+
+      // Ignore hidden/disabled elements
+      const cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
+
+      // Skip elements not actually clickable
+      if (el.matches("button, input, select, textarea") && el.disabled) return false;
+
+      const r = el.getBoundingClientRect();
+      if (r.width < 12 || r.height < 12) return false;
+
+      // In viewport?
+      if (r.bottom < 0 || r.top > window.innerHeight) return false;
+      if (r.right < 0 || r.left > window.innerWidth) return false;
+
+      return true;
+    }
+
     function computeRequiredLift(btnRect) {
-      // ✅ HARDTEST: Do NOT restrict to "near bottom" only.
-      // Any overlapped interactive element in the viewport matters (e.g. CTA row).
       const candidates = Array.from(document.querySelectorAll(INTERACTIVE_SELECTOR))
-        .filter((el) => {
-          if (!el || el === button) return false;
-          if (panel.contains(el)) return false;
-          const r = el.getBoundingClientRect();
-          // Must be in viewport and have size
-          if (r.width < 12 || r.height < 12) return false;
-          if (r.bottom < 0 || r.top > window.innerHeight) return false;
-          if (r.right < 0 || r.left > window.innerWidth) return false;
-          return true;
-        });
+        .filter(isVisibleInteractive);
 
       let lift = 0;
 
@@ -251,32 +277,34 @@
       return Math.min(lift, maxLift);
     }
 
-    function applyLift(px) {
-      currentLiftPx = px;
-      const t = px ? `translateY(${-px}px)` : "";
-      button.style.transform = t;
-      panel.style.transform = t;
-    }
-
     function avoidOverlap() {
       // Disable in print and when hidden elements not laid out.
       if (window.matchMedia && window.matchMedia("print").matches) return;
       if (!button || !document.body.contains(button)) return;
 
-      // Only enforce on narrow screens; on desktop it's less risky and could feel "jumpy".
+      // Keep it conservative: only enforce on narrow screens (mobile).
       const narrow = window.innerWidth <= 420;
-
       if (!narrow) {
-        if (currentLiftPx) applyLift(0);
+        if (currentLiftPx) {
+          currentLiftPx = 0;
+          setLiftPx(0);
+        }
         return;
       }
 
-      // Reset first, then measure.
-      if (currentLiftPx) applyLift(0);
+      // Measure at base position first for deterministic lift
+      if (currentLiftPx) {
+        currentLiftPx = 0;
+        setLiftPx(0);
+      }
 
       const btnRect = button.getBoundingClientRect();
       const lift = computeRequiredLift(btnRect);
-      if (lift > 0) applyLift(lift);
+
+      if (lift !== currentLiftPx) {
+        currentLiftPx = lift;
+        setLiftPx(lift);
+      }
     }
 
     // Throttle to animation frame
@@ -299,7 +327,6 @@
       panel.style.display = isOpen ? "block" : "none";
       scrim.style.display = isOpen ? "block" : "none";
 
-      // When open, make it explicit that panel is overlay; avoid underlying accidental clicks.
       if (isOpen) {
         input.focus();
       } else {
