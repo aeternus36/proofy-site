@@ -62,11 +62,21 @@
       }
 
       /* Viktigt: reservera lite extra bottenutrymme på just intygssidan också
-         (utöver global lösning i proofy.css) */
+         (utöver global lösning i proofy.css)
+
+         ✅ PATCH (minimalt & säkert):
+         - mer bottenluft på mobil så att FAB/chat inte "sitter på" innehållet
+         - ta med safe-area (Android/iPhone)
+      */
       main{
         max-width:1100px;
         margin:0 auto;
-        padding:10px 18px calc(48px + var(--proofy-fab-space, 0px));
+        padding:10px 18px calc(96px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom, 0px));
+      }
+      @media (max-width: 420px){
+        main{
+          padding-bottom: calc(120px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom, 0px));
+        }
       }
 
       .pill{
