@@ -109,6 +109,14 @@
         margin-top:14px;
       }
 
+      .statusArea{
+        display:flex;
+        flex-direction:column;
+        align-items:flex-end;
+        gap:10px;
+        min-width:220px;
+      }
+
       .statusBadge{
         display:inline-flex; align-items:center; gap:8px;
         padding:10px 14px;
@@ -124,6 +132,17 @@
       .statusBadge.good .dot{background:var(--good)}
       .statusBadge.bad .dot{background:var(--bad)}
       .statusBadge.warn .dot{background:var(--warn)}
+
+      .statusMeta{
+        width:100%;
+        border:1px solid var(--border);
+        border-radius:16px;
+        background:rgba(255,255,255,.03);
+        padding:12px;
+      }
+      .statusMeta .label{
+        margin:0 0 6px;
+      }
 
       .actions{
         display:flex; gap:10px; flex-wrap:wrap;
@@ -146,6 +165,7 @@
       @media (max-width: 900px){
         .auditTop{ grid-template-columns:1fr; }
         h1{font-size:36px}
+        .statusArea{ align-items:stretch; }
       }
 
       .card{
@@ -310,17 +330,15 @@
 
       @media print{
         header, .actions, details.tech { display:none !important; }
+        /* VIKTIGT: warnBox MÅSTE få vara med i print (status/avgränsning kan vara avgörande) */
         body{ background:#fff !important; color:#000 !important; }
         .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
-        .pill, .statusBadge, .val { border-color:#ddd !important; background:#fff !important; }
+        .pill, .statusBadge, .val, .statusMeta { border-color:#ddd !important; background:#fff !important; }
         .lead, .note, .fine, .small, .footer { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
 
         .auditTop{ display:flex !important; flex-direction:column !important; gap:14px !important; }
         .card{ break-inside:avoid; page-break-inside:avoid; }
-
-        /* KRITISKT: varningar får INTE döljas i PDF */
-        .warnBox{ display:block !important; border-color:#999 !important; background:#fff !important; color:#000 !important; }
 
         #qrcodeTap{
           box-shadow:none !important;
@@ -410,9 +428,24 @@
             <h1>Verifieringsintyg</h1>
           </div>
 
-          <div id="statusBadge" class="statusBadge warn" title="Status hos Proofy vid kontrolltillfället">
-            <span class="dot" aria-hidden="true"></span>
-            <span id="statusText">Kontrollerar…</span>
+          <div class="statusArea" aria-label="Status och kontrolltid">
+            <div id="statusBadge" class="statusBadge warn" title="Status hos Proofy vid kontrolltillfället">
+              <span class="dot" aria-hidden="true"></span>
+              <span id="statusText">Kontrollerar…</span>
+            </div>
+
+            <div class="statusMeta">
+              <div class="label">Kontrolltid (denna visning – webbläsarens klocka)</div>
+              <div class="mono" id="checkedTopLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+              <div class="mono" id="checkedTopUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+              <div class="small" style="margin-top:8px">
+                Kontrolltiden genereras i denna webbläsare och kan vara fel om enhetens systemklocka är fel. Den utgör inte i sig bevis om extern tidskälla.
+              </div>
+
+              <div class="label" style="margin-top:10px">Statusbeskrivning (vid kontrolltillfället)</div>
+              <div class="mono" id="resultText">—</div>
+              <div class="small" id="legalLine" style="margin-top:8px">—</div>
+            </div>
           </div>
         </div>
 
@@ -441,24 +474,12 @@
               </div>
 
               <div class="val">
-                <div class="label">Kontrolltid (denna visning)</div>
-                <div class="mono" id="checkedLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
-                <div class="mono" id="checkedUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
-                <div class="small" style="margin-top:8px">
-                  Tidpunkten ovan genereras i <b>denna webbläsare</b> och kan vara fel om enhetens systemklocka är fel. Den utgör inte i sig bevis om extern tidskälla.
-                </div>
-              </div>
-
-              <div class="val">
                 <div class="label">Tidpunkt (endast om bekräftad)</div>
                 <div class="mono" id="regLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
-              </div>
-
-              <div class="val">
-                <div class="label">Statuskod &amp; avgränsning</div>
-                <div class="mono" id="statusCodeText">—</div>
-                <div class="small" id="legalLine" style="margin-top:8px">—</div>
+                <div class="small" style="margin-top:8px">
+                  Tidpunkten avser när kontrollvärdet först blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.
+                </div>
               </div>
             </div>
 
@@ -762,20 +783,6 @@
         if (refWrap) refWrap.style.display = hasRef ? "block" : "none";
       }
 
-      function setTechHintText(prefix, value){
-        const el = $("techHint");
-        if (!el) return;
-        el.textContent = "";
-        if (!value) return;
-        const p = document.createElement("span");
-        p.textContent = prefix + ": ";
-        const v = document.createElement("span");
-        v.className = "mono";
-        v.textContent = value;
-        el.appendChild(p);
-        el.appendChild(v);
-      }
-
       async function run(){
         hideWarn();
 
@@ -785,23 +792,13 @@
         const certId = (url.searchParams.get("cert") || "").trim();
 
         const checkedParam = (url.searchParams.get("checked") || "").trim();
-        const checkedFromParam = (() => {
+        const checked = (() => {
           const n = Number(checkedParam);
-          return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+          return Number.isFinite(n) && n > 0 ? Math.floor(n) : nowSeconds();
         })();
 
-        const checked = checkedFromParam != null ? checkedFromParam : nowSeconds();
-
-        /* KRITISKT: intygslänk ska vara stabil. Inkludera checked endast om den angavs explicit. */
-        const certLink =
-          `${location.origin}/certificate.html?hash=${encodeURIComponent(hash)}` +
-          (checkedFromParam != null ? `&checked=${checked}` : "") +
-          (tx ? `&tx=${encodeURIComponent(tx)}` : "") +
-          (certId ? `&cert=${encodeURIComponent(certId)}` : "");
-
-        const verifyLink =
-          `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}` +
-          (tx ? `&tx=${encodeURIComponent(tx)}` : "");
+        const certLink = `${location.origin}/certificate.html?hash=${encodeURIComponent(hash)}&checked=${checked}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}${certId ? `&cert=${encodeURIComponent(certId)}` : ""}`;
+        const verifyLink = `${location.origin}/verify.html?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`;
 
         $("certLink").textContent = certLink;
         $("verifyLink").textContent = verifyLink;
@@ -826,10 +823,10 @@
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
         };
 
-        $("checkedLocal").innerHTML = fmtSeHtml(checked);
-        $("checkedUtc").textContent = fmtUtc(checked);
+        $("checkedTopLocal").innerHTML = fmtSeHtml(checked);
+        $("checkedTopUtc").textContent = fmtUtc(checked);
 
-        $("statusCodeText").textContent = "—";
+        $("resultText").textContent = "Kontrollerar…";
         $("legalLine").textContent = "—";
         $("regLocal").textContent = "—";
         $("regUtc").textContent = "—";
@@ -838,9 +835,9 @@
         updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
 
         if (certId){
-          setTechHintText("Referens-ID för intyget", certId);
+          $("techHint").innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
         } else if (tx){
-          setTechHintText("Registreringsreferens", tx);
+          $("techHint").innerHTML = `Registreringsreferens: <span class="mono">${tx}</span>`;
         } else {
           $("techHint").textContent = "";
         }
@@ -848,7 +845,7 @@
         if (!isValidBytes32Hex(hash)){
           setStatus("bad", "Ogiltigt ID");
           $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
-          $("statusCodeText").textContent = "INVALID_ID";
+          $("resultText").textContent = "Kunde inte kontrollera: saknat/ogiltigt Verifierings-ID i URL.";
           $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt Verifierings-ID.";
           showWarn(`
             <b>Fel:</b> Intyget saknar giltigt Verifierings-ID i URL.<br/>
@@ -860,13 +857,14 @@
         $("hashText").textContent = hash;
 
         setStatus("warn", "Kontrollerar…");
+        $("resultText").textContent = "Kontrollerar status hos Proofy…";
 
         let v;
         try{
           v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`);
         }catch(e){
           setStatus("bad", "Kunde inte kontrolleras");
-          $("statusCodeText").textContent = "TECHNICAL_ERROR";
+          $("resultText").textContent = "Kunde inte kontrolleras vid kontrolltillfället.";
           $("legalLine").textContent = "Detta är ett tekniskt fel. Ingen slutsats kan dras om bekräftelse.";
           updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
           showWarn(`
@@ -877,10 +875,9 @@
         }
 
         const statusCode = safeText(v?.statusCode, "UNKNOWN");
+        const statusText = safeText(v?.statusText, "Kunde inte kontrolleras");
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
-
-        $("statusCodeText").textContent = statusCode;
 
         const observedPoint = safeText(v?.evidence?.observedBlockNumber, "—");
         const registrationRef = safeText(v?.submission?.txHash, "—");
@@ -891,13 +888,15 @@
         const pres = pickStatusPresentation(statusCode);
         setStatus(pres.tone, pres.badge);
 
+        $("resultText").textContent = statusText;
+
         if (legalText){
           $("legalLine").textContent = legalText;
         } else {
           if (statusCode === "CONFIRMED"){
             $("legalLine").textContent = "Status är bekräftad vid kontrolltillfället.";
           } else if (statusCode === "SUBMITTED_UNCONFIRMED"){
-            $("legalLine").textContent = "En registrering är inskickad men ännu ej bekräftad. Intyget visar inte “bekräftad” innan bekräftelse finns.";
+            $("legalLine").textContent = "En registrering är inskickad men ännu ej bekräftad. Intyget visar inte 'bekräftad' innan bekräftelse finns.";
           } else if (statusCode === "NOT_CONFIRMED"){
             $("legalLine").textContent = "Ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
           } else {
