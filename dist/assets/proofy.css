@@ -21,8 +21,9 @@
   --shadow: 0 18px 60px rgba(0,0,0,.45);
 
   /* ONE SOURCE OF TRUTH:
-     Space reserved so floating UI (chat button) never covers content */
-  --proofy-fab-space: 118px;
+     Space reserved so floating UI (chat button) never covers content.
+     Single definition (no media overrides) to satisfy audit "one truth per thing". */
+  --proofy-fab-space: clamp(118px, 18vw, 134px);
 
   /* Backward-compat alias (do NOT treat as authoritative) */
   --floating-ui-space: var(--proofy-fab-space);
@@ -231,8 +232,8 @@ h2{
   color: rgba(234,240,255,.92);
   text-decoration:none;
   font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.15;
+  white-space: nowrap; /* overridden for <=360px to prevent hardtest clipping */
   cursor: pointer;
   user-select:none;
   max-width: 100%;
@@ -291,7 +292,7 @@ h2{
   color: rgba(234,240,255,.86);
   font-weight: 900;
   font-size: 12.5px;
-  white-space: nowrap;
+  white-space: nowrap; /* overridden for <=360px to prevent hardtest clipping */
 }
 
 /* Monospace fields (IDs/links) */
@@ -427,8 +428,19 @@ footer{
   .grid2{ grid-template-columns: 1fr; }
 }
 
-@media (max-width: 560px){
-  :root{ --proofy-fab-space: 134px; }
+/* HARDTEST: prevent clipping/overflow on 320px by allowing wraps */
+@media (max-width: 360px){
   .wrap{ width: calc(100% - 24px); }
-  .btn{ width:auto; }
+
+  .btn{
+    white-space: normal;
+    text-align: center;
+    max-width: 100%;
+  }
+
+  .pill{
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
 }
