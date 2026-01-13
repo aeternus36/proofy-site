@@ -23,7 +23,7 @@
 
 /* Span.logo i din HTML */
 .logo{
-  display:inline-block; /* ✅ KRITISKT: gör att width/height faktiskt gäller på <span> */
+  display:inline-block; /* gör att width/height gäller på <span> */
   width: 28px;
   height: 28px;
   border-radius: 10px;
@@ -65,9 +65,9 @@
   .logo::after{ font-size: 14.5px; }
 }
 
-/* ✅ EXTRA “last-wins” försäkring (om någon annan CSS råkar skriva över .logo) */
+/* SÄKER “last-wins” försäkring (begränsad):
+   Undvik !important där det går – men säkra minsta storlek. */
 .brand .logo{
-  display:inline-block !important;
   min-width: 28px;
   min-height: 28px;
 }
@@ -81,6 +81,21 @@
   position: relative;
   flex: 0 0 auto;
   margin-left: auto;
+}
+
+/* Scrim för att minska dubbelhandling (audit-safe).
+   Visas endast när details är open. */
+.mnavScrim{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.28);
+  z-index: 1999; /* under menyn, över sidan */
+  display: none;
+}
+
+/* Visa scrim när menyn är öppen */
+.mnav[open] .mnavScrim{
+  display: block;
 }
 
 .mnavSummary{
@@ -103,6 +118,13 @@
 .mnavSummary:hover{
   background: rgba(255,255,255,.10);
   border-color: rgba(255,255,255,.18);
+}
+
+/* Visuell indikator när menyn är öppen */
+.mnav[open] .mnavSummary{
+  border-color: rgba(110,168,255,.35);
+  box-shadow: 0 0 0 2px rgba(110,168,255,.10);
+  background: rgba(110,168,255,.10);
 }
 
 .mnavIcon{
@@ -149,6 +171,9 @@
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+
+  /* HARDTEST: avoid horizontal overflow inside menu */
+  overflow-x: hidden;
 }
 
 .mnavLink{
@@ -163,6 +188,10 @@
   font-weight: 900;
   font-size: 16px;
   color: rgba(234,240,255,.92);
+
+  /* Prevent overflow on narrow screens if labels change */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .mnavLink:hover{
   background: rgba(255,255,255,.07);
@@ -187,6 +216,8 @@
   color: rgba(169,183,211,.92);
   font-size: 13px;
   font-weight: 800;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .mnavMail{
@@ -200,6 +231,9 @@
   text-decoration:none;
   font-weight: 900;
   color: rgba(234,240,255,.92);
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* ------- Responsive rules ------- */
@@ -236,4 +270,13 @@
 .mnavMeta .mnavLink[aria-current="page"]{
   border-color: rgba(110,168,255,.45);
   box-shadow: 0 0 0 1px rgba(110,168,255,.18) inset;
+}
+
+/* PRINT/PDF: mobilenheter/meny ska aldrig påverka bevisbilaga */
+@media print{
+  .mnav,
+  .mnavMenu,
+  .mnavScrim{
+    display:none !important;
+  }
 }
