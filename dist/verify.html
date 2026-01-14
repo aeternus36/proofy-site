@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- VERIFY-HARDTEST v2026-01-14 / audit-lock 5/5 -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -43,7 +44,6 @@
       margin-top:10px;
     }
 
-    /* ✅ QR block: matchar befintlig layout */
     .selfLinkRow{
       display:flex;
       gap:12px;
@@ -57,10 +57,12 @@
       border-radius:16px;
       border:1px solid rgba(255,255,255,.14);
       background:#ffffff;
-      display:none; /* only when valid link */
+      display:none;
       place-items:center;
       overflow:hidden;
       cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
     }
     #selfQRCode{
       width:168px;
@@ -75,7 +77,6 @@
       image-rendering: pixelated;
     }
 
-    /* ✅ Debug-info (neutral) – visas bara vid ?debug=1 */
     #auditVerifyVersion{
       display:none;
       margin-top:10px;
@@ -94,32 +95,11 @@
       overflow-wrap:anywhere;
     }
 
-    /* ✅ Små inmatningsfält (ärendeakt) */
-    .caseGrid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-      margin-top:12px;
-    }
-    @media (max-width: 900px){
-      .caseGrid{ grid-template-columns:1fr; }
-    }
-    .caseGrid .caseField label{
-      display:block;
-      margin:0 0 6px;
-      opacity:.85;
-    }
-    .caseGrid .caseField input{
-      width:100%;
-    }
-
     @media print{
       header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
-      /* keep QR visible in print */
       #selfQRTap{ display:grid !important; border-color:#ddd !important; }
       #selfQRTap, #selfQRCode{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
-      /* Debug/version ska bara vara med om debug är aktivt (JS sätter display) */
       #auditVerifyVersion{
         border-color:#ddd !important;
         background:#fff !important;
@@ -185,22 +165,28 @@
       <strong>Kontrollen sker lokalt. Underlaget lämnar inte din dator.</strong>
     </p>
 
+    <!-- ✅ 100% samsyn: identisk avgränsning/kärntext med register/cert -->
+    <p class="meta" style="margin-top:-6px; opacity:.9; max-width:92ch;">
+      Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
+      Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
+    </p>
+
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
         <section aria-label="Verifieringsuppgifter">
-          <div style="font-weight:950; font-size:16px;">1. Ange kontrollvärde</div>
+          <div style="font-weight:950; font-size:16px;">1. Ange Verifierings-ID</div>
 
-          <label class="meta" for="hashInput" style="margin-top:8px;">Kontrollvärde (Verifierings-ID)</label>
-          <input id="hashInput" type="text" placeholder="—" autocomplete="off" spellcheck="false" style="margin-top:6px" />
+          <label class="meta" for="hashInput" style="margin-top:8px;">Verifierings-ID (kontrollvärde)</label>
+          <input id="hashInput" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:6px" />
 
           <div class="small" style="margin-top:8px">
-            Fylls i automatiskt om du öppnat sidan via verifieringslänk.
+            ID:t fylls i automatiskt om du öppnat sidan via verifieringslänk.
           </div>
 
           <div class="actions" style="margin-top:10px;">
             <div class="actionsRow">
-              <button class="btn" id="pasteIdBtn" type="button">Klistra in</button>
+              <button class="btn" id="pasteIdBtn" type="button">Klistra in ID</button>
               <button class="btn soft" id="clearIdBtn" type="button" disabled>Rensa</button>
             </div>
 
@@ -331,14 +317,6 @@
               </div>
             </div>
 
-            <div style="margin-top:12px;">
-              <div class="meta">Kontrollrapport-ID</div>
-              <div id="outReportId" class="mono" style="margin-top:6px;">—</div>
-              <div class="small" style="margin-top:8px; opacity:.9;">
-                Kontrollrapport-ID avser denna kontrollvisning och underlättar hänvisning i ärendet.
-              </div>
-            </div>
-
             <div style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04);">
               <div class="small" style="line-height:1.45;">
                 <div><b>Bevisar:</b> Att denna filversion motsvarar kontrollvärdet (Verifierings-ID).</div>
@@ -347,69 +325,48 @@
             </div>
 
             <div style="margin-top:12px;">
-              <div class="meta">Resultat A (filversion)</div>
-              <div id="outA" class="mono" style="margin-top:6px;">—</div>
+              <div class="meta">Status vid kontrolltillfället</div>
+              <div id="outRegStatus" class="mono" style="margin-top:6px;">—</div>
 
-              <div class="meta" style="margin-top:10px;">Resultat B (registerstatus vid kontrolltillfället)</div>
-              <div id="outB" class="mono" style="margin-top:6px;">—</div>
-            </div>
-
-            <div style="margin-top:12px;">
-              <div class="meta">Tidpunkt (endast om bekräftad)</div>
-              <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
-              <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad) – UTC</div>
-              <div id="outRegUtc" class="mono" style="margin-top:6px;">—</div>
-            </div>
-
-            <div id="outExplain"
-                 style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
-              <div id="outExplainTitle" style="font-weight:900;"></div>
-              <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
-            </div>
-
-            <div class="actions" style="margin-top:12px;">
-              <div class="actionsRow">
-                <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
-                <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
-                <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
+              <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:10px;">
+                <div>
+                  <div class="meta">Tidpunkt (endast om bekräftad)</div>
+                  <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
+                </div>
+                <div>
+                  <div class="meta">Tidpunkt (endast om bekräftad) – UTC</div>
+                  <div id="outRegUtc" class="mono" style="margin-top:6px;">—</div>
+                </div>
               </div>
 
-              <div class="actionsMetaRow">
-                <span id="copySummaryPill" class="pill" aria-live="polite" aria-atomic="true" role="status"> </span>
+              <div id="outExplain"
+                   style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+                <div id="outExplainTitle" style="font-weight:900;"></div>
+                <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
               </div>
+
+              <div class="actions" style="margin-top:12px;">
+                <div class="actionsRow">
+                  <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
+                  <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
+                  <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
+                </div>
+
+                <div class="actionsMetaRow">
+                  <span id="copySummaryPill" class="pill" aria-live="polite" aria-atomic="true" role="status"> </span>
+                </div>
+              </div>
+
+              <p class="meta" style="margin-top:14px; opacity:.9;">
+                Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
+                Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
+              </p>
+
+              <div class="hr" style="margin-top:14px;"></div>
+
+              <div class="meta">Notering (för ärendeakt)</div>
+              <pre class="mono" id="summaryOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
             </div>
-
-            <div class="hr" style="margin-top:14px;"></div>
-
-            <div style="font-weight:950; font-size:16px;">Uppgifter för ärendeakt (valfritt)</div>
-            <div class="small" style="margin-top:6px; opacity:.9;">
-              Dessa fält används endast i noteringen och skickas inte vid kontroll.
-            </div>
-
-            <div class="caseGrid" aria-label="Ärendeakt">
-              <div class="caseField">
-                <label class="meta" for="caseId">Ärende-ID</label>
-                <input id="caseId" type="text" placeholder="—" autocomplete="off" spellcheck="false" />
-              </div>
-              <div class="caseField">
-                <label class="meta" for="caseOrg">Organisation/byrå</label>
-                <input id="caseOrg" type="text" placeholder="—" autocomplete="off" spellcheck="false" />
-              </div>
-              <div class="caseField">
-                <label class="meta" for="caseHandler">Handläggare</label>
-                <input id="caseHandler" type="text" placeholder="—" autocomplete="off" spellcheck="false" />
-              </div>
-            </div>
-
-            <div class="hr" style="margin-top:14px;"></div>
-
-            <div class="meta">Notering (för ärendeakt)</div>
-            <pre class="mono" id="summaryOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
-
-            <p class="meta" style="margin-top:14px; opacity:.9;">
-              Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
-              Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
-            </p>
           </div>
 
           <div id="errorBox" style="display:none;">
@@ -448,8 +405,8 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  /* Systemversion (neutral). Visas bara vid ?debug=1 */
-  const PROOFY_VERIFY_BUILD = "verify-2026-01-14a-5of5";
+  // ✅ Audit/version (neutral). Visas bara vid ?debug=1
+  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-14";
 
   const urlForDebug = new URL(location.href);
   const DEBUG = urlForDebug.searchParams.get("debug") === "1";
@@ -481,60 +438,42 @@
 
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
-
-  const outCheckedSe = $("outCheckedSe");
-  const outCheckedUtc = $("outCheckedUtc");
-
-  const outReportId = $("outReportId");
-  const outA = $("outA");
-  const outB = $("outB");
+  const outRegStatus = $("outRegStatus");
   const outRegSe = $("outRegSe");
   const outRegUtc = $("outRegUtc");
+  const openCertBtn = $("openCertBtn");
 
   const outExplain = $("outExplain");
   const outExplainTitle = $("outExplainTitle");
   const outExplainBody = $("outExplainBody");
 
-  const openCertBtn = $("openCertBtn");
-
   const copySummaryBtn = $("copySummaryBtn");
   const copySummaryPill = $("copySummaryPill");
   const summaryOut = $("summaryOut");
+
   const downloadReportBtn = $("downloadReportBtn");
 
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
 
+  const outCheckedSe = $("outCheckedSe");
+  const outCheckedUtc = $("outCheckedUtc");
+
   const auditVerifyVersion = $("auditVerifyVersion");
   const auditVerifyVersionValue = $("auditVerifyVersionValue");
-
-  // Ärendeaktfält
-  const caseId = $("caseId");
-  const caseOrg = $("caseOrg");
-  const caseHandler = $("caseHandler");
 
   let currentFile = null;
   let busy = false;
   let opId = 0;
   let lastRun = null;
 
+  // --------- Hardtest: bind once ----------
+  const BIND_KEY = "__proofy_verify_bound";
+  if (document.documentElement.dataset[BIND_KEY] === "1") return;
+  document.documentElement.dataset[BIND_KEY] = "1";
+
   function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
-  }
-
-  function buildSelfLink(id){
-    const u = new URL(`${location.origin}/verify.html`);
-    u.searchParams.set("hash", id);
-    if (DEBUG) u.searchParams.set("debug", "1");
-    return u.toString();
-  }
-
-  function buildCertLink(id, checkedEpoch){
-    const u = new URL(`${location.origin}/certificate.html`);
-    u.searchParams.set("hash", id);
-    if (checkedEpoch) u.searchParams.set("checked", String(checkedEpoch));
-    if (DEBUG) u.searchParams.set("debug", "1");
-    return u.toString();
   }
 
   function showPill(el, text, ms = 1400){
@@ -621,52 +560,6 @@
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
-  // Kontrollrapport-ID (revisionsvänligt; avser denna kontrollvisning)
-  function bytesToBase32(bytes){
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    let bits = 0, value = 0, output = "";
-    for (const b of bytes){
-      value = (value << 8) | b;
-      bits += 8;
-      while (bits >= 5){
-        output += alphabet[(value >>> (bits - 5)) & 31];
-        bits -= 5;
-      }
-    }
-    if (bits > 0){
-      output += alphabet[(value << (5 - bits)) & 31];
-    }
-    return output;
-  }
-
-  async function makeReportId({ refId, checkedEpoch, match, statusText }){
-    const payload = `${refId}|${checkedEpoch}|${match ? "A_OK" : "A_DIFF"}|${statusText}`;
-    const buf = new TextEncoder().encode(payload);
-    const dig = await crypto.subtle.digest("SHA-256", buf);
-    const b32 = bytesToBase32(new Uint8Array(dig));
-    return b32.slice(0, 16);
-  }
-
-  function setParamsInUrl({ hash, checked }){
-    const url = new URL(location.href);
-
-    if (hash) {
-      url.searchParams.set("hash", hash);
-      url.searchParams.delete("id");
-    } else {
-      url.searchParams.delete("hash");
-      url.searchParams.delete("id");
-    }
-
-    if (checked) url.searchParams.set("checked", String(checked));
-    else url.searchParams.delete("checked");
-
-    if (DEBUG) url.searchParams.set("debug", "1");
-    else url.searchParams.delete("debug");
-
-    history.replaceState({}, "", url.toString());
-  }
-
   function isoUtcNoMs(d){
     return d.toISOString().replace("T"," ").replace(/\.\d{3}Z$/, " UTC");
   }
@@ -705,7 +598,7 @@
     }
   }
 
-  // ✅ 100% språk-synk: 4 canonical statusuttryck
+  // ✅ Språklås: exakt 4 canonical statusuttryck
   function canonicalStatusFromCode(statusCode){
     const sc = String(statusCode || "");
     if (sc === "CONFIRMED") return "Bekräftad";
@@ -738,27 +631,83 @@
     };
   }
 
-  async function fetchVerify(id){
-    const r = await fetch(`/api/verify?hash=${encodeURIComponent(id)}&t=${Date.now()}`, { method:"GET", cache:"no-store" });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) return { ok:false, data:j, status:r.status };
-    return { ok:true, data:j, status:r.status };
+  // --------- Hardtest: timeout + retryable fetch ----------
+  function isRetryableStatus(status){
+    return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
   }
 
-  function setExplainTone(match){
-    if (!outExplain) return;
-    if (match === true) {
-      outExplain.style.borderColor = "rgba(80,255,180,.22)";
-      outExplain.style.background = "rgba(80,255,180,.07)";
-      return;
+  async function fetchJsonWithTimeout(url, timeoutMs = 20000){
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+    try{
+      const r = await fetch(url, { method:"GET", cache:"no-store", signal: controller.signal });
+      const j = await r.json().catch(() => ({}));
+      return { ok: r.ok, status: r.status, data: j, aborted:false };
+    } catch (e){
+      const aborted = (e && e.name === "AbortError");
+      return { ok:false, status:0, data:{}, aborted };
+    } finally {
+      clearTimeout(t);
     }
-    if (match === false) {
-      outExplain.style.borderColor = "rgba(255,80,80,.22)";
-      outExplain.style.background = "rgba(255,80,80,.07)";
-      return;
+  }
+
+  async function fetchVerify(id){
+    const base = `/api/verify?hash=${encodeURIComponent(id)}&t=${Date.now()}`;
+    const attempts = 3;
+    const baseDelay = 520;
+
+    for (let i=0; i<attempts; i++){
+      const res = await fetchJsonWithTimeout(base, 20000);
+
+      if (res.ok) return { ok:true, data:res.data, status:res.status };
+
+      const retryable = res.aborted || isRetryableStatus(res.status);
+      if (i < attempts - 1 && retryable){
+        const jitter = Math.floor(Math.random()*180);
+        await new Promise(r => setTimeout(r, baseDelay*(i+1) + jitter));
+        continue;
+      }
+
+      return { ok:false, data:res.data, status:res.status };
     }
-    outExplain.style.borderColor = "rgba(255,255,255,.14)";
-    outExplain.style.background = "rgba(255,255,255,.06)";
+
+    return { ok:false, data:{}, status:0 };
+  }
+
+  function setParamsInUrl({ hash, checked }){
+    const url = new URL(location.href);
+
+    if (hash) {
+      url.searchParams.set("hash", hash);
+      url.searchParams.delete("id");
+    } else {
+      url.searchParams.delete("hash");
+      url.searchParams.delete("id");
+    }
+
+    if (checked) url.searchParams.set("checked", String(checked));
+    else url.searchParams.delete("checked");
+
+    if (DEBUG) url.searchParams.set("debug", "1");
+    else url.searchParams.delete("debug");
+
+    history.replaceState({}, "", url.toString());
+  }
+
+  function buildSelfLink(id, checkedEpoch){
+    const u = new URL(`${location.origin}/verify.html`);
+    u.searchParams.set("hash", id);
+    if (checkedEpoch) u.searchParams.set("checked", String(checkedEpoch));
+    if (DEBUG) u.searchParams.set("debug", "1");
+    return u.toString();
+  }
+
+  function buildCertLink(id, checkedEpoch){
+    const u = new URL(`${location.origin}/certificate.html`);
+    u.searchParams.set("hash", id);
+    if (checkedEpoch) u.searchParams.set("checked", String(checkedEpoch));
+    if (DEBUG) u.searchParams.set("debug", "1");
+    return u.toString();
   }
 
   function applyCopyHover(fieldEl, iconBtnEl, enabled){
@@ -898,7 +847,7 @@
 
       qr.makeCode(payload);
 
-      const node = el.querySelector("canvas, img, svg");
+      const node = el.querySelector("canvas, img, svg, table");
       if (!node){
         setFallback("QR kunde inte visas.");
         return;
@@ -936,10 +885,7 @@
     if (summaryOut) summaryOut.textContent = "—";
     lastRun = null;
 
-    if (outA) outA.textContent = "—";
-    if (outB) outB.textContent = "—";
-    if (outReportId) outReportId.textContent = "—";
-
+    outRegStatus.textContent = "—";
     outRegSe.textContent = "—";
     outRegUtc.textContent = "—";
 
@@ -962,6 +908,47 @@
     verifyBtn.textContent = busy ? "Kontrollerar…" : (lastRun ? "Kontrollera igen" : "Kontrollera");
   }
 
+  function setExplainTone(match){
+    if (!outExplain) return;
+    if (match === true) {
+      outExplain.style.borderColor = "rgba(80,255,180,.22)";
+      outExplain.style.background = "rgba(80,255,180,.07)";
+      return;
+    }
+    if (match === false) {
+      outExplain.style.borderColor = "rgba(255,80,80,.22)";
+      outExplain.style.background = "rgba(255,80,80,.07)";
+      return;
+    }
+    outExplain.style.borderColor = "rgba(255,255,255,.14)";
+    outExplain.style.background = "rgba(255,255,255,.06)";
+  }
+
+  function setResultHeadline(match){
+    resultHeadline.textContent = "";
+    const left = document.createElement("span");
+    const right = document.createElement("span");
+    right.className = "meta";
+
+    if (match) {
+      left.className = "ok";
+      left.textContent = "✅ Oförändrat";
+      right.textContent = "(samma filversion)";
+      resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
+      resultHeadline.style.background = "rgba(80,255,180,.06)";
+    } else {
+      left.className = "err";
+      left.textContent = "⚠️ Avvikelse";
+      right.textContent = "(annan filversion)";
+      resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
+      resultHeadline.style.background = "rgba(255,80,80,.06)";
+    }
+
+    resultHeadline.appendChild(left);
+    resultHeadline.appendChild(document.createTextNode(" "));
+    resultHeadline.appendChild(right);
+  }
+
   function updateSelfLinkUI(){
     const id = (hashInput.value || "").trim();
     const ok = isValidId(id);
@@ -975,7 +962,8 @@
       return;
     }
 
-    const link = buildSelfLink(id);
+    const checked = (new URL(location.href).searchParams.get("checked") || "").trim();
+    const link = buildSelfLink(id, checked || "");
     selfLinkOut.textContent = link;
     applyCopyHover(selfLinkOut, copySelfLinkIconBtn, true);
     renderSelfQR(link);
@@ -997,19 +985,19 @@
 
     if (!id){
       showAlert(
-        "⚠️ Ange kontrollvärde för att kunna kontrollera",
-        "Klistra in kontrollvärdet (Verifierings-ID) eller öppna verifieringslänken du fått.",
+        "⚠️ Ange Verifierings-ID för att kunna kontrollera",
+        "Klistra in Verifierings-ID eller öppna verifieringslänken du fått.",
         "err"
       );
-      setStatus("Ange kontrollvärde");
+      setStatus("Ange Verifierings-ID");
       setBusy(false);
       return;
     }
 
     if (!okId){
       showAlert(
-        "⚠️ Kontrollvärdet verkar inte stämma",
-        "Kontrollera att du kopierat hela kontrollvärdet utan att något saknas.",
+        "⚠️ Verifierings-ID verkar inte stämma",
+        "Kontrollera att du kopierat hela Verifierings-ID:t utan att något saknas.",
         "err"
       );
       setStatus("Åtgärd krävs");
@@ -1039,6 +1027,7 @@
     updateValidationUI();
   }
 
+  // --------- URL init ----------
   const urlId = (() => {
     const url = new URL(location.href);
     return (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim();
@@ -1046,12 +1035,11 @@
 
   if (isValidId(urlId)) {
     hashInput.value = urlId;
-    setParamsInUrl({ hash: urlId, checked: (() => {
-      const url = new URL(location.href);
-      return (url.searchParams.get("checked") || "").trim();
-    })() || "" });
+    const existingChecked = (new URL(location.href).searchParams.get("checked") || "").trim();
+    setParamsInUrl({ hash: urlId, checked: existingChecked || "" });
   }
 
+  // --------- Handlers ----------
   if (pasteIdBtn){
     pasteIdBtn.addEventListener("click", async () => {
       const txt = (await readClipboardText()).trim();
@@ -1064,7 +1052,8 @@
       hashInput.value = candidate;
 
       if (isValidId(candidate)) {
-        setParamsInUrl({ hash: candidate, checked: (new URL(location.href).searchParams.get("checked") || "").trim() || "" });
+        const checked = (new URL(location.href).searchParams.get("checked") || "").trim();
+        setParamsInUrl({ hash: candidate, checked: checked || "" });
         showPill(idPill, "Klistrat ✓");
       } else {
         showPill(idPill, "Klistrat (kontrollera att du fått med hela)");
@@ -1112,15 +1101,16 @@
       if (!link || link === "—") return;
       await copyWithPill({ text: link, pillEl: selfLinkPill, okText:"Länk kopierad ✅" });
     };
-    selfQRTap.onclick = (e) => { e.preventDefault(); doQrCopy(); };
-    selfQRTap.onkeydown = (e) => {
+    selfQRTap.addEventListener("click", (e) => { e.preventDefault(); doQrCopy(); });
+    selfQRTap.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
-    };
+    });
   }
 
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
-    if (isValidId(v)) setParamsInUrl({ hash: v, checked: (new URL(location.href).searchParams.get("checked") || "").trim() || "" });
+    const checked = (new URL(location.href).searchParams.get("checked") || "").trim();
+    if (isValidId(v)) setParamsInUrl({ hash: v, checked: checked || "" });
     updateValidationUI();
   });
 
@@ -1142,49 +1132,13 @@
     });
   }
 
-  function setResultHeadline(match){
-    resultHeadline.textContent = "";
-    const left = document.createElement("span");
-    const right = document.createElement("span");
-    right.className = "meta";
-
-    if (match) {
-      left.className = "ok";
-      left.textContent = "✅ Oförändrat";
-      right.textContent = "(samma filversion)";
-      resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
-      resultHeadline.style.background = "rgba(80,255,180,.06)";
-    } else {
-      left.className = "err";
-      left.textContent = "⚠️ Avvikelse";
-      right.textContent = "(annan filversion)";
-      resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
-      resultHeadline.style.background = "rgba(255,80,80,.06)";
-    }
-
-    resultHeadline.appendChild(left);
-    resultHeadline.appendChild(document.createTextNode(" "));
-    resultHeadline.appendChild(right);
-  }
-
-  // ✅ Notering (identisk struktur för revision/juridik)
   function buildSummaryText(run){
     if (!run) return "—";
     const lines = [];
 
-    lines.push("PROOFY – Notering (ärendeakt/granskningsunderlag)");
+    lines.push("PROOFY – Notering");
     lines.push("");
 
-    // Valfria ärendeuppgifter
-    if (run.caseId || run.caseOrg || run.caseHandler){
-      lines.push("Ärendeuppgifter (valfritt):");
-      if (run.caseId) lines.push(`Ärende-ID: ${run.caseId}`);
-      if (run.caseOrg) lines.push(`Organisation/byrå: ${run.caseOrg}`);
-      if (run.caseHandler) lines.push(`Handläggare: ${run.caseHandler}`);
-      lines.push("");
-    }
-
-    if (run.reportId) lines.push(`Kontrollrapport-ID: ${run.reportId}`);
     lines.push(`Kontrollvärde (Verifierings-ID): ${run.refId || "—"}`);
     if (run.fileName) lines.push(`Underlag/filnamn: ${run.fileName}`);
 
@@ -1194,20 +1148,20 @@
     lines.push("Obs: Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
 
     lines.push("");
-    lines.push(`Resultat A (filversion): ${run.match ? "Oförändrat (samma filversion)" : "Avvikelse (annan filversion)"}`);
-    lines.push(`Resultat B (registerstatus vid kontrolltillfället): ${run.statusText || "Kunde inte kontrolleras"}`);
+    lines.push(`Resultat (filversion): ${run.match ? "Oförändrat underlag (samma filversion)" : "Avvikelse (annan filversion)"}`);
+
+    lines.push("");
+    lines.push("Status vid kontrolltillfället:");
+    lines.push(`${run.statusText || "Kunde inte kontrolleras"}`);
 
     if (run.statusText === "Bekräftad") {
       if (run.confirmedSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.confirmedSe}`);
       if (run.confirmedUtc) lines.push(`Tidpunkt (endast om bekräftad) – UTC: ${run.confirmedUtc}`);
     }
 
-    if (run.verifyLink) lines.push(`Verifieringslänk: ${run.verifyLink}`);
-    if (run.certLink) lines.push(`Intygslänk: ${run.certLink}`);
-
     if (DEBUG) {
       lines.push("");
-      lines.push(`Systemversion (verify.html): ${PROOFY_VERIFY_BUILD}`);
+      lines.push(`Systemversion: ${PROOFY_VERIFY_BUILD}`);
     }
 
     lines.push("");
@@ -1230,8 +1184,8 @@
     downloadReportBtn.addEventListener("click", () => {
       if (!lastRun) return;
       const txt = buildSummaryText(lastRun);
-      const fn = `proofy-notering.txt`;
-      downloadTextFile(fn, txt);
+      downloadTextFile("proofy-notering.txt", txt);
+      showPill(copySummaryPill, "Nerladdad ✅");
     });
   }
 
@@ -1244,7 +1198,7 @@
     if (!isValidId(refId)) {
       showAlert(
         "⚠️ Kontroll kan inte starta",
-        "Kontrollvärde (Verifierings-ID) saknas eller verkar inte stämma. Kontrollera att du kopierat hela värdet.",
+        "Verifierings-ID saknas eller verkar inte stämma. Kontrollera att du kopierat hela Verifierings-ID:t.",
         "err"
       );
       setStatus("Åtgärd krävs");
@@ -1278,9 +1232,6 @@
 
       const match = (localId.toLowerCase() === refId.toLowerCase());
 
-      // A-resultat direkt (oberoende av nätet)
-      if (outA) outA.textContent = match ? "Oförändrat (samma filversion)" : "Avvikelse (annan filversion)";
-
       const verifyRes = await fetchVerify(refId);
       if (myOp !== opId) return;
 
@@ -1306,12 +1257,11 @@
       setResultHeadline(match);
       setExplainTone(match);
 
-      // Grundförklaring (utan teknikord)
       if (match) {
-        outExplainTitle.textContent = "Filversionen stämmer med kontrollvärdet.";
+        outExplainTitle.textContent = "Filversionen stämmer med Verifierings-ID.";
         outExplainBody.textContent = "Kontrollen avser filversion och säger inget om dokumentets innehåll, giltighet eller äkthet.";
       } else {
-        outExplainTitle.textContent = "Filversionen avviker från kontrollvärdet.";
+        outExplainTitle.textContent = "Filversionen avviker från Verifierings-ID.";
         outExplainBody.textContent = "Det kan bero på att fel underlag valts eller att filen har skapats om/sparats på nytt (t.ex. ny export, omskanning eller omkomprimering).";
       }
 
@@ -1320,58 +1270,52 @@
 
       if (!verifyRes.ok) {
         statusText = "Kunde inte kontrolleras";
+        outRegStatus.textContent = statusText;
+        outRegSe.textContent = "—";
+        outRegUtc.textContent = "—";
       } else {
         const norm = normalizeVerifyModel(verifyRes.data || {});
         statusText = canonicalStatusFromCode(norm.statusCode);
         confirmedAtUnix = norm.confirmedAtUnix;
-      }
 
-      // B-resultat
-      if (outB) outB.textContent = statusText;
+        outRegStatus.textContent = statusText;
 
-      // Tidpunkt endast om bekräftad
-      if (statusText === "Bekräftad" && confirmedAtUnix) {
-        outRegSe.textContent = (formatUnixSe(confirmedAtUnix) + " (Europe/Stockholm)");
-        outRegUtc.textContent = fmtUtcEpoch(confirmedAtUnix);
-      } else {
-        outRegSe.textContent = "—";
-        outRegUtc.textContent = "—";
-      }
+        if (statusText === "Bekräftad" && confirmedAtUnix) {
+          outRegSe.textContent = (formatUnixSe(confirmedAtUnix) + " (Europe/Stockholm)");
+          outRegUtc.textContent = fmtUtcEpoch(confirmedAtUnix);
+        } else {
+          outRegSe.textContent = "—";
+          outRegUtc.textContent = "—";
+        }
 
-      // Förklaringsrutan nyanserar utan att blanda A/B
-      if (statusText === "Inskickad – ej bekräftad") {
-        outExplainTitle.textContent = match
-          ? "Filversionen stämmer – men registerstatus är inskickad (ej bekräftad) vid kontrolltillfället."
-          : "Filversionen avviker – och registerstatus är inskickad (ej bekräftad) vid kontrolltillfället.";
-        outExplainBody.textContent = "En inskickad notering innebär inte bekräftelse. Status blir “Bekräftad” först när bekräftelse kan konstateras i registret.";
-      } else if (statusText === "Ej bekräftad") {
-        outExplainTitle.textContent = match
-          ? "Filversionen stämmer – men registerstatus är ej bekräftad vid kontrolltillfället."
-          : "Filversionen avviker – och registerstatus är ej bekräftad vid kontrolltillfället.";
-        outExplainBody.textContent = "Kontrollera att rätt kontrollvärde används och försök igen vid behov.";
-      } else if (statusText === "Kunde inte kontrolleras") {
-        outExplainTitle.textContent = match
-          ? "Filversionen stämmer – men registerstatus kunde inte kontrolleras vid kontrolltillfället."
-          : "Filversionen avviker – och registerstatus kunde inte kontrolleras vid kontrolltillfället.";
-        outExplainBody.textContent = "Detta kan vara ett tillfälligt fel. Försök igen.";
-      }
-
-      const reportId = await makeReportId({ refId, checkedEpoch, match, statusText });
-      if (outReportId) outReportId.textContent = reportId;
-
-      const verifyLink = buildSelfLink(refId);
-      const certLink = buildCertLink(refId, checkedEpoch);
-
-      if (openCertBtn) {
-        openCertBtn.href = certLink;
-        openCertBtn.style.display = "inline-flex";
+        // Nyansering utan att blanda ihop filresultat och registerstatus
+        if (statusText === "Inskickad – ej bekräftad") {
+          outExplainTitle.textContent = match
+            ? "Filversionen stämmer – men status är inskickad (ej bekräftad) vid kontrolltillfället."
+            : "Filversionen avviker – och status är inskickad (ej bekräftad) vid kontrolltillfället.";
+          outExplainBody.textContent = "En inskickad notering innebär inte bekräftelse. Status blir “Bekräftad” först när bekräftelse kan konstateras i registret.";
+        } else if (statusText === "Ej bekräftad") {
+          outExplainTitle.textContent = match
+            ? "Filversionen stämmer – men status är ej bekräftad vid kontrolltillfället."
+            : "Filversionen avviker – och status är ej bekräftad vid kontrolltillfället.";
+          outExplainBody.textContent = "Kontrollera att rätt Verifierings-ID används och försök igen vid behov.";
+        } else if (statusText === "Kunde inte kontrolleras") {
+          outExplainTitle.textContent = match
+            ? "Filversionen stämmer – men status kunde inte kontrolleras vid kontrolltillfället."
+            : "Filversionen avviker – och status kunde inte kontrolleras vid kontrolltillfället.";
+          outExplainBody.textContent = "Detta kan vara ett tillfälligt tekniskt fel. Försök igen.";
+        }
       }
 
       const confirmedSe = (statusText === "Bekräftad" && confirmedAtUnix) ? (formatUnixSe(confirmedAtUnix) + " (Europe/Stockholm)") : null;
       const confirmedUtc = (statusText === "Bekräftad" && confirmedAtUnix) ? fmtUtcEpoch(confirmedAtUnix) : null;
 
+      if (openCertBtn) {
+        openCertBtn.href = buildCertLink(refId, checkedEpoch);
+        openCertBtn.style.display = "inline-flex";
+      }
+
       lastRun = {
-        reportId,
         refId,
         match,
         fileName: currentFile?.name || "",
@@ -1379,12 +1323,7 @@
         confirmedSe,
         confirmedUtc,
         verifySe: checkedSe,
-        verifyUtc: checkedUtc,
-        verifyLink,
-        certLink,
-        caseId: String(caseId?.value || "").trim(),
-        caseOrg: String(caseOrg?.value || "").trim(),
-        caseHandler: String(caseHandler?.value || "").trim()
+        verifyUtc: checkedUtc
       };
 
       const summaryText = buildSummaryText(lastRun);
@@ -1394,6 +1333,7 @@
       if (downloadReportBtn) downloadReportBtn.style.display = "inline-flex";
 
       hideAlert();
+
       setStatus("Klar ✅");
       setBusy(false);
 
@@ -1409,9 +1349,8 @@
   // init
   resetUI();
   setFile(null);
-  updateValidationUI();
 
-  // debug-version (förbereds; visas först när resultat visas)
+  // visa debug-rad vid laddning om debug=1
   if (auditVerifyVersion && auditVerifyVersionValue) {
     if (DEBUG) {
       auditVerifyVersionValue.textContent = PROOFY_VERIFY_BUILD;
@@ -1420,10 +1359,9 @@
     }
   }
 
-  function updateSelfLinkUIOnLoad(){
-    updateSelfLinkUI();
-  }
-  updateSelfLinkUIOnLoad();
+  // Selflink init
+  updateSelfLinkUI();
+  updateValidationUI();
 
 })();
 </script>
