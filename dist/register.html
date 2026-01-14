@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Skapa kontrollvärde</title>
   <meta name="description" content="Skapa kontrollvärde (Verifierings-ID) för en filversion lokalt i webbläsaren. Underlaget lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
@@ -12,11 +12,6 @@
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
-    :root{
-      /* ✅ Hård default för chat/FAB-space (om widgeten saknar hook) */
-      --proofy-fab-space: 120px;
-    }
-
     .sr-only{
       position:absolute !important;
       width:1px !important;
@@ -52,26 +47,27 @@
       background: rgba(255,255,255,.05);
     }
 
-    /* ✅ Avbryt = riktig knapp (inte “utan UI”) */
-    #abortBtn{
-      display:none;
-      padding:8px 12px;
-      border-radius:999px;
-      font-weight:900;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.04);
-      color: rgba(234,240,255,.88);
-      cursor:pointer;
-      white-space:nowrap;
-    }
-    #abortBtn:hover{ background: rgba(255,255,255,.06); }
-
-    /* ✅ Öppna intyg = tydlig primär åtgärd när man granskar */
+    /* ✅ “Intyg”-knappen ser ut som en knapp men är en riktig <button> (mobil-säkert) */
     #receiptBtn{
       background: rgba(255,255,255,.04) !important;
       border: 1px solid rgba(255,255,255,.12) !important;
-      color: rgba(234,240,255,.90) !important;
-      font-weight: 950 !important;
+      color: rgba(234,240,255,.85) !important;
+    }
+
+    /* ✅ Avbryt ska ha UI (inte bara textlänk) */
+    #abortBtn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-weight: 950;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(234,240,255,.88);
+      cursor:pointer;
+      text-decoration:none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .proofyQrTap{
@@ -129,16 +125,72 @@
       text-underline-offset: 3px;
     }
 
-    /* ✅ Hårdtest: bottenpadding + safe-area så chat-widget aldrig täcker knappar */
+    /* ✅ Hårdtest: extra bottenpadding så “Fråga oss”-widget inte täcker knappar/länkar */
     main{
-      padding-bottom: calc(56px + env(safe-area-inset-bottom) + var(--proofy-fab-space, 120px));
+      padding-bottom: calc(160px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom));
     }
-    @media (max-width: 700px){
-      :root{ --proofy-fab-space: 140px; }
+
+    /* ✅ Sticky actions: minimal, icke-repetitiv, alltid ovan chat/FAB */
+    .proofySticky{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(env(safe-area-inset-bottom) + 10px);
+      z-index: 60;
+      display: none;
+      pointer-events: none;
+    }
+    .proofySticky .inner{
+      pointer-events: auto;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 14px;
+    }
+    .proofySticky .bar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:flex-end;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(11,18,32,.78);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 10px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.35);
+    }
+    .proofySticky .btnPrimary{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 950;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.10);
+      color: rgba(234,240,255,.94);
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .proofySticky .btnSecondary{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 950;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(234,240,255,.88);
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .proofySticky{
+      margin-bottom: calc(var(--proofy-fab-space, 120px));
     }
 
     @media print{
-      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
+      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions, .proofySticky { display:none !important; }
       #qrTap, #manualQrTap { display:grid !important; border-color:#ddd !important; }
       #qrTap, #qrBox, #manualQrTap, #manualQrBox{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     }
@@ -235,9 +287,7 @@
           <div class="actions" style="margin-top:14px;">
             <div class="actionsMetaRow">
               <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Välj underlag</span>
-
-              <!-- ✅ Nu riktig knapp med UI -->
-              <button id="abortBtn" type="button" aria-label="Avbryt pågående kontroll">Avbryt pågående kontroll</button>
+              <button id="abortBtn" type="button" style="display:none;">Avbryt</button>
             </div>
           </div>
 
@@ -358,11 +408,6 @@
                 <span id="copyLinkPill" class="pill" style="display:none; margin-top:8px;"></span>
               </div>
 
-              <!-- ✅ NYTT: Öppna intyg flyttas upp hit (högre upp, direkt synligt) -->
-              <div class="actionsRow" style="margin-top:12px;">
-                <button class="btn soft" id="receiptBtn" type="button" style="display:none;">Öppna intyg</button>
-              </div>
-
               <p class="small" style="margin:10px 0 0; opacity:.95;">
                 <b>Notera:</b> Kontrollvärde och verifieringslänk skapas lokalt. För att kunna redovisa <b>Bekräftad</b> status vid senare kontroll behöver status vara <b>Bekräftad</b>.
               </p>
@@ -385,6 +430,10 @@
 
                   <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
                     Skanna med <b>annan enhet</b> (kollega/klient). Klick på QR kopierar länken.
+                  </div>
+
+                  <div class="actions" style="margin-top:12px;">
+                    <button class="btn soft" id="receiptBtn" type="button" style="display:none;">Öppna intyg</button>
                   </div>
                 </div>
 
@@ -547,6 +596,17 @@
   </div>
 </footer>
 
+<!-- ✅ Sticky åtgärdsrad (visas bara när den behövs) -->
+<div class="proofySticky" id="stickyBar" aria-hidden="true">
+  <div class="inner">
+    <div class="bar">
+      <button class="btnSecondary" id="stickyAbortBtn" type="button" style="display:none;">Avbryt</button>
+      <button class="btnSecondary" id="stickyCopyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
+      <button class="btnPrimary" id="stickyReceiptBtn" type="button" style="display:none;">Öppna intyg</button>
+    </div>
+  </div>
+</div>
+
 <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
 <script>
@@ -574,7 +634,7 @@
   const qrBox = $("qrBox");
 
   const receiptBtn = $("receiptBtn");
-  let receiptHref = null;
+  let receiptHref = null; /* ✅ robust: lagra senast byggda intygslänk */
 
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
@@ -604,6 +664,12 @@
   const manualLinkOut = $("manualLinkOut");
   const manualQrTap = $("manualQrTap");
   const manualQrBox = $("manualQrBox");
+
+  // ✅ Sticky actions
+  const stickyBar = $("stickyBar");
+  const stickyAbortBtn = $("stickyAbortBtn");
+  const stickyCopyNoteBtn = $("stickyCopyNoteBtn");
+  const stickyReceiptBtn = $("stickyReceiptBtn");
 
   let currentFile = null;
   let currentId = null;
@@ -1048,12 +1114,67 @@
     if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
   }
 
+  // ✅ Sticky logic: visas bara när den behövs → minimal repetition
+  function setStickyVisible(v){
+    if (!stickyBar) return;
+    stickyBar.style.display = v ? "block" : "none";
+    stickyBar.setAttribute("aria-hidden", v ? "false" : "true");
+  }
+
+  function syncSticky(){
+    if (!stickyBar) return;
+
+    const hasResult = !!currentId;
+    const isBusy = !!busy;
+    const hasReceipt = !!receiptHref && receiptHref !== "—";
+    const hasNote = !!lastRun;
+
+    if (stickyAbortBtn) stickyAbortBtn.style.display = "none";
+    if (stickyReceiptBtn) stickyReceiptBtn.style.display = "none";
+    if (stickyCopyNoteBtn) stickyCopyNoteBtn.style.display = "none";
+
+    if (isBusy){
+      if (stickyAbortBtn) stickyAbortBtn.style.display = "inline-flex";
+      setStickyVisible(true);
+      return;
+    }
+
+    if (hasResult){
+      let any = false;
+
+      if (hasReceipt){
+        if (stickyReceiptBtn){
+          stickyReceiptBtn.style.display = "inline-flex";
+          stickyReceiptBtn.textContent = receiptBtn?.textContent || "Öppna intyg";
+          stickyReceiptBtn.onclick = () => { window.location.href = receiptHref; };
+        }
+        any = true;
+      }
+
+      if (hasNote){
+        if (stickyCopyNoteBtn){
+          stickyCopyNoteBtn.style.display = "inline-flex";
+          stickyCopyNoteBtn.onclick = async () => {
+            await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
+          };
+        }
+        any = true;
+      }
+
+      setStickyVisible(any);
+      return;
+    }
+
+    setStickyVisible(false);
+  }
+
   function setBusy(v){
     busy = v;
     setAriaBusy(v);
     if (abortBtn){
       abortBtn.style.display = busy ? "inline-flex" : "none";
     }
+    syncSticky();
   }
 
   function resetReport(){
@@ -1096,6 +1217,7 @@
     stopPolling();
 
     if (emptyState) emptyState.style.display = "block";
+    syncSticky();
   }
 
   function setFile(file){
@@ -1191,7 +1313,7 @@
       updateReceiptLabel();
       receiptBtn.onclick = () => {
         if (!receiptHref || receiptHref === "—") return;
-        window.location.href = receiptHref; /* samma flik = mobil-säkert */
+        window.location.href = receiptHref;
       };
     }
 
@@ -1211,6 +1333,8 @@
     if (noteOut) noteOut.textContent = buildNote(lastRun);
     if (noteBox) noteBox.style.display = "block";
     if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
+
+    syncSticky();
   }
 
   async function pollTxAndVerify(myOp, id, txHash, checkedEpoch){
@@ -1314,15 +1438,18 @@
     resetReport();
 
     setPill("Skapar kontrollvärde…");
-    if (abortBtn){
-      abortBtn.onclick = () => {
-        opId++;
-        stopPolling();
-        setBusy(false);
-        setPill("Avbruten – välj underlag igen");
-        markHeadline("warn", "Avbruten");
-      };
-    }
+
+    const doAbort = () => {
+      opId++;
+      stopPolling();
+      setBusy(false);
+      setPill("Avbruten – välj underlag igen");
+      markHeadline("warn", "Avbruten");
+      syncSticky();
+    };
+
+    if (abortBtn) abortBtn.onclick = doAbort;
+    if (stickyAbortBtn) stickyAbortBtn.onclick = doAbort;
 
     try{
       const checkedEpoch = Math.floor(Date.now() / 1000);
@@ -1398,6 +1525,7 @@
 
       setPill("Klart ✅");
       setBusy(false);
+      syncSticky();
 
     } catch (e){
       if (myOp !== opId) return;
@@ -1430,6 +1558,7 @@
 
       setPill("Klart (lokalt) ✅");
       setBusy(false);
+      syncSticky();
     }
   }
 
@@ -1477,6 +1606,7 @@
     copyNoteBtn.addEventListener("click", async () => {
       if (!lastRun) return;
       await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
+      syncSticky();
     });
   }
 
@@ -1486,6 +1616,7 @@
       downloadTextFile("proofy-notering.txt", buildNote(lastRun));
       showPill(copyNotePill, "Nerladdad ✅");
       setTimeout(() => hidePill(copyNotePill), 1200);
+      syncSticky();
     });
   }
 
@@ -1549,6 +1680,7 @@
   setFile(null);
   setBusy(false);
   setManualState("");
+  syncSticky();
 })();
 </script>
 
