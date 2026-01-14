@@ -47,18 +47,11 @@
       background: rgba(255,255,255,.05);
     }
 
-    /* Sekundärknapp (intyg) */
+    /* Färre knappar: fokusera på 1 primär CTA */
     #receiptBtn{
       background: rgba(255,255,255,.04) !important;
       border: 1px solid rgba(255,255,255,.12) !important;
       color: rgba(234,240,255,.85) !important;
-    }
-
-    /* Primär CTA: Kopiera notering */
-    #copyNoteBtn.btn.primary{
-      background: rgba(120, 180, 255, .18) !important;
-      border: 1px solid rgba(120, 180, 255, .28) !important;
-      color: rgba(234,240,255,.95) !important;
     }
 
     .proofyQrTap{
@@ -116,51 +109,6 @@
       text-decoration: underline;
       text-underline-offset: 3px;
     }
-
-    /* Bevisar / Bevisar inte */
-    .proofBox{
-      margin-top:10px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      border-radius: 14px;
-      padding: 10px 12px;
-    }
-    .proofRow{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      margin: 6px 0;
-    }
-    .proofTag{
-      min-width: 98px;
-      display:inline-flex;
-      justify-content:center;
-      align-items:center;
-      padding: 3px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.04);
-      font-weight: 850;
-      font-size: 12px;
-      letter-spacing: .2px;
-      white-space: nowrap;
-    }
-    .proofText{ font-size: 13px; opacity:.95; line-height:1.35; }
-
-    /* Opt-in */
-    .optinBox{
-      margin-top:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      border-radius: 14px;
-      padding: 10px 12px;
-    }
-    .optinRow{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-    }
-    .optinRow input{ margin-top:3px; }
 
     @media print{
       header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
@@ -221,9 +169,8 @@
     <h1 class="pageTitle">Skapa kontrollvärde <span class="meta">(Verifierings-ID)</span></h1>
 
     <p class="lead">
-      Välj filversionen som ska vara <b>referens</b> i ärendet. Proofy skapar kontrollvärde lokalt och du kan (om du vill) skicka en registrering för bekräftelse.
-      <strong>Underlaget lämnar aldrig din dator.</strong><br/>
-      <span class="small" style="opacity:.92;">Minskar versionsglapp mellan mottaget, granskat och arkiverat underlag — utan att lagra dokument.</span>
+      Välj filversionen som ska vara <b>referens</b> i ärendet. Proofy skapar kontrollvärde lokalt och (om du vill) skickar en registrering för bekräftelse.
+      <strong>Underlaget lämnar aldrig din dator.</strong>
     </p>
 
     <div class="card content" style="margin-top:14px;">
@@ -233,6 +180,7 @@
         <section aria-label="Välj referensunderlag">
           <div style="font-weight:950; font-size:16px;">1. Referensunderlag (filversion)</div>
 
+          <!-- Endast 1 primär CTA -->
           <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:10px; cursor:pointer;">
             Välj / byt underlag
           </label>
@@ -254,23 +202,7 @@
             Inget underlag valt.
           </div>
 
-          <!-- Opt-in för registrering (juridiskt tryggt) -->
-          <div class="optinBox" aria-label="Registrering för bekräftelse (valfritt)">
-            <div class="optinRow">
-              <input id="optInRegister" type="checkbox" />
-              <div>
-                <div style="font-weight:850;">Skicka registrering för bekräftelse (valfritt)</div>
-                <div class="small" style="opacity:.92; margin-top:4px;">
-                  Skickar endast kontrollvärdet (inte dokumentet). Ger möjlighet att visa <b>registerstatus hos Proofy</b> vid senare kontroll.
-                </div>
-                <div class="small" style="opacity:.86; margin-top:6px;">
-                  Ingen extern tidsstämpling tillhandahålls här. Kontrolltiden nedan genereras i din webbläsare.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="actions" style="margin-top:10px;">
+          <div class="actions" style="margin-top:14px;">
             <div class="actionsMetaRow">
               <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Välj underlag</span>
               <button id="abortBtn" class="inlineLinkBtn" type="button" style="display:none;">Avbryt pågående kontroll</button>
@@ -335,15 +267,12 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- K1: Bevisar / Bevisar inte -->
-            <div class="proofBox" aria-label="Vad detta bevisar och inte bevisar">
-              <div class="proofRow">
-                <div class="proofTag">Bevisar</div>
-                <div class="proofText">Att denna <b>filversion</b> matchar referensen (kontrollvärde/Verifierings-ID) vid detta kontrolltillfälle.</div>
-              </div>
-              <div class="proofRow">
-                <div class="proofTag">Bevisar inte</div>
-                <div class="proofText">Äkthet, behörighet, signering, innehållsriktighet eller rättslig giltighet. Ingen extern tidsstämpling görs här.</div>
+            <!-- ✅ NYTT: Bevisar / Bevisar inte (språksynk, inga teknikord) -->
+            <div id="evidenceBox"
+                 style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04);">
+              <div class="small" style="line-height:1.45;">
+                <div><b>Bevisar:</b> Att denna filversion motsvarar kontrollvärdet (Verifierings-ID).</div>
+                <div style="margin-top:6px;"><b>Bevisar inte:</b> Dokumentets innehåll, riktighet, giltighet eller äkthet.</div>
               </div>
             </div>
 
@@ -408,7 +337,7 @@
               </div>
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
-                <b>Revisionsnot:</b> kontrollvärde och verifieringslänk skapas lokalt. Om du vill kunna visa <b>bekräftelse</b> vid senare kontroll behöver status hos <b>Proofys register</b> vara <b>Bekräftad</b>.
+                <b>Revisionsnot:</b> kontrollvärde och verifieringslänk skapas lokalt. För att kunna visa <b>status</b> vid senare kontroll behöver status vid kontrolltillfället vara <b>Bekräftad</b>.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
@@ -437,6 +366,7 @@
                 </div>
 
                 <div style="min-width:240px; flex:1;">
+                  <!-- ✅ SPRÅKSYNK: exakt samma rubrik som verify -->
                   <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
                   <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
                   <div id="checkedUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
@@ -444,10 +374,11 @@
                     Tidpunkten genereras i webbläsaren och kan vara fel om systemklockan är fel. Den utgör inte extern tidsstämpling.
                   </div>
 
-                  <div class="meta" style="margin-top:12px;">Status hos Proofy (Proofys register) vid kontrolltillfället</div>
+                  <!-- ✅ SPRÅKSYNK: exakt samma rubrik som verify -->
+                  <div class="meta" style="margin-top:12px;">Status vid kontrolltillfället</div>
                   <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
-                  <div class="meta" style="margin-top:10px;">Tidpunkt för bekräftelse (om bekräftad)</div>
+                  <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
 
                   <div class="noteBox" id="noteBox" style="display:none;">
@@ -455,7 +386,7 @@
                     <pre class="mono" id="noteOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
 
                     <div class="noteActions">
-                      <button class="btn primary" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
+                      <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
                       <span id="copyNotePill" class="pill" style="display:none;"></span>
                     </div>
 
@@ -464,8 +395,10 @@
                       <button class="inlineLinkBtn" id="downloadNoteLink" type="button">proofy-notering.txt</button>
                     </div>
 
+                    <!-- ✅ JURIDISK ANKARSATS (identisk, utan teknikord) -->
                     <p class="meta" style="margin:10px 0 0; opacity:.9;">
-                      <b>Begränsning:</b> Proofy uttalar sig inte om dokumentets innehåll, behörighet, signering eller rättslig giltighet. Kontroll avser filversion (tekniskt kontrollvärde) och registerstatus hos Proofy vid angivet kontrolltillfälle.
+                      <b>Avgränsning:</b> Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
+                      Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
                     </p>
                   </div>
 
@@ -651,8 +584,6 @@
   const manualLinkOut = $("manualLinkOut");
   const manualQrTap = $("manualQrTap");
   const manualQrBox = $("manualQrBox");
-
-  const optInRegister = $("optInRegister");
 
   let currentFile = null;
   let currentId = null;
@@ -1051,29 +982,31 @@
     setTimeout(() => URL.revokeObjectURL(url), 1200);
   }
 
+  // ✅ SPRÅKSYNK: Notering använder exakt rubriker/texter som verify
   function buildNote(run){
     if (!run) return "—";
     const lines = [];
-    lines.push("PROOFY – Notering (ärendeakt/granskningsunderlag)");
+    lines.push("PROOFY – Notering");
     lines.push("");
     lines.push(`Kontrollvärde (Verifierings-ID): ${run.id || "—"}`);
     if (run.fileName) lines.push(`Referensunderlag: ${run.fileName}`);
     lines.push("");
     lines.push(`Kontrolltid (detta kontrolltillfälle): ${run.checkedSe || "—"}`);
     lines.push(`Kontrolltid (UTC): ${run.checkedUtc || "—"}`);
-    lines.push("Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
+    lines.push("Obs: Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
     lines.push("");
     lines.push(`Verifieringslänk: ${run.link || "—"}`);
     lines.push(`Intygslänk: ${run.certLink || "—"}`);
     lines.push("");
-    lines.push(`Registerstatus hos Proofy (Proofys register) vid kontrolltillfället: ${run.statusLine || "—"}`);
-    if (run.regSent === false) lines.push("Registrering för bekräftelse: EJ skickad (valfritt steg).");
-    if (run.timeSe) lines.push(`Tidpunkt för bekräftelse (om bekräftad): ${run.timeSe}`);
+    lines.push("Status vid kontrolltillfället:");
+    lines.push(`${run.statusLine || "—"}`);
+    if (run.timeSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.timeSe}`);
     if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
     lines.push("");
-    lines.push("Begränsning: Proofy verifierar inte dokumentets innehåll, behörighet, signering eller rättsliga giltighet.");
-    lines.push("Kontrollen avser filversion (tekniskt kontrollvärde) och registerstatus hos Proofy vid angivet kontrolltillfälle.");
+    lines.push("Avgränsning:");
+    lines.push("Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.");
+    lines.push("Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.");
     return lines.join("\n");
   }
 
@@ -1084,12 +1017,12 @@
     pollTxHash = null;
   }
 
+  // ✅ SPRÅKSYNK: knapplabel baseras på 4 statusuttryck (ingen teknik)
   function updateReceiptLabel(){
     if (!receiptBtn || !currentId) return;
     receiptBtn.textContent = "Öppna intyg";
-    if (lastProofyStatusCode === "UNKNOWN") receiptBtn.textContent = "Öppna intyg (status oklar)";
+    if (lastProofyStatusCode === "UNKNOWN") receiptBtn.textContent = "Öppna intyg (kunde inte kontrolleras)";
     if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
-    if (lastProofyStatusCode === "LOCAL_ONLY") receiptBtn.textContent = "Öppna intyg (lokalt)";
   }
 
   function setBusy(v){
@@ -1165,10 +1098,11 @@
     const niceSize = (sizeMb < 10) ? sizeMb.toFixed(2) : sizeMb.toFixed(1);
     fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
 
-    // AUTO: starta lokalt flöde direkt (registrering endast vid opt-in)
+    // AUTO: starta flöde direkt
     beginAutoFlow();
   }
 
+  // ✅ Rubriken här kan vara kvar (visuell), men statusfältet ska alltid vara 4-giltigt
   function markHeadline(type, text){
     if (!headline) return;
     headline.style.borderColor = "rgba(255,255,255,.14)";
@@ -1194,9 +1128,17 @@
     headline.textContent = text;
   }
 
-  function applyStatusToUI({ id, checkedEpoch, data, regSent }){
+  // ✅ SPRÅKSYNK: mappar API-statuskoder till 4 ord-för-ord statusuttryck
+  function mapStatusToCanonical(sc){
+    const s = String(sc || "");
+    if (s === "CONFIRMED") return "Bekräftad";
+    if (s === "SUBMITTED_UNCONFIRMED") return "Inskickad – ej bekräftad";
+    if (s === "NOT_CONFIRMED") return "Ej bekräftad";
+    return "Kunde inte kontrolleras";
+  }
+
+  function applyStatusToUI({ id, checkedEpoch, data }){
     const sc = String(data?.statusCode || "");
-    const st = String(data?.statusText || "");
     const legal = String(data?.legalText || "");
     const confirmedAt = data?.confirmedAtUnix ?? null;
 
@@ -1209,25 +1151,26 @@
     debugOut.textContent = legal || (debugOut.textContent || "—");
 
     const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
-    timeOut.textContent = confirmedSe || "—";
+
+    // ✅ Tidpunkt ska bara vara meningsfull om status är "Bekräftad"
+    const canon = mapStatusToCanonical(sc);
+    timeOut.textContent = (canon === "Bekräftad" && confirmedSe) ? confirmedSe : "—";
 
     lastProofyStatusCode = sc || "";
+    updateReceiptLabel();
 
-    if (sc === "CONFIRMED") {
+    if (canon === "Bekräftad") {
       markHeadline("ok", "Bekräftad");
-      regStatusOut.textContent = st || "Bekräftad";
-    } else if (sc === "NOT_CONFIRMED" || sc === "SUBMITTED_UNCONFIRMED") {
-      const isSubmitted = (sc === "SUBMITTED_UNCONFIRMED");
-      markHeadline("warn", isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad");
-      regStatusOut.textContent = st || (isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad");
-    } else if (sc === "LOCAL_ONLY") {
-      markHeadline("warn", "Lokalt klart");
-      regStatusOut.textContent = "Ej inskickad (valfritt steg)";
-      timeOut.textContent = "—";
+    } else if (canon === "Inskickad – ej bekräftad") {
+      markHeadline("warn", "Inskickad – ej bekräftad");
+    } else if (canon === "Ej bekräftad") {
+      markHeadline("warn", "Ej bekräftad");
     } else {
       markHeadline("err", "Kunde inte kontrolleras");
-      regStatusOut.textContent = st || "Kunde inte kontrolleras";
     }
+
+    // ✅ Visning ska alltid vara exakt canonical text
+    regStatusOut.textContent = canon;
 
     const verifyLink = currentLink || "—";
     const certLink = buildCertLink(id, checkedEpoch, txHash || "");
@@ -1245,10 +1188,9 @@
       checkedSe: fmtSeEpochSec(checkedEpoch),
       checkedUtc: fmtUtcEpochSec(checkedEpoch),
       statusLine: regStatusOut.textContent || "—",
-      timeSe: confirmedSe,
+      timeSe: (canon === "Bekräftad" ? confirmedSe : null),
       txHash: txHash,
-      observedBlockNumber: observedBlockNumber,
-      regSent: regSent
+      observedBlockNumber: observedBlockNumber
     };
 
     if (noteOut) noteOut.textContent = buildNote(lastRun);
@@ -1273,16 +1215,13 @@
         stopPolling();
         lastProofyStatusCode = "NOT_CONFIRMED";
         updateReceiptLabel();
-        debugOut.textContent = "Kontroll kunde inte visa bekräftelse inom tidsgränsen. Du kan verifiera igen senare.";
-        markHeadline("warn", "Ej bekräftad");
-        regStatusOut.textContent = "Ej bekräftad";
-        timeOut.textContent = "—";
-        applyStatusToUI({ id, checkedEpoch, data: { statusCode:"NOT_CONFIRMED", statusText:"Ej bekräftad" }, regSent:true });
+        debugOut.textContent = "Kontroll kunde inte visa bekräftelse inom tidsgränsen. Du kan kontrollera igen senare.";
+        applyStatusToUI({ id, checkedEpoch, data: { statusCode:"NOT_CONFIRMED" } });
         return;
       }
 
       attempt++;
-      regStatusOut.textContent = "Kontroll pågår…";
+      regStatusOut.textContent = "Inskickad – ej bekräftad";
       txOut.textContent = txHash || "—";
 
       const txRes = await safeGetJson(`/api/tx?tx=${encodeURIComponent(txHash)}`);
@@ -1292,14 +1231,12 @@
         lastProofyStatusCode = "UNKNOWN";
         updateReceiptLabel();
         debugOut.textContent = "Status kunde inte kontrolleras just nu (tillfälligt fel). Ingen slutsats kan dras.";
-        markHeadline("err", "Kunde inte kontrolleras");
-        regStatusOut.textContent = "Kunde inte kontrolleras";
-        timeOut.textContent = "—";
-        applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN", statusText:"Kunde inte kontrolleras" }, regSent:true });
+        applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN" } });
       } else {
         const mined = !!txRes.data?.mined;
         if (!mined) {
-          markHeadline("warn", "Inskickad – ej bekräftad");
+          // fortsatt inskickad – ej bekräftad
+          applyStatusToUI({ id, checkedEpoch, data: { statusCode:"SUBMITTED_UNCONFIRMED" } });
         } else {
           const st = String(txRes.data?.status || "");
           const blockNo = txRes.data?.blockNumber || null;
@@ -1310,11 +1247,8 @@
             stopPolling();
             lastProofyStatusCode = "UNKNOWN";
             updateReceiptLabel();
-            markHeadline("err", "Kunde inte kontrolleras");
-            regStatusOut.textContent = "Kunde inte kontrolleras";
-            timeOut.textContent = "—";
             debugOut.textContent = "Inskick misslyckades. Du kan försöka igen eller kontakta Proofy och ange registreringsreferensen.";
-            applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN", statusText:"Kunde inte kontrolleras" }, regSent:true });
+            applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN" } });
             return;
           }
 
@@ -1324,13 +1258,10 @@
           if (!ver.ok || ver.data?.ok === false) {
             lastProofyStatusCode = "UNKNOWN";
             updateReceiptLabel();
-            markHeadline("err", "Kunde inte kontrolleras");
-            regStatusOut.textContent = "Kunde inte kontrolleras";
-            timeOut.textContent = "—";
             debugOut.textContent = "Verifiering misslyckades (tillfälligt fel). Ingen slutsats kan dras.";
-            applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN", statusText:"Kunde inte kontrolleras" }, regSent:true });
+            applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN" } });
           } else {
-            applyStatusToUI({ id, checkedEpoch, data: ver.data, regSent:true });
+            applyStatusToUI({ id, checkedEpoch, data: ver.data });
 
             if (String(ver.data?.statusCode || "") === "CONFIRMED") {
               stopPolling();
@@ -1358,6 +1289,7 @@
     setPill("Skapar kontrollvärde…");
     if (abortBtn){
       abortBtn.onclick = () => {
+        // avbryt hela flödet
         opId++;
         stopPolling();
         setBusy(false);
@@ -1386,6 +1318,14 @@
       if (localIdBox) localIdBox.style.display = "block";
       if (localIdOut) localIdOut.textContent = id;
 
+      // Kopiera automatiskt (hjälper i byråflöde), men UI funkar även utan
+      copyTextToClipboard(id).then((ok) => {
+        if (ok) {
+          showPill(copyIdPill, "Kontrollvärde kopierat");
+          setTimeout(() => hidePill(copyIdPill), 1200);
+        }
+      });
+
       idOut.textContent = id;
       linkOut.textContent = currentLink;
       linkOut.href = currentLink;
@@ -1401,66 +1341,38 @@
       });
       attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
 
-      // Lokalt klart direkt
-      lastProofyStatusCode = "LOCAL_ONLY";
-      updateReceiptLabel();
-      applyStatusToUI({
-        id,
-        checkedEpoch,
-        data: { statusCode:"LOCAL_ONLY", statusText:"Ej inskickad (valfritt steg)" },
-        regSent: false
-      });
+      setPill("Skickar registrering…");
+      regStatusOut.textContent = "Inskickad – ej bekräftad";
+      markHeadline("warn", "Inskickad – ej bekräftad");
 
-      // Registrering endast om opt-in
-      if (optInRegister && optInRegister.checked){
-        setPill("Skickar registrering…");
-        regStatusOut.textContent = "Skickar…";
-        markHeadline("warn", "Inskickad – ej bekräftad");
+      // Auto-registrera
+      const reg = await safeRegisterRequest(id);
+      if (myOp !== opId) return;
 
-        const reg = await safeRegisterRequest(id);
-        if (myOp !== opId) return;
-
-        if (!reg.ok){
-          // Lokalt fortfarande klart, men registrering misslyckades
-          debugOut.textContent = "Registrering kunde inte skickas just nu (tillfälligt fel). Kontrollvärde och länkar är skapade lokalt. Försök igen senare.";
-          lastProofyStatusCode = "LOCAL_ONLY";
-          updateReceiptLabel();
-          applyStatusToUI({
-            id,
-            checkedEpoch,
-            data: { statusCode:"LOCAL_ONLY", statusText:"Ej inskickad (valfritt steg)" },
-            regSent: false
-          });
-          setPill("Klart (lokalt) ✅");
-          setBusy(false);
-          return;
-        }
-
-        const data = reg.data || {};
-        applyStatusToUI({ id, checkedEpoch, data, regSent:true });
-
-        const txHash = data?.submission?.txHash || null;
-        if (txHash) {
-          pollTxHash = txHash;
-          currentLink = buildVerifyLink(id, checkedEpoch, txHash);
-
-          linkOut.textContent = currentLink;
-          linkOut.href = currentLink;
-
-          if (qrTap) qrTap.style.display = "grid";
-          requestAnimationFrame(() => renderQr(qrBox, currentLink));
-
-          pollTxAndVerify(myOp, id, txHash, checkedEpoch);
-        } else {
-          debugOut.textContent = debugOut.textContent || "Ingen registreringsreferens kunde visas. Du kan verifiera igen senare.";
-        }
-
-        setPill("Klart ✅");
-        setBusy(false);
-        return;
+      if (!reg.ok){
+        throw new Error("Registreringen kunde inte skickas in just nu. Kontrollvärde och länkar är skapade lokalt. Försök igen senare.");
       }
 
-      setPill("Klart (lokalt) ✅");
+      const data = reg.data || {};
+      applyStatusToUI({ id, checkedEpoch, data });
+
+      const txHash = data?.submission?.txHash || null;
+      if (txHash) {
+        pollTxHash = txHash;
+        currentLink = buildVerifyLink(id, checkedEpoch, txHash);
+
+        linkOut.textContent = currentLink;
+        linkOut.href = currentLink;
+
+        if (qrTap) qrTap.style.display = "grid";
+        requestAnimationFrame(() => renderQr(qrBox, currentLink));
+
+        pollTxAndVerify(myOp, id, txHash, checkedEpoch);
+      } else {
+        debugOut.textContent = debugOut.textContent || "Ingen registreringsreferens kunde visas. Du kan kontrollera igen senare.";
+      }
+
+      setPill("Klart ✅");
       setBusy(false);
 
     } catch (e){
@@ -1469,15 +1381,16 @@
       if (errorBox) errorBox.style.display = "block";
       if (errorMsg) errorMsg.textContent = (e?.message || "Tillfälligt fel. Kontrollvärde/länk kan vara skapade lokalt.");
 
+      // om vi ändå hann skapa ID/länk: håll rapporten synlig
       if (currentId && currentLink){
         if (resultBox) resultBox.style.display = "block";
         if (emptyState) emptyState.style.display = "none";
 
-        regStatusOut.textContent = "Ej inskickad (valfritt steg)";
+        regStatusOut.textContent = "Kunde inte kontrolleras";
         timeOut.textContent = "—";
-        markHeadline("warn", "Lokalt klart");
+        markHeadline("err", "Kunde inte kontrolleras");
 
-        lastProofyStatusCode = "LOCAL_ONLY";
+        lastProofyStatusCode = "UNKNOWN";
         updateReceiptLabel();
 
         if (qrTap) qrTap.style.display = "grid";
@@ -1488,8 +1401,7 @@
         applyStatusToUI({
           id: currentId,
           checkedEpoch,
-          data: { statusCode:"LOCAL_ONLY", statusText:"Ej inskickad (valfritt steg)" },
-          regSent:false
+          data: { statusCode:"UNKNOWN" }
         });
       }
 
@@ -1498,6 +1410,7 @@
     }
   }
 
+  // Klick/kopiera på fält
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Kopierat ✅" });
@@ -1554,6 +1467,7 @@
     });
   }
 
+  // Filval / drop
   fileInput.addEventListener("change", () => {
     setFile(fileInput.files?.[0] || null);
   });
@@ -1575,6 +1489,7 @@
     if (f) setFile(f);
   });
 
+  // MANUELLT ID -> auto länk + QR
   function setManualState(id){
     const clean = (id || "").trim();
     if (!/^0x[0-9a-fA-F]{64}$/.test(clean)){
@@ -1610,6 +1525,7 @@
 
   manualId.addEventListener("input", () => setManualState(manualId.value));
 
+  // Init
   resetReport();
   setFile(null);
   setBusy(false);
