@@ -1,10 +1,11 @@
 <!doctype html>
+<!-- PROOFY HARDTEST REGISTER v2026-01-14 -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proofy – Skapa Verifierings-ID</title>
-  <meta name="description" content="Skapa ett Verifierings-ID (kontroll-ID) för en filversion lokalt i webbläsaren. Filen lämnar aldrig din dator." />
+  <title>Proofy – Skapa kontrollvärde (Verifierings-ID)</title>
+  <meta name="description" content="Skapa ett kontrollvärde (Verifierings-ID) för en filversion lokalt i webbläsaren. Underlaget lämnar aldrig din dator." />
   <meta name="theme-color" content="#0b1220" />
   <meta name="robots" content="noindex" />
 
@@ -45,17 +46,12 @@
       background: rgba(255,255,255,.05);
     }
 
-    /* CTA-prio: nästa steg ska inte konkurrera med "Skapa" */
+    /* CTA-prio: en primär åtgärd tills resultat finns */
     #nextStepBtn{ display:none; }
     #receiptBtn{
       background: rgba(255,255,255,.04) !important;
       border: 1px solid rgba(255,255,255,.12) !important;
       color: rgba(234,240,255,.85) !important;
-    }
-
-    .btn.softSecondary{
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.12);
     }
 
     .proofyQrTap{
@@ -95,12 +91,24 @@
       border-radius:14px;
       padding:12px;
     }
-    .noteActions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
+
+    /* ✅ HARDTEST: audit-version synlig diskret + i print */
+    #auditRegisterVersion{
+      display:none;
       margin-top:10px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.04);
+      color:rgba(234,240,255,.78);
+      font-size:12px;
+      line-height:1.35;
+    }
+    #auditRegisterVersion .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color:rgba(234,240,255,.92);
+      word-break:break-word;
+      overflow-wrap:anywhere;
     }
 
     @media print{
@@ -108,6 +116,15 @@
       /* QR får vara med i print */
       #qrTap, #manualQrTap { display:grid !important; border-color:#ddd !important; }
       #qrTap, #qrBox, #manualQrTap, #manualQrBox{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+      /* audit-version får vara med i print (bevis på exakt filversion) */
+      #auditRegisterVersion{
+        display:block !important;
+        border-color:#ddd !important;
+        background:#fff !important;
+        color:#111 !important;
+      }
+      #auditRegisterVersion .mono{ color:#000 !important; }
     }
   </style>
 </head>
@@ -124,7 +141,7 @@
       </a>
 
       <div class="navActions" id="navActionsDesktop">
-        <a class="btn isCurrent" aria-current="page">Skapa Verifierings-ID</a>
+        <a class="btn isCurrent" aria-current="page">Skapa kontrollvärde</a>
         <a class="btn soft" href="/verify">Verifiera underlag</a>
         <a class="btn soft" href="/pilot">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
@@ -136,7 +153,7 @@
         </summary>
 
         <nav class="mnavMenu" aria-label="Meny">
-          <a class="mnavLink" href="/register" aria-current="page">Skapa Verifierings-ID</a>
+          <a class="mnavLink" href="/register" aria-current="page">Skapa kontrollvärde</a>
           <a class="mnavLink" href="/verify">Verifiera underlag</a>
           <a class="mnavLink" href="/pilot">Starta pilot</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
@@ -160,21 +177,24 @@
   <div class="wrap">
     <div class="badge">Verifiering · revision · granskning</div>
 
-    <h1 class="pageTitle">Skapa Verifierings-ID</h1>
+    <h1 class="pageTitle">Skapa kontrollvärde <span class="meta">(Verifierings-ID)</span></h1>
 
     <p class="lead">
-      Skapa ett Verifierings-ID <span class="meta">(kontroll-ID)</span> för den filversion som ska vara <b>referens</b> i ärendet.
-      <strong>Underlaget lämnar aldrig din dator.</strong>
+      Skapa ett <b>kontrollvärde för filversionen</b> som ska vara referens i ärendet (Verifierings-ID).
+      <strong>Kontrollen sker lokalt. Underlaget lämnar inte din dator.</strong>
+      <span class="small" style="display:block; margin-top:8px; opacity:.92;">
+        Avsett som <b>granskningsunderlag</b>: minskar risken för versionsglapp mellan mottaget, granskat och arkiverat underlag – utan att lagra dokument.
+      </span>
     </p>
 
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
 
-        <section aria-label="Skapa via fil">
-          <div style="font-weight:950; font-size:16px;">1. Välj referensunderlag</div>
+        <section aria-label="Skapa kontrollvärde">
+          <div style="font-weight:950; font-size:16px;">1. Välj referensunderlag (filversion)</div>
 
           <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:10px; cursor:pointer;">
-            Välj underlag (fil)
+            Välj underlag
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
@@ -197,11 +217,11 @@
           <div class="actions" style="margin-top:14px;">
             <div class="actionsRow" aria-label="Åtgärder">
               <!-- ✅ Endast en primär CTA innan resultat finns -->
-              <button class="btn primary" id="createBtn" disabled>Skapa Verifierings-ID</button>
+              <button class="btn primary" id="createBtn" disabled>Skapa kontrollvärde</button>
 
               <!-- Sekundära, visas när ID finns -->
-              <a class="btn soft" id="nextStepBtn" href="/verify">Öppna verifiering</a>
-              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna intyg</a>
+              <a class="btn soft" id="nextStepBtn" href="/verify">Genomför kontroll (verifiera)</a>
+              <a class="btn soft" id="receiptBtn" href="#" target="_blank" rel="noopener" style="display:none;">Öppna kontrollintyg</a>
             </div>
 
             <div class="actionsMetaRow">
@@ -210,7 +230,7 @@
           </div>
 
           <div id="localIdBox" style="display:none; margin-top:12px;">
-            <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span> – för notering i ärendet</div>
+            <div class="meta">Verifierings-ID (kontrollvärde) – för notering i ärendeakt</div>
 
             <div id="localIdOut"
                  class="mono"
@@ -233,13 +253,19 @@
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            De flesta vanliga filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).<br />
-            <b>Obs:</b> Ny export/omskanning/konvertering kan ge en annan filversion även om dokumentet “ser likadant ut”.
+            Vanliga filtyper stöds (t.ex. PDF, Excel, bilder, ZIP).<br />
+            <b>Observera:</b> Ny export/omskanning/konvertering kan ge annan filversion även om innehållet “ser likadant ut”.
           </p>
+
+          <!-- ✅ HARDTEST audit-version (visas efter första resultat) -->
+          <div id="auditRegisterVersion">
+            <div class="meta" style="opacity:.9;">Audit-version (register)</div>
+            <div class="mono" id="auditRegisterVersionValue">—</div>
+          </div>
         </section>
 
-        <section aria-label="Registreringsrapport">
-          <div style="font-weight:950; font-size:16px;">2. Registreringsrapport</div>
+        <section aria-label="Rapport och dokumentation">
+          <div style="font-weight:950; font-size:16px;">2. Dokumentationsrapport</div>
           <div class="hr"></div>
 
           <div id="emptyState"
@@ -249,12 +275,12 @@
                  border-radius: 16px;
                  padding: 12px 14px;
                ">
-            <div style="font-weight:950; margin-bottom:6px;">Så används det i en byråprocess</div>
+            <div style="font-weight:950; margin-bottom:6px;">Förslag på arbetsflöde (byrå/ärende)</div>
             <div class="small">
-              1) Välj filversionen som ska vara <b>referens</b>.<br/>
-              2) Proofy skapar ett Verifierings-ID lokalt (<b>ingen uppladdning</b>).<br/>
-              3) Dela länk/QR till kollega, klient eller ärendeakt för senare kontroll.<br/><br/>
-              <b>QR är för skanning med en annan enhet.</b> På samma mobil är det normalt svårt/omöjligt att skanna sin egen skärm med kameran.
+              1) Välj filversionen som ska vara <b>referens</b> i ärendet.<br/>
+              2) Proofy skapar ett <b>kontrollvärde</b> lokalt (<b>ingen uppladdning</b>).<br/>
+              3) Spara notering i <b>ärendeakt</b> och dela länk/QR vid intern kontroll eller granskning.<br/><br/>
+              <b>QR avser skanning med en annan enhet.</b> Det är normalt svårt att skanna sin egen skärm med samma mobil.
             </div>
           </div>
 
@@ -267,7 +293,7 @@
             </div>
 
             <div style="margin-top:12px;">
-              <div class="meta">Verifierings-ID <span class="meta">(kontroll-ID)</span></div>
+              <div class="meta">Verifierings-ID (kontrollvärde)</div>
               <div class="small hintline">Klicka i fältet för att kopiera.</div>
 
               <div style="position:relative; margin-top:6px;">
@@ -295,11 +321,11 @@
                 <span id="copyIdPill2" class="pill" style="display:none; margin-top:8px;"></span>
               </div>
 
-              <div class="meta" style="margin-top:12px;">Delbar verifieringslänk</div>
+              <div class="meta" style="margin-top:12px;">Kontrollänk (delbar)</div>
               <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
 
               <div style="position:relative; margin-top:6px;">
-                <button type="button" id="copyLinkIconBtn" aria-label="Kopiera länk" title="Kopiera"
+                <button type="button" id="copyLinkIconBtn" aria-label="Kopiera kontrollänk" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
@@ -310,7 +336,7 @@
                    target="_blank"
                    rel="noopener"
                    title="Tryck för att öppna · Långtryck för att kopiera"
-                   aria-label="Delbar verifieringslänk"
+                   aria-label="Kontrollänk"
                    style="
                      display:block;
                      padding:10px 12px;
@@ -327,8 +353,8 @@
               </div>
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
-                <b>Obs:</b> Verifierings-ID och verifieringslänk skapas alltid lokalt.
-                För att kunna påvisa <b>bekräftelse</b> vid senare kontroll behöver status vara <b>Bekräftad</b>.
+                <b>Observera:</b> Verifierings-ID och kontrollänk skapas lokalt.
+                För att kunna påvisa <b>bekräftelse i registret</b> vid senare kontroll behöver status vara <b>Bekräftad</b>.
                 Om status är <i>“Inskickad – ej bekräftad”</i> eller <i>“Ej bekräftad”</i> kan du kontrollera igen via verifiering.
               </p>
 
@@ -342,20 +368,19 @@
                        class="proofyQrTap"
                        role="button"
                        tabindex="0"
-                       aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
-                       title="Klicka för att kopiera verifieringslänk"
+                       aria-label="QR-kod (klicka för att kopiera kontrollänken)"
+                       title="Klicka för att kopiera kontrollänken"
                        style="display:none;">
                     <div id="qrBox" class="proofyQrBox" aria-label="QR-kod"></div>
                   </div>
 
                   <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
-                    Skanna QR med <b>en annan enhet</b> (t.ex. klient/kollega).
+                    Skanna med <b>annan enhet</b> (t.ex. klient/kollega).
                     Klick på QR kopierar länken till urklipp.
                   </div>
                 </div>
 
                 <div style="min-width:240px; flex:1;">
-                  <!-- Kontrolltid synlig för revisionsspår -->
                   <div class="meta">Kontrolltid (denna visning)</div>
                   <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
                   <div id="checkedUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
@@ -363,14 +388,14 @@
                     Tidpunkten genereras i webbläsaren och kan vara fel om systemklockan är fel. Den utgör inte extern tidsstämpling.
                   </div>
 
-                  <div class="meta" style="margin-top:12px;">Status hos Proofy</div>
+                  <div class="meta" style="margin-top:12px;">Status i Proofys register vid kontrolltillfället</div>
                   <div id="regStatusOut" class="mono" style="margin-top:8px;" aria-live="polite" aria-atomic="true">—</div>
 
-                  <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
+                  <div class="meta" style="margin-top:10px;">Tidpunkt för bekräftelse i registret (om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
 
                   <div class="actions" style="margin-top:12px;">
-                    <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering för ärendeakt</button>
+                    <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering (ärendeakt)</button>
                     <button class="btn soft" id="downloadNoteBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
                     <span id="copyNotePill" class="pill" style="display:none;"></span>
                   </div>
@@ -379,22 +404,23 @@
                     <div class="meta">Notering (för dokumentation)</div>
                     <pre class="mono" id="noteOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
                     <p class="meta" style="margin:10px 0 0; opacity:.9;">
-                      Proofy avgör inte om ett dokument är korrekt, giltigt eller äkta. Kontrollen avser endast filversion (tekniskt fingeravtryck).
+                      Proofy verifierar inte dokumentets innehåll, behörighet, signering eller rättslig giltighet.
+                      Kontrollen avser endast filversion (tekniskt kontrollvärde) och status i registret vid angivet kontrolltillfälle.
                     </p>
                   </div>
 
                   <details style="margin-top:12px;">
                     <summary>Extra uppgifter (valfritt)</summary>
                     <p class="small" style="margin:10px 0 8px; opacity:.95;">
-                      Behövs normalt inte i ärendet, men kan hjälpa vid utredning vid behov.
+                      Behövs normalt inte i ärendet, men kan underlätta vid utredning vid behov.
                     </p>
 
                     <div class="hr"></div>
 
-                    <div class="meta">Registreringsreferens (valfritt)</div>
+                    <div class="meta">Registreringsreferens (valfri)</div>
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
-                    <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfritt)</div>
+                    <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfri)</div>
                     <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Meddelande (om något)</div>
@@ -418,17 +444,17 @@
       <div class="card content">
         <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett Verifierings-ID?</h2>
         <p class="meta" style="margin:0 0 10px;">
-          Klistra in ett Verifierings-ID så skapar vi delbar länk och QR direkt.
+          Klistra in ett Verifierings-ID så skapar vi kontrollänk och QR direkt (för intern kontroll eller delning).
         </p>
 
         <div class="grid2">
           <div>
-            <label class="meta" for="manualId">Verifierings-ID</label>
+            <label class="meta" for="manualId">Verifierings-ID (kontrollvärde)</label>
             <input id="manualId" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:8px" />
 
             <div class="actions" style="margin-top:12px;">
               <div class="actionsRow">
-                <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera länk</button>
+                <button class="btn" id="manualCopyLinkBtn" type="button" disabled>Kopiera kontrollänk</button>
                 <a class="btn primary" id="manualVerifyBtn" href="/verify" style="pointer-events:none;opacity:.55;">Öppna verifiering</a>
               </div>
 
@@ -439,7 +465,7 @@
           </div>
 
           <div>
-            <div class="meta">Delbar verifieringslänk</div>
+            <div class="meta">Kontrollänk (delbar)</div>
 
             <a id="manualLinkOut"
                class="mono"
@@ -467,15 +493,15 @@
                      class="proofyQrTap"
                      role="button"
                      tabindex="0"
-                     aria-label="QR-kod manuell (klicka för att kopiera verifieringslänk)"
-                     title="Klicka för att kopiera verifieringslänk"
+                     aria-label="QR-kod (klicka för att kopiera kontrollänken)"
+                     title="Klicka för att kopiera kontrollänken"
                      style="display:none;">
                   <div id="manualQrBox" class="proofyQrBox" aria-label="QR-kod (manuell)"></div>
                 </div>
               </div>
               <div style="min-width:240px; flex:1;">
                 <div class="small" style="margin-top:0;">
-                  Bra när du fått ett ID i en notering och vill dela en länk snabbt.
+                  Passar när Verifierings-ID finns i en notering och du snabbt vill dela en kontrollänk.
                 </div>
               </div>
             </div>
@@ -484,7 +510,7 @@
 
         <div class="hr"></div>
         <p class="small" style="margin:0;">
-          Proofy lagrar inte dokument. Verifiering bygger på att jämföra filversioner mot en tidigare fastställd referens.
+          Proofy lagrar inte dokument. Verifiering bygger på jämförelse av filversioner mot en tidigare fastställd referens (kontrollvärde).
         </p>
       </div>
     </section>
@@ -499,7 +525,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk kontroll av filversioner. Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+          Proofy tillhandahåller teknisk kontroll av filversioner (kontrollvärden). Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -519,6 +545,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const mainEl = $("main") || document.querySelector("main");
+
+  /* ✅ HARDTEST VERSION STAMP (single source of truth) */
+  const PROOFY_REGISTER_HARDTEST_VERSION = "PROOFY HARDTEST REGISTER v2026-01-14";
 
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
@@ -557,6 +586,9 @@
 
   const checkedSeOut = $("checkedSeOut");
   const checkedUtcOut = $("checkedUtcOut");
+
+  const auditRegisterVersion = $("auditRegisterVersion");
+  const auditRegisterVersionValue = $("auditRegisterVersionValue");
 
   const errorBox = $("errorBox");
   const errorMsg = $("errorMsg");
@@ -714,7 +746,7 @@
     const p = new URL(`${location.origin}/verify`);
     p.searchParams.set("hash", hash);
     if (checkedEpoch) p.searchParams.set("checked", String(checkedEpoch));
-    if (txHash) p.searchParams.set("tx", txHash);
+    if (txHash) p.searchParams.set("tx", String(txHash));
     return p.toString();
   }
 
@@ -722,7 +754,7 @@
     const p = new URL(`${location.origin}/certificate`);
     p.searchParams.set("hash", hash);
     if (checkedEpoch) p.searchParams.set("checked", String(checkedEpoch));
-    if (txHash) p.searchParams.set("tx", txHash);
+    if (txHash) p.searchParams.set("tx", String(txHash));
     return p.toString();
   }
 
@@ -969,24 +1001,27 @@
   function buildNote(run){
     if (!run) return "—";
     const lines = [];
-    lines.push("PROOFY – Notering för ärendeakt");
+    lines.push("PROOFY – Notering (ärendeakt/granskningsunderlag)");
     lines.push("");
-    lines.push(`Verifierings-ID: ${run.id || "—"}`);
+    lines.push(`Audit-version (register): ${PROOFY_REGISTER_HARDTEST_VERSION}`);
+    lines.push("");
+    lines.push(`Verifierings-ID (kontrollvärde): ${run.id || "—"}`);
     if (run.fileName) lines.push(`Referensunderlag: ${run.fileName}`);
     lines.push("");
     lines.push(`Kontrolltid (denna visning): ${run.checkedSe || "—"}`);
     lines.push(`Kontrolltid (denna visning, UTC): ${run.checkedUtc || "—"}`);
     lines.push("Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
     lines.push("");
-    lines.push(`Delbar verifieringslänk: ${run.link || "—"}`);
-    lines.push(`Länk till intyg: ${run.certLink || "—"}`);
+    lines.push(`Kontrollänk: ${run.link || "—"}`);
+    lines.push(`Länk till kontrollintyg: ${run.certLink || "—"}`);
     lines.push("");
-    lines.push(`Status hos Proofy vid kontrolltillfället: ${run.statusLine || "—"}`);
-    if (run.timeSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.timeSe}`);
+    lines.push(`Status i Proofys register vid kontrolltillfället: ${run.statusLine || "—"}`);
+    if (run.timeSe) lines.push(`Tidpunkt för bekräftelse i registret (om bekräftad): ${run.timeSe}`);
     if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
     lines.push("");
-    lines.push("Detta är ett tekniskt kontrollunderlag och uttalar sig inte om dokumentets innehåll, giltighet eller äkthet.");
+    lines.push("Avgränsning: Proofy verifierar inte dokumentets innehåll, behörighet, signering eller rättslig giltighet.");
+    lines.push("Kontrollen avser endast filversion (kontrollvärde) och status i registret vid angivet kontrolltillfälle.");
     return lines.join("\n");
   }
 
@@ -1000,13 +1035,13 @@
   function updateReceiptLabel(){
     if (!receiptBtn || !currentId) return;
     if (lastProofyStatusCode === "CONFIRMED") {
-      receiptBtn.textContent = "Öppna intyg";
+      receiptBtn.textContent = "Öppna kontrollintyg";
     } else if (lastProofyStatusCode === "UNKNOWN") {
-      receiptBtn.textContent = "Öppna intyg (kunde inte kontrolleras)";
+      receiptBtn.textContent = "Öppna kontrollintyg (kunde inte kontrolleras)";
     } else if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") {
-      receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
+      receiptBtn.textContent = "Öppna kontrollintyg (ej bekräftad)";
     } else {
-      receiptBtn.textContent = "Öppna intyg";
+      receiptBtn.textContent = "Öppna kontrollintyg";
     }
   }
 
@@ -1017,7 +1052,7 @@
     createBtn.disabled = !currentFile || busy;
 
     /* CTA-regel:
-       - När ID finns: visa "Öppna verifiering" som sekundär och göm create
+       - När ID finns: visa "Genomför kontroll" som sekundär och göm create
        - Annars: visa create */
     if (nextStepBtn){
       if (currentLink && !busy){
@@ -1078,6 +1113,9 @@
     lastProofyStatusCode = "";
     pollTxHash = null;
 
+    if (auditRegisterVersion) auditRegisterVersion.style.display = "none";
+    if (auditRegisterVersionValue) auditRegisterVersionValue.textContent = "—";
+
     if (emptyState) emptyState.style.display = "block";
   }
 
@@ -1099,7 +1137,7 @@
     if (receiptBtn) receiptBtn.style.display = "none";
     if (nextStepBtn) nextStepBtn.style.display = "none";
     if (createBtn) createBtn.style.display = "inline-flex";
-    if (createBtn) createBtn.textContent = "Skapa Verifierings-ID";
+    if (createBtn) createBtn.textContent = "Skapa kontrollvärde";
 
     if (!currentFile){
       fileInfo.textContent = "Inget underlag valt.";
@@ -1113,7 +1151,7 @@
 
     fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
 
-    setPill("Redo att skapa");
+    setPill("Redo");
     setBusy(false);
   }
 
@@ -1141,24 +1179,24 @@
 
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
-      await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
+      await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Verifierings-ID kopierat ✅" });
     });
     localIdOut.addEventListener("keydown", async (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill });
+        await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Verifierings-ID kopierat ✅" });
       }
     });
   }
 
   if (idOut){
     idOut.addEventListener("click", async () => {
-      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
+      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2, okText:"Verifierings-ID kopierat ✅" });
     });
     idOut.addEventListener("keydown", async (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
+        await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2, okText:"Verifierings-ID kopierat ✅" });
       }
     });
   }
@@ -1167,7 +1205,7 @@
     copyIdIconBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2 });
+      await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2, okText:"Verifierings-ID kopierat ✅" });
     });
   }
 
@@ -1175,7 +1213,7 @@
     copyLinkIconBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill });
+      await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill, okText:"Länk kopierad ✅" });
     });
   }
 
@@ -1219,7 +1257,7 @@
     if (sc === "CONFIRMED") {
       headline.style.borderColor = "rgba(80,255,180,.20)";
       headline.style.background = "rgba(80,255,180,.06)";
-      headline.innerHTML = `<span class="ok">✅ Bekräftad</span> <span class="meta">(status hos Proofy vid kontrolltillfället)</span>`;
+      headline.innerHTML = `<span class="ok">✅ Bekräftad</span> <span class="meta">(status i registret vid kontrolltillfället)</span>`;
       regStatusOut.textContent = st || "Bekräftad";
     } else if (sc === "NOT_CONFIRMED" || sc === "SUBMITTED_UNCONFIRMED") {
       const isSubmitted = (sc === "SUBMITTED_UNCONFIRMED");
@@ -1283,7 +1321,6 @@
         headline.innerHTML = `<span class="meta">⚠️ Ej bekräftad</span> <span class="meta">(kontrollen hann inte visa bekräftelse)</span>`;
         regStatusOut.textContent = "Ej bekräftad";
         timeOut.textContent = "—";
-        /* uppdatera notering */
         applyStatusToUI({ id, createdSe, checkedEpoch, data: { statusCode:"NOT_CONFIRMED", statusText:"Ej bekräftad" } });
         return;
       }
@@ -1369,7 +1406,7 @@
     stopPolling();
     setBusy(true);
     resetReport();
-    setPill("Skapar Verifierings-ID…");
+    setPill("Skapar kontrollvärde…");
 
     try{
       const checkedEpoch = Math.floor(Date.now() / 1000);
@@ -1392,6 +1429,12 @@
 
       localIdBox.style.display = "block";
       localIdOut.textContent = id;
+
+      /* visa audit-version när resultat visas */
+      if (auditRegisterVersion && auditRegisterVersionValue){
+        auditRegisterVersionValue.textContent = PROOFY_REGISTER_HARDTEST_VERSION;
+        auditRegisterVersion.style.display = "block";
+      }
 
       copyTextToClipboard(id).then((ok) => {
         if (ok) {
@@ -1446,7 +1489,7 @@
       if (myOp !== opId) return;
 
       if (!reg.ok){
-        const msg = "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade lokalt. Försök igen senare eller kontakta Proofy och ange Verifierings-ID.";
+        const msg = "Registreringen kunde inte skickas in just nu. Verifierings-ID och kontrollänk är skapade lokalt. Försök igen senare eller kontakta Proofy och ange Verifierings-ID.";
         throw new Error(msg);
       }
 
@@ -1486,7 +1529,7 @@
       if (myOp !== opId) return;
 
       errorBox.style.display = "block";
-      errorMsg.textContent = (e?.message || "Registreringen kunde inte skickas in just nu. Verifierings-ID och verifieringslänk är skapade.");
+      errorMsg.textContent = (e?.message || "Registreringen kunde inte skickas in just nu. Verifierings-ID och kontrollänk är skapade.");
 
       /* Om ID/länk redan finns, lämna rapporten synlig och skapa notering */
       if (currentId && currentLink){
@@ -1506,6 +1549,11 @@
 
         lastProofyStatusCode = "UNKNOWN";
         updateReceiptLabel();
+
+        if (auditRegisterVersion && auditRegisterVersionValue){
+          auditRegisterVersionValue.textContent = PROOFY_REGISTER_HARDTEST_VERSION;
+          auditRegisterVersion.style.display = "block";
+        }
 
         if (qrTap) qrTap.style.display = "grid";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
