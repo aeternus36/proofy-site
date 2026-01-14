@@ -171,10 +171,10 @@
       <strong>Underlaget lämnar aldrig din dator.</strong>
     </p>
 
-    <!-- ✅ 100% samsyn: identisk avgränsning/kärntext med verify/cert -->
+    <!-- ✅ Avgränsning (identisk med verify/intyg) -->
     <p class="meta" style="margin-top:-6px; opacity:.9; max-width:92ch;">
       Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
-      Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.
+      Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
     </p>
 
     <div class="card content" style="margin-top:14px;">
@@ -240,7 +240,7 @@
           </p>
         </section>
 
-        <section aria-label="Dokumentationsrapport">
+        <section aria-label="Dokumentation">
           <div style="font-weight:950; font-size:16px;">2. Dokumentation</div>
           <div class="hr"></div>
 
@@ -385,10 +385,10 @@
                       <button class="inlineLinkBtn" id="downloadNoteLink" type="button">proofy-notering.txt</button>
                     </div>
 
-                    <!-- ✅ 100% samsyn: identisk avgränsning -->
+                    <!-- ✅ Avgränsning (identisk med verify/intyg) -->
                     <p class="meta" style="margin:10px 0 0; opacity:.9;">
                       Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
-                      Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.
+                      Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
                     </p>
                   </div>
 
@@ -640,6 +640,7 @@
   }
 
   async function sha256Hex(file){
+    // Hardtest: yield to UI thread
     await sleep(0);
     const buf = await file.arrayBuffer();
     const dig = await crypto.subtle.digest("SHA-256", buf);
@@ -971,7 +972,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1200);
   }
 
-  // ✅ Canonical statusfraser (samsyn med verify/cert)
+  // ✅ Canonical statusfraser (samsyn med verify/intyg)
   function canonicalStatusFromCode(code){
     if (code === "CONFIRMED") return "Bekräftad";
     if (code === "SUBMITTED_UNCONFIRMED") return "Inskickad – ej bekräftad";
@@ -979,28 +980,43 @@
     return "Kunde inte kontrolleras";
   }
 
+  // ✅ Notering – samma struktur som verify (revisionsvänlig)
   function buildNote(run){
     if (!run) return "—";
     const lines = [];
-    lines.push("PROOFY – Notering (ärendeakt/granskningsunderlag)");
+
+    lines.push("PROOFY – Notering");
     lines.push("");
+
     lines.push(`Kontrollvärde (Verifierings-ID): ${run.id || "—"}`);
-    if (run.fileName) lines.push(`Referensunderlag: ${run.fileName}`);
+    if (run.fileName) lines.push(`Underlag/filnamn: ${run.fileName}`);
+
     lines.push("");
     lines.push(`Kontrolltid (detta kontrolltillfälle): ${run.checkedSe || "—"}`);
     lines.push(`Kontrolltid (UTC): ${run.checkedUtc || "—"}`);
-    lines.push("Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
+    lines.push("Obs: Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
+
     lines.push("");
     lines.push(`Verifieringslänk: ${run.link || "—"}`);
     lines.push(`Intygslänk: ${run.certLink || "—"}`);
+
     lines.push("");
-    lines.push(`Status vid kontrolltillfället: ${run.statusLine || "—"}`);
-    if (run.timeSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.timeSe}`);
-    if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
-    if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
+    lines.push("Status vid kontrolltillfället:");
+    lines.push(`${run.statusLine || "Kunde inte kontrolleras"}`);
+
+    if (run.statusLine === "Bekräftad") {
+      if (run.timeSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.timeSe}`);
+      if (run.timeUtc) lines.push(`Tidpunkt (endast om bekräftad) – UTC: ${run.timeUtc}`);
+    }
+
+    if (run.txRef) lines.push(`Registreringsreferens (valfri): ${run.txRef}`);
+    if (run.controlPoint) lines.push(`Kontrollpunkt (valfri): ${run.controlPoint}`);
+
     lines.push("");
-    lines.push("Avgränsning: Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.");
-    lines.push("Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.");
+    lines.push("Avgränsning:");
+    lines.push("Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.");
+    lines.push("Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.");
+
     return lines.join("\n");
   }
 
@@ -1121,19 +1137,20 @@
 
   function applyStatusToUI({ id, checkedEpoch, data }){
     const sc = String(data?.statusCode || "");
-    const legal = String(data?.legalText || "");
-    const confirmedAt = data?.confirmedAtUnix ?? null;
+    const confirmedAtUnix = (data?.confirmedAtUnix != null) ? Number(data.confirmedAtUnix) : null;
 
     const txHash = data?.submission?.txHash || null;
-    const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
+    const controlPoint = data?.evidence?.observedBlockNumber;
 
-    // Optional details
+    // Extra (valfritt)
     txOut.textContent = txHash || "—";
-    submitterOut.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
-    debugOut.textContent = legal || "—";
+    submitterOut.textContent = (controlPoint != null) ? String(controlPoint) : "—";
+    debugOut.textContent = String(data?.legalText || "") || "—";
 
-    const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
-    timeOut.textContent = confirmedSe || "—";
+    const timeSe = confirmedAtUnix ? fmtSeEpochSec(confirmedAtUnix) : null;
+    const timeUtc = confirmedAtUnix ? fmtUtcEpochSec(confirmedAtUnix) : null;
+
+    timeOut.textContent = timeSe || "—";
 
     lastProofyStatusCode = sc || "";
     updateReceiptLabel();
@@ -1168,9 +1185,10 @@
       checkedSe: fmtSeEpochSec(checkedEpoch),
       checkedUtc: fmtUtcEpochSec(checkedEpoch),
       statusLine: canonical,
-      timeSe: confirmedSe,
-      txHash: txHash,
-      observedBlockNumber: observedBlockNumber
+      timeSe: timeSe,
+      timeUtc: timeUtc,
+      txRef: txHash,
+      controlPoint: (controlPoint != null) ? String(controlPoint) : null
     };
 
     if (noteOut) noteOut.textContent = buildNote(lastRun);
@@ -1225,9 +1243,8 @@
           regStatusOut.textContent = "Inskickad – ej bekräftad";
         } else {
           const st = String(txRes.data?.status || "");
-          const blockNo = txRes.data?.blockNumber || null;
-
-          submitterOut.textContent = blockNo != null ? String(blockNo) : (submitterOut.textContent || "—");
+          const controlPoint = txRes.data?.blockNumber;
+          if (controlPoint != null) submitterOut.textContent = String(controlPoint);
 
           if (st === "reverted") {
             stopPolling();
@@ -1254,7 +1271,6 @@
             applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN" } });
           } else {
             applyStatusToUI({ id, checkedEpoch, data: ver.data });
-
             if (String(ver.data?.statusCode || "") === "CONFIRMED") {
               stopPolling();
               return;
