@@ -8,7 +8,6 @@
     <meta name="theme-color" content="#0b1220" />
     <title>Proofy – Verifieringsintyg</title>
 
-    <!-- Bas-styling -->
     <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
     <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
@@ -27,7 +26,6 @@
         --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 
-        /* QR (audit-safe) */
         --qr-dark:#0b1220;
         --qr-light:#ffffff;
         --qr-frame: rgba(255,255,255,.10);
@@ -36,12 +34,7 @@
 
       *{box-sizing:border-box}
 
-      /* ✅ FIX: stoppa “färg/overlay-band” från globala lager i proofy.css
-         - Lås sidans bakgrund här
-         - Slå av eventuella html/body pseudo-element (vanlig källa till dubbel-gradient/overlay på mobil) */
-      html{
-        background: var(--bg) !important;
-      }
+      html{ background: var(--bg) !important; }
       body{
         margin:0;
         background-color: var(--bg) !important;
@@ -77,8 +70,6 @@
         border-radius: 14px;
       }
 
-      /* Viktigt: reservera lite extra bottenutrymme på just intygssidan också
-         (utöver global lösning i proofy.css) */
       main{
         max-width:1100px;
         margin:0 auto;
@@ -117,13 +108,6 @@
         letter-spacing:-.02em;
         line-height:1.02;
       }
-      .lead{
-        max-width:820px;
-        color:var(--muted);
-        line-height:1.55;
-        font-size:16px;
-        margin-top:14px;
-      }
 
       .statusArea{
         display:flex;
@@ -156,9 +140,7 @@
         background:rgba(255,255,255,.03);
         padding:12px;
       }
-      .statusMeta .label{
-        margin:0 0 6px;
-      }
+      .statusMeta .label{ margin:0 0 6px; }
 
       .actions{
         display:flex; gap:10px; flex-wrap:wrap;
@@ -349,7 +331,7 @@
         body{ background:#fff !important; color:#000 !important; }
         .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
         .pill, .statusBadge, .val, .statusMeta { border-color:#ddd !important; background:#fff !important; }
-        .lead, .note, .fine, .small, .footer { color:#111 !important; }
+        .small, .footer { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
 
         .auditTop{ display:flex !important; flex-direction:column !important; gap:14px !important; }
@@ -373,7 +355,6 @@
 
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
-    <!-- ✅ HARDTEST: Canonical redirect om någon öppnar /certificate (men undvik loop/flimmer) -->
     <script>
       (function(){
         try{
@@ -400,7 +381,7 @@
           </a>
 
           <div class="navActions" id="navActionsDesktop">
-            <a class="btn soft" href="/register.html">Skapa Verifierings-ID</a>
+            <a class="btn soft" href="/register.html">Skapa kontrollvärde</a>
             <a class="btn soft" href="/verify.html">Verifiera underlag</a>
             <a class="btn soft" href="/pilot.html">Starta pilot</a>
             <a class="btn primary" href="/#kontakt">Boka kort demo</a>
@@ -412,7 +393,7 @@
             </summary>
 
             <nav class="mnavMenu" aria-label="Meny">
-              <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
+              <a class="mnavLink" href="/register.html">Skapa kontrollvärde</a>
               <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
               <a class="mnavLink" href="/pilot.html">Starta pilot</a>
               <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
@@ -433,18 +414,21 @@
     </header>
 
     <main id="main">
-      <div class="pill">Intyg · spårbarhet · byrå &amp; granskning</div>
+      <div class="pill">Intyg · revision · granskning</div>
 
       <section class="hero" aria-label="Verifieringsintyg">
         <div class="heroTop">
           <div>
             <h1>Verifieringsintyg</h1>
 
+            <!-- ✅ 100% samsyn med verify/register -->
             <div class="small" style="margin-top:10px; max-width:86ch;">
-              <b>Begränsning och metod:</b>
-              Intyget avser en <b>teknisk kontroll av filversion</b> (Verifierings-ID/kontrollvärde) mot Proofys register vid kontrolltillfället.
-              Intyget uttalar sig inte om dokumentets innehåll, riktighet, behörighet, signaturers äkthet eller juridiska giltighet.
-              Kontrolltiden i denna visning genereras i webbläsaren (enhetens klocka) och är inte extern tidsstämpling.
+              <b>Avgränsning:</b>
+              Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
+              Intyget avser endast filversion och registerstatus vid angivet kontrolltillfälle.
+              <br/><span style="opacity:.92">
+                Kontrolltiden i denna visning genereras i webbläsaren (enhetens klocka) och är inte extern tidsstämpling.
+              </span>
             </div>
           </div>
 
@@ -455,14 +439,14 @@
             </div>
 
             <div class="statusMeta">
-              <div class="label">Kontrolltid (denna visning – webbläsarens klocka)</div>
+              <div class="label">Kontrolltid (detta kontrolltillfälle)</div>
               <div class="mono" id="checkedTopLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="mono" id="checkedTopUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="small" style="margin-top:8px">
-                Kontrolltiden genereras i denna webbläsare och kan vara fel om enhetens systemklocka är fel. Den utgör inte i sig bevis om extern tidskälla.
+                Tidpunkten genereras i denna webbläsare och kan vara fel om enhetens systemklocka är fel. Den utgör inte extern tidsstämpling.
               </div>
 
-              <div class="label" style="margin-top:10px">Statusbeskrivning (vid kontrolltillfället)</div>
+              <div class="label" style="margin-top:10px">Status vid kontrolltillfället</div>
               <div class="mono" id="resultText">—</div>
               <div class="small" id="legalLine" style="margin-top:8px">—</div>
             </div>
@@ -483,13 +467,13 @@
 
             <div class="kv">
               <div class="val">
-                <div class="label">Verifierings-ID</div>
+                <div class="label">Kontrollvärde (Verifierings-ID)</div>
                 <div class="row">
                   <div class="mono" id="hashText">—</div>
                   <button class="copyBtn" id="copyHash" type="button">Kopiera</button>
                 </div>
                 <div class="small" style="margin-top:8px">
-                  ID:t avser en specifik filversion. Ny export/omskanning/omkomprimering kan ge nytt ID även om underlaget ser likadant ut.
+                  Kontrollvärdet avser en specifik filversion. Ny export/omskanning/omkomprimering kan ge nytt kontrollvärde även om underlaget ser likadant ut.
                 </div>
               </div>
 
@@ -498,19 +482,19 @@
                 <div class="mono" id="regLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="small" style="margin-top:8px">
-                  Tidpunkten avser när kontrollvärdet först blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.
+                  Tidpunkten avser när kontrollvärdet blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.
                 </div>
               </div>
             </div>
 
             <div class="note">
-              <b>Praktiskt tips:</b> Spara Verifierings-ID + intygslänk i ärendet vid fastställande.
-              Dela verifieringslänk/QR vid intern kvalitetskontroll eller efterhandsgranskning.
+              <b>Praktiskt:</b> Spara kontrollvärde (Verifierings-ID) och intygslänk i ärendet.
+              Dela verifieringslänk/QR vid intern kontroll eller efterhandsgranskning.
             </div>
 
             <div class="small" style="margin-top:10px; opacity:.95;">
-              <b>Viktigt för revision:</b> Detta intyg visar status för Verifierings-ID i Proofys register <b>vid kontrolltillfället</b>.
-              Bevisvärde bedöms i sitt sammanhang (process, åtkomst, versionskedja och övrig dokumentation).
+              <b>För revision:</b> Intyget visar registerstatus <b>vid kontrolltillfället</b>.
+              Bevisvärde bedöms i sitt sammanhang (process, åtkomst och övrig dokumentation).
             </div>
           </div>
 
@@ -552,10 +536,9 @@
           </div>
         </div>
 
-        <div class="lead">
-          Detta intyg är ett <b>tekniskt underlag</b> som sammanfattar utfallet av en kontroll av ett
-          <b>Verifierings-ID</b> (kontrollvärde för en specifik filversion) mot Proofys register vid angiven kontrolltid.
-          Proofy lagrar <b>inte</b> dokumentinnehåll i registret.
+        <div class="small" style="margin-top:14px; max-width:92ch;">
+          <b>Bevisar:</b> Att status för kontrollvärdet (Verifierings-ID) hämtades från Proofys register vid kontrolltillfället.<br/>
+          <b>Bevisar inte:</b> Dokumentets innehåll, riktighet, giltighet eller äkthet.
         </div>
 
         <div class="card" id="cardSummary" style="margin-top:14px;">
@@ -564,29 +547,30 @@
           <div class="fine" style="border-top:0; padding-top:0; margin-top:0;">
             <b>Revisions-/juridisk tydlighet</b><br/>
             • Intyget redovisar status för kontrollvärdet i Proofys register vid kontrolltillfället.<br/>
-            • Tidpunkt anges endast när status är <b>bekräftad</b>.<br/>
-            • Tidpunkten avser när kontrollvärdet först blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
+            • Tidpunkt anges endast när status är <b>Bekräftad</b>.<br/>
+            • Tidpunkten avser när kontrollvärdet blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.<br/>
             • Intyget ersätter inte e-signering, arkivering, behörighetsloggar, processkontroller eller juridisk rådgivning.<br/>
-            • Bevisvärde och relevans bedöms i sitt sammanhang (process, åtkomst, versionshantering, dokumentationskedja).<br/>
-            • Intyget avser en <b>teknisk kontroll vid kontrolltillfället</b>. Utfallet kan ändras om registret uppdateras senare.
+            • Bevisvärde och relevans bedöms i sitt sammanhang (process, åtkomst, versionshantering och dokumentationskedja).<br/>
+            • Intyget avser en kontroll vid kontrolltillfället. Utfallet kan ändras om registret uppdateras senare.
           </div>
 
+          <!-- ✅ Definitioner utan teknikord -->
           <div class="fine" style="margin-top:12px;">
             <b>Definitioner (kort)</b><br/>
-            • <b>Verifierings-ID:</b> kryptografiskt kontrollvärde för en specifik filversion.<br/>
-            • <b>Kontrolltillfälle:</b> när denna sida kontrollerar status mot Proofys register.<br/>
+            • <b>Kontrollvärde (Verifierings-ID):</b> ett kontrollvärde som avser en specifik filversion.<br/>
+            • <b>Kontrolltillfälle:</b> när denna sida hämtar status från Proofys register.<br/>
             • <b>Bekräftad:</b> status där Proofy kan redovisa bekräftelse och tidpunkt i registret.<br/>
-            • <b>Kontrolltid (denna visning):</b> baserad på enhetens systemklocka, ej extern tidskälla.
+            • <b>Kontrolltid (detta kontrolltillfälle):</b> baserad på enhetens systemklocka (ej extern tidskälla).
           </div>
 
           <details class="tech" id="techDetails">
-            <summary>Teknisk information (valfritt)</summary>
+            <summary>Mer information (valfritt)</summary>
             <div class="techGrid">
               <div class="val">
-                <div class="label">Kontrollpunkt (valfritt)</div>
+                <div class="label">Kontrollpunkt (valfri)</div>
                 <div class="mono" id="observedPoint">—</div>
                 <div class="small" style="margin-top:6px">
-                  Visar vilken kontrollpunkt som användes vid kontrolltillfället. Kan underlätta felsökning.
+                  Kan underlätta felsökning och intern spårning.
                 </div>
               </div>
               <div class="val">
@@ -600,7 +584,7 @@
           </details>
 
           <div class="footer">
-            <div><b>Integritet:</b> Verifierings-ID skapas lokalt från filen. Vid kontroll skickas endast kontrollvärdet – inte filen.</div>
+            <div><b>Integritet:</b> Vid kontroll skickas endast kontrollvärdet – inte filen.</div>
             <div style="margin-top:6px">Kontakt: <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a></div>
           </div>
         </div>
@@ -608,9 +592,7 @@
     </main>
 
     <script>
-      // ✅ HARDTEST version (spårbarhet)
       const CERT_HARDTEST_VERSION = "CERT-HARDTEST v2026-01-13";
-
       const $ = (id) => document.getElementById(id);
 
       function isValidBytes32Hex(s){
@@ -783,6 +765,14 @@
         return s ? s : fallback;
       }
 
+      // ✅ Canonical språk (identiskt med verify/register)
+      function canonicalStatusFromCode(code){
+        if (code === "CONFIRMED") return "Bekräftad";
+        if (code === "SUBMITTED_UNCONFIRMED") return "Inskickad – ej bekräftad";
+        if (code === "NOT_CONFIRMED") return "Ej bekräftad";
+        return "Kunde inte kontrolleras";
+      }
+
       function pickStatusPresentation(code){
         if (code === "CONFIRMED") return { tone:"good", badge:"Bekräftad" };
         if (code === "SUBMITTED_UNCONFIRMED") return { tone:"warn", badge:"Inskickad – ej bekräftad" };
@@ -811,8 +801,7 @@
         }
 
         tech.style.display = "block";
-        tech.open = true;
-
+        tech.open = false; // valfritt = inte auto-open
         const observedWrap = $("observedPoint")?.closest(".val");
         const refWrap = $("registrationRef")?.closest(".val");
         if (observedWrap) observedWrap.style.display = hasObserved ? "block" : "none";
@@ -844,16 +833,14 @@
         $("btnPrint").onclick = () => window.print();
         $("btnRefresh").onclick = () => run();
 
-        $("copyHash").onclick = async () => { if (await copyText(hash)) toastCopied("Verifierings-ID"); };
+        $("copyHash").onclick = async () => { if (await copyText(hash)) toastCopied("Kontrollvärde (Verifierings-ID)"); };
         $("copyCert").onclick = async () => { if (await copyText(certLink)) toastCopied("Länk till intyg"); };
         $("copyVerify").onclick = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
 
         renderQR(verifyLink);
 
         const qrTap = $("qrcodeTap");
-        const doQrCopy = async () => {
-          if (await copyText(verifyLink)) toastCopied("Verifieringslänk");
-        };
+        const doQrCopy = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
         qrTap.onclick = (e) => { e.preventDefault(); doQrCopy(); };
         qrTap.onkeydown = (e) => {
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
@@ -870,7 +857,6 @@
         $("registrationRef").textContent = "—";
         updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
 
-        // ✅ Spårbar “hardtest-stämpel” i techHint om inget annat hint finns
         const techHintEl = $("techHint");
         if (techHintEl && !techHintEl.textContent.trim() && !certId && !tx){
           techHintEl.textContent = `Audit-version: ${CERT_HARDTEST_VERSION}`;
@@ -883,12 +869,12 @@
         }
 
         if (!isValidBytes32Hex(hash)){
-          setStatus("bad", "Ogiltigt ID");
+          setStatus("bad", "Kunde inte kontrolleras");
           $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
-          $("resultText").textContent = "Kunde inte kontrollera: saknat/ogiltigt Verifierings-ID i URL.";
-          $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt Verifierings-ID.";
+          $("resultText").textContent = "Kunde inte kontrolleras: saknat/ogiltigt kontrollvärde (Verifierings-ID) i URL.";
+          $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt kontrollvärde (Verifierings-ID).";
           showWarn(`
-            <b>Fel:</b> Intyget saknar giltigt Verifierings-ID i URL.<br/>
+            <b>Fel:</b> Intyget saknar giltigt kontrollvärde (Verifierings-ID) i URL.<br/>
             Exempel: <span class="mono">/certificate.html?hash=0x...</span>
           `);
           return;
@@ -897,7 +883,7 @@
         $("hashText").textContent = hash;
 
         setStatus("warn", "Kontrollerar…");
-        $("resultText").textContent = "Kontrollerar status hos Proofy…";
+        $("resultText").textContent = "Kontrollerar status vid kontrolltillfället…";
 
         let v;
         try{
@@ -905,7 +891,7 @@
         }catch(e){
           setStatus("bad", "Kunde inte kontrolleras");
           $("resultText").textContent = "Kunde inte kontrolleras vid kontrolltillfället.";
-          $("legalLine").textContent = "Detta är ett tekniskt fel. Ingen slutsats kan dras om bekräftelse.";
+          $("legalLine").textContent = "Detta kan vara ett tillfälligt fel. Försök igen.";
           updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
           showWarn(`
             <b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>
@@ -915,7 +901,7 @@
         }
 
         const statusCode = safeText(v?.statusCode, "UNKNOWN");
-        const statusText = safeText(v?.statusText, "Kunde inte kontrolleras");
+        const statusText = canonicalStatusFromCode(statusCode);
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
@@ -936,11 +922,11 @@
           if (statusCode === "CONFIRMED"){
             $("legalLine").textContent = "Status är bekräftad vid kontrolltillfället.";
           } else if (statusCode === "SUBMITTED_UNCONFIRMED"){
-            $("legalLine").textContent = "En registrering är inskickad men ännu ej bekräftad. Intyget visar inte 'bekräftad' innan bekräftelse finns.";
+            $("legalLine").textContent = "Status är inskickad – ej bekräftad vid kontrolltillfället.";
           } else if (statusCode === "NOT_CONFIRMED"){
-            $("legalLine").textContent = "Ingen bekräftad notering kunde konstateras vid kontrolltillfället.";
+            $("legalLine").textContent = "Status är ej bekräftad vid kontrolltillfället.";
           } else {
-            $("legalLine").textContent = "Status kunde inte kontrolleras vid kontrolltillfället. Ingen slutsats kan dras om bekräftelse.";
+            $("legalLine").textContent = "Status kunde inte kontrolleras vid kontrolltillfället.";
           }
         }
 
@@ -955,25 +941,16 @@
         $("regUtc").textContent = "—";
 
         if (statusCode === "SUBMITTED_UNCONFIRMED"){
-          showWarn(`
-            <b>Inskickad – ej bekräftad.</b><br/>
-            Intyget kan inte redovisa bekräftelse innan status är bekräftad.
-          `);
+          showWarn(`<b>Inskickad – ej bekräftad.</b><br/>Intyget kan inte redovisa tidpunkt innan status är Bekräftad.`);
           return;
         }
 
         if (statusCode === "NOT_CONFIRMED"){
-          showWarn(`
-            <b>Ej bekräftad.</b><br/>
-            Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/Verifierings-ID används och uppdatera vid behov.
-          `);
+          showWarn(`<b>Ej bekräftad.</b><br/>Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/kontrollvärde används.`);
           return;
         }
 
-        showWarn(`
-          <b>Kunde inte kontrolleras.</b><br/>
-          Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.
-        `);
+        showWarn(`<b>Kunde inte kontrolleras.</b><br/>Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.`);
       }
 
       run();
