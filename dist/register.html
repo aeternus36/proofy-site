@@ -1,5 +1,4 @@
 <!doctype html>
-<!-- REGISTER-HARDTEST v2026-01-14 / audit-lock 5/5 -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -13,6 +12,12 @@
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
+    :root{
+      /* ✅ HÅRDTEST: standard-reserv om widget ej kan mätas direkt */
+      --proofy-fab-space: 110px;
+      --proofy-safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
     .sr-only{
       position:absolute !important;
       width:1px !important;
@@ -109,29 +114,16 @@
       text-underline-offset: 3px;
     }
 
-    /* hardtest: ikon-knappar syns på hover/focus via JS */
-    .copyIconBtn{
-      display:none;
-      position:absolute;
-      top:6px;
-      right:6px;
-      width:34px;
-      height:30px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.06);
-      cursor:pointer;
-    }
-    .copyIconBtn span{
-      display:block;
-      font-size:15px;
-      line-height:28px;
+    /* ✅ HÅRDTEST: reservera plats för flytande widget (t.ex. "Fråga oss") + safe-area */
+    main{
+      padding-bottom: calc(28px + var(--proofy-fab-space) + var(--proofy-safe-bottom));
     }
 
     @media print{
       header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
       #qrTap, #manualQrTap { display:grid !important; border-color:#ddd !important; }
       #qrTap, #qrBox, #manualQrTap, #manualQrBox{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      main{ padding-bottom: 0 !important; }
     }
   </style>
 </head>
@@ -293,8 +285,9 @@
               <div class="small hintline">Klicka i fältet för att kopiera.</div>
 
               <div style="position:relative; margin-top:6px;">
-                <button type="button" id="copyIdIconBtn" class="copyIconBtn" aria-label="Kopiera kontrollvärde" title="Kopiera">
-                  <span aria-hidden="true">⧉</span>
+                <button type="button" id="copyIdIconBtn" aria-label="Kopiera kontrollvärde" title="Kopiera"
+                        style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
+                  <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
 
                 <div id="idOut"
@@ -320,8 +313,9 @@
               <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
 
               <div style="position:relative; margin-top:6px;">
-                <button type="button" id="copyLinkIconBtn" class="copyIconBtn" aria-label="Kopiera länk" title="Kopiera">
-                  <span aria-hidden="true">⧉</span>
+                <button type="button" id="copyLinkIconBtn" aria-label="Kopiera länk" title="Kopiera"
+                        style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
+                  <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
 
                 <a id="linkOut"
@@ -539,11 +533,6 @@
 
 <script>
 (() => {
-  // hardtest: single-bind (förhindrar dubbla listeners vid ev. partial reload)
-  const BIND_KEY = "__proofy_register_bound";
-  if (document.documentElement.dataset[BIND_KEY] === "1") return;
-  document.documentElement.dataset[BIND_KEY] = "1";
-
   const $ = (id) => document.getElementById(id);
   const mainEl = $("main") || document.querySelector("main");
 
@@ -621,14 +610,8 @@
     } catch {}
   }
 
-  function setPill(text){
-    statusPill.textContent = text;
-    statusPill.style.display = "inline-flex";
-  }
-  function setManualPill(text){
-    manualPill.textContent = text;
-    manualPill.style.display = "inline-flex";
-  }
+  function setPill(text){ statusPill.textContent = text; }
+  function setManualPill(text){ manualPill.textContent = text; }
 
   function hidePill(p){
     if (!p) return;
@@ -703,7 +686,7 @@
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
     try{
-      const res = await fetch(url, { ...options, signal: controller.signal, cache:"no-store" });
+      const res = await fetch(url, { ...options, signal: controller.signal });
       const data = await res.json().catch(() => ({}));
       return { res, data, aborted:false };
     } catch (e){
@@ -1426,7 +1409,6 @@
     }
   }
 
-  // Copy handlers
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Kopierat ✅" });
@@ -1483,8 +1465,9 @@
     });
   }
 
-  // Input handlers
-  fileInput.addEventListener("change", () => setFile(fileInput.files?.[0] || null));
+  fileInput.addEventListener("change", () => {
+    setFile(fileInput.files?.[0] || null);
+  });
 
   dropZone.addEventListener("click", () => fileInput.click());
   dropZone.addEventListener("keydown", (e) => {
@@ -1503,7 +1486,6 @@
     if (f) setFile(f);
   });
 
-  // Manual ID → link/QR
   function setManualState(id){
     const clean = (id || "").trim();
     if (!/^0x[0-9a-fA-F]{64}$/.test(clean)){
@@ -1539,11 +1521,80 @@
 
   manualId.addEventListener("input", () => setManualState(manualId.value));
 
-  // init
   resetReport();
   setFile(null);
   setBusy(false);
   setManualState("");
+})();
+</script>
+
+<!-- ✅ HÅRDTEST: mäter chat-widgetens höjd och reserverar plats så den inte täcker footer/innehåll -->
+<script>
+(() => {
+  const ROOT = document.documentElement;
+
+  function setFabSpace(px){
+    const n = Math.max(0, Math.floor(Number(px) || 0));
+    // lite extra luft + safe-area hanteras i CSS
+    ROOT.style.setProperty("--proofy-fab-space", (n ? (n + 16) : 110) + "px");
+  }
+
+  function findWidget(){
+    // vanliga id:n + fallback: leta efter en tydlig fast/floating knapp nere till höger
+    return document.getElementById("chatWidget")
+      || document.getElementById("chat-widget")
+      || document.querySelector("[data-chat-widget]")
+      || null;
+  }
+
+  function measureAndBind(el){
+    if (!el) return;
+
+    const measure = () => {
+      const r = el.getBoundingClientRect?.();
+      if (r && r.height) setFabSpace(r.height);
+      else setFabSpace(110);
+    };
+
+    measure();
+
+    // ResizeObserver om möjligt
+    try{
+      const ro = new ResizeObserver(() => measure());
+      ro.observe(el);
+    }catch{}
+
+    // Extra: resize/orientationchange
+    window.addEventListener("resize", measure, { passive:true });
+    window.addEventListener("orientationchange", measure, { passive:true });
+  }
+
+  function boot(){
+    let w = findWidget();
+    if (w) return measureAndBind(w);
+
+    // Widgeten laddas ofta senare – bevaka DOM en kort stund
+    try{
+      const mo = new MutationObserver(() => {
+        w = findWidget();
+        if (w){
+          mo.disconnect();
+          measureAndBind(w);
+        }
+      });
+      mo.observe(document.documentElement, { childList:true, subtree:true });
+      setTimeout(() => { try{ mo.disconnect(); }catch{} }, 6000);
+    }catch{
+      // fallback: behåll default
+      setFabSpace(110);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
 })();
 </script>
 
