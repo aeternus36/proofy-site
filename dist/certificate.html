@@ -1,9 +1,9 @@
 <!doctype html>
-<!-- CERT-HARDTEST v2026-01-14 / mobile-safe + XSS-hardening + audit 5/5 -->
+<!-- CERT-HARDTEST v2026-01-14 / audit+mobile 5/5 -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#0b1220" />
     <title>Proofy – Verifieringsintyg</title>
@@ -30,10 +30,12 @@
         --qr-light:#ffffff;
         --qr-frame: rgba(255,255,255,.10);
         --qr-shadow: 0 14px 42px rgba(0,0,0,.35);
+
+        /* Fallback-space så chat/FAB aldrig täcker innehåll på mobil */
+        --proofy-fab-space: 120px;
       }
 
       *{box-sizing:border-box}
-
       html{ background: var(--bg) !important; }
       body{
         margin:0;
@@ -73,7 +75,10 @@
       main{
         max-width:1100px;
         margin:0 auto;
-        padding:10px 18px calc(130px + var(--proofy-fab-space, 0px)); /* ✅ widget-safe */
+        padding:
+          10px
+          18px
+          calc(48px + env(safe-area-inset-bottom) + var(--proofy-fab-space, 120px));
       }
 
       .pill{
@@ -205,7 +210,8 @@
       .mono{
         font-family:var(--mono);
         font-size:13px;
-        word-break:break-all;
+        word-break:break-word;
+        overflow-wrap:anywhere;
         color:rgba(234,240,255,.92);
       }
 
@@ -324,6 +330,11 @@
         white-space:nowrap;
         word-break:normal;
         overflow-wrap:normal;
+      }
+
+      /* Extra hård mobil-säkring mot FAB/keyboard */
+      @media (max-width: 700px){
+        :root{ --proofy-fab-space: 140px; }
       }
 
       @media print{
@@ -448,6 +459,9 @@
               <div class="label" style="margin-top:10px">Status vid kontrolltillfället</div>
               <div class="mono" id="resultText">—</div>
               <div class="small" id="legalLine" style="margin-top:8px">—</div>
+
+              <div class="label" style="margin-top:10px">Intygsversion</div>
+              <div class="mono" id="auditVersion">—</div>
             </div>
           </div>
         </div>
@@ -482,6 +496,30 @@
                 <div class="mono" id="regUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="small" style="margin-top:8px">
                   Tidpunkten avser när kontrollvärdet blev bekräftat i registret – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.
+                </div>
+              </div>
+            </div>
+
+            <div class="kv" style="margin-top:12px">
+              <div class="val">
+                <div class="label">Intygslänk (denna visning)</div>
+                <div class="row">
+                  <div class="mono" id="certLinkInline">—</div>
+                  <button class="copyBtn" id="copyCertInline" type="button">Kopiera</button>
+                </div>
+                <div class="small" style="margin-top:8px">
+                  Spara i ärendeakten. Länken visar registerstatus vid kontrolltillfället (kontrolltid = webbläsarens tid i denna visning).
+                </div>
+              </div>
+
+              <div class="val">
+                <div class="label">Intygsreferens (valfri)</div>
+                <div class="row">
+                  <div class="mono" id="certRef">—</div>
+                  <button class="copyBtn" id="copyCertRef" type="button">Kopiera</button>
+                </div>
+                <div class="small" style="margin-top:8px">
+                  Om en extern process ger ett intygs-ID kan det anges som <span class="mono">cert=…</span> i URL.
                 </div>
               </div>
             </div>
@@ -614,7 +652,7 @@
           const dt = new Date(n*1000);
           const tz = "Europe/Stockholm";
           const se = new Intl.DateTimeFormat("sv-SE", {
-            timeZone:"Europe/Stockholm",
+            timeZone: tz,
             year:"numeric", month:"2-digit", day:"2-digit",
             hour:"2-digit", minute:"2-digit", second:"2-digit"
           }).format(dt);
@@ -670,25 +708,7 @@
         setTimeout(() => hideWarn(), 1200);
       }
 
-      function getCorrectLevelH(){
-        if (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) return window.QRCodeCorrectLevel.H;
-        if (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) return window.QRCode.CorrectLevel.H;
-        return undefined;
-      }
-
-      function waitForQRCode(timeoutMs = 2000){
-        return new Promise((resolve) => {
-          const start = Date.now();
-          const tick = () => {
-            if (typeof window.QRCode === "function") return resolve(true);
-            if (Date.now() - start > timeoutMs) return resolve(false);
-            requestAnimationFrame(tick);
-          };
-          tick();
-        });
-      }
-
-      async function renderQR(text){
+      function renderQR(text){
         const el = $("qrcode");
         el.innerHTML = "";
 
@@ -705,74 +725,78 @@
           return;
         }
 
-        const ok = await waitForQRCode(2000);
-        if (!ok){
-          setFallback("QR kunde inte laddas.");
-          return;
-        }
+        const correctLevel =
+          (window.QRCodeCorrectLevel && window.QRCodeCorrectLevel.H != null) ? window.QRCodeCorrectLevel.H :
+          (window.QRCode && window.QRCode.CorrectLevel && window.QRCode.CorrectLevel.H != null) ? window.QRCode.CorrectLevel.H :
+          undefined;
 
-        const correctLevel = getCorrectLevelH();
-
-        try{
-          let qr = null;
+        const runRender = () => {
+          if (typeof window.QRCode !== "function"){
+            setFallback("QR kunde inte laddas.");
+            return;
+          }
           try{
-            qr = new window.QRCode(el);
-            if (qr && qr._htOption){
-              qr._htOption.width = 168;
-              qr._htOption.height = 168;
-              qr._htOption.colorDark = getComputedStyle(document.documentElement).getPropertyValue("--qr-dark").trim() || "#0b1220";
-              qr._htOption.colorLight = "#ffffff";
-              if (correctLevel != null) qr._htOption.correctLevel = correctLevel;
+            let qr = null;
+
+            try{
+              qr = new window.QRCode(el);
+              if (qr && qr._htOption){
+                qr._htOption.width = 168;
+                qr._htOption.height = 168;
+                qr._htOption.colorDark = getComputedStyle(document.documentElement).getPropertyValue("--qr-dark").trim() || "#0b1220";
+                qr._htOption.colorLight = "#ffffff";
+                if (correctLevel != null) qr._htOption.correctLevel = correctLevel;
+              }
+            }catch{
+              qr = null;
             }
-          }catch{
-            qr = null;
-          }
 
-          if (!qr || typeof qr.makeCode !== "function"){
-            el.innerHTML = "";
-            qr = new window.QRCode(el, {
-              width:168,
-              height:168,
-              colorDark:(getComputedStyle(document.documentElement).getPropertyValue("--qr-dark").trim() || "#0b1220"),
-              colorLight:"#ffffff",
-              correctLevel: correctLevel
-            });
-          }
+            if (!qr || typeof qr.makeCode !== "function"){
+              el.innerHTML = "";
+              qr = new window.QRCode(el, {
+                width:168,
+                height:168,
+                colorDark:(getComputedStyle(document.documentElement).getPropertyValue("--qr-dark").trim() || "#0b1220"),
+                colorLight:"#ffffff",
+                correctLevel: correctLevel
+              });
+            }
 
-          if (!qr || typeof qr.makeCode !== "function"){
+            if (!qr || typeof qr.makeCode !== "function"){
+              setFallback("QR-koden kunde inte visas.");
+              return;
+            }
+
+            qr.makeCode(payload);
+
+            const node = el.querySelector("canvas, img, svg, table");
+            if (!node){
+              setFallback("QR-koden kunde inte visas.");
+              return;
+            }
+            node.style.width = "168px";
+            node.style.height = "168px";
+            node.style.display = "block";
+            node.style.imageRendering = "pixelated";
+          }catch(e){
             setFallback("QR-koden kunde inte visas.");
-            return;
           }
+        };
 
-          qr.makeCode(payload);
-
-          const node = el.querySelector("canvas, img, svg, table");
-          if (!node){
-            setFallback("QR-koden kunde inte visas.");
-            return;
-          }
-          node.style.width = "168px";
-          node.style.height = "168px";
-          node.style.display = "block";
-          node.style.imageRendering = "pixelated";
-        }catch(e){
-          setFallback("QR-koden kunde inte visas.");
-        }
+        if (typeof window.QRCode === "function") runRender();
+        else setTimeout(runRender, 0);
       }
 
-      async function fetchJsonWithTimeout(url, timeoutMs = 20000){
-        const controller = new AbortController();
-        const t = setTimeout(() => controller.abort(), timeoutMs);
-        try{
-          const sep = url.includes("?") ? "&" : "?";
-          const bustUrl = url + sep + "t=" + Date.now();
-          const r = await fetch(bustUrl, { cache:"no-store", credentials:"same-origin", signal: controller.signal });
-          const data = await r.json().catch(() => ({}));
-          if(!r.ok) throw new Error(data?.error || data?.detail || `HTTP ${r.status}`);
-          return data;
-        }finally{
-          clearTimeout(t);
-        }
+      async function fetchJson(url){
+        const sep = url.includes("?") ? "&" : "?";
+        const bustUrl = url + sep + "t=" + Date.now();
+        const r = await fetch(bustUrl, { cache:"no-store", credentials:"same-origin" });
+
+        let data = {};
+        try { data = await r.json(); } catch { data = {}; }
+
+        if(!r.ok) throw new Error(data?.error || data?.detail || `HTTP ${r.status}`);
+        return data;
       }
 
       function safeText(v, fallback="—"){
@@ -822,24 +846,34 @@
         if (refWrap) refWrap.style.display = hasRef ? "block" : "none";
       }
 
-      function setTechHintText(label, value){
-        const techHintEl = $("techHint");
-        if (!techHintEl) return;
-        techHintEl.textContent = "";
-        const span1 = document.createElement("span");
-        span1.textContent = label + ": ";
-        const span2 = document.createElement("span");
-        span2.className = "mono";
-        span2.textContent = value;
-        techHintEl.appendChild(span1);
-        techHintEl.appendChild(span2);
+      /* Bonus: försök läsa av ev. chat/FAB och ge extra bottenutrymme */
+      function trySetFabSpace(){
+        try{
+          const candidates = [
+            document.querySelector('[data-proofy-fab]'),
+            document.querySelector('.proofy-chat-fab'),
+            document.querySelector('.chat-widget-fab'),
+            document.querySelector('#chatFab'),
+            document.querySelector('button[aria-label*="Fråga"]'),
+          ].filter(Boolean);
+
+          if(!candidates.length) return;
+
+          let maxH = 0;
+          for(const el of candidates){
+            const r = el.getBoundingClientRect();
+            if (r && r.height) maxH = Math.max(maxH, r.height);
+          }
+          if(maxH > 0){
+            document.documentElement.style.setProperty('--proofy-fab-space', String(Math.ceil(maxH + 56)) + 'px');
+          }
+        }catch{}
       }
 
       async function run(){
         hideWarn();
 
-        const btnRefresh = $("btnRefresh");
-        if (btnRefresh) btnRefresh.disabled = true;
+        $("auditVersion").textContent = CERT_HARDTEST_VERSION;
 
         const url = new URL(location.href);
         const hash = (url.searchParams.get("hash") || "").trim();
@@ -857,6 +891,8 @@
 
         $("certLink").textContent = certLink;
         $("verifyLink").textContent = verifyLink;
+        $("certLinkInline").textContent = certLink;
+        $("certRef").textContent = certId ? certId : "—";
 
         $("btnOpenVerify").href = verifyLink;
 
@@ -867,7 +903,10 @@
         $("copyCert").onclick = async () => { if (await copyText(certLink)) toastCopied("Länk till intyg"); };
         $("copyVerify").onclick = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
 
-        await renderQR(verifyLink);
+        $("copyCertInline").onclick = async () => { if (await copyText(certLink)) toastCopied("Intygslänk"); };
+        $("copyCertRef").onclick = async () => { if (await copyText(certId)) toastCopied("Intygsreferens"); };
+
+        renderQR(verifyLink);
 
         const qrTap = $("qrcodeTap");
         const doQrCopy = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
@@ -887,15 +926,15 @@
         $("registrationRef").textContent = "—";
         updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
 
-        if (!certId && !tx){
-          const techHintEl = $("techHint");
-          if (techHintEl && !techHintEl.textContent.trim()){
+        const techHintEl = $("techHint");
+        if (techHintEl){
+          if (certId){
+            techHintEl.innerHTML = `Referens-ID för intyget: <span class="mono">${certId}</span>`;
+          } else if (tx){
+            techHintEl.innerHTML = `Registreringsreferens: <span class="mono">${tx}</span>`;
+          } else {
             techHintEl.textContent = `Audit-version: ${CERT_HARDTEST_VERSION}`;
           }
-        } else if (certId){
-          setTechHintText("Referens-ID för intyget", certId);
-        } else if (tx){
-          setTechHintText("Registreringsreferens", tx);
         }
 
         if (!isValidBytes32Hex(hash)){
@@ -903,11 +942,10 @@
           $("hashText").textContent = "Ogiltigt eller saknas (hash=...)";
           $("resultText").textContent = "Kunde inte kontrolleras: saknat/ogiltigt kontrollvärde (Verifierings-ID) i URL.";
           $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt kontrollvärde (Verifierings-ID).";
-          showWarn(
-            `<b>Fel:</b> Intyget saknar giltigt kontrollvärde (Verifierings-ID) i URL.<br/>
-             Exempel: <span class="mono">/certificate.html?hash=0x...</span>`
-          );
-          if (btnRefresh) btnRefresh.disabled = false;
+          showWarn(`
+            <b>Fel:</b> Intyget saknar giltigt kontrollvärde (Verifierings-ID) i URL.<br/>
+            Exempel: <span class="mono">/certificate.html?hash=0x...</span>
+          `);
           return;
         }
 
@@ -918,17 +956,16 @@
 
         let v;
         try{
-          v = await fetchJsonWithTimeout(`/api/verify?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`, 20000);
+          v = await fetchJson(`/api/verify?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`);
         }catch(e){
           setStatus("bad", "Kunde inte kontrolleras");
           $("resultText").textContent = "Kunde inte kontrolleras vid kontrolltillfället.";
           $("legalLine").textContent = "Detta kan vara ett tillfälligt fel. Försök igen.";
           updateTechBoxVisibility({ observedPoint: "—", registrationRef: "—" });
-          showWarn(
-            `<b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>
-             Försök igen eller öppna verifieringssidan: <a class="mutedLink" href="${verifyLink}">${verifyLink}</a>`
-          );
-          if (btnRefresh) btnRefresh.disabled = false;
+          showWarn(`
+            <b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>
+            Försök igen eller öppna verifieringssidan: <a class="mutedLink" href="${verifyLink}">${verifyLink}</a>
+          `);
           return;
         }
 
@@ -966,7 +1003,6 @@
           $("regLocal").innerHTML = fmtSeHtml(confirmedAtUnix);
           $("regUtc").textContent = fmtUtc(confirmedAtUnix);
           hideWarn();
-          if (btnRefresh) btnRefresh.disabled = false;
           return;
         }
 
@@ -975,19 +1011,21 @@
 
         if (statusCode === "SUBMITTED_UNCONFIRMED"){
           showWarn(`<b>Inskickad – ej bekräftad.</b><br/>Intyget kan inte redovisa tidpunkt innan status är Bekräftad.`);
-          if (btnRefresh) btnRefresh.disabled = false;
           return;
         }
 
         if (statusCode === "NOT_CONFIRMED"){
           showWarn(`<b>Ej bekräftad.</b><br/>Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Kontrollera att rätt filversion/kontrollvärde används.`);
-          if (btnRefresh) btnRefresh.disabled = false;
           return;
         }
 
         showWarn(`<b>Kunde inte kontrolleras.</b><br/>Kontroll kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.`);
-        if (btnRefresh) btnRefresh.disabled = false;
       }
+
+      /* Kör och försök samtidigt säkra mobil-FAB-space */
+      trySetFabSpace();
+      window.addEventListener("resize", trySetFabSpace, { passive:true });
+      setTimeout(trySetFabSpace, 400);
 
       run();
     </script>
