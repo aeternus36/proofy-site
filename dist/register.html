@@ -125,9 +125,14 @@
       text-underline-offset: 3px;
     }
 
+    /* ✅ Overlay-safe: reserve bottom space for fixed chat/FAB overlays */
+    :root{
+      --proofy-fab-space: 0px; /* set by JS */
+    }
+
     /* ✅ Hårdtest: extra bottenpadding så “Fråga oss”-widget inte täcker knappar/länkar */
     main{
-      padding-bottom: calc(160px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom));
+      padding-bottom: calc(160px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom, 0px));
     }
 
     /* ✅ Sticky actions: minimal, icke-repetitiv, alltid ovan chat/FAB */
@@ -135,7 +140,7 @@
       position: fixed;
       left: 0;
       right: 0;
-      bottom: calc(env(safe-area-inset-bottom) + 10px);
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 10px + var(--proofy-fab-space, 0px));
       z-index: 60;
       display: none;
       pointer-events: none;
@@ -184,9 +189,6 @@
       color: rgba(234,240,255,.88);
       cursor:pointer;
       -webkit-tap-highlight-color: transparent;
-    }
-    .proofySticky{
-      margin-bottom: calc(var(--proofy-fab-space, 120px));
     }
 
     @media print{
@@ -438,7 +440,7 @@
                 </div>
 
                 <div style="min-width:240px; flex:1;">
-                  <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
+                  <div class="meta">Kontrolltid (detta kontrolltillfället)</div>
                   <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
                   <div id="checkedUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
                   <div class="small" style="margin-top:8px; opacity:.9;">
@@ -1681,6 +1683,78 @@
   setBusy(false);
   setManualState("");
   syncSticky();
+
+  /*
+    ✅ Overlay-safe (samma princip som verify.html):
+    Mäter fasta overlays (chat/FAB) nära botten/hörn och reserverar utrymme.
+    Viktigt: ignorera vår egen stickybar så vi inte får “self amplification”.
+  */
+  (function overlaySafe(){
+    const root = document.documentElement;
+
+    const isInsideSticky = (el) => {
+      try{
+        return !!(stickyBar && (el === stickyBar || stickyBar.contains(el)));
+      } catch { return false; }
+    };
+
+    const candidates = () => {
+      const els = [];
+      const byId1 = document.getElementById("chatWidget");
+      const byId2 = document.getElementById("chat-widget");
+      if (byId1) els.push(byId1);
+      if (byId2) els.push(byId2);
+
+      const maybe = Array.from(document.querySelectorAll("button, a, div, iframe"))
+        .filter(el => {
+          if (!el || !el.getBoundingClientRect) return false;
+          if (isInsideSticky(el)) return false;
+          const cs = getComputedStyle(el);
+          if (cs.position !== "fixed") return false;
+
+          const r = el.getBoundingClientRect();
+          if (r.width < 44 || r.height < 44) return false;
+
+          const nearBottom = r.bottom > (window.innerHeight - 40);
+          const nearRight  = r.right  > (window.innerWidth  - 140);
+          const nearLeft   = r.left   < 140;
+
+          return nearBottom && (nearRight || nearLeft);
+        });
+
+      for (const el of maybe) els.push(el);
+      return Array.from(new Set(els));
+    };
+
+    const compute = () => {
+      const list = candidates();
+      let extra = 0;
+
+      for (const el of list){
+        try{
+          const r = el.getBoundingClientRect();
+          extra = Math.max(extra, r.height);
+        } catch {}
+      }
+
+      const px = extra > 0 ? Math.ceil(extra + 18) : 0;
+      root.style.setProperty("--proofy-fab-space", px + "px");
+    };
+
+    compute();
+    window.addEventListener("resize", () => compute(), { passive:true });
+
+    const obs = new MutationObserver(() => compute());
+    obs.observe(document.body, { childList:true, subtree:true, attributes:true });
+
+    let n = 0;
+    const t = setInterval(() => {
+      compute();
+      n++;
+      if (n > 8) clearInterval(t);
+    }, 180);
+  })();
+
 })();
 </script>
 
