@@ -37,7 +37,7 @@
       margin-top:10px;
       flex-wrap:wrap;
     }
-    #statusPill, #manualPill { margin-left:0 !important; }
+
     .hintline{ margin-top:6px; opacity:.9; }
 
     .navActions .btn.isCurrent{
@@ -45,13 +45,6 @@
       opacity:1;
       border-color: rgba(255,255,255,.18);
       background: rgba(255,255,255,.05);
-    }
-
-    /* “Intyg”-knappen ser ut som en knapp men är en riktig <button> (mobil-säkert) */
-    #receiptBtn{
-      background: rgba(255,255,255,.04) !important;
-      border: 1px solid rgba(255,255,255,.12) !important;
-      color: rgba(234,240,255,.85) !important;
     }
 
     /* Avbryt ska ha UI (inte bara textlänk) */
@@ -128,6 +121,22 @@
     /* HARDTEST: extra bottenpadding så chat/FAB aldrig täcker knappar/länkar */
     main{
       padding-bottom: calc(160px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom));
+    }
+
+    /* “Öppna intyg” ska vara lätt att se (utan att bli skrikig). */
+    .primaryCtaBox{
+      margin-top:12px;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.03);
+    }
+    .primaryCtaHint{
+      margin-top:8px;
+      color: rgba(234,240,255,.78);
+      font-size: 12.5px;
+      line-height:1.45;
+      max-width: 80ch;
     }
 
     @media print{
@@ -349,15 +358,26 @@
                 <span id="copyLinkPill" class="pill" style="display:none; margin-top:8px;"></span>
               </div>
 
+              <!-- ✅ Primära åtgärder direkt här (ingen scroll): -->
+              <div class="primaryCtaBox" aria-label="Primära åtgärder (ärendeakt/granskning)">
+                <div class="actionsRow">
+                  <button class="btn primary" id="receiptBtn" type="button" style="display:none;">Öppna intyg</button>
+                  <button class="btn soft" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
+                  <span id="copyNotePill" class="pill" style="display:none;"></span>
+                </div>
+                <div class="primaryCtaHint">
+                  För granskning/ärendeakt är intyget den samlade vyn: kontrollvärde, länkar, kontrolltid och status vid kontrolltillfället.
+                </div>
+              </div>
+
               <p class="small" style="margin:10px 0 0; opacity:.95;">
                 <b>Notera:</b> Kontrollvärde och verifieringslänk skapas lokalt. För att kunna redovisa <b>Bekräftad</b> status vid senare kontroll behöver status vara <b>Bekräftad</b>.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
 
-              <!-- ✅ NY ORDNING (5/5 revisor/juridik): Först status + tider + intyg, sedan QR -->
+              <!-- Underlag + QR efter primära åtgärder -->
               <div class="qrWrap" style="margin-top:12px;">
-                <!-- Meta/underlag först -->
                 <div style="min-width:260px; flex:1;">
                   <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
                   <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
@@ -371,30 +391,6 @@
 
                   <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
-
-                  <div class="actions" style="margin-top:12px;">
-                    <button class="btn soft" id="receiptBtn" type="button" style="display:none;">Öppna intyg</button>
-                  </div>
-
-                  <div class="noteBox" id="noteBox" style="display:none;">
-                    <div class="meta">Notering (för ärendeakt)</div>
-                    <pre class="mono" id="noteOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
-
-                    <div class="noteActions">
-                      <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
-                      <span id="copyNotePill" class="pill" style="display:none;"></span>
-                    </div>
-
-                    <div class="small" style="margin-top:10px; opacity:.9;">
-                      Ladda ner som .txt:
-                      <button class="inlineLinkBtn" id="downloadNoteLink" type="button">proofy-notering.txt</button>
-                    </div>
-
-                    <p class="meta" style="margin:10px 0 0; opacity:.9;">
-                      Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
-                      Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.
-                    </p>
-                  </div>
 
                   <details style="margin-top:12px;">
                     <summary>Extra uppgifter (valfritt)</summary>
@@ -413,9 +409,23 @@
                     <div class="meta" style="margin-top:10px;">Meddelande (om något)</div>
                     <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
                   </details>
+
+                  <div class="noteBox" id="noteBox" style="display:none;">
+                    <div class="meta">Notering (för ärendeakt)</div>
+                    <pre class="mono" id="noteOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
+
+                    <div class="small" style="margin-top:10px; opacity:.9;">
+                      Ladda ner som .txt:
+                      <button class="inlineLinkBtn" id="downloadNoteLink" type="button">proofy-notering.txt</button>
+                    </div>
+
+                    <p class="meta" style="margin:10px 0 0; opacity:.9;">
+                      Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
+                      Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.
+                    </p>
+                  </div>
                 </div>
 
-                <!-- QR efteråt -->
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
@@ -434,7 +444,6 @@
                   </div>
                 </div>
               </div>
-              <!-- /NY ORDNING -->
             </div>
           </div>
 
@@ -1038,8 +1047,8 @@
   function updateReceiptLabel(){
     if (!receiptBtn || !currentId) return;
     receiptBtn.textContent = "Öppna intyg";
-    if (lastProofyStatusCode === "UNKNOWN") receiptBtn.textContent = "Öppna intyg (status oklar)";
-    if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
+    if (lastProofyStatusCode === "UNKNOWN") receiptBtn.textContent = "Öppna intyg";
+    if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") receiptBtn.textContent = "Öppna intyg";
   }
 
   function setBusy(v){
@@ -1162,8 +1171,6 @@
     lastProofyStatusCode = sc || "";
     updateReceiptLabel();
 
-    const canonical = canonicalStatusFromCode(sc);
-
     if (sc === "CONFIRMED") {
       markHeadline("ok", "Bekräftad");
       regStatusOut.textContent = "Bekräftad";
@@ -1196,7 +1203,7 @@
       fileName: currentFile?.name || "",
       checkedSe: fmtSeEpochSec(checkedEpoch),
       checkedUtc: fmtUtcEpochSec(checkedEpoch),
-      statusLine: canonical,
+      statusLine: canonicalStatusFromCode(sc),
       timeSe: confirmedSe,
       txHash: txHash,
       observedBlockNumber: observedBlockNumber
@@ -1204,7 +1211,6 @@
 
     if (noteOut) noteOut.textContent = buildNote(lastRun);
     if (noteBox) noteBox.style.display = "block";
-    if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
   }
 
   async function pollTxAndVerify(myOp, id, txHash, checkedEpoch){
@@ -1331,6 +1337,18 @@
       if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt kontrollvärde.");
 
       currentId = id;
+
+      // ✅ Gör intyg direkt synligt och primärt (ingen scroll).
+      receiptHref = buildCertLink(id, checkedEpoch, "");
+      if (receiptBtn){
+        receiptBtn.style.display = "inline-flex";
+        updateReceiptLabel();
+        receiptBtn.onclick = () => {
+          if (!receiptHref || receiptHref === "—") return;
+          window.location.href = receiptHref;
+        };
+      }
+
       currentLink = buildVerifyLink(id, checkedEpoch, null);
 
       if (emptyState) emptyState.style.display = "none";
@@ -1361,6 +1379,29 @@
       });
       attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
 
+      // Notering-knappar: aktiveras så fort vi har en sammanställning.
+      if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
+      copyNoteBtn.onclick = async () => {
+        if (!lastRun && currentId){
+          // Bygg en minimal notering även om status ännu inte hämtats.
+          const tmp = {
+            id: currentId,
+            link: currentLink,
+            certLink: receiptHref,
+            fileName: currentFile?.name || "",
+            checkedSe: fmtSeEpochSec(checkedEpoch),
+            checkedUtc: fmtUtcEpochSec(checkedEpoch),
+            statusLine: "—",
+            timeSe: null,
+            txHash: null,
+            observedBlockNumber: null
+          };
+          await copyWithFeedback({ text: buildNote(tmp), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
+          return;
+        }
+        await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
+      };
+
       setPill("Skickar registrering…");
       regStatusOut.textContent = "Inskickad – ej bekräftad";
       markHeadline("warn", "Inskickad – ej bekräftad");
@@ -1385,6 +1426,10 @@
 
         if (qrTap) qrTap.style.display = "grid";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
+
+        // Uppdatera intygslänken med intern referens om den finns.
+        receiptHref = buildCertLink(id, checkedEpoch, txHash);
+        updateReceiptLabel();
 
         pollTxAndVerify(myOp, id, txHash, checkedEpoch);
       } else {
@@ -1421,6 +1466,13 @@
           checkedEpoch,
           data: { statusCode:"UNKNOWN" }
         });
+
+        // Se till att intyg-knappen är synlig även här.
+        receiptHref = buildCertLink(currentId, checkedEpoch, "");
+        if (receiptBtn){
+          receiptBtn.style.display = "inline-flex";
+          receiptBtn.onclick = () => window.location.href = receiptHref;
+        }
       }
 
       setPill("Klart (lokalt) ✅");
@@ -1465,13 +1517,6 @@
       e.preventDefault();
       e.stopPropagation();
       await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill, okText:"Länk kopierad ✅" });
-    });
-  }
-
-  if (copyNoteBtn){
-    copyNoteBtn.addEventListener("click", async () => {
-      if (!lastRun) return;
-      await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
     });
   }
 
