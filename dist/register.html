@@ -47,14 +47,14 @@
       background: rgba(255,255,255,.05);
     }
 
-    /* ✅ “Intyg”-knappen ser ut som en knapp men är en riktig <button> (mobil-säkert) */
+    /* “Intyg”-knappen ser ut som en knapp men är en riktig <button> (mobil-säkert) */
     #receiptBtn{
       background: rgba(255,255,255,.04) !important;
       border: 1px solid rgba(255,255,255,.12) !important;
       color: rgba(234,240,255,.85) !important;
     }
 
-    /* ✅ Avbryt ska ha UI (inte bara textlänk) */
+    /* Avbryt ska ha UI (inte bara textlänk) */
     #abortBtn{
       display:inline-flex;
       align-items:center;
@@ -117,7 +117,7 @@
     .inlineLinkBtn{
       background: transparent;
       border: 0;
-      color: rgba(170, 210, 255, .92serif;
+      color: rgba(170, 210, 255, .92);
       cursor:pointer;
       padding: 0;
       font: inherit;
@@ -125,79 +125,13 @@
       text-underline-offset: 3px;
     }
 
-    /* ✅ Hårdtest: extra bottenpadding så “Fråga oss”-widget inte täcker knappar/länkar */
+    /* HARDTEST: extra bottenpadding så chat/FAB aldrig täcker knappar/länkar */
     main{
       padding-bottom: calc(160px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom));
     }
 
-    /* ✅ Sticky actions: visas bara när originalknapparna inte syns (aldrig “alltid med”) */
-    .proofySticky{
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: calc(env(safe-area-inset-bottom) + 10px);
-      z-index: 60;
-      display: none;
-      pointer-events: none;
-    }
-    .proofySticky .inner{
-      pointer-events: auto;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 14px;
-    }
-    .proofySticky .bar{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:flex-end;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(11,18,32,.78);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      padding: 10px;
-      box-shadow: 0 12px 32px rgba(0,0,0,.35);
-    }
-    .proofySticky .btnPrimary{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border-radius: 12px;
-      padding: 10px 14px;
-      font-weight: 950;
-      border: 1px solid rgba(255,255,255,.18);
-      background: rgba(255,255,255,.10);
-      color: rgba(234,240,255,.94);
-      cursor:pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .proofySticky .btnSecondary{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border-radius: 12px;
-      padding: 10px 14px;
-      font-weight: 950;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      color: rgba(234,240,255,.88);
-      cursor:pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .proofySticky{
-      margin-bottom: calc(var(--proofy-fab-space, 120px));
-    }
-
-    /* Små “ankare” som vi observerar för att veta om originalknapparna syns */
-    .proofyAnchor{
-      width:1px;
-      height:1px;
-      overflow:hidden;
-    }
-
     @media print{
-      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions, .proofySticky { display:none !important; }
+      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
       #qrTap, #manualQrTap { display:grid !important; border-color:#ddd !important; }
       #qrTap, #qrBox, #manualQrTap, #manualQrBox{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     }
@@ -421,32 +355,10 @@
 
               <div class="hr" style="margin-top:14px;"></div>
 
+              <!-- ✅ NY ORDNING (5/5 revisor/juridik): Först status + tider + intyg, sedan QR -->
               <div class="qrWrap" style="margin-top:12px;">
-                <div>
-                  <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
-
-                  <div id="qrTap"
-                       class="proofyQrTap"
-                       role="button"
-                       tabindex="0"
-                       aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
-                       title="Klicka för att kopiera verifieringslänk"
-                       style="display:none;">
-                    <div id="qrBox" class="proofyQrBox" aria-label="QR-kod"></div>
-                  </div>
-
-                  <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
-                    Skanna med <b>annan enhet</b> (kollega/klient). Klick på QR kopierar länken.
-                  </div>
-
-                  <div class="actions" style="margin-top:12px;">
-                    <button class="btn soft" id="receiptBtn" type="button" style="display:none;">Öppna intyg</button>
-                    <!-- Ankare: när denna del syns ska sticky INTE visas -->
-                    <div id="receiptAnchor" class="proofyAnchor" aria-hidden="true"></div>
-                  </div>
-                </div>
-
-                <div style="min-width:240px; flex:1;">
+                <!-- Meta/underlag först -->
+                <div style="min-width:260px; flex:1;">
                   <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
                   <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
                   <div id="checkedUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
@@ -460,6 +372,10 @@
                   <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
 
+                  <div class="actions" style="margin-top:12px;">
+                    <button class="btn soft" id="receiptBtn" type="button" style="display:none;">Öppna intyg</button>
+                  </div>
+
                   <div class="noteBox" id="noteBox" style="display:none;">
                     <div class="meta">Notering (för ärendeakt)</div>
                     <pre class="mono" id="noteOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
@@ -467,8 +383,6 @@
                     <div class="noteActions">
                       <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
                       <span id="copyNotePill" class="pill" style="display:none;"></span>
-                      <!-- Ankare: när noteringen/knappen syns ska sticky INTE visas -->
-                      <div id="noteAnchor" class="proofyAnchor" aria-hidden="true"></div>
                     </div>
 
                     <div class="small" style="margin-top:10px; opacity:.9;">
@@ -490,7 +404,7 @@
 
                     <div class="hr"></div>
 
-                    <div class="meta">Registreringsreferens (valfri)</div>
+                    <div class="meta">Intern referens (valfri)</div>
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfri)</div>
@@ -500,7 +414,27 @@
                     <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
                   </details>
                 </div>
+
+                <!-- QR efteråt -->
+                <div>
+                  <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
+
+                  <div id="qrTap"
+                       class="proofyQrTap"
+                       role="button"
+                       tabindex="0"
+                       aria-label="QR-kod (klicka för att kopiera verifieringslänk)"
+                       title="Klicka för att kopiera verifieringslänk"
+                       style="display:none;">
+                    <div id="qrBox" class="proofyQrBox" aria-label="QR-kod"></div>
+                  </div>
+
+                  <div class="small" style="margin-top:8px; opacity:.9; max-width:48ch;">
+                    Skanna med <b>annan enhet</b> (kollega/klient). Klick på QR kopierar länken.
+                  </div>
+                </div>
               </div>
+              <!-- /NY ORDNING -->
             </div>
           </div>
 
@@ -607,17 +541,6 @@
   </div>
 </footer>
 
-<!-- ✅ Sticky åtgärdsrad (visas bara när den behövs) -->
-<div class="proofySticky" id="stickyBar" aria-hidden="true">
-  <div class="inner">
-    <div class="bar">
-      <button class="btnSecondary" id="stickyAbortBtn" type="button" style="display:none;">Avbryt</button>
-      <button class="btnSecondary" id="stickyCopyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
-      <button class="btnPrimary" id="stickyReceiptBtn" type="button" style="display:none;">Öppna intyg</button>
-    </div>
-  </div>
-</div>
-
 <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
 <script>
@@ -645,10 +568,7 @@
   const qrBox = $("qrBox");
 
   const receiptBtn = $("receiptBtn");
-  const receiptAnchor = $("receiptAnchor");
-  const noteAnchor = $("noteAnchor");
-
-  let receiptHref = null; /* ✅ robust: lagra senast byggda intygslänk */
+  let receiptHref = null;
 
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
@@ -679,12 +599,6 @@
   const manualQrTap = $("manualQrTap");
   const manualQrBox = $("manualQrBox");
 
-  // ✅ Sticky actions
-  const stickyBar = $("stickyBar");
-  const stickyAbortBtn = $("stickyAbortBtn");
-  const stickyCopyNoteBtn = $("stickyCopyNoteBtn");
-  const stickyReceiptBtn = $("stickyReceiptBtn");
-
   let currentFile = null;
   let currentId = null;
   let currentLink = null;
@@ -700,10 +614,6 @@
   let pollTimer = null;
   let pollStartAt = 0;
   let pollTxHash = null;
-
-  // ✅ “syns originalknapparna?” (om ja: sticky ska vara dold)
-  let receiptInView = true;
-  let noteInView = true;
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -1110,7 +1020,7 @@
     lines.push("");
     lines.push(`Status vid kontrolltillfället: ${run.statusLine || "—"}`);
     if (run.timeSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.timeSe}`);
-    if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
+    if (run.txHash) lines.push(`Intern referens (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
     lines.push("");
     lines.push("Avgränsning: Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.");
@@ -1132,78 +1042,12 @@
     if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
   }
 
-  function setStickyVisible(v){
-    if (!stickyBar) return;
-    stickyBar.style.display = v ? "block" : "none";
-    stickyBar.setAttribute("aria-hidden", v ? "false" : "true");
-  }
-
-  function actionsAreVisible(){
-    return !!(receiptInView || noteInView);
-  }
-
-  function syncSticky(){
-    if (!stickyBar) return;
-
-    const hasResult = !!currentId;
-    const isBusy = !!busy;
-    const hasReceipt = !!receiptHref && receiptHref !== "—";
-    const hasNote = !!lastRun;
-
-    if (stickyAbortBtn) stickyAbortBtn.style.display = "none";
-    if (stickyReceiptBtn) stickyReceiptBtn.style.display = "none";
-    if (stickyCopyNoteBtn) stickyCopyNoteBtn.style.display = "none";
-
-    // 1) Under pågående körning: visa bara Avbryt (så användaren har kontroll)
-    if (isBusy){
-      if (stickyAbortBtn) stickyAbortBtn.style.display = "inline-flex";
-      setStickyVisible(true);
-      return;
-    }
-
-    // 2) När originalknapparna syns i vyn: visa aldrig sticky (detta löser “följer med hela tiden”)
-    if (actionsAreVisible()){
-      setStickyVisible(false);
-      return;
-    }
-
-    // 3) När de inte syns: visa sticky endast om det faktiskt finns något att göra
-    if (hasResult){
-      let any = false;
-
-      if (hasReceipt){
-        if (stickyReceiptBtn){
-          stickyReceiptBtn.style.display = "inline-flex";
-          stickyReceiptBtn.textContent = receiptBtn?.textContent || "Öppna intyg";
-          stickyReceiptBtn.onclick = () => { window.location.href = receiptHref; };
-        }
-        any = true;
-      }
-
-      if (hasNote){
-        if (stickyCopyNoteBtn){
-          stickyCopyNoteBtn.style.display = "inline-flex";
-          stickyCopyNoteBtn.onclick = async () => {
-            await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
-          };
-        }
-        any = true;
-      }
-
-      setStickyVisible(any);
-      return;
-    }
-
-    setStickyVisible(false);
-  }
-
   function setBusy(v){
     busy = v;
     setAriaBusy(v);
     if (abortBtn){
       abortBtn.style.display = busy ? "inline-flex" : "none";
     }
-    syncSticky();
   }
 
   function resetReport(){
@@ -1246,7 +1090,6 @@
     stopPolling();
 
     if (emptyState) emptyState.style.display = "block";
-    syncSticky();
   }
 
   function setFile(file){
@@ -1311,8 +1154,6 @@
 
     txOut.textContent = txHash || "—";
     submitterOut.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
-
-    // “Meddelande” ska vara mänskligt och revisionsvänligt (utan tekniska termer)
     debugOut.textContent = legal || "—";
 
     const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
@@ -1364,8 +1205,6 @@
     if (noteOut) noteOut.textContent = buildNote(lastRun);
     if (noteBox) noteBox.style.display = "block";
     if (copyNoteBtn) copyNoteBtn.style.display = "inline-flex";
-
-    syncSticky();
   }
 
   async function pollTxAndVerify(myOp, id, txHash, checkedEpoch){
@@ -1426,7 +1265,7 @@
             markHeadline("err", "Kunde inte kontrolleras");
             regStatusOut.textContent = "Kunde inte kontrolleras";
             timeOut.textContent = "—";
-            debugOut.textContent = "Inskick misslyckades. Du kan försöka igen eller kontakta Proofy och ange registreringsreferensen.";
+            debugOut.textContent = "Inskick misslyckades. Du kan försöka igen eller kontakta Proofy och ange intern referens.";
             applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN" } });
             return;
           }
@@ -1476,11 +1315,9 @@
       setBusy(false);
       setPill("Avbruten – välj underlag igen");
       markHeadline("warn", "Avbruten");
-      syncSticky();
     };
 
     if (abortBtn) abortBtn.onclick = doAbort;
-    if (stickyAbortBtn) stickyAbortBtn.onclick = doAbort;
 
     try{
       const checkedEpoch = Math.floor(Date.now() / 1000);
@@ -1551,12 +1388,11 @@
 
         pollTxAndVerify(myOp, id, txHash, checkedEpoch);
       } else {
-        debugOut.textContent = debugOut.textContent || "Registreringsreferens kunde inte visas. Du kan verifiera igen senare.";
+        debugOut.textContent = debugOut.textContent || "En intern referens kunde inte visas. Du kan verifiera igen senare.";
       }
 
       setPill("Klart ✅");
       setBusy(false);
-      syncSticky();
 
     } catch (e){
       if (myOp !== opId) return;
@@ -1589,55 +1425,6 @@
 
       setPill("Klart (lokalt) ✅");
       setBusy(false);
-      syncSticky();
-    }
-  }
-
-  // ✅ Observer: sticky visas bara när receipt/note-knappar INTE syns
-  function setupStickyObservers(){
-    const anchors = [
-      { el: receiptAnchor, key: "receipt" },
-      { el: noteAnchor, key: "note" }
-    ].filter(x => !!x.el);
-
-    if (!anchors.length) return;
-
-    const setFlagsAndSync = (key, isIn) => {
-      if (key === "receipt") receiptInView = !!isIn;
-      if (key === "note") noteInView = !!isIn;
-      syncSticky();
-    };
-
-    try{
-      const io = new IntersectionObserver((entries) => {
-        for (const e of entries){
-          const key = e.target === receiptAnchor ? "receipt" : (e.target === noteAnchor ? "note" : "");
-          if (!key) continue;
-          setFlagsAndSync(key, e.isIntersecting);
-        }
-      }, {
-        root: null,
-        // Lite “förlåtande” så att sticky inte blinkar nära kanten, och tar höjd för botten-FAB
-        rootMargin: `0px 0px -120px 0px`,
-        threshold: 0.01
-      });
-
-      for (const a of anchors) io.observe(a.el);
-    }catch{
-      // Fallback: enkel scroll-check
-      const isVisible = (el) => {
-        if (!el) return false;
-        const r = el.getBoundingClientRect();
-        return r.bottom > 0 && r.top < (window.innerHeight || document.documentElement.clientHeight);
-      };
-      const tick = () => {
-        receiptInView = isVisible(receiptAnchor);
-        noteInView = isVisible(noteAnchor);
-        syncSticky();
-      };
-      window.addEventListener("scroll", tick, { passive:true });
-      window.addEventListener("resize", tick, { passive:true });
-      setTimeout(tick, 0);
     }
   }
 
@@ -1685,7 +1472,6 @@
     copyNoteBtn.addEventListener("click", async () => {
       if (!lastRun) return;
       await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
-      syncSticky();
     });
   }
 
@@ -1695,7 +1481,6 @@
       downloadTextFile("proofy-notering.txt", buildNote(lastRun));
       showPill(copyNotePill, "Nerladdad ✅");
       setTimeout(() => hidePill(copyNotePill), 1200);
-      syncSticky();
     });
   }
 
@@ -1755,15 +1540,11 @@
 
   manualId.addEventListener("input", () => setManualState(manualId.value));
 
-  // Init
   resetReport();
   setFile(null);
   setBusy(false);
   setManualState("");
-  setupStickyObservers();
-  syncSticky();
 })();
-
 </script>
 
 <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
