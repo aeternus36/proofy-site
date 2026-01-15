@@ -117,7 +117,7 @@
     .inlineLinkBtn{
       background: transparent;
       border: 0;
-      color: rgba(170, 210, 255, .92);
+      color: rgba(170, 210, 255, .92serif;
       cursor:pointer;
       padding: 0;
       font: inherit;
@@ -125,22 +125,17 @@
       text-underline-offset: 3px;
     }
 
-    /* ✅ Overlay-safe: reserve bottom space for fixed chat/FAB overlays */
-    :root{
-      --proofy-fab-space: 0px; /* set by JS */
-    }
-
     /* ✅ Hårdtest: extra bottenpadding så “Fråga oss”-widget inte täcker knappar/länkar */
     main{
-      padding-bottom: calc(160px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(160px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom));
     }
 
-    /* ✅ Sticky actions: minimal, icke-repetitiv, alltid ovan chat/FAB */
+    /* ✅ Sticky actions: visas bara när originalknapparna inte syns (aldrig “alltid med”) */
     .proofySticky{
       position: fixed;
       left: 0;
       right: 0;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 10px + var(--proofy-fab-space, 0px));
+      bottom: calc(env(safe-area-inset-bottom) + 10px);
       z-index: 60;
       display: none;
       pointer-events: none;
@@ -189,6 +184,16 @@
       color: rgba(234,240,255,.88);
       cursor:pointer;
       -webkit-tap-highlight-color: transparent;
+    }
+    .proofySticky{
+      margin-bottom: calc(var(--proofy-fab-space, 120px));
+    }
+
+    /* Små “ankare” som vi observerar för att veta om originalknapparna syns */
+    .proofyAnchor{
+      width:1px;
+      height:1px;
+      overflow:hidden;
     }
 
     @media print{
@@ -436,11 +441,13 @@
 
                   <div class="actions" style="margin-top:12px;">
                     <button class="btn soft" id="receiptBtn" type="button" style="display:none;">Öppna intyg</button>
+                    <!-- Ankare: när denna del syns ska sticky INTE visas -->
+                    <div id="receiptAnchor" class="proofyAnchor" aria-hidden="true"></div>
                   </div>
                 </div>
 
                 <div style="min-width:240px; flex:1;">
-                  <div class="meta">Kontrolltid (detta kontrolltillfället)</div>
+                  <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
                   <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
                   <div id="checkedUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
                   <div class="small" style="margin-top:8px; opacity:.9;">
@@ -460,6 +467,8 @@
                     <div class="noteActions">
                       <button class="btn" id="copyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
                       <span id="copyNotePill" class="pill" style="display:none;"></span>
+                      <!-- Ankare: när noteringen/knappen syns ska sticky INTE visas -->
+                      <div id="noteAnchor" class="proofyAnchor" aria-hidden="true"></div>
                     </div>
 
                     <div class="small" style="margin-top:10px; opacity:.9;">
@@ -636,6 +645,9 @@
   const qrBox = $("qrBox");
 
   const receiptBtn = $("receiptBtn");
+  const receiptAnchor = $("receiptAnchor");
+  const noteAnchor = $("noteAnchor");
+
   let receiptHref = null; /* ✅ robust: lagra senast byggda intygslänk */
 
   const regStatusOut = $("regStatusOut");
@@ -688,6 +700,10 @@
   let pollTimer = null;
   let pollStartAt = 0;
   let pollTxHash = null;
+
+  // ✅ “syns originalknapparna?” (om ja: sticky ska vara dold)
+  let receiptInView = true;
+  let noteInView = true;
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -1116,11 +1132,14 @@
     if (lastProofyStatusCode === "NOT_CONFIRMED" || lastProofyStatusCode === "SUBMITTED_UNCONFIRMED") receiptBtn.textContent = "Öppna intyg (ej bekräftad)";
   }
 
-  // ✅ Sticky logic: visas bara när den behövs → minimal repetition
   function setStickyVisible(v){
     if (!stickyBar) return;
     stickyBar.style.display = v ? "block" : "none";
     stickyBar.setAttribute("aria-hidden", v ? "false" : "true");
+  }
+
+  function actionsAreVisible(){
+    return !!(receiptInView || noteInView);
   }
 
   function syncSticky(){
@@ -1135,12 +1154,20 @@
     if (stickyReceiptBtn) stickyReceiptBtn.style.display = "none";
     if (stickyCopyNoteBtn) stickyCopyNoteBtn.style.display = "none";
 
+    // 1) Under pågående körning: visa bara Avbryt (så användaren har kontroll)
     if (isBusy){
       if (stickyAbortBtn) stickyAbortBtn.style.display = "inline-flex";
       setStickyVisible(true);
       return;
     }
 
+    // 2) När originalknapparna syns i vyn: visa aldrig sticky (detta löser “följer med hela tiden”)
+    if (actionsAreVisible()){
+      setStickyVisible(false);
+      return;
+    }
+
+    // 3) När de inte syns: visa sticky endast om det faktiskt finns något att göra
     if (hasResult){
       let any = false;
 
@@ -1284,6 +1311,8 @@
 
     txOut.textContent = txHash || "—";
     submitterOut.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
+
+    // “Meddelande” ska vara mänskligt och revisionsvänligt (utan tekniska termer)
     debugOut.textContent = legal || "—";
 
     const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
@@ -1564,6 +1593,54 @@
     }
   }
 
+  // ✅ Observer: sticky visas bara när receipt/note-knappar INTE syns
+  function setupStickyObservers(){
+    const anchors = [
+      { el: receiptAnchor, key: "receipt" },
+      { el: noteAnchor, key: "note" }
+    ].filter(x => !!x.el);
+
+    if (!anchors.length) return;
+
+    const setFlagsAndSync = (key, isIn) => {
+      if (key === "receipt") receiptInView = !!isIn;
+      if (key === "note") noteInView = !!isIn;
+      syncSticky();
+    };
+
+    try{
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries){
+          const key = e.target === receiptAnchor ? "receipt" : (e.target === noteAnchor ? "note" : "");
+          if (!key) continue;
+          setFlagsAndSync(key, e.isIntersecting);
+        }
+      }, {
+        root: null,
+        // Lite “förlåtande” så att sticky inte blinkar nära kanten, och tar höjd för botten-FAB
+        rootMargin: `0px 0px -120px 0px`,
+        threshold: 0.01
+      });
+
+      for (const a of anchors) io.observe(a.el);
+    }catch{
+      // Fallback: enkel scroll-check
+      const isVisible = (el) => {
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        return r.bottom > 0 && r.top < (window.innerHeight || document.documentElement.clientHeight);
+      };
+      const tick = () => {
+        receiptInView = isVisible(receiptAnchor);
+        noteInView = isVisible(noteAnchor);
+        syncSticky();
+      };
+      window.addEventListener("scroll", tick, { passive:true });
+      window.addEventListener("resize", tick, { passive:true });
+      setTimeout(tick, 0);
+    }
+  }
+
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Kopierat ✅" });
@@ -1678,84 +1755,15 @@
 
   manualId.addEventListener("input", () => setManualState(manualId.value));
 
+  // Init
   resetReport();
   setFile(null);
   setBusy(false);
   setManualState("");
+  setupStickyObservers();
   syncSticky();
-
-  /*
-    ✅ Overlay-safe (samma princip som verify.html):
-    Mäter fasta overlays (chat/FAB) nära botten/hörn och reserverar utrymme.
-    Viktigt: ignorera vår egen stickybar så vi inte får “self amplification”.
-  */
-  (function overlaySafe(){
-    const root = document.documentElement;
-
-    const isInsideSticky = (el) => {
-      try{
-        return !!(stickyBar && (el === stickyBar || stickyBar.contains(el)));
-      } catch { return false; }
-    };
-
-    const candidates = () => {
-      const els = [];
-      const byId1 = document.getElementById("chatWidget");
-      const byId2 = document.getElementById("chat-widget");
-      if (byId1) els.push(byId1);
-      if (byId2) els.push(byId2);
-
-      const maybe = Array.from(document.querySelectorAll("button, a, div, iframe"))
-        .filter(el => {
-          if (!el || !el.getBoundingClientRect) return false;
-          if (isInsideSticky(el)) return false;
-          const cs = getComputedStyle(el);
-          if (cs.position !== "fixed") return false;
-
-          const r = el.getBoundingClientRect();
-          if (r.width < 44 || r.height < 44) return false;
-
-          const nearBottom = r.bottom > (window.innerHeight - 40);
-          const nearRight  = r.right  > (window.innerWidth  - 140);
-          const nearLeft   = r.left   < 140;
-
-          return nearBottom && (nearRight || nearLeft);
-        });
-
-      for (const el of maybe) els.push(el);
-      return Array.from(new Set(els));
-    };
-
-    const compute = () => {
-      const list = candidates();
-      let extra = 0;
-
-      for (const el of list){
-        try{
-          const r = el.getBoundingClientRect();
-          extra = Math.max(extra, r.height);
-        } catch {}
-      }
-
-      const px = extra > 0 ? Math.ceil(extra + 18) : 0;
-      root.style.setProperty("--proofy-fab-space", px + "px");
-    };
-
-    compute();
-    window.addEventListener("resize", () => compute(), { passive:true });
-
-    const obs = new MutationObserver(() => compute());
-    obs.observe(document.body, { childList:true, subtree:true, attributes:true });
-
-    let n = 0;
-    const t = setInterval(() => {
-      compute();
-      n++;
-      if (n > 8) clearInterval(t);
-    }, 180);
-  })();
-
 })();
+
 </script>
 
 <script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
