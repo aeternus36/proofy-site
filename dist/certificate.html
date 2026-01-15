@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- CERT-HARDTEST v2026-01-15 / audit+juridik 5/5 (SE) / no-tech-terms -->
+<!-- CERT-HARDTEST v2026-01-15 / audit+juridik 5/5 (SE) / no-tech-terms + case-note -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
@@ -332,6 +332,42 @@
         overflow-wrap:normal;
       }
 
+      /* Noteringsruta */
+      .noteBox{
+        margin-top:12px;
+        border:1px solid rgba(255,255,255,.12);
+        background:rgba(255,255,255,.03);
+        border-radius:16px;
+        padding:12px;
+      }
+      .noteText{
+        margin-top:8px;
+        border:1px solid rgba(255,255,255,.10);
+        background:rgba(0,0,0,.18);
+        border-radius:14px;
+        padding:12px;
+        font-family:var(--mono);
+        font-size:12.5px;
+        line-height:1.5;
+        color:rgba(234,240,255,.92);
+        white-space:pre-wrap;
+        overflow-wrap:anywhere;
+        user-select:text;
+      }
+      .noteActions{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        align-items:center;
+        margin-top:10px;
+      }
+      .noteHint{
+        margin-top:10px;
+        font-size:12px;
+        color:var(--muted2);
+        line-height:1.45;
+      }
+
       /* Extra hård mobil-säkring mot FAB/keyboard */
       @media (max-width: 700px){
         :root{ --proofy-fab-space: 140px; }
@@ -341,8 +377,8 @@
         header, .actions, details.more { display:none !important; }
         body{ background:#fff !important; color:#000 !important; }
         .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
-        .pill, .statusBadge, .val, .statusMeta { border-color:#ddd !important; background:#fff !important; }
-        .small, .footer { color:#111 !important; }
+        .pill, .statusBadge, .val, .statusMeta, .noteBox, .noteText { border-color:#ddd !important; background:#fff !important; }
+        .small, .footer, .noteHint { color:#111 !important; }
         a{ color:#000 !important; text-decoration:none !important; }
 
         .auditTop{ display:flex !important; flex-direction:column !important; gap:14px !important; }
@@ -499,7 +535,7 @@
                 <div class="mono" id="confirmedLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="mono" id="confirmedUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="small" style="margin-top:8px">
-                  Tidpunkten avser när Proofy kan redovisa bekräftelse för kontrollvärdet i sitt register – inte när dokumentet skapades, signerades, godkändes eller kommunicerades.
+                  Tidpunkten avser när Proofy kan redovisa bekräftelse för kontrollvärdet i sitt register – inte när dokumentet upprättades, signerades, godkändes eller kommunicerades.
                 </div>
               </div>
             </div>
@@ -531,6 +567,21 @@
             <div class="note">
               <b>Rekommenderad notering i ärendeakt:</b> Spara kontrollvärde (Verifierings-ID) och intygslänk.
               Vid efterhandsgranskning används verifieringslänk/QR för snabb kontroll.
+            </div>
+
+            <!-- ✅ NYTT: Notering för ärendeakt (kopiera + ladda ner) -->
+            <div class="noteBox" aria-label="Notering för ärendeakt">
+              <div class="label">Notering för ärendeakt (kopiera / spara)</div>
+              <div class="noteText" id="caseNoteText" role="textbox" aria-label="Noteringstext" tabindex="0">—</div>
+
+              <div class="noteActions">
+                <button class="copyBtn" id="copyCaseNote" type="button">Kopiera notering</button>
+                <button class="copyBtn" id="downloadCaseNote" type="button">Ladda ner .txt</button>
+              </div>
+
+              <div class="noteHint">
+                Tips: Klistra in noteringen i ärendeakten tillsammans med eventuellt underlag om process/åtkomst.
+              </div>
             </div>
 
             <div class="small" style="margin-top:10px; opacity:.95;">
@@ -633,11 +684,11 @@
     </main>
 
     <script>
-      const CERT_HARDTEST_VERSION = "CERT-HARDTEST v2026-01-15 (SE audit/juridik, no-tech-terms)";
+      const CERT_HARDTEST_VERSION = "CERT-HARDTEST v2026-01-15 (SE audit/juridik, no-tech-terms + case-note)";
       const $ = (id) => document.getElementById(id);
 
       // URL måste bära ett kontrollvärde (Verifierings-ID).
-      // För att undvika teknikspråk i UI använder vi interna namn i koden men visar aldrig tekniska ord i text.
+      // Interna namn i koden påverkar inte UI. UI använder inga tekniska begrepp.
       function isValidVerifieringsId(s){
         return typeof s === "string" && /^0x[0-9a-fA-F]{64}$/.test(s.trim());
       }
@@ -713,6 +764,18 @@
       function toastCopied(label){
         showWarn(`<b>Kopierat:</b> ${label}`);
         setTimeout(() => hideWarn(), 1200);
+      }
+
+      function downloadTextFile(filename, text){
+        const blob = new Blob([String(text || "")], { type:"text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1200);
       }
 
       function renderQR(text){
@@ -795,7 +858,6 @@
       }
 
       async function fetchJson(url){
-        // cache-bust utan att nämna teknik i UI
         const sep = url.includes("?") ? "&" : "?";
         const bustUrl = url + sep + "t=" + Date.now();
         const r = await fetch(bustUrl, { cache:"no-store", credentials:"same-origin" });
@@ -855,6 +917,68 @@
         if (bWrap) bWrap.style.display = hasB ? "block" : "none";
       }
 
+      function buildCaseNote({
+        verifieringsId,
+        statusText,
+        checkedLocalText,
+        checkedUtcText,
+        confirmedLocalText,
+        confirmedUtcText,
+        certLink,
+        verifyLink,
+        legalLine,
+        certId,
+        internalA,
+        internalB
+      }){
+        const lines = [];
+        lines.push("PROOFY – Notering (ärendeakt/granskningsunderlag)");
+        lines.push("");
+        lines.push("Syfte: Dokumentera att status för kontrollvärdet kontrollerades hos Proofy vid angivet kontrolltillfälle.");
+        lines.push("Avgränsning: Intyget avser inte dokumentets innehåll, riktighet, giltighet eller äkthet.");
+        lines.push("");
+
+        lines.push(`Kontrollvärde (Verifierings-ID): ${verifieringsId || "—"}`);
+        lines.push(`Status vid kontrolltillfället: ${statusText || "—"}`);
+        if (legalLine) lines.push(`Kommentar: ${legalLine}`);
+
+        lines.push("");
+        lines.push(`Kontrolltid (detta kontrolltillfälle): ${checkedLocalText || "—"}`);
+        lines.push(`Kontrolltid (UTC): ${checkedUtcText || "—"}`);
+        lines.push("Obs: Kontrolltiden utgår från enhetens tid och är inte extern tidsstämpling.");
+
+        lines.push("");
+        lines.push(`Intygslänk: ${certLink || "—"}`);
+        lines.push(`Verifieringslänk: ${verifyLink || "—"}`);
+
+        if (certId) {
+          lines.push("");
+          lines.push(`Intygs-ID (valfritt): ${certId}`);
+        }
+
+        // Tidpunkt endast när bekräftad
+        if (statusText === "Bekräftad" && confirmedLocalText && confirmedLocalText !== "—"){
+          lines.push("");
+          lines.push(`Tidpunkt (endast om bekräftad): ${confirmedLocalText}`);
+          if (confirmedUtcText && confirmedUtcText !== "—") lines.push(`Tidpunkt (UTC): ${confirmedUtcText}`);
+          lines.push("Obs: Tidpunkten avser när Proofy kan redovisa bekräftelse för kontrollvärdet – inte när dokumentet upprättades eller användes.");
+        }
+
+        // Valfria interna referenser (utan teknikspråk)
+        const hasA = internalA && internalA !== "—" && !/^0+$/.test(String(internalA));
+        const hasB = internalB && internalB !== "—" && !/^0+$/.test(String(internalB));
+        if (hasA || hasB){
+          lines.push("");
+          lines.push("Interna referenser (valfritt, för support/spårning):");
+          if (hasA) lines.push(`- Intern referens: ${internalA}`);
+          if (hasB) lines.push(`- Spårningsreferens: ${internalB}`);
+        }
+
+        lines.push("");
+        lines.push("Slutsats: Noteringen visar endast utfallet av kontrollen vid kontrolltillfället.");
+        return lines.join("\n");
+      }
+
       /* Mobil-säkring: försök läsa av ev. flytande widget och ge extra bottenutrymme */
       function trySetFabSpace(){
         try{
@@ -884,8 +1008,10 @@
         $("auditVersion").textContent = CERT_HARDTEST_VERSION;
 
         const url = new URL(location.href);
-        const verifieringsId = (url.searchParams.get("hash") || "").trim(); // internt paramnamn, visas aldrig som "hash"
-        const optionalContext = (url.searchParams.get("tx") || "").trim(); // internt, visas som intern/spårning (valfritt)
+
+        // Interna parameternamn (UI nämner inte tekniska ord)
+        const verifieringsId = (url.searchParams.get("hash") || "").trim();
+        const optionalContext = (url.searchParams.get("tx") || "").trim();
         const certId = (url.searchParams.get("cert") || "").trim();
 
         const checkedParam = (url.searchParams.get("checked") || "").trim();
@@ -928,15 +1054,18 @@
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
         };
 
-        $("checkedTopLocal").innerHTML = fmtSeHtml(checked);
-        $("checkedTopUtc").textContent = fmtUtc(checked);
+        // Kontrolltid (topp)
+        const checkedLocalHtml = fmtSeHtml(checked);
+        const checkedUtcText = fmtUtc(checked);
+        $("checkedTopLocal").innerHTML = checkedLocalHtml;
+        $("checkedTopUtc").textContent = checkedUtcText;
 
+        // Reset innan kontroll
         $("resultText").textContent = "Kontrollerar…";
         $("legalLine").textContent = "—";
         $("confirmedLocal").textContent = "—";
         $("confirmedUtc").textContent = "—";
 
-        // Mer information (valfritt) – visas bara om värden finns
         $("internalRefA").textContent = "—";
         $("internalRefB").textContent = "—";
         updateMoreVisibility({ a:"—", b:"—" });
@@ -952,11 +1081,57 @@
           }
         }
 
+        // Förhandsbygg notering (innan vi vet status)
+        const noteEl = $("caseNoteText");
+        const updateCaseNote = (payload) => {
+          const note = buildCaseNote(payload);
+          if (noteEl) noteEl.textContent = note;
+          return note;
+        };
+
+        // Kopiera/ladda ner notering
+        const copyNoteBtn = $("copyCaseNote");
+        const dlNoteBtn = $("downloadCaseNote");
+
+        const wireNoteButtons = () => {
+          if (copyNoteBtn){
+            copyNoteBtn.onclick = async () => {
+              const t = noteEl?.textContent || "";
+              if (await copyText(t)) toastCopied("Notering för ärendeakt");
+            };
+          }
+          if (dlNoteBtn){
+            dlNoteBtn.onclick = () => {
+              const t = noteEl?.textContent || "";
+              downloadTextFile("proofy-notering.txt", t);
+              showWarn("<b>Nerladdad:</b> proofy-notering.txt");
+              setTimeout(() => hideWarn(), 1200);
+            };
+          }
+        };
+        wireNoteButtons();
+
         if (!isValidVerifieringsId(verifieringsId)){
           setStatus("bad", "Kunde inte kontrolleras");
           $("idText").textContent = "Ogiltigt eller saknas (Verifierings-ID)";
           $("resultText").textContent = "Kunde inte kontrolleras: giltigt kontrollvärde (Verifierings-ID) saknas i länken.";
           $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt kontrollvärde (Verifierings-ID).";
+
+          updateCaseNote({
+            verifieringsId: "—",
+            statusText: "Kunde inte kontrolleras",
+            checkedLocalText: $("checkedTopLocal")?.textContent || "—",
+            checkedUtcText,
+            confirmedLocalText: "—",
+            confirmedUtcText: "—",
+            certLink,
+            verifyLink,
+            legalLine: "Ingen slutsats kan dras utan giltigt kontrollvärde (Verifierings-ID).",
+            certId: certId || "",
+            internalA: "—",
+            internalB: "—"
+          });
+
           showWarn(`
             <b>Fel:</b> Intyget saknar giltigt kontrollvärde (Verifierings-ID) i länken.<br/>
             Exempel: <span class="mono">/certificate.html?hash=0x…</span>
@@ -965,6 +1140,22 @@
         }
 
         $("idText").textContent = verifieringsId;
+
+        // Notering (preliminär)
+        updateCaseNote({
+          verifieringsId,
+          statusText: "Kontrollerar…",
+          checkedLocalText: $("checkedTopLocal")?.textContent || "—",
+          checkedUtcText,
+          confirmedLocalText: "—",
+          confirmedUtcText: "—",
+          certLink,
+          verifyLink,
+          legalLine: "Kontroll pågår.",
+          certId: certId || "",
+          internalA: "—",
+          internalB: "—"
+        });
 
         setStatus("warn", "Kontrollerar…");
         $("resultText").textContent = "Kontrollerar status vid kontrolltillfället…";
@@ -976,6 +1167,22 @@
           setStatus("bad", "Kunde inte kontrolleras");
           $("resultText").textContent = "Kunde inte kontrolleras vid kontrolltillfället.";
           $("legalLine").textContent = "Detta kan vara ett tillfälligt fel. Försök igen.";
+
+          updateCaseNote({
+            verifieringsId,
+            statusText: "Kunde inte kontrolleras",
+            checkedLocalText: $("checkedTopLocal")?.textContent || "—",
+            checkedUtcText,
+            confirmedLocalText: "—",
+            confirmedUtcText: "—",
+            certLink,
+            verifyLink,
+            legalLine: "Tillfälligt fel. Försök igen.",
+            certId: certId || "",
+            internalA: "—",
+            internalB: "—"
+          });
+
           updateMoreVisibility({ a:"—", b:"—" });
           showWarn(`
             <b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>
@@ -989,7 +1196,7 @@
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
-        // Valfria interna referenser – men vi presenterar dem som interna (utan tekniska termer)
+        // Valfria interna referenser – presenteras som intern/spårning
         const internalA = safeText(v?.evidence?.observedBlockNumber, "—");
         const internalB = safeText(v?.submission?.txHash, "—");
         $("internalRefA").textContent = internalA;
@@ -1000,29 +1207,70 @@
         setStatus(pres.tone, pres.badge);
         $("resultText").textContent = statusText;
 
-        if (legalText){
-          $("legalLine").textContent = legalText;
-        } else {
-          if (statusCode === "CONFIRMED"){
-            $("legalLine").textContent = "Status är bekräftad vid kontrolltillfället.";
-          } else if (statusCode === "SUBMITTED_UNCONFIRMED"){
-            $("legalLine").textContent = "Status är inskickad men ännu inte bekräftad vid kontrolltillfället.";
-          } else if (statusCode === "NOT_CONFIRMED"){
-            $("legalLine").textContent = "Status är inte bekräftad vid kontrolltillfället.";
-          } else {
-            $("legalLine").textContent = "Status kunde inte kontrolleras vid kontrolltillfället.";
-          }
-        }
+        const finalLegalLine = (() => {
+          if (legalText) return legalText;
+          if (statusCode === "CONFIRMED") return "Status är bekräftad vid kontrolltillfället.";
+          if (statusCode === "SUBMITTED_UNCONFIRMED") return "Status är inskickad men ännu inte bekräftad vid kontrolltillfället.";
+          if (statusCode === "NOT_CONFIRMED") return "Status är inte bekräftad vid kontrolltillfället.";
+          return "Status kunde inte kontrolleras vid kontrolltillfället.";
+        })();
+        $("legalLine").textContent = finalLegalLine;
+
+        let confirmedLocalPlain = "—";
+        let confirmedUtcPlain = "—";
 
         if (statusCode === "CONFIRMED" && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
           $("confirmedLocal").innerHTML = fmtSeHtml(confirmedAtUnix);
           $("confirmedUtc").textContent = fmtUtc(confirmedAtUnix);
+
+          // För noteringen vill vi ha plain-text (utan HTML)
+          try{
+            confirmedLocalPlain = new Intl.DateTimeFormat("sv-SE", {
+              timeZone:"Europe/Stockholm",
+              year:"numeric", month:"2-digit", day:"2-digit",
+              hour:"2-digit", minute:"2-digit", second:"2-digit"
+            }).format(new Date(confirmedAtUnix*1000)) + " (Europe/Stockholm)";
+          }catch{
+            confirmedLocalPlain = (new Date(confirmedAtUnix*1000)).toLocaleString("sv-SE");
+          }
+          confirmedUtcPlain = fmtUtc(confirmedAtUnix);
+
+          updateCaseNote({
+            verifieringsId,
+            statusText,
+            checkedLocalText: $("checkedTopLocal")?.textContent || "—",
+            checkedUtcText,
+            confirmedLocalText: confirmedLocalPlain,
+            confirmedUtcText: confirmedUtcPlain,
+            certLink,
+            verifyLink,
+            legalLine: finalLegalLine,
+            certId: certId || "",
+            internalA,
+            internalB
+          });
+
           hideWarn();
           return;
         }
 
         $("confirmedLocal").textContent = "—";
         $("confirmedUtc").textContent = "—";
+
+        updateCaseNote({
+          verifieringsId,
+          statusText,
+          checkedLocalText: $("checkedTopLocal")?.textContent || "—",
+          checkedUtcText,
+          confirmedLocalText: "—",
+          confirmedUtcText: "—",
+          certLink,
+          verifyLink,
+          legalLine: finalLegalLine,
+          certId: certId || "",
+          internalA,
+          internalB
+        });
 
         if (statusCode === "SUBMITTED_UNCONFIRMED"){
           showWarn(`<b>Inskickad – ej bekräftad.</b><br/>Intyget kan inte redovisa tidpunkt innan status är Bekräftad.`);
