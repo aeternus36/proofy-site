@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- VERIFY-HARDTEST v2026-01-15 / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe) -->
+<!-- VERIFY-HARDTEST v2026-01-15 / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe + dedupe) -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -27,7 +27,7 @@
       border:0 !important;
     }
 
-    /* ✅ Hardtest: bottenutrymme så widget/overlay inte täcker knappar */
+    /* ✅ HARDTEST: bottenutrymme så widget/overlay inte täcker knappar (mäts även via JS) */
     main{
       padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px) + var(--proofy-fab-space, 0px));
     }
@@ -82,10 +82,8 @@
       image-rendering: pixelated;
     }
 
-    /* ✅ Liten “Avbryt” som riktig knapp (inte naken länk) */
-    #abortBtn{
-      display:none;
-    }
+    /* ✅ Liten “Avbryt” som riktig knapp */
+    #abortBtn{ display:none; }
 
     /* ✅ Audit/version (neutral). Visas bara vid ?debug=1 */
     #auditVerifyVersion{
@@ -106,7 +104,7 @@
       overflow-wrap:anywhere;
     }
 
-    /* ✅ Prioritera “Öppna intyg” högre upp och tydligare */
+    /* ✅ Primära resultatknappar visas EN gång och högst upp i resultat */
     .resultTopActions{
       display:flex;
       gap:10px;
@@ -325,8 +323,8 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- ✅ “Öppna intyg” direkt efter rubrik (högre upp, syns alltid vid resultat) -->
-            <div class="resultTopActions">
+            <!-- ✅ ENDA platsen för resultatknappar (hindrar repetition) -->
+            <div class="resultTopActions" id="resultActions">
               <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
               <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
               <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
@@ -436,11 +434,49 @@
   if (document.documentElement.dataset[BIND_KEY] === "1") return;
   document.documentElement.dataset[BIND_KEY] = "1";
 
+  // ✅ HARDTEST: ta bort ev. dubletter om något (include/script) råkat injicera flera actionbars/knappar
+  function dedupeById(id){
+    const nodes = document.querySelectorAll('[id="' + id + '"]');
+    nodes.forEach((n, idx) => { if (idx > 0 && n && n.parentNode) n.parentNode.removeChild(n); });
+  }
+  [
+    "openCertBtn","copySummaryBtn","downloadReportBtn","resultActions",
+    "verifyBtn","abortBtn","statusPill","hashInput","fileInput","dropZone",
+    "selfLinkOut","selfQRTap","selfQRCode"
+  ].forEach(dedupeById);
+
   const urlInit = new URL(location.href);
   const DEBUG = urlInit.searchParams.get("debug") === "1";
 
   // ✅ Propagera ev. tx från länkar (för registerkedja / cert)
   const initialTx = (urlInit.searchParams.get("tx") || "").trim();
+
+  // ✅ HARDTEST: mät chat-widget / flytande bubbla och reservera bottenutrymme dynamiskt
+  const setFabSpace = (() => {
+    let raf = 0;
+    const apply = () => {
+      raf = 0;
+      const w = document.getElementById("chatWidget") || document.getElementById("chat-widget");
+      if (!w || !w.getBoundingClientRect) {
+        document.documentElement.style.setProperty("--proofy-fab-space", "0px");
+        return;
+      }
+      const r = w.getBoundingClientRect();
+      // hur mycket av botten som “upptas” av widgeten (inkl lite marginal)
+      const overlap = Math.max(0, (window.innerHeight - r.top)) + 12;
+      const px = Math.min(Math.max(overlap, 0), 280);
+      document.documentElement.style.setProperty("--proofy-fab-space", px.toFixed(0) + "px");
+    };
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(apply); };
+    window.addEventListener("resize", schedule, { passive:true });
+    window.addEventListener("scroll", schedule, { passive:true });
+    document.addEventListener("visibilitychange", schedule, { passive:true });
+    // initial (och efter att externa scripts kan ha laddat)
+    setTimeout(schedule, 0);
+    setTimeout(schedule, 800);
+    setTimeout(schedule, 2000);
+    return schedule;
+  })();
 
   const hashInput = $("hashInput");
   const pasteIdBtn = $("pasteIdBtn");
@@ -939,10 +975,8 @@
   function setBusy(v){
     busy = v;
 
-    // ✅ Avbryt-knapp med UI
     if (abortBtn) abortBtn.style.display = v ? "inline-flex" : "none";
 
-    // ✅ verifyBtn: används mest för “Kontrollera igen”
     verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
     setVerifyBtnTone(!verifyBtn.disabled);
 
@@ -1068,7 +1102,6 @@
     const autoKey = `${id.toLowerCase()}::${currentFile.name}::${currentFile.size}::${currentFile.lastModified}`;
     if (autoKey !== lastAutoKey && !busy) {
       lastAutoKey = autoKey;
-      // Låt UI uppdatera innan start
       setTimeout(() => {
         if (!busy && currentFile && isValidId(hashInput.value)) verifyNow({ auto:true });
       }, 0);
@@ -1279,6 +1312,7 @@
 
   async function verifyNow({ auto }){
     resetUI();
+    setFabSpace(); // uppdatera overlay-marginal innan resultat
 
     const refId = hashInput.value.trim();
     if (!isValidId(refId)) {
@@ -1310,7 +1344,7 @@
     const checkedSe = fmtSeEpoch(checkedEpoch);
     const checkedUtc = fmtUtcEpoch(checkedEpoch);
 
-    setStatus(auto ? "Kontrollerar…" : "Kontrollerar…");
+    setStatus("Kontrollerar…");
     setBusy(true);
 
     const myOp = ++opId;
@@ -1377,7 +1411,6 @@
           outRegUtc.textContent = "—";
         }
 
-        // Nyansering utan att blanda ihop filresultat och registerstatus
         if (statusText === "Inskickad – ej bekräftad") {
           outExplainTitle.textContent = match
             ? "Filversionen stämmer – men status är inskickad (ej bekräftad) vid kontrolltillfället."
@@ -1427,12 +1460,15 @@
       setStatus("Klar ✅");
       setBusy(false);
 
+      setFabSpace(); // efter att resultat + ev. widget renderats
+
     } catch (e){
       if (myOp !== opId) return;
       errorBox.style.display = "block";
       errorMsg.textContent = e?.message || "Tekniskt fel.";
       setStatus("Åtgärd krävs");
       setBusy(false);
+      setFabSpace();
     }
   }
 
@@ -1440,7 +1476,6 @@
   resetUI();
   setFile(null);
 
-  // debug-rad vid laddning om debug=1
   if (auditVerifyVersion && auditVerifyVersionValue) {
     if (DEBUG) {
       auditVerifyVersionValue.textContent = PROOFY_VERIFY_BUILD;
@@ -1449,9 +1484,9 @@
     }
   }
 
-  // URL/ID init + selflink init
   updateSelfLinkUI();
   updateValidationUI();
+  setFabSpace();
 
 })();
 </script>
