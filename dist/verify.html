@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- VERIFY-HARDTEST v2026-01-14 / audit-lock 5/5 -->
+<!-- VERIFY-HARDTEST v2026-01-15 / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe) -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -25,6 +25,11 @@
       clip:rect(0,0,0,0) !important;
       white-space:nowrap !important;
       border:0 !important;
+    }
+
+    /* ✅ Hardtest: bottenutrymme så widget/overlay inte täcker knappar */
+    main{
+      padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px) + var(--proofy-fab-space, 0px));
     }
 
     /* Visas endast vid behov (JS) */
@@ -77,6 +82,12 @@
       image-rendering: pixelated;
     }
 
+    /* ✅ Liten “Avbryt” som riktig knapp (inte naken länk) */
+    #abortBtn{
+      display:none;
+    }
+
+    /* ✅ Audit/version (neutral). Visas bara vid ?debug=1 */
     #auditVerifyVersion{
       display:none;
       margin-top:10px;
@@ -93,6 +104,15 @@
       color:rgba(234,240,255,.92);
       word-break:break-word;
       overflow-wrap:anywhere;
+    }
+
+    /* ✅ Prioritera “Öppna intyg” högre upp och tydligare */
+    .resultTopActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
     }
 
     @media print{
@@ -217,9 +237,11 @@
             Inget underlag valt.
           </div>
 
+          <!-- ✅ Färre klick: auto-kör när ID+fil finns. Knapp blir “Kontrollera igen” när resultat finns. -->
           <div class="actions" style="margin-top:14px">
             <div class="actionsRow">
               <button class="btn soft" id="verifyBtn" disabled>Kontrollera</button>
+              <button class="btn" id="abortBtn" type="button">Avbryt</button>
               <span id="statusPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Förbered kontroll</span>
             </div>
           </div>
@@ -303,6 +325,13 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
+            <!-- ✅ “Öppna intyg” direkt efter rubrik (högre upp, syns alltid vid resultat) -->
+            <div class="resultTopActions">
+              <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
+              <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
+              <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
+            </div>
+
             <div id="auditVerifyVersion">
               <div class="meta" style="opacity:.9;">Systemversion (verify.html)</div>
               <div class="mono" id="auditVerifyVersionValue">—</div>
@@ -345,18 +374,6 @@
                 <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
               </div>
 
-              <div class="actions" style="margin-top:12px;">
-                <div class="actionsRow">
-                  <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
-                  <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
-                  <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
-                </div>
-
-                <div class="actionsMetaRow">
-                  <span id="copySummaryPill" class="pill" aria-live="polite" aria-atomic="true" role="status"> </span>
-                </div>
-              </div>
-
               <p class="meta" style="margin-top:14px; opacity:.9;">
                 Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
                 Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
@@ -366,6 +383,12 @@
 
               <div class="meta">Notering (för ärendeakt)</div>
               <pre class="mono" id="summaryOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
+
+              <div class="actions" style="margin-top:12px;">
+                <div class="actionsMetaRow">
+                  <span id="copySummaryPill" class="pill" aria-live="polite" aria-atomic="true" role="status"> </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -405,11 +428,19 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ✅ Audit/version (neutral). Visas bara vid ?debug=1
-  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-14";
+  // ✅ LOCKED build/version (neutral). Visas bara vid ?debug=1
+  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-15 / LOCKED 5/5";
 
-  const urlForDebug = new URL(location.href);
-  const DEBUG = urlForDebug.searchParams.get("debug") === "1";
+  // --------- Hardtest: bind once ----------
+  const BIND_KEY = "__proofy_verify_bound";
+  if (document.documentElement.dataset[BIND_KEY] === "1") return;
+  document.documentElement.dataset[BIND_KEY] = "1";
+
+  const urlInit = new URL(location.href);
+  const DEBUG = urlInit.searchParams.get("debug") === "1";
+
+  // ✅ Propagera ev. tx från länkar (för registerkedja / cert)
+  const initialTx = (urlInit.searchParams.get("tx") || "").trim();
 
   const hashInput = $("hashInput");
   const pasteIdBtn = $("pasteIdBtn");
@@ -428,6 +459,7 @@
   const dropZone = $("dropZone");
   const fileInfo = $("fileInfo");
   const verifyBtn = $("verifyBtn");
+  const abortBtn = $("abortBtn");
   const statusPill = $("statusPill");
 
   const inputAlert = $("inputAlert");
@@ -467,10 +499,8 @@
   let opId = 0;
   let lastRun = null;
 
-  // --------- Hardtest: bind once ----------
-  const BIND_KEY = "__proofy_verify_bound";
-  if (document.documentElement.dataset[BIND_KEY] === "1") return;
-  document.documentElement.dataset[BIND_KEY] = "1";
+  // ✅ Färre klick: autostart när ID+fil finns (men bara en gång per kombination)
+  let lastAutoKey = "";
 
   function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
@@ -640,7 +670,7 @@
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
     try{
-      const r = await fetch(url, { method:"GET", cache:"no-store", signal: controller.signal });
+      const r = await fetch(url, { method:"GET", cache:"no-store", signal: controller.signal, credentials:"same-origin" });
       const j = await r.json().catch(() => ({}));
       return { ok: r.ok, status: r.status, data: j, aborted:false };
     } catch (e){
@@ -651,8 +681,8 @@
     }
   }
 
-  async function fetchVerify(id){
-    const base = `/api/verify?hash=${encodeURIComponent(id)}&t=${Date.now()}`;
+  async function fetchVerify(id, tx){
+    const base = `/api/verify?hash=${encodeURIComponent(id)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}&t=${Date.now()}`;
     const attempts = 3;
     const baseDelay = 520;
 
@@ -674,7 +704,7 @@
     return { ok:false, data:{}, status:0 };
   }
 
-  function setParamsInUrl({ hash, checked }){
+  function setParamsInUrl({ hash, checked, tx }){
     const url = new URL(location.href);
 
     if (hash) {
@@ -688,24 +718,29 @@
     if (checked) url.searchParams.set("checked", String(checked));
     else url.searchParams.delete("checked");
 
+    if (tx) url.searchParams.set("tx", String(tx));
+    else url.searchParams.delete("tx");
+
     if (DEBUG) url.searchParams.set("debug", "1");
     else url.searchParams.delete("debug");
 
     history.replaceState({}, "", url.toString());
   }
 
-  function buildSelfLink(id, checkedEpoch){
+  function buildSelfLink(id, checkedEpoch, tx){
     const u = new URL(`${location.origin}/verify.html`);
     u.searchParams.set("hash", id);
     if (checkedEpoch) u.searchParams.set("checked", String(checkedEpoch));
+    if (tx) u.searchParams.set("tx", String(tx));
     if (DEBUG) u.searchParams.set("debug", "1");
     return u.toString();
   }
 
-  function buildCertLink(id, checkedEpoch){
+  function buildCertLink(id, checkedEpoch, tx){
     const u = new URL(`${location.origin}/certificate.html`);
     u.searchParams.set("hash", id);
     if (checkedEpoch) u.searchParams.set("checked", String(checkedEpoch));
+    if (tx) u.searchParams.set("tx", String(tx));
     if (DEBUG) u.searchParams.set("debug", "1");
     return u.toString();
   }
@@ -903,9 +938,19 @@
 
   function setBusy(v){
     busy = v;
+
+    // ✅ Avbryt-knapp med UI
+    if (abortBtn) abortBtn.style.display = v ? "inline-flex" : "none";
+
+    // ✅ verifyBtn: används mest för “Kontrollera igen”
     verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
     setVerifyBtnTone(!verifyBtn.disabled);
-    verifyBtn.textContent = busy ? "Kontrollerar…" : (lastRun ? "Kontrollera igen" : "Kontrollera");
+
+    if (v) {
+      verifyBtn.textContent = "Kontrollerar…";
+    } else {
+      verifyBtn.textContent = lastRun ? "Kontrollera igen" : "Kontrollera";
+    }
   }
 
   function setExplainTone(match){
@@ -962,8 +1007,11 @@
       return;
     }
 
-    const checked = (new URL(location.href).searchParams.get("checked") || "").trim();
-    const link = buildSelfLink(id, checked || "");
+    const u = new URL(location.href);
+    const checked = (u.searchParams.get("checked") || "").trim();
+    const tx = (u.searchParams.get("tx") || initialTx || "").trim();
+
+    const link = buildSelfLink(id, checked || "", tx || "");
     selfLinkOut.textContent = link;
     applyCopyHover(selfLinkOut, copySelfLinkIconBtn, true);
     renderSelfQR(link);
@@ -1015,6 +1063,16 @@
 
     setStatus("Redo");
     setBusy(false);
+
+    // ✅ Auto-start: när redo och inte redan kört för denna kombination
+    const autoKey = `${id.toLowerCase()}::${currentFile.name}::${currentFile.size}::${currentFile.lastModified}`;
+    if (autoKey !== lastAutoKey && !busy) {
+      lastAutoKey = autoKey;
+      // Låt UI uppdatera innan start
+      setTimeout(() => {
+        if (!busy && currentFile && isValidId(hashInput.value)) verifyNow({ auto:true });
+      }, 0);
+    }
   }
 
   function setFile(file){
@@ -1035,8 +1093,10 @@
 
   if (isValidId(urlId)) {
     hashInput.value = urlId;
-    const existingChecked = (new URL(location.href).searchParams.get("checked") || "").trim();
-    setParamsInUrl({ hash: urlId, checked: existingChecked || "" });
+    const u = new URL(location.href);
+    const existingChecked = (u.searchParams.get("checked") || "").trim();
+    const existingTx = (u.searchParams.get("tx") || initialTx || "").trim();
+    setParamsInUrl({ hash: urlId, checked: existingChecked || "", tx: existingTx || "" });
   }
 
   // --------- Handlers ----------
@@ -1051,9 +1111,12 @@
       const candidate = (m ? m[0] : txt).trim();
       hashInput.value = candidate;
 
+      const u = new URL(location.href);
+      const checked = (u.searchParams.get("checked") || "").trim();
+      const tx = (u.searchParams.get("tx") || initialTx || "").trim();
+
       if (isValidId(candidate)) {
-        const checked = (new URL(location.href).searchParams.get("checked") || "").trim();
-        setParamsInUrl({ hash: candidate, checked: checked || "" });
+        setParamsInUrl({ hash: candidate, checked: checked || "", tx: tx || "" });
         showPill(idPill, "Klistrat ✓");
       } else {
         showPill(idPill, "Klistrat (kontrollera att du fått med hela)");
@@ -1068,7 +1131,7 @@
   if (clearIdBtn){
     clearIdBtn.addEventListener("click", () => {
       hashInput.value = "";
-      setParamsInUrl({ hash: "", checked: "" });
+      setParamsInUrl({ hash: "", checked: "", tx: "" });
       showPill(idPill, "Rensat");
       updateValidationUI();
       hashInput.focus();
@@ -1109,8 +1172,10 @@
 
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
-    const checked = (new URL(location.href).searchParams.get("checked") || "").trim();
-    if (isValidId(v)) setParamsInUrl({ hash: v, checked: checked || "" });
+    const u = new URL(location.href);
+    const checked = (u.searchParams.get("checked") || "").trim();
+    const tx = (u.searchParams.get("tx") || initialTx || "").trim();
+    if (isValidId(v)) setParamsInUrl({ hash: v, checked: checked || "", tx: tx || "" });
     updateValidationUI();
   });
 
@@ -1159,6 +1224,11 @@
       if (run.confirmedUtc) lines.push(`Tidpunkt (endast om bekräftad) – UTC: ${run.confirmedUtc}`);
     }
 
+    if (run.tx) {
+      lines.push("");
+      lines.push(`Registreringsreferens (valfri): ${run.tx}`);
+    }
+
     if (DEBUG) {
       lines.push("");
       lines.push(`Systemversion: ${PROOFY_VERIFY_BUILD}`);
@@ -1189,9 +1259,25 @@
     });
   }
 
-  verifyBtn.addEventListener("click", async () => {
-    if (busy) return;
+  // ✅ Avbryt
+  if (abortBtn){
+    abortBtn.addEventListener("click", () => {
+      if (!busy) return;
+      opId++; // invalidates current run
+      busy = false;
+      setStatus("Avbruten");
+      setBusy(false);
+      showPill(copySummaryPill, "Avbruten", 900);
+    });
+  }
 
+  // ✅ Manuell “Kontrollera igen”
+  verifyBtn.addEventListener("click", () => {
+    if (busy) return;
+    verifyNow({ auto:false });
+  });
+
+  async function verifyNow({ auto }){
     resetUI();
 
     const refId = hashInput.value.trim();
@@ -1215,13 +1301,16 @@
       return;
     }
 
+    const u = new URL(location.href);
+    const tx = (u.searchParams.get("tx") || initialTx || "").trim();
+
     const checkedEpoch = Math.floor(Date.now() / 1000);
-    setParamsInUrl({ hash: refId, checked: checkedEpoch });
+    setParamsInUrl({ hash: refId, checked: checkedEpoch, tx: tx || "" });
 
     const checkedSe = fmtSeEpoch(checkedEpoch);
     const checkedUtc = fmtUtcEpoch(checkedEpoch);
 
-    setStatus("Kontrollerar…");
+    setStatus(auto ? "Kontrollerar…" : "Kontrollerar…");
     setBusy(true);
 
     const myOp = ++opId;
@@ -1232,7 +1321,7 @@
 
       const match = (localId.toLowerCase() === refId.toLowerCase());
 
-      const verifyRes = await fetchVerify(refId);
+      const verifyRes = await fetchVerify(refId, tx || "");
       if (myOp !== opId) return;
 
       resultBox.style.display = "block";
@@ -1311,7 +1400,7 @@
       const confirmedUtc = (statusText === "Bekräftad" && confirmedAtUnix) ? fmtUtcEpoch(confirmedAtUnix) : null;
 
       if (openCertBtn) {
-        openCertBtn.href = buildCertLink(refId, checkedEpoch);
+        openCertBtn.href = buildCertLink(refId, checkedEpoch, tx || "");
         openCertBtn.style.display = "inline-flex";
       }
 
@@ -1323,7 +1412,8 @@
         confirmedSe,
         confirmedUtc,
         verifySe: checkedSe,
-        verifyUtc: checkedUtc
+        verifyUtc: checkedUtc,
+        tx: tx || ""
       };
 
       const summaryText = buildSummaryText(lastRun);
@@ -1344,13 +1434,13 @@
       setStatus("Åtgärd krävs");
       setBusy(false);
     }
-  });
+  }
 
   // init
   resetUI();
   setFile(null);
 
-  // visa debug-rad vid laddning om debug=1
+  // debug-rad vid laddning om debug=1
   if (auditVerifyVersion && auditVerifyVersionValue) {
     if (DEBUG) {
       auditVerifyVersionValue.textContent = PROOFY_VERIFY_BUILD;
@@ -1359,7 +1449,7 @@
     }
   }
 
-  // Selflink init
+  // URL/ID init + selflink init
   updateSelfLinkUI();
   updateValidationUI();
 
