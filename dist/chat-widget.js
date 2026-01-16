@@ -14,21 +14,13 @@
       :root{
         --proofy-safe-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
         --proofy-safe-right:  calc(16px + env(safe-area-inset-right, 0px));
-
-        /* IMPORTANT:
-           Do NOT define/override --proofy-fab-space here.
-           Pages own it (single source of truth in /assets/proofy.css).
-        */
+        /* IMPORTANT: do NOT define/override --proofy-fab-space here */
       }
 
-      /* IMPORTANT:
-         Do NOT add body padding here. Pages reserve space via --proofy-fab-space in CSS (e.g. main padding).
-         This avoids double/triple spacing and print side-effects. */
       body.__proofy-has-chat{
         padding-bottom: env(safe-area-inset-bottom) !important;
       }
 
-      /* We compute bottom offset dynamically in JS to avoid covering sticky action bars. */
       .proofy-chat-btn{
         position:fixed;
         right: var(--proofy-safe-right);
@@ -44,11 +36,10 @@
         box-shadow: 0 10px 30px rgba(0,0,0,.25);
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
-        will-change: auto; /* avoid jitter from transforms */
+        will-change: auto;
       }
       .proofy-chat-btn:active{ transform: translateY(1px); }
 
-      /* Optional scrim to make overlay intent clear (reduces accidental double-actions) */
       .proofy-scrim{
         position: fixed;
         inset: 0;
@@ -73,8 +64,6 @@
         font-family: system-ui;
         color: #eaf1ff;
       }
-
-      /* HARDTEST: no blur/backdrop-filter (prevents flicker / inconsistent rendering) */
 
       .proofy-header{
         display:flex;align-items:center;justify-content:space-between;
@@ -136,7 +125,6 @@
         color:#0b1020;font-weight:900;
       }
 
-      /* PRINT/PDF: widget must never appear or affect evidence layout */
       @media print{
         .proofy-chat-btn, .proofy-panel, .proofy-scrim{ display:none !important; }
         body.__proofy-has-chat{ padding-bottom: 0 !important; }
@@ -145,7 +133,6 @@
       document.head.appendChild(style);
     }
 
-    // Mark body (no layout side-effects beyond safe-area)
     document.body.classList.add("__proofy-has-chat");
 
     // Create scrim once
@@ -196,8 +183,6 @@
     if (!msgRoot || !input || !sendBtn || !closeBtn) return;
 
     // === HARDTEST: Never cover audit-critical action bars ===
-    // If a sticky action bar exists (e.g. #stickyBar), move the chat button/panel upward.
-    // Works even if sticky is created by other pages.
     const stickySelectors = ["#stickyBar", ".proofySticky"];
     let lastOffsetPx = 0;
 
@@ -210,14 +195,12 @@
     }
 
     function getStickyOffsetPx() {
-      // Minimum “lift” so button clears common sticky bar heights.
-      // If sticky is visible, add its height + small gap.
       try {
         for (const sel of stickySelectors) {
           const el = document.querySelector(sel);
           if (el && isElementVisible(el)) {
             const r = el.getBoundingClientRect();
-            const h = Math.max(0, Math.min(r.height, 120));
+            const h = Math.max(0, Math.min(r.height, 140));
             return Math.ceil(h + 12);
           }
         }
@@ -240,29 +223,29 @@
       }
     }
 
-    // Observe layout changes: scroll/resize + a light MutationObserver
-    const onTick = () => syncOffsets();
-    window.addEventListener("resize", onTick, { passive: true });
-    window.addEventListener("scroll", onTick, { passive: true });
+    window.addEventListener("resize", syncOffsets, { passive: true });
+    window.addEventListener("scroll", syncOffsets, { passive: true });
 
     try {
       const mo = new MutationObserver(() => syncOffsets());
       mo.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
     } catch {}
 
-    // Initial sync
     syncOffsets();
 
     function toggle(open) {
       isOpen = open ?? !isOpen;
       panel.style.display = isOpen ? "block" : "none";
       scrim.style.display = isOpen ? "block" : "none";
-
-      // Re-sync in case opening overlaps something (e.g., sticky appears on state change)
       syncOffsets();
-
       if (isOpen) input.focus();
       else button.focus();
+    }
+
+    // Exposed close helper for “close on audit action”
+    function closeIfOpen() {
+      if (!isOpen) return;
+      toggle(false);
     }
 
     button.onclick = () => toggle(true);
@@ -272,6 +255,80 @@
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && isOpen) toggle(false);
     });
+
+    // === HARDTEST: Close chat on explicit audit actions (whitelist) ===
+    // Only close when user activates a known “case file / evidence” action.
+    const closeOnSelectors = [
+      // Register / result actions
+      "#receiptBtn",
+      "#stickyReceiptBtn",
+      "#copyNoteBtn",
+      "#stickyCopyNoteBtn",
+      "#downloadNoteLink",
+
+      // Copy fields (ID/link click) + QR tap areas
+      "#localIdOut",
+      "#idOut",
+      "#linkOut",
+      "#qrTap",
+      "#manualLinkOut",
+      "#manualQrTap",
+
+      // Copy icon buttons (desktop hover icons)
+      "#copyIdIconBtn",
+      "#copyLinkIconBtn",
+
+      // Optional: if you later add “Copy” buttons for manual area
+      "#manualCopyBtn"
+    ];
+
+    function bindCloseOnAction() {
+      // Idempotent: don’t bind twice.
+      if (window.__proofyChatCloseBindings) return;
+      window.__proofyChatCloseBindings = true;
+
+      // Capture-phase listener: catches both button and keyboard activations
+      document.addEventListener(
+        "click",
+        (e) => {
+          if (!isOpen) return;
+          const t = e.target;
+          if (!(t instanceof Element)) return;
+          for (const sel of closeOnSelectors) {
+            try {
+              if (t.closest(sel)) {
+                // Close after the primary action has been triggered
+                setTimeout(closeIfOpen, 0);
+                return;
+              }
+            } catch {}
+          }
+        },
+        true
+      );
+
+      // Close on Enter/Space when focus is on a known action element
+      document.addEventListener(
+        "keydown",
+        (e) => {
+          if (!isOpen) return;
+          if (e.key !== "Enter" && e.key !== " ") return;
+          const t = e.target;
+          if (!(t instanceof Element)) return;
+          for (const sel of closeOnSelectors) {
+            try {
+              if (t.closest(sel)) {
+                setTimeout(closeIfOpen, 0);
+                return;
+              }
+            } catch {}
+          }
+        },
+        true
+      );
+    }
+
+    bindCloseOnAction();
 
     function addMessage(role, text) {
       const wrapper = document.createElement("div");
@@ -370,12 +427,9 @@
     function extractCopyableNote(text) {
       const t = String(text || "").trim();
       if (!t) return null;
-
-      // Acceptera både äldre och nyare rubriker
       const ok =
         /^PROOFY\s*–\s*Notering/i.test(t) ||
         /^PROOFY\s*–\s*Verifieringsnotering/i.test(t);
-
       if (!ok) return null;
       return t;
     }
@@ -454,7 +508,6 @@
       }
     });
 
-    // Första meddelandet: sakligt och granskningsnära
     const hello = addMessage(
       "assistant",
       "Hej! Beskriv kort vad du behöver i ärendet, eller välj ett alternativ."
