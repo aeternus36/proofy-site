@@ -15,8 +15,10 @@
         --proofy-safe-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
         --proofy-safe-right:  calc(16px + env(safe-area-inset-right, 0px));
 
-        /* Single source of truth for reserved space (pages use this in main padding) */
-        --proofy-fab-space: 108px;
+        /* IMPORTANT:
+           Do NOT define/override --proofy-fab-space here.
+           Pages own it (single source of truth in /assets/proofy.css).
+        */
       }
 
       /* IMPORTANT:
@@ -26,6 +28,7 @@
         padding-bottom: env(safe-area-inset-bottom) !important;
       }
 
+      /* We compute bottom offset dynamically in JS to avoid covering sticky action bars. */
       .proofy-chat-btn{
         position:fixed;
         right: var(--proofy-safe-right);
@@ -136,7 +139,6 @@
       /* PRINT/PDF: widget must never appear or affect evidence layout */
       @media print{
         .proofy-chat-btn, .proofy-panel, .proofy-scrim{ display:none !important; }
-        :root{ --proofy-fab-space: 0px !important; }
         body.__proofy-has-chat{ padding-bottom: 0 !important; }
       }
       `;
@@ -145,16 +147,6 @@
 
     // Mark body (no layout side-effects beyond safe-area)
     document.body.classList.add("__proofy-has-chat");
-
-    // Only set a fallback if the variable is missing/empty.
-    try {
-      const cs = getComputedStyle(document.documentElement)
-        .getPropertyValue("--proofy-fab-space")
-        .trim();
-      if (!cs) {
-        document.documentElement.style.setProperty("--proofy-fab-space", "108px");
-      }
-    } catch {}
 
     // Create scrim once
     let scrim = document.querySelector(".proofy-scrim");
@@ -172,7 +164,7 @@
       button.className = "proofy-chat-btn";
       button.type = "button";
       button.innerText = "Fråga oss";
-      button.setAttribute("aria-label", "Öppna Proofy Assist");
+      button.setAttribute("aria-label", "Öppna support");
       document.body.appendChild(button);
     }
 
@@ -182,15 +174,15 @@
       panel = document.createElement("div");
       panel.className = "proofy-panel";
       panel.setAttribute("role", "dialog");
-      panel.setAttribute("aria-label", "Proofy Assist");
+      panel.setAttribute("aria-label", "Support");
       panel.innerHTML = `
       <div class="proofy-header">
-        <div class="proofy-title"><span class="proofy-dot"></span>Proofy Assist</div>
+        <div class="proofy-title"><span class="proofy-dot"></span>Support</div>
         <button class="proofy-x" aria-label="Stäng" type="button">✕</button>
       </div>
       <div class="proofy-body"><div id="proofy-messages"></div></div>
       <div class="proofy-footer">
-        <input class="proofy-input" placeholder="Skriv en fråga..." />
+        <input class="proofy-input" placeholder="Skriv en fråga…" />
         <button class="proofy-send" type="button">Skicka</button>
       </div>
     `;
@@ -203,10 +195,71 @@
     const closeBtn = panel.querySelector(".proofy-x");
     if (!msgRoot || !input || !sendBtn || !closeBtn) return;
 
+    // === HARDTEST: Never cover audit-critical action bars ===
+    // If a sticky action bar exists (e.g. #stickyBar), move the chat button/panel upward.
+    // Works even if sticky is created by other pages.
+    const stickySelectors = ["#stickyBar", ".proofySticky"];
+    let lastOffsetPx = 0;
+
+    function isElementVisible(el) {
+      if (!el) return false;
+      const cs = window.getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    }
+
+    function getStickyOffsetPx() {
+      // Minimum “lift” so button clears common sticky bar heights.
+      // If sticky is visible, add its height + small gap.
+      try {
+        for (const sel of stickySelectors) {
+          const el = document.querySelector(sel);
+          if (el && isElementVisible(el)) {
+            const r = el.getBoundingClientRect();
+            const h = Math.max(0, Math.min(r.height, 120));
+            return Math.ceil(h + 12);
+          }
+        }
+      } catch {}
+      return 0;
+    }
+
+    function applyBottomOffset(px) {
+      const safe = "var(--proofy-safe-bottom)";
+      const off = Math.max(0, Number(px || 0));
+      button.style.bottom = off ? `calc(${safe} + ${off}px)` : safe;
+      panel.style.bottom = off ? `calc(${safe} + ${off}px + 66px)` : `calc(${safe} + 66px)`;
+    }
+
+    function syncOffsets() {
+      const px = getStickyOffsetPx();
+      if (px !== lastOffsetPx) {
+        lastOffsetPx = px;
+        applyBottomOffset(px);
+      }
+    }
+
+    // Observe layout changes: scroll/resize + a light MutationObserver
+    const onTick = () => syncOffsets();
+    window.addEventListener("resize", onTick, { passive: true });
+    window.addEventListener("scroll", onTick, { passive: true });
+
+    try {
+      const mo = new MutationObserver(() => syncOffsets());
+      mo.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
+    } catch {}
+
+    // Initial sync
+    syncOffsets();
+
     function toggle(open) {
       isOpen = open ?? !isOpen;
       panel.style.display = isOpen ? "block" : "none";
       scrim.style.display = isOpen ? "block" : "none";
+
+      // Re-sync in case opening overlaps something (e.g., sticky appears on state change)
+      syncOffsets();
 
       if (isOpen) input.focus();
       else button.focus();
@@ -317,7 +370,13 @@
     function extractCopyableNote(text) {
       const t = String(text || "").trim();
       if (!t) return null;
-      if (!/^PROOFY\s*–\s*Verifieringsnotering/i.test(t)) return null;
+
+      // Acceptera både äldre och nyare rubriker
+      const ok =
+        /^PROOFY\s*–\s*Notering/i.test(t) ||
+        /^PROOFY\s*–\s*Verifieringsnotering/i.test(t);
+
+      if (!ok) return null;
       return t;
     }
 
@@ -351,7 +410,8 @@
             : `Kunde inte läsa svaret. Status ${res.status}. Mejla kontakt@proofy.se.`;
 
         const answer = stripKnownLinks(rawAnswer);
-        loading.querySelector(".proofy-bubble").textContent = answer;
+        const bubble = loading.querySelector(".proofy-bubble");
+        if (bubble) bubble.textContent = answer;
 
         const baseCtas = Array.isArray(data?.ctas) ? data.ctas : [];
         addCtas(loading, baseCtas);
@@ -375,8 +435,10 @@
 
         chatHistory.push({ role: "assistant", content: answer });
       } catch {
-        loading.querySelector(".proofy-bubble").textContent =
-          "Tekniskt fel just nu. Mejla kontakt@proofy.se så hjälper vi dig.";
+        const bubble = loading.querySelector(".proofy-bubble");
+        if (bubble) {
+          bubble.textContent = "Tillfälligt fel. Mejla kontakt@proofy.se så hjälper vi dig.";
+        }
       } finally {
         sendBtn.disabled = false;
         input.disabled = false;
@@ -392,28 +454,28 @@
       }
     });
 
+    // Första meddelandet: sakligt och granskningsnära
     const hello = addMessage(
       "assistant",
-      "Hej! Välj ett alternativ, eller skriv kort vad du vill göra i ärendet."
+      "Hej! Beskriv kort vad du behöver i ärendet, eller välj ett alternativ."
     );
 
     addCtas(hello, [
-      { label: "Skapa Verifierings-ID", url: "/register.html" },
+      { label: "Fastställ referens", url: "/register.html" },
       { label: "Verifiera underlag", url: "/verify.html" },
       {
-        label: "Skapa verifieringsnotering",
+        label: "Skapa notering för ärendeakt",
         action: "prompt",
         prompt:
-          "Skapa en klistra-in-notering för revisionsfilen.\n" +
-          "Krav: börja med rubriken 'PROOFY – Verifieringsnotering'. Neutral byråton. Max 10 rader.\n" +
+          "Skapa en klistra-in-notering för ärendeakten.\n" +
+          "Krav: börja med rubriken 'PROOFY – Notering (ärendeakt/granskningsunderlag)'. Neutral byråton. Max 10 rader.\n" +
           "Fyll i med platshållare om fakta saknas:\n" +
-          "- Verifierings-ID: [Verifierings-ID]\n" +
-          "- Underlag/filnamn: [filnamn]\n" +
-          "- Resultat: [Oförändrat underlag / Avvikelse]\n" +
-          "- Registreringsstatus: [Registrerad / Ej registrerad / Okänt]\n" +
-          "- Registreringstid (om känd): [datum/tid]\n" +
-          "- Verifiering genomförd: [datum/tid]\n" +
-          "Avsluta med avgränsning: Proofy avser filversion (tekniskt fingeravtryck), inte innehållets riktighet.",
+          "- Kontrollkod: [kontrollkod]\n" +
+          "- Referensunderlag/filnamn: [filnamn]\n" +
+          "- Kontrolltid: [datum/tid]\n" +
+          "- Status vid kontrolltillfället: [Bekräftad / Ej bekräftad / Kunde inte kontrolleras]\n" +
+          "- Verifieringslänk: [länk]\n" +
+          "Avsluta med avgränsning: Kontrollen avser filversion och status vid kontrolltillfället; inte dokumentets innehåll, riktighet eller giltighet.",
       },
     ]);
   }
