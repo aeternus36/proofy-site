@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Proofy – Skapa kontrollvärde</title>
-  <meta name="description" content="Skapa kontrollvärde (Verifierings-ID) för en filversion lokalt i webbläsaren. Underlaget lämnar aldrig din dator." />
+  <title>Proofy – Fastställ referens</title>
+  <meta name="description" content="Fastställ en referens för en filversion och skapa underlag för senare kontroll. Underlaget lämnar inte din enhet." />
   <meta name="theme-color" content="#0b1220" />
   <meta name="robots" content="noindex" />
 
@@ -47,14 +47,14 @@
       background: rgba(255,255,255,.05);
     }
 
-    /* ✅ “Intyg”-knappen ser ut som en knapp men är en riktig <button> (mobil-säkert) */
+    /* “Intyg”-knapp */
     #receiptBtn{
       background: rgba(255,255,255,.04) !important;
       border: 1px solid rgba(255,255,255,.12) !important;
       color: rgba(234,240,255,.85) !important;
     }
 
-    /* ✅ Avbryt ska ha UI (inte bara textlänk) */
+    /* Avbryt ska ha UI */
     #abortBtn{
       display:inline-flex;
       align-items:center;
@@ -125,12 +125,12 @@
       text-underline-offset: 3px;
     }
 
-    /* ✅ Hårdtest: extra bottenpadding så “Fråga oss”-widget inte täcker knappar/länkar */
+    /* Hårdtest: extra bottenpadding så “Fråga oss”-widget inte täcker knappar/länkar */
     main{
       padding-bottom: calc(160px + var(--proofy-fab-space, 0px) + env(safe-area-inset-bottom));
     }
 
-    /* ✅ Sticky actions: visas bara när primära knappar inte syns (ingen onödig “följ med”) */
+    /* Sticky actions: visas bara när primära knappar inte syns */
     .proofySticky{
       position: fixed;
       left: 0;
@@ -189,6 +189,20 @@
       margin-bottom: calc(var(--proofy-fab-space, 120px));
     }
 
+    /* Juridiskt “ramverk” som snabbt går att scanna */
+    .legalBox{
+      margin-top:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      border-radius: 16px;
+      padding: 12px 14px;
+      max-width: 92ch;
+    }
+    .legalBoxTitle{
+      font-weight: 950;
+      margin-bottom: 6px;
+    }
+
     @media print{
       header, .actions, #chatWidget, #chat-widget, .mnav, .navActions, .proofySticky { display:none !important; }
       #qrTap, #manualQrTap { display:grid !important; border-color:#ddd !important; }
@@ -209,7 +223,7 @@
       </a>
 
       <div class="navActions" id="navActionsDesktop">
-        <a class="btn isCurrent" aria-current="page">Skapa kontrollvärde</a>
+        <a class="btn isCurrent" aria-current="page">Fastställ referens</a>
         <a class="btn soft" href="/verify.html">Verifiera underlag</a>
         <a class="btn soft" href="/pilot.html">Starta pilot</a>
         <a class="btn primary" href="/#kontakt">Boka kort demo</a>
@@ -221,7 +235,7 @@
         </summary>
 
         <nav class="mnavMenu" aria-label="Meny">
-          <a class="mnavLink" href="/register.html" aria-current="page">Skapa kontrollvärde</a>
+          <a class="mnavLink" href="/register.html" aria-current="page">Fastställ referens</a>
           <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/pilot.html">Starta pilot</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
@@ -245,17 +259,20 @@
   <div class="wrap">
     <div class="badge">Verifiering · revision · granskning</div>
 
-    <h1 class="pageTitle">Skapa kontrollvärde <span class="meta">(Verifierings-ID)</span></h1>
+    <h1 class="pageTitle">Fastställ referens <span class="meta">(för ärendeakt)</span></h1>
 
     <p class="lead">
-      Välj filversionen som ska vara <b>referens</b> i ärendet. Proofy skapar kontrollvärde lokalt och (om du vill) skickar en registrering för bekräftelse.
-      <strong>Underlaget lämnar aldrig din dator.</strong>
+      Välj filversionen som ska vara <b>referens</b> i ärendet. Proofy skapar en <b>kontrollkod</b> och, om tjänsten används med bekräftelse, skickas en registrering för senare kontroll.
+      <strong>Underlaget lämnar inte din enhet.</strong>
     </p>
 
-    <p class="meta" style="margin-top:-6px; opacity:.9; max-width:92ch;">
-      Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
-      Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.
-    </p>
+    <div class="legalBox" role="note" aria-label="Avgränsning och ansvar">
+      <div class="legalBoxTitle">Avgränsning</div>
+      <div class="small" style="margin:0;">
+        Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
+        Kontrollen avser endast <b>filversion</b> och <b>status</b> vid angivet kontrolltillfälle.
+      </div>
+    </div>
 
     <div class="card content" style="margin-top:14px;">
       <div class="grid2">
@@ -264,7 +281,7 @@
           <div style="font-weight:950; font-size:16px;">1. Referensunderlag (filversion)</div>
 
           <label for="fileInput" class="btn primary" style="display:inline-flex; margin-top:10px; cursor:pointer;">
-            Välj / byt underlag
+            Välj underlag
           </label>
           <input id="fileInput" type="file" style="display:none;" />
 
@@ -292,13 +309,13 @@
           </div>
 
           <div id="localIdBox" style="display:none; margin-top:12px;">
-            <div class="meta">Kontrollvärde (Verifierings-ID) – för notering i ärendeakt</div>
+            <div class="meta">Kontrollkod – för notering i ärendeakt</div>
 
             <div id="localIdOut"
                  class="mono"
                  tabindex="0"
                  role="button"
-                 aria-label="Kontrollvärde (klicka för att kopiera)"
+                 aria-label="Kontrollkod (klicka för att kopiera)"
                  title="Klicka för att kopiera"
                  style="
                    margin-top:8px;
@@ -320,8 +337,8 @@
           </p>
         </section>
 
-        <section aria-label="Dokumentationsrapport">
-          <div style="font-weight:950; font-size:16px;">2. Dokumentation</div>
+        <section aria-label="Sammanfattning och dokumentation">
+          <div style="font-weight:950; font-size:16px;">2. Sammanfattning (för granskning)</div>
           <div class="hr"></div>
 
           <div id="emptyState"
@@ -331,12 +348,12 @@
                  border-radius: 16px;
                  padding: 12px 14px;
                ">
-            <div style="font-weight:950; margin-bottom:6px;">Arbetsflöde (byrå/ärende)</div>
+            <div style="font-weight:950; margin-bottom:6px;">Så används detta i ett ärende</div>
             <div class="small">
-              1) Välj filversionen som ska vara <b>referens</b> i ärendet.<br/>
-              2) Proofy skapar kontrollvärde lokalt (<b>ingen uppladdning</b>).<br/>
-              3) Spara notering i <b>ärendeakt</b> och dela länk/QR vid intern kontroll, klientdialog eller granskning.<br/><br/>
-              <b>QR avser skanning med en annan enhet.</b> På samma mobil är det normalt svårt att skanna sin egen skärm.
+              1) Välj filversionen som ska vara <b>referens</b>.<br/>
+              2) Spara <b>kontrollkod</b> i <b>ärendeakten</b>.<br/>
+              3) Vid efterhandsgranskning kan kontroll göras med länk eller QR.<br/><br/>
+              <b>QR avser skanning med en annan enhet.</b>
             </div>
           </div>
 
@@ -349,11 +366,11 @@
             </div>
 
             <div style="margin-top:12px;">
-              <div class="meta">Kontrollvärde (Verifierings-ID)</div>
+              <div class="meta">Kontrollkod</div>
               <div class="small hintline">Klicka i fältet för att kopiera.</div>
 
               <div style="position:relative; margin-top:6px;">
-                <button type="button" id="copyIdIconBtn" aria-label="Kopiera kontrollvärde" title="Kopiera"
+                <button type="button" id="copyIdIconBtn" aria-label="Kopiera kontrollkod" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
@@ -363,7 +380,7 @@
                      tabindex="0"
                      role="button"
                      title="Klicka för att kopiera"
-                     aria-label="Kontrollvärde (klicka för att kopiera)"
+                     aria-label="Kontrollkod (klicka för att kopiera)"
                      style="
                        padding:10px 12px;
                        border-radius:12px;
@@ -378,10 +395,10 @@
               </div>
 
               <div class="meta" style="margin-top:12px;">Verifieringslänk (delbar)</div>
-              <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
+              <div class="small hintline">Klicka i fältet för att kopiera. Öppna i ny flik vid behov.</div>
 
               <div style="position:relative; margin-top:6px;">
-                <button type="button" id="copyLinkIconBtn" aria-label="Kopiera länk" title="Kopiera"
+                <button type="button" id="copyLinkIconBtn" aria-label="Kopiera verifieringslänk" title="Kopiera"
                         style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); cursor:pointer;">
                   <span aria-hidden="true" style="display:block; font-size:15px; line-height:28px;">⧉</span>
                 </button>
@@ -391,7 +408,7 @@
                    href="#"
                    target="_blank"
                    rel="noopener"
-                   title="Tryck för att öppna · Långtryck för att kopiera"
+                   title="Öppna i ny flik"
                    aria-label="Verifieringslänk (delbar)"
                    style="
                      display:block;
@@ -409,20 +426,18 @@
               </div>
 
               <p class="small" style="margin:10px 0 0; opacity:.95;">
-                <b>Notera:</b> Kontrollvärde och verifieringslänk skapas lokalt. För att kunna redovisa <b>Bekräftad</b> status vid senare kontroll behöver status vara <b>Bekräftad</b>.
+                <b>Notera:</b> För att senare kunna visa <b>Bekräftad</b> status behöver status vid kontrolltillfället vara <b>Bekräftad</b>.
               </p>
 
               <div class="hr" style="margin-top:14px;"></div>
 
-              <!-- ✅ Revisions-/juridik-flöde: tid & status + intyg först, QR därefter -->
               <div class="qrWrap" style="margin-top:12px;">
-                <!-- META först -->
                 <div style="min-width:240px; flex:1;">
                   <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
                   <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
                   <div id="checkedUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
                   <div class="small" style="margin-top:8px; opacity:.9;">
-                    Tidpunkten genereras i webbläsaren och kan vara fel om systemklockan är fel. Den utgör inte extern tidsstämpling.
+                    Tidpunkten hämtas från din enhet och kan vara fel om enhetens klocka är fel. Den är inte en extern tidsstämpling.
                   </div>
 
                   <div class="meta" style="margin-top:12px;">Status vid kontrolltillfället</div>
@@ -431,7 +446,6 @@
                   <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
 
-                  <!-- ✅ Primär åtgärd (synlig på sidan) -->
                   <div class="actions" style="margin-top:12px;">
                     <button class="btn soft" id="receiptBtn" type="button" style="display:none;">Öppna intyg</button>
                   </div>
@@ -449,11 +463,6 @@
                       Ladda ner som .txt:
                       <button class="inlineLinkBtn" id="downloadNoteLink" type="button">proofy-notering.txt</button>
                     </div>
-
-                    <p class="meta" style="margin:10px 0 0; opacity:.9;">
-                      Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
-                      Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.
-                    </p>
                   </div>
 
                   <details style="margin-top:12px;">
@@ -464,7 +473,7 @@
 
                     <div class="hr"></div>
 
-                    <div class="meta">Registreringsreferens (valfri)</div>
+                    <div class="meta">Referens för bekräftelse (valfri)</div>
                     <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
                     <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfri)</div>
@@ -475,7 +484,6 @@
                   </details>
                 </div>
 
-                <!-- QR därefter -->
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
 
@@ -508,19 +516,19 @@
 
     <section style="margin-top:14px;">
       <div class="card content">
-        <h2 style="margin:0 0 8px; font-size:18px;">Har du redan ett kontrollvärde?</h2>
+        <h2 style="margin:0 0 8px; font-size:18px;">Har du redan en kontrollkod?</h2>
         <p class="meta" style="margin:0 0 10px;">
-          Klistra in ett kontrollvärde (Verifierings-ID) så skapar vi verifieringslänk och QR direkt.
+          Klistra in kontrollkoden så skapar vi verifieringslänk och QR direkt.
         </p>
 
         <div class="grid2">
           <div>
-            <label class="meta" for="manualId">Kontrollvärde (Verifierings-ID)</label>
-            <input id="manualId" type="text" placeholder="0x…" autocomplete="off" spellcheck="false" style="margin-top:8px" />
+            <label class="meta" for="manualId">Kontrollkod</label>
+            <input id="manualId" type="text" placeholder="Klistra in kontrollkod" autocomplete="off" spellcheck="false" style="margin-top:8px" />
 
             <div class="actions" style="margin-top:12px;">
               <div class="actionsMetaRow">
-                <span id="manualPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Klistra in ID</span>
+                <span id="manualPill" class="pill" role="status" aria-live="polite" aria-atomic="true">Klistra in kod</span>
               </div>
             </div>
           </div>
@@ -533,7 +541,7 @@
                href="#"
                target="_blank"
                rel="noopener"
-               title="Tryck för att öppna · Långtryck för att kopiera"
+               title="Öppna i ny flik"
                style="
                  display:block;
                  margin-top:8px;
@@ -562,7 +570,7 @@
               </div>
               <div style="min-width:240px; flex:1;">
                 <div class="small" style="margin-top:0;">
-                  Bra när kontrollvärdet finns i en notering och du snabbt vill dela verifieringslänk.
+                  Bra när kontrollkoden finns i en notering och du snabbt vill dela verifieringslänk.
                 </div>
               </div>
             </div>
@@ -571,7 +579,7 @@
 
         <div class="hr"></div>
         <p class="small" style="margin:0;">
-          Proofy lagrar inte dokument. Verifiering bygger på jämförelse av filversioner mot en tidigare fastställd referens (kontrollvärde).
+          Proofy lagrar inte dokument. Kontroll bygger på jämförelse av filversioner mot en tidigare fastställd referens.
         </p>
       </div>
     </section>
@@ -586,7 +594,7 @@
         <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
         <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk kontroll av filversioner (kontrollvärden). Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
+          Proofy tillhandahåller kontroll av filversioner (kontrollkoder). Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
         </div>
       </div>
       <div class="links">
@@ -600,7 +608,6 @@
   </div>
 </footer>
 
-<!-- ✅ Sticky åtgärdsrad (visas bara när primära knappar inte syns) -->
 <div class="proofySticky" id="stickyBar" aria-hidden="true">
   <div class="inner">
     <div class="bar">
@@ -669,7 +676,6 @@
   const manualQrTap = $("manualQrTap");
   const manualQrBox = $("manualQrBox");
 
-  // ✅ Sticky actions
   const stickyBar = $("stickyBar");
   const stickyAbortBtn = $("stickyAbortBtn");
   const stickyCopyNoteBtn = $("stickyCopyNoteBtn");
@@ -685,13 +691,11 @@
 
   let lastRun = null;
   let lastProofyStatusCode = "";
-  let manualCurrentLink = null;
 
   let pollTimer = null;
   let pollStartAt = 0;
   let pollTxHash = null;
 
-  // ✅ Sticky visibility based on whether primary buttons are on-screen
   let receiptInView = false;
   let noteInView = false;
   let ioReady = false;
@@ -752,24 +756,37 @@
     return "0x" + bytesToHex(new Uint8Array(dig));
   }
 
-  function isIdFormat(v){
-    return typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v.trim());
+  function normalizeId(v){
+    const s = String(v || "").trim();
+    if (!s) return null;
+    if (/^0x[0-9a-fA-F]{64}$/.test(s)) return s.toLowerCase();
+    if (/^[0-9a-fA-F]{64}$/.test(s)) return ("0x" + s).toLowerCase();
+    return null;
   }
 
-  function buildVerifyLink(hash, checkedEpoch, txHash){
+  function buildVerifyLink(id, checkedEpoch, txHash){
     const p = new URL(`${location.origin}/verify.html`);
-    p.searchParams.set("hash", hash);
+    p.searchParams.set("hash", id);
     if (checkedEpoch) p.searchParams.set("checked", String(checkedEpoch));
     if (txHash) p.searchParams.set("tx", txHash);
     return p.toString();
   }
 
-  function buildCertLink(hash, checkedEpoch, txHash){
+  function buildCertLink(id, checkedEpoch, txHash){
     const p = new URL(`${location.origin}/certificate.html`);
-    p.searchParams.set("hash", hash);
+    p.searchParams.set("hash", id);
     if (checkedEpoch) p.searchParams.set("checked", String(checkedEpoch));
     if (txHash) p.searchParams.set("tx", txHash);
     return p.toString();
+  }
+
+  function formatLinkDisplay(fullUrl){
+    try{
+      const u = new URL(fullUrl);
+      return `${u.origin}${u.pathname} …`;
+    }catch{
+      return String(fullUrl || "—");
+    }
   }
 
   function isRetryableStatus(status){
@@ -791,7 +808,7 @@
     }
   }
 
-  async function safeRegisterRequest(hash){
+  async function safeRegisterRequest(id){
     const attempts = 3;
     const baseDelay = 650;
 
@@ -801,7 +818,7 @@
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ hash })
+          body: JSON.stringify({ hash: id })
         },
         25000
       );
@@ -1009,7 +1026,7 @@
     targetEl.innerHTML = "";
 
     if (!payload || payload === "—") {
-      targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">Ingen länk att koda.</div>`;
+      targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">Ingen länk att visa.</div>`;
       return;
     }
 
@@ -1048,7 +1065,7 @@
           correctLevel: levelH
         });
       }
-    } catch (e){
+    } catch {
       targetEl.innerHTML = `<div class="meta" style="color:#0b1220;">QR-koden kunde inte visas.</div>`;
       return;
     }
@@ -1089,23 +1106,23 @@
     const lines = [];
     lines.push("PROOFY – Notering (ärendeakt/granskningsunderlag)");
     lines.push("");
-    lines.push(`Kontrollvärde (Verifierings-ID): ${run.id || "—"}`);
+    lines.push(`Kontrollkod: ${run.id || "—"}`);
     if (run.fileName) lines.push(`Referensunderlag: ${run.fileName}`);
     lines.push("");
     lines.push(`Kontrolltid (detta kontrolltillfälle): ${run.checkedSe || "—"}`);
     lines.push(`Kontrolltid (UTC): ${run.checkedUtc || "—"}`);
-    lines.push("Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
+    lines.push("Tidpunkten hämtas från enheten och är inte en extern tidsstämpling.");
     lines.push("");
     lines.push(`Verifieringslänk: ${run.link || "—"}`);
     lines.push(`Intygslänk: ${run.certLink || "—"}`);
     lines.push("");
     lines.push(`Status vid kontrolltillfället: ${run.statusLine || "—"}`);
     if (run.timeSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.timeSe}`);
-    if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
+    if (run.txHash) lines.push(`Referens för bekräftelse (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
     lines.push("");
     lines.push("Avgränsning: Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.");
-    lines.push("Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.");
+    lines.push("Kontroll avser endast filversion och status vid angivet kontrolltillfälle.");
     return lines.join("\n");
   }
 
@@ -1130,7 +1147,6 @@
   }
 
   function shouldShowStickyForActions(){
-    // Under pågående arbete: alltid visa Avbryt i sticky
     if (busy) return true;
 
     const hasResult = !!currentId;
@@ -1139,10 +1155,8 @@
     const hasReceipt = !!receiptHref && receiptHref !== "—" && (receiptBtn && receiptBtn.style.display !== "none");
     const hasNote = !!lastRun && (copyNoteBtn && copyNoteBtn.style.display !== "none");
 
-    // Om inga actions finns: ingen sticky
     if (!hasReceipt && !hasNote) return false;
 
-    // När vi kan observera: visa bara om respektive primärknapp inte syns
     if (ioReady){
       let need = false;
       if (hasReceipt) need = need || !receiptInView;
@@ -1150,7 +1164,6 @@
       return need;
     }
 
-    // Fallback utan IO: visa som tidigare
     return true;
   }
 
@@ -1251,33 +1264,6 @@
 
     if (emptyState) emptyState.style.display = "block";
     syncSticky();
-  }
-
-  function setFile(file){
-    stopPolling();
-    currentFile = file || null;
-    currentId = null;
-    currentLink = null;
-    currentCheckedEpoch = null;
-    lastProofyStatusCode = "";
-    resetReport();
-
-    if (localIdBox) localIdBox.style.display = "none";
-    if (localIdOut) localIdOut.textContent = "—";
-    hidePill(copyIdPill);
-
-    if (!currentFile){
-      fileInfo.textContent = "Inget underlag valt.";
-      setPill("Välj underlag");
-      setBusy(false);
-      return;
-    }
-
-    const sizeMb = (currentFile.size/1024/1024);
-    const niceSize = (sizeMb < 10) ? sizeMb.toFixed(2) : sizeMb.toFixed(1);
-    fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
-
-    beginAutoFlow();
   }
 
   function markHeadline(type, text){
@@ -1387,7 +1373,7 @@
         stopPolling();
         lastProofyStatusCode = "NOT_CONFIRMED";
         updateReceiptLabel();
-        debugOut.textContent = "Kontroll kunde inte visa bekräftelse inom tidsgränsen. Du kan verifiera igen senare.";
+        debugOut.textContent = "Bekräftelse kunde inte visas inom tidsgränsen. Du kan kontrollera igen senare.";
         markHeadline("warn", "Ej bekräftad");
         regStatusOut.textContent = "Ej bekräftad";
         timeOut.textContent = "—";
@@ -1428,7 +1414,7 @@
             markHeadline("err", "Kunde inte kontrolleras");
             regStatusOut.textContent = "Kunde inte kontrolleras";
             timeOut.textContent = "—";
-            debugOut.textContent = "Inskick misslyckades. Du kan försöka igen eller kontakta Proofy och ange registreringsreferensen.";
+            debugOut.textContent = "Registrering misslyckades. Du kan försöka igen eller kontakta Proofy och ange referensen för bekräftelse.";
             applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN" } });
             return;
           }
@@ -1442,7 +1428,7 @@
             markHeadline("err", "Kunde inte kontrolleras");
             regStatusOut.textContent = "Kunde inte kontrolleras";
             timeOut.textContent = "—";
-            debugOut.textContent = "Verifiering misslyckades (tillfälligt fel). Ingen slutsats kan dras.";
+            debugOut.textContent = "Kontroll misslyckades (tillfälligt fel). Ingen slutsats kan dras.";
             applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN" } });
           } else {
             applyStatusToUI({ id, checkedEpoch, data: ver.data });
@@ -1470,7 +1456,7 @@
     setBusy(true);
     resetReport();
 
-    setPill("Skapar kontrollvärde…");
+    setPill("Tar fram kontrollkod…");
 
     const doAbort = () => {
       opId++;
@@ -1493,7 +1479,7 @@
 
       const id = await sha256Hex(currentFile);
       if (myOp !== opId) return;
-      if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt kontrollvärde.");
+      if (!normalizeId(id)) throw new Error("Det gick inte att ta fram en giltig kontrollkod.");
 
       currentId = id;
       currentLink = buildVerifyLink(id, checkedEpoch, null);
@@ -1504,15 +1490,9 @@
       if (localIdBox) localIdBox.style.display = "block";
       if (localIdOut) localIdOut.textContent = id;
 
-      copyTextToClipboard(id).then((ok) => {
-        if (ok) {
-          showPill(copyIdPill, "Kontrollvärde kopierat");
-          setTimeout(() => hidePill(copyIdPill), 1200);
-        }
-      });
-
       idOut.textContent = id;
-      linkOut.textContent = currentLink;
+
+      linkOut.textContent = formatLinkDisplay(currentLink);
       linkOut.href = currentLink;
 
       if (qrTap) qrTap.style.display = "grid";
@@ -1534,7 +1514,7 @@
       if (myOp !== opId) return;
 
       if (!reg.ok){
-        throw new Error("Registreringen kunde inte skickas in just nu. Kontrollvärde och länkar är skapade lokalt. Försök igen senare.");
+        throw new Error("Registreringen kunde inte skickas in just nu. Kontrollkod och länkar är framtagna. Försök igen senare.");
       }
 
       const data = reg.data || {};
@@ -1545,7 +1525,7 @@
         pollTxHash = txHash;
         currentLink = buildVerifyLink(id, checkedEpoch, txHash);
 
-        linkOut.textContent = currentLink;
+        linkOut.textContent = formatLinkDisplay(currentLink);
         linkOut.href = currentLink;
 
         if (qrTap) qrTap.style.display = "grid";
@@ -1553,7 +1533,7 @@
 
         pollTxAndVerify(myOp, id, txHash, checkedEpoch);
       } else {
-        debugOut.textContent = debugOut.textContent || "Registreringsreferens kunde inte visas. Du kan verifiera igen senare.";
+        debugOut.textContent = debugOut.textContent || "Referens för bekräftelse kunde inte visas. Du kan kontrollera igen senare.";
       }
 
       setPill("Klart ✅");
@@ -1564,7 +1544,7 @@
       if (myOp !== opId) return;
 
       if (errorBox) errorBox.style.display = "block";
-      if (errorMsg) errorMsg.textContent = (e?.message || "Tillfälligt fel. Kontrollvärde/länk kan vara skapade lokalt.");
+      if (errorMsg) errorMsg.textContent = (e?.message || "Tillfälligt fel. Kontrollkod/länk kan vara framtagna.");
 
       if (currentId && currentLink){
         if (resultBox) resultBox.style.display = "block";
@@ -1589,13 +1569,39 @@
         });
       }
 
-      setPill("Klart (lokalt) ✅");
+      setPill("Klart (utan bekräftelse) ✅");
       setBusy(false);
       syncSticky();
     }
   }
 
-  // ✅ Setup: observe when primary buttons are visible to decide sticky
+  function setFile(file){
+    stopPolling();
+    currentFile = file || null;
+    currentId = null;
+    currentLink = null;
+    currentCheckedEpoch = null;
+    lastProofyStatusCode = "";
+    resetReport();
+
+    if (localIdBox) localIdBox.style.display = "none";
+    if (localIdOut) localIdOut.textContent = "—";
+    hidePill(copyIdPill);
+
+    if (!currentFile){
+      fileInfo.textContent = "Inget underlag valt.";
+      setPill("Välj underlag");
+      setBusy(false);
+      return;
+    }
+
+    const sizeMb = (currentFile.size/1024/1024);
+    const niceSize = (sizeMb < 10) ? sizeMb.toFixed(2) : sizeMb.toFixed(1);
+    fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
+
+    beginAutoFlow();
+  }
+
   function setupStickyObservers(){
     try{
       if (!("IntersectionObserver" in window)) { ioReady = false; return; }
@@ -1662,7 +1668,7 @@
     copyLinkIconBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill, okText:"Länk kopierad ✅" });
+      await copyWithFeedback({ text: currentLink, pillEl: copyLinkPill, okText:"Länk kopierad ✅" });
     });
   }
 
@@ -1705,23 +1711,26 @@
     if (f) setFile(f);
   });
 
-  function setManualState(id){
-    const clean = (id || "").trim();
-    if (!/^0x[0-9a-fA-F]{64}$/.test(clean)){
+  // Manuell kontrollkod -> accept med eller utan 0x, normalisera tyst
+  let manualCurrentLink = null;
+
+  function setManualState(raw){
+    const id = normalizeId(raw);
+    if (!id){
       manualCurrentLink = null;
       manualLinkOut.textContent = "—";
       manualLinkOut.href = "#";
       manualQrBox.innerHTML = "";
       if (manualQrTap) manualQrTap.style.display = "none";
-      setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
+      setManualPill(String(raw || "").trim() ? "Ogiltig kod" : "Klistra in kod");
       return null;
     }
 
     const checkedEpoch = Math.floor(Date.now() / 1000);
-    const link = buildVerifyLink(clean, checkedEpoch, null);
+    const link = buildVerifyLink(id, checkedEpoch, null);
     manualCurrentLink = link;
 
-    manualLinkOut.textContent = link;
+    manualLinkOut.textContent = formatLinkDisplay(link);
     manualLinkOut.href = link;
 
     if (manualQrTap) manualQrTap.style.display = "grid";
