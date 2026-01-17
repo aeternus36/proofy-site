@@ -134,13 +134,15 @@
       text-underline-offset: 3px;
     }
 
-    /* ✅ Sticky actions: sits ABOVE chat FAB */
+    /* ✅ Sticky actions: sits ABOVE chat FAB (use real FAB height, not --proofy-fab-space) */
     .proofySticky{
       position: fixed;
       left: 0;
       right: 0;
-      bottom: calc(env(safe-area-inset-bottom) + 12px + var(--proofy-fab-space, 0px));
-      z-index: 6000; /* above chat */
+      /* IMPORTANT: --proofy-fab-space is reserved padding, not the button height.
+         Use a constant that matches the FAB footprint (≈66px inc. gap). */
+      bottom: calc(env(safe-area-inset-bottom) + 12px + 66px);
+      z-index: 7000; /* chat widget usually higher; this is fine */
       display: none;
       pointer-events: none;
     }
@@ -442,6 +444,9 @@
 
               <div class="hr" style="margin-top:14px;"></div>
 
+              <!-- ✅ Sentinel: when QR-zone is near, hide sticky bar so it never covers evidence -->
+              <div id="stickyHideSentinel" style="height:1px;"></div>
+
               <div class="qrWrap" style="margin-top:12px;">
                 <div>
                   <div class="meta" style="margin-bottom:8px;">QR-kod (för skanning)</div>
@@ -579,6 +584,9 @@
       </div>
     </section>
 
+    <!-- ✅ Sentinel: near end of main -> hide sticky so it never overlaps footer -->
+    <div id="stickyEndSentinel" style="height:1px;"></div>
+
   </div>
 </main>
 
@@ -603,13 +611,13 @@
   </div>
 </footer>
 
-<!-- ✅ Sticky åtgärdsrad (visas bara när primära knappar inte syns) -->
+<!-- ✅ Sticky åtgärdsrad (visas bara när primära knappar inte syns + döljs vid QR/slut) -->
 <div class="proofySticky" id="stickyBar" aria-hidden="true">
   <div class="inner">
     <div class="bar">
       <button class="btnSecondary" id="stickyAbortBtn" type="button" style="display:none;">Avbryt</button>
       <a class="btnPrimary" id="stickyOpenVerifyBtn" href="#" target="_blank" rel="noopener" style="display:none; text-decoration:none;">Öppna verifiering</a>
-      <a class="btnSecondary" id="stickyOpenCertBtn" href="#" style="display:none; text-decoration:none;">Öppna intyg</a>
+      <a class="btnSecondary" id="stickyOpenCertBtn" href="#" target="_blank" rel="noopener" style="display:none; text-decoration:none;">Öppna intyg</a>
       <button class="btnSecondary" id="stickyCopyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
     </div>
   </div>
@@ -646,6 +654,10 @@
   const openCertBtn = $("openCertBtn");
   const copyNoteTopBtn = $("copyNoteTopBtn");
   const primaryActionsAnchor = $("primaryActionsAnchor");
+
+  // Sticky hide zones
+  const stickyHideSentinel = $("stickyHideSentinel");
+  const stickyEndSentinel = $("stickyEndSentinel");
 
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
@@ -698,8 +710,10 @@
   let pollStartAt = 0;
   let pollTxHash = null;
 
-  // Sticky visibility via anchor in view (stable: anchor always exists)
+  // Sticky visibility state
   let actionsInView = false;
+  let hideZoneInView = false;  // near QR/notering
+  let endZoneInView = false;   // near end/footer
   let ioReady = false;
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -1053,9 +1067,18 @@
   }
 
   function shouldShowStickyForActions(){
+    // Never show sticky near QR/notering or near footer/end
+    if (hideZoneInView || endZoneInView) return false;
+
+    // Show while busy so user can abort (unless we're in hide zones)
     if (busy) return true;
+
+    // Only if we have a result
     if (!currentId) return false;
+
+    // If IO is ready: only show when top actions are NOT in view
     if (ioReady) return !actionsInView;
+
     return true;
   }
 
@@ -1425,16 +1448,29 @@
       if (!("IntersectionObserver" in window)) { ioReady = false; return; }
       if (!primaryActionsAnchor) { ioReady = false; return; }
 
+      // Use generous rootMargin so we hide sticky BEFORE it can cover QR/notering/footer
       const io = new IntersectionObserver((entries) => {
         for (const entry of entries){
           if (entry.target === primaryActionsAnchor){
-            actionsInView = !!entry.isIntersecting && entry.intersectionRatio >= 0.35;
+            actionsInView = !!entry.isIntersecting && entry.intersectionRatio >= 0.2;
+          }
+          if (entry.target === stickyHideSentinel){
+            hideZoneInView = !!entry.isIntersecting;
+          }
+          if (entry.target === stickyEndSentinel){
+            endZoneInView = !!entry.isIntersecting;
           }
         }
         syncSticky();
-      }, { threshold: [0, 0.15, 0.35, 0.6] });
+      }, {
+        threshold: [0, 0.1, 0.2, 0.35],
+        rootMargin: "0px 0px -30% 0px"
+      });
 
       io.observe(primaryActionsAnchor);
+      if (stickyHideSentinel) io.observe(stickyHideSentinel);
+      if (stickyEndSentinel) io.observe(stickyEndSentinel);
+
       ioReady = true;
       syncSticky();
     }catch{
