@@ -24,17 +24,6 @@
       border:0 !important;
     }
 
-    /* Reserve space for BOTH chat FAB + sticky bar (audit-safe single source) */
-    :root{
-      --proofy-sticky-space: 84px; /* approx height incl. safe breathing */
-    }
-
-    main{
-      /* proofy.css already reserves var(--proofy-fab-space);
-         here we add sticky space too (register page only). */
-      padding-bottom: calc(60px + var(--proofy-fab-space, 0px) + var(--proofy-sticky-space) + env(safe-area-inset-bottom));
-    }
-
     .actionsRow{
       display:flex;
       flex-wrap:wrap;
@@ -134,55 +123,6 @@
       text-underline-offset: 3px;
     }
 
-    /* ✅ Sticky actions: sits ABOVE chat FAB (use real FAB height, not --proofy-fab-space) */
-    .proofySticky{
-      position: fixed;
-      left: 0;
-      right: 0;
-      /* IMPORTANT: --proofy-fab-space is reserved padding, not the button height.
-         Use a constant that matches the FAB footprint (≈66px inc. gap). */
-      bottom: calc(env(safe-area-inset-bottom) + 12px + 66px);
-      z-index: 7000; /* chat widget usually higher; this is fine */
-      display: none;
-      pointer-events: none;
-    }
-    .proofySticky .inner{
-      pointer-events: auto;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 14px;
-    }
-    .proofySticky .bar{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:flex-end;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(11,18,32,.92);
-      padding: 10px;
-      box-shadow: 0 12px 32px rgba(0,0,0,.35);
-    }
-    .proofySticky .btnPrimary,
-    .proofySticky .btnSecondary{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border-radius: 12px;
-      padding: 10px 14px;
-      font-weight: 950;
-      cursor:pointer;
-      -webkit-tap-highlight-color: transparent;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      color: rgba(234,240,255,.90);
-    }
-    .proofySticky .btnPrimary{
-      border-color: rgba(255,255,255,.18);
-      background: rgba(255,255,255,.10);
-      color: rgba(234,240,255,.94);
-    }
-
     /* A revision-first "top actions" card */
     .revTop{
       border:1px solid rgba(255,255,255,.14);
@@ -228,7 +168,7 @@
     }
 
     @media print{
-      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions, .proofySticky { display:none !important; }
+      header, .actions, #chatWidget, #chat-widget, .mnav, .navActions { display:none !important; }
       #qrTap, #manualQrTap { display:grid !important; border-color:#ddd !important; }
       #qrTap, #qrBox, #manualQrTap, #manualQrBox{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     }
@@ -376,7 +316,7 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- ✅ REVISIONSRAD HÖGST UPP -->
+            <!-- ✅ Revisions-/juridik: tid + primära åtgärder högst upp -->
             <div class="revTop" id="revTop">
               <div class="revGrid">
                 <div>
@@ -394,9 +334,6 @@
 
                   <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
-
-                  <!-- Anchor observed for sticky -->
-                  <div id="primaryActionsAnchor" style="height:1px;"></div>
 
                   <div class="revActions" aria-label="Primära åtgärder">
                     <a id="openVerifyBtn" class="revBtn primary" href="#" style="display:none;">Öppna verifiering</a>
@@ -443,9 +380,6 @@
               </div>
 
               <div class="hr" style="margin-top:14px;"></div>
-
-              <!-- ✅ Sentinel: when QR-zone is near, hide sticky bar so it never covers evidence -->
-              <div id="stickyHideSentinel" style="height:1px;"></div>
 
               <div class="qrWrap" style="margin-top:12px;">
                 <div>
@@ -584,9 +518,6 @@
       </div>
     </section>
 
-    <!-- ✅ Sentinel: near end of main -> hide sticky so it never overlaps footer -->
-    <div id="stickyEndSentinel" style="height:1px;"></div>
-
   </div>
 </main>
 
@@ -610,18 +541,6 @@
     </div>
   </div>
 </footer>
-
-<!-- ✅ Sticky åtgärdsrad (visas bara när primära knappar inte syns + döljs vid QR/slut) -->
-<div class="proofySticky" id="stickyBar" aria-hidden="true">
-  <div class="inner">
-    <div class="bar">
-      <button class="btnSecondary" id="stickyAbortBtn" type="button" style="display:none;">Avbryt</button>
-      <a class="btnPrimary" id="stickyOpenVerifyBtn" href="#" target="_blank" rel="noopener" style="display:none; text-decoration:none;">Öppna verifiering</a>
-      <a class="btnSecondary" id="stickyOpenCertBtn" href="#" target="_blank" rel="noopener" style="display:none; text-decoration:none;">Öppna intyg</a>
-      <button class="btnSecondary" id="stickyCopyNoteBtn" type="button" style="display:none;">Kopiera notering</button>
-    </div>
-  </div>
-</div>
 
 <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
@@ -649,15 +568,10 @@
   const qrTap = $("qrTap");
   const qrBox = $("qrBox");
 
-  // NEW top actions
+  // Top actions
   const openVerifyBtn = $("openVerifyBtn");
   const openCertBtn = $("openCertBtn");
   const copyNoteTopBtn = $("copyNoteTopBtn");
-  const primaryActionsAnchor = $("primaryActionsAnchor");
-
-  // Sticky hide zones
-  const stickyHideSentinel = $("stickyHideSentinel");
-  const stickyEndSentinel = $("stickyEndSentinel");
 
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
@@ -687,13 +601,6 @@
   const manualQrBox = $("manualQrBox");
   const manualOpenVerifyBtn = $("manualOpenVerifyBtn");
 
-  // Sticky
-  const stickyBar = $("stickyBar");
-  const stickyAbortBtn = $("stickyAbortBtn");
-  const stickyCopyNoteBtn = $("stickyCopyNoteBtn");
-  const stickyOpenVerifyBtn = $("stickyOpenVerifyBtn");
-  const stickyOpenCertBtn = $("stickyOpenCertBtn");
-
   let currentFile = null;
   let currentId = null;
   let currentLink = null;
@@ -703,18 +610,11 @@
   let opId = 0;
 
   let lastRun = null;
-  let lastProofyStatusCode = "";
   let manualCurrentLink = null;
 
   let pollTimer = null;
   let pollStartAt = 0;
   let pollTxHash = null;
-
-  // Sticky visibility state
-  let actionsInView = false;
-  let hideZoneInView = false;  // near QR/notering
-  let endZoneInView = false;   // near end/footer
-  let ioReady = false;
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -1060,60 +960,10 @@
     pollTxHash = null;
   }
 
-  function setStickyVisible(v){
-    if (!stickyBar) return;
-    stickyBar.style.display = v ? "block" : "none";
-    stickyBar.setAttribute("aria-hidden", v ? "false" : "true");
-  }
-
-  function shouldShowStickyForActions(){
-    // Never show sticky near QR/notering or near footer/end
-    if (hideZoneInView || endZoneInView) return false;
-
-    // Show while busy so user can abort (unless we're in hide zones)
-    if (busy) return true;
-
-    // Only if we have a result
-    if (!currentId) return false;
-
-    // If IO is ready: only show when top actions are NOT in view
-    if (ioReady) return !actionsInView;
-
-    return true;
-  }
-
-  function syncSticky(){
-    if (!stickyBar) return;
-
-    if (stickyAbortBtn) stickyAbortBtn.style.display = busy ? "inline-flex" : "none";
-
-    const hasResult = !!currentId;
-    const hasVerify = !!currentLink && currentLink !== "—";
-    const hasCert = !!lastRun?.certLink && lastRun.certLink !== "—";
-    const hasNote = !!lastRun;
-
-    if (stickyOpenVerifyBtn) stickyOpenVerifyBtn.style.display = (hasResult && hasVerify && !busy) ? "inline-flex" : "none";
-    if (stickyOpenCertBtn) stickyOpenCertBtn.style.display = (hasResult && hasCert && !busy) ? "inline-flex" : "none";
-    if (stickyCopyNoteBtn) stickyCopyNoteBtn.style.display = (hasResult && hasNote && !busy) ? "inline-flex" : "none";
-
-    if (stickyOpenVerifyBtn && hasVerify) stickyOpenVerifyBtn.href = currentLink;
-    if (stickyOpenCertBtn && hasCert) stickyOpenCertBtn.href = lastRun.certLink;
-
-    if (stickyCopyNoteBtn){
-      stickyCopyNoteBtn.onclick = async () => {
-        if (!lastRun) return;
-        await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
-      };
-    }
-
-    setStickyVisible(shouldShowStickyForActions());
-  }
-
   function setBusy(v){
     busy = v;
     setAriaBusy(v);
     if (abortBtn) abortBtn.style.display = busy ? "inline-flex" : "none";
-    syncSticky();
   }
 
   function resetReport(){
@@ -1136,7 +986,6 @@
     if (checkedSeOut) checkedSeOut.textContent = "—";
     if (checkedUtcOut) checkedUtcOut.textContent = "—";
 
-    // top actions
     if (openVerifyBtn) openVerifyBtn.style.display = "none";
     if (openCertBtn) openCertBtn.style.display = "none";
     if (copyNoteTopBtn) copyNoteTopBtn.style.display = "none";
@@ -1151,11 +1000,9 @@
     if (copyNoteBtn) copyNoteBtn.style.display = "none";
 
     lastRun = null;
-    lastProofyStatusCode = "";
     stopPolling();
 
     if (emptyState) emptyState.style.display = "block";
-    syncSticky();
   }
 
   function markHeadline(type, text){
@@ -1184,7 +1031,6 @@
   }
 
   function applyPrimaryButtons(){
-    // Verify
     if (openVerifyBtn){
       if (currentLink && currentLink !== "—"){
         openVerifyBtn.href = currentLink;
@@ -1193,7 +1039,7 @@
         openVerifyBtn.style.display = "none";
       }
     }
-    // Cert
+
     if (openCertBtn){
       if (lastRun?.certLink){
         openCertBtn.href = lastRun.certLink;
@@ -1204,7 +1050,7 @@
         openCertBtn.style.display = "none";
       }
     }
-    // Copy note
+
     if (copyNoteTopBtn){
       if (lastRun){
         copyNoteTopBtn.style.display = "inline-flex";
@@ -1215,7 +1061,6 @@
         copyNoteTopBtn.style.display = "none";
       }
     }
-    syncSticky();
   }
 
   function applyStatusToUI({ id, checkedEpoch, data }){
@@ -1331,11 +1176,9 @@
       setBusy(false);
       setPill("Avbruten – välj underlag igen");
       markHeadline("warn", "Avbruten");
-      syncSticky();
     };
 
     if (abortBtn) abortBtn.onclick = doAbort;
-    if (stickyAbortBtn) stickyAbortBtn.onclick = doAbort;
 
     try{
       const checkedEpoch = Math.floor(Date.now() / 1000);
@@ -1361,11 +1204,6 @@
       linkOut.textContent = currentLink;
       linkOut.href = currentLink;
 
-      if (openVerifyBtn){
-        openVerifyBtn.href = currentLink;
-        openVerifyBtn.style.display = "inline-flex";
-      }
-
       if (qrTap) qrTap.style.display = "grid";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
       attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
@@ -1390,10 +1228,6 @@
 
         linkOut.textContent = currentLink;
         linkOut.href = currentLink;
-        if (openVerifyBtn){
-          openVerifyBtn.href = currentLink;
-          openVerifyBtn.style.display = "inline-flex";
-        }
 
         if (qrTap) qrTap.style.display = "grid";
         requestAnimationFrame(() => renderQr(qrBox, currentLink));
@@ -1403,7 +1237,6 @@
 
       setPill("Klart ✅");
       setBusy(false);
-      syncSticky();
 
     } catch (e){
       if (myOp !== opId) return;
@@ -1413,7 +1246,6 @@
 
       setPill("Klart (lokalt) ✅");
       setBusy(false);
-      syncSticky();
     }
   }
 
@@ -1441,41 +1273,6 @@
     fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
 
     beginAutoFlow();
-  }
-
-  function setupStickyObservers(){
-    try{
-      if (!("IntersectionObserver" in window)) { ioReady = false; return; }
-      if (!primaryActionsAnchor) { ioReady = false; return; }
-
-      // Use generous rootMargin so we hide sticky BEFORE it can cover QR/notering/footer
-      const io = new IntersectionObserver((entries) => {
-        for (const entry of entries){
-          if (entry.target === primaryActionsAnchor){
-            actionsInView = !!entry.isIntersecting && entry.intersectionRatio >= 0.2;
-          }
-          if (entry.target === stickyHideSentinel){
-            hideZoneInView = !!entry.isIntersecting;
-          }
-          if (entry.target === stickyEndSentinel){
-            endZoneInView = !!entry.isIntersecting;
-          }
-        }
-        syncSticky();
-      }, {
-        threshold: [0, 0.1, 0.2, 0.35],
-        rootMargin: "0px 0px -30% 0px"
-      });
-
-      io.observe(primaryActionsAnchor);
-      if (stickyHideSentinel) io.observe(stickyHideSentinel);
-      if (stickyEndSentinel) io.observe(stickyEndSentinel);
-
-      ioReady = true;
-      syncSticky();
-    }catch{
-      ioReady = false;
-    }
   }
 
   // Copy handlers
@@ -1573,8 +1370,6 @@
   setFile(null);
   setBusy(false);
   setManualState("");
-  setupStickyObservers();
-  syncSticky();
 })();
 </script>
 
