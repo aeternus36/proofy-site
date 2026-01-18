@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- CERTIFICATE v2026-01-18 / SE audit+juridik / UI: no internal labels -->
+<!-- CERTIFICATE v2026-01-18b / SE audit+juridik / HARDTEST 5/5 / UI: no internal labels -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
@@ -31,7 +31,7 @@
         --qr-frame: rgba(255,255,255,.10);
         --qr-shadow: 0 14px 42px rgba(0,0,0,.35);
 
-        /* Fallback-space så chat/FAB aldrig täcker innehåll på mobil */
+        /* Fallback-space så chat/FAB aldrig täcker innehåll på mobil (JS kan justera) */
         --proofy-fab-space: 120px;
       }
 
@@ -381,9 +381,7 @@
       }
 
       /* Print footer (självbärande PDF) */
-      #printFooter{
-        display:none;
-      }
+      #printFooter{ display:none; }
 
       @media print{
         header, .actions, details.more { display:none !important; }
@@ -409,6 +407,10 @@
         .card{ break-inside:avoid; page-break-inside:avoid; padding:12px !important; }
         .kv{ gap:10px !important; }
         .val{ padding:10px !important; }
+
+        /* 5/5 audit: gör PDF kompakt – länkar finns redan i printFooter */
+        #cardLinks{ display:none !important; }
+        #cardSummary{ display:none !important; }
 
         /* QR mindre men kvar i print (snabb kontroll) */
         #qrcodeTap{
@@ -450,6 +452,7 @@
       }
     </style>
 
+    <!-- QR: only once (fix: removed duplicate include) -->
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
     <script>
@@ -559,16 +562,18 @@
                 Kontrolltiden kommer från enheten och kan vara fel om enhetens klocka är fel. Den är inte extern tidsstämpling.
               </div>
 
-              <div class="label" style="margin-top:10px">Status vid kontrollen</div>
+              <div class="label" style="margin-top:10px">Bevisstatus vid kontrollen (registerstatus)</div>
               <div class="mono" id="resultText">—</div>
               <div class="small" id="legalLine" style="margin-top:8px">—</div>
             </div>
           </div>
         </div>
 
-        <div class="actions">
+        <!-- 5/5-prio för intyg: PDF först, sedan kopiera verifieringslänk, sedan omkontroll/navigering -->
+        <div class="actions" aria-label="Åtgärder">
           <button class="btn primary" id="btnPrint" type="button">Skriv ut / Spara som PDF</button>
-          <button class="btn" id="btnRefresh" type="button">Uppdatera</button>
+          <button class="btn" id="btnCopyVerifyTop" type="button">Kopiera verifieringslänk</button>
+          <button class="btn soft" id="btnRefresh" type="button">Kontrollera igen</button>
           <a class="btn soft" id="btnOpenVerify" href="/verify.html">Öppna verifiering</a>
         </div>
 
@@ -661,7 +666,7 @@
             </div>
           </div>
 
-          <div class="card" id="cardLinks">
+          <div class="card screenOnly" id="cardLinks">
             <h3>Verifieringslänk &amp; QR</h3>
             <div class="qrWrap">
               <div>
@@ -671,7 +676,7 @@
                     <div id="qrcode" aria-label="QR-kod"></div>
                   </div>
                 </div>
-                <div class="small screenOnly" style="margin-top:10px">
+                <div class="small" style="margin-top:10px">
                   Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänken.
                 </div>
               </div>
@@ -693,7 +698,7 @@
                   </div>
                 </div>
 
-                <div class="small screenOnly" id="contextHint" style="margin-top:10px"></div>
+                <div class="small" id="contextHint" style="margin-top:10px"></div>
               </div>
             </div>
           </div>
@@ -704,7 +709,6 @@
           <b>Detta intyg visar inte:</b> dokumentets innehåll, riktighet, giltighet eller äkthet – och ersätter inte juridisk bedömning.
         </div>
 
-        <!-- Längre “tydlighet” är bra på skärm men kortas bort i PDF -->
         <div class="card screenOnly" id="cardSummary" style="margin-top:14px;">
           <h3>Tydlighet för granskning</h3>
 
@@ -766,6 +770,12 @@
             Kontrolltid (UTC): <span class="mono" id="pf_checkedUtc">—</span>
           </div>
           <div>
+            Status vid kontrollen: <span class="mono" id="pf_status">—</span>
+          </div>
+          <div id="pf_confirmedRow" style="display:none;">
+            Tidpunkt (UTC, endast om Bekräftad): <span class="mono" id="pf_confirmedUtc">—</span>
+          </div>
+          <div style="margin-top:4px;">
             Verifieringslänk: <span class="mono" id="pf_verify">—</span>
           </div>
           <div>
@@ -780,7 +790,7 @@
 
     <script>
       /* Intern versionsrad (visas inte för mottagare) */
-      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-18 (SE audit/juridik)";
+      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-18b (SE audit/juridik, hardtest)";
 
       const ISSUER_LEGAL_NAME = "Proofy AB";   // ändra vid behov
       const ISSUER_ORGNR = "";                 // valfritt: t.ex. "org.nr 556XXXX-XXXX"
@@ -969,18 +979,6 @@
         else setTimeout(runRender, 0);
       }
 
-      async function fetchJson(url){
-        const sep = url.includes("?") ? "&" : "?";
-        const bustUrl = url + sep + "t=" + Date.now();
-        const r = await fetch(bustUrl, { cache:"no-store", credentials:"same-origin" });
-
-        let data = {};
-        try { data = await r.json(); } catch { data = {}; }
-
-        if(!r.ok) throw new Error(data?.error || data?.detail || `HTTP ${r.status}`);
-        return data;
-      }
-
       function safeText(v, fallback="—"){
         const s = String(v ?? "").trim();
         return s ? s : fallback;
@@ -1050,24 +1048,20 @@
         const lines = [];
         lines.push("PROOFY – Notering (ärendeakt/granskningsunderlag)");
         lines.push("");
-        lines.push("Syfte: Dokumentera att en kontroll av status för kontrollvärdet gjordes hos Proofy vid angiven kontrolltid.");
-        lines.push("Intyget gäller: Utfallet avser kontrollen vid kontrolltiden och kan ändras vid senare kontroll om registerstatus uppdateras.");
-        lines.push("Avgränsning: Intyget avser inte dokumentets innehåll, riktighet, giltighet eller äkthet.");
+        lines.push("Kontrolltyp: Intyg (status för kontrollvärde vid kontrolltid).");
+        lines.push("Syfte: Dokumentera att en kontroll av registerstatus för kontrollvärdet gjordes hos Proofy vid angiven kontrolltid.");
+        lines.push("Avgränsning: Uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.");
         lines.push("");
 
+        // Revisions-/juridik-prio: ID + kontrolltid + status + länkar
         lines.push(`Kontrollvärde (Verifierings-ID): ${verifieringsId || "—"}`);
         if (controlId && controlId !== "—") lines.push(`Kontroll-ID (detta kontrolltillfälle): ${controlId}`);
-        lines.push(`Status vid kontrollen: ${statusText || "—"}`);
-        if (legalLine) lines.push(`Kommentar: ${legalLine}`);
-
-        lines.push("");
         lines.push(`Kontrolltid (denna kontroll): ${checkedLocalText || "—"}`);
         lines.push(`Kontrolltid (UTC): ${checkedUtcText || "—"}`);
         lines.push("Obs: Kontrolltiden kommer från enheten som öppnar intyget och är inte extern tidsstämpling.");
-
         lines.push("");
-        lines.push(`Intygslänk: ${certLink || "—"}`);
-        lines.push(`Verifieringslänk: ${verifyLink || "—"}`);
+        lines.push(`Bevisstatus vid kontrollen (registerstatus): ${statusText || "—"}`);
+        if (legalLine) lines.push(`Kommentar: ${legalLine}`);
 
         if (certId) {
           lines.push("");
@@ -1076,10 +1070,14 @@
 
         if (statusText === "Bekräftad" && confirmedLocalText && confirmedLocalText !== "—"){
           lines.push("");
-          lines.push(`Tidpunkt (endast om bekräftad): ${confirmedLocalText}`);
+          lines.push(`Tidpunkt (endast om Bekräftad): ${confirmedLocalText}`);
           if (confirmedUtcText && confirmedUtcText !== "—") lines.push(`Tidpunkt (UTC): ${confirmedUtcText}`);
           lines.push("Obs: Tidpunkten avser när Proofy kan redovisa bekräftelse för kontrollvärdet – inte när dokumentet upprättades eller användes.");
         }
+
+        lines.push("");
+        lines.push(`Intygslänk: ${certLink || "—"}`);
+        lines.push(`Verifieringslänk: ${verifyLink || "—"}`);
 
         const hasA = internalA && internalA !== "—" && !/^0+$/.test(String(internalA));
         const hasB = internalB && internalB !== "—" && !/^0+$/.test(String(internalB));
@@ -1093,30 +1091,6 @@
         lines.push("");
         lines.push("Slutsats: Noteringen visar utfallet av kontrollen vid kontrolltiden.");
         return lines.join("\n");
-      }
-
-      /* Mobil-säkring: försök läsa av ev. flytande widget och ge extra bottenutrymme */
-      function trySetFabSpace(){
-        try{
-          const candidates = [
-            document.querySelector('[data-proofy-fab]'),
-            document.querySelector('.proofy-chat-fab'),
-            document.querySelector('.chat-widget-fab'),
-            document.querySelector('#chatFab'),
-            document.querySelector('button[aria-label*="Fråga"]'),
-          ].filter(Boolean);
-
-          if(!candidates.length) return;
-
-          let maxH = 0;
-          for(const el of candidates){
-            const r = el.getBoundingClientRect();
-            if (r && r.height) maxH = Math.max(maxH, r.height);
-          }
-          if(maxH > 0){
-            document.documentElement.style.setProperty('--proofy-fab-space', String(Math.ceil(maxH + 56)) + 'px');
-          }
-        }catch{}
       }
 
       function setIssuer(){
@@ -1156,6 +1130,55 @@
         }
       }
 
+      // HARDTEST: timeout + retry (för att undvika "häng" och ge stabil audit-output)
+      function isRetryableStatus(status){
+        return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
+      }
+
+      async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 20000){
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), timeoutMs);
+        try{
+          const sep = url.includes("?") ? "&" : "?";
+          const bustUrl = url + sep + "t=" + Date.now();
+          const r = await fetch(bustUrl, {
+            method: "GET",
+            cache: "no-store",
+            credentials: "same-origin",
+            signal: controller.signal,
+            ...options
+          });
+          const j = await r.json().catch(() => ({}));
+          return { ok: r.ok, status: r.status, data: j, aborted:false };
+        } catch (e){
+          const aborted = (e && e.name === "AbortError");
+          return { ok:false, status:0, data:{}, aborted };
+        } finally {
+          clearTimeout(t);
+        }
+      }
+
+      async function fetchVerify(hash, tx){
+        const base = `/api/verify?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`;
+        const attempts = 3;
+        const baseDelay = 520;
+
+        for (let i=0; i<attempts; i++){
+          const res = await fetchJsonWithTimeout(base, {}, 20000);
+
+          if (res.ok) return { ok:true, data:res.data, status:res.status };
+
+          const retryable = res.aborted || isRetryableStatus(res.status);
+          if (i < attempts - 1 && retryable){
+            const jitter = Math.floor(Math.random()*180);
+            await new Promise(r => setTimeout(r, baseDelay*(i+1) + jitter));
+            continue;
+          }
+          return { ok:false, data:res.data, status:res.status };
+        }
+        return { ok:false, data:{}, status:0 };
+      }
+
       async function run(){
         hideWarn();
         setIssuer();
@@ -1178,9 +1201,7 @@
 
         if (skew > STALE_SECONDS){
           checked = now;
-          showWarn(
-            `<b>Observera:</b> Den tid som fanns i länken var äldre. Intyget har därför gjort en ny kontroll nu och visar resultatet från denna kontroll.`
-          );
+          showWarn(`<b>Observera:</b> Den tid som fanns i länken var äldre. Intyget har därför gjort en ny kontroll nu och visar resultatet från denna kontroll.`);
           setTimeout(() => hideWarn(), 4500);
         }
 
@@ -1197,28 +1218,26 @@
         $("verifyLink").textContent = verifyLink;
         $("certLinkInline").textContent = certLink;
 
-        // Intygs-ID 5/5: snyggt om tomt
-        const certIdOut = $("certIdOut");
-        const copyCertIdBtn = $("copyCertId");
-        if (certId){
-          certIdOut.textContent = certId;
-          copyCertIdBtn.disabled = false;
-          copyCertIdBtn.style.display = "inline-flex";
-          $("certIdVal").style.display = "block";
-        } else {
-          certIdOut.textContent = "Ej angivet";
-          copyCertIdBtn.disabled = true;
-          copyCertIdBtn.style.display = "none";
-          // För 5/5 i print: rutan kan ligga kvar på skärm, men tar inte plats i PDF eftersom screenOnly döljs.
-        }
-
+        // Top actions
         $("btnOpenVerify").href = verifyLink;
+
+        const btnCopyVerifyTop = $("btnCopyVerifyTop");
+        if (btnCopyVerifyTop){
+          btnCopyVerifyTop.onclick = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
+        }
 
         // Print footer values (självbärande)
         $("pf_id").textContent = verifieringsId || "—";
         $("pf_checkedUtc").textContent = fmtUtc(checked);
         $("pf_verify").textContent = verifyLink;
         $("pf_cert").textContent = certLink;
+
+        // Reset print-only status rows each run
+        $("pf_status").textContent = "—";
+        const pfConfirmedRow = $("pf_confirmedRow");
+        if (pfConfirmedRow) pfConfirmedRow.style.display = "none";
+        const pfConfirmedUtc = $("pf_confirmedUtc");
+        if (pfConfirmedUtc) pfConfirmedUtc.textContent = "—";
 
         $("btnPrint").onclick = () => window.print();
         $("btnRefresh").onclick = () => run();
@@ -1227,7 +1246,6 @@
         $("copyCert").onclick = async () => { if (await copyText(certLink)) toastCopied("Länk till intyg"); };
         $("copyVerify").onclick = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
         $("copyCertInline").onclick = async () => { if (await copyText(certLink)) toastCopied("Intygslänk"); };
-        $("copyCertId").onclick = async () => { if (await copyText(certId)) toastCopied("Intygs-ID"); };
 
         renderQR(verifyLink);
 
@@ -1244,6 +1262,21 @@
         $("checkedTopLocal").innerHTML = checkedLocalHtml;
         $("checkedTopUtc").textContent = checkedUtcText;
 
+        // CertID 5/5: rent om tomt
+        const certIdOut = $("certIdOut");
+        const copyCertIdBtn = $("copyCertId");
+        if (certId){
+          certIdOut.textContent = certId;
+          copyCertIdBtn.disabled = false;
+          copyCertIdBtn.style.display = "inline-flex";
+          $("certIdVal").style.display = "block";
+          copyCertIdBtn.onclick = async () => { if (await copyText(certId)) toastCopied("Intygs-ID"); };
+        } else {
+          certIdOut.textContent = "Ej angivet";
+          copyCertIdBtn.disabled = true;
+          copyCertIdBtn.style.display = "none";
+        }
+
         // Reset innan kontroll
         $("resultText").textContent = "Kontrollerar…";
         $("legalLine").textContent = "—";
@@ -1259,7 +1292,7 @@
           if (certId){
             contextHintEl.innerHTML = `Intygs-ID: <span class="mono">${certId}</span>`;
           } else {
-            contextHintEl.textContent = "Spara länken i ärendeakten. Använd verifieringslänk/QR för ny kontroll vid behov.";
+            contextHintEl.textContent = "Spara intygslänken i ärendeakten. Använd verifieringslänk/QR för ny kontroll vid behov.";
           }
         }
 
@@ -1299,6 +1332,8 @@
           $("idText").textContent = "Ogiltigt eller saknas (Verifierings-ID)";
           $("resultText").textContent = "Kunde inte kontrolleras: giltigt kontrollvärde (Verifierings-ID) saknas i länken.";
           $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt kontrollvärde (Verifierings-ID).";
+
+          $("pf_status").textContent = "Kunde inte kontrolleras";
 
           // Dölj Kontroll-ID helt (5/5: inga tomma rutor)
           $("controlIdVal").style.display = "none";
@@ -1349,13 +1384,14 @@
         setStatus("warn", "Kontrollerar…");
         $("resultText").textContent = "Kontrollerar status…";
 
-        let v;
-        try{
-          v = await fetchJson(`/api/verify?hash=${encodeURIComponent(verifieringsId)}` + (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : ""));
-        }catch(e){
+        // HARDTEST: verify med timeout+retry
+        const verifyRes = await fetchVerify(verifieringsId, optionalContext || "");
+        if (!verifyRes.ok){
           setStatus("bad", "Kunde inte kontrolleras");
           $("resultText").textContent = "Kunde inte kontrolleras.";
           $("legalLine").textContent = "Detta kan vara ett tillfälligt fel. Försök igen.";
+
+          $("pf_status").textContent = "Kunde inte kontrolleras";
 
           // Dölj Kontroll-ID helt i fel-läge (5/5)
           $("controlIdVal").style.display = "none";
@@ -1385,6 +1421,7 @@
           return;
         }
 
+        const v = verifyRes.data || {};
         const statusCode = safeText(v?.statusCode, "UNKNOWN");
         const statusText = canonicalStatus(statusCode);
         const legalText = safeText(v?.legalText, "");
@@ -1403,6 +1440,8 @@
         setStatus(pres.tone, pres.badge);
         $("resultText").textContent = statusText;
 
+        $("pf_status").textContent = statusText;
+
         const finalLegalLine = (() => {
           if (legalText) return legalText;
           if (statusCode === "CONFIRMED") return "Status är bekräftad vid kontrollen.";
@@ -1413,7 +1452,6 @@
         $("legalLine").textContent = finalLegalLine;
 
         // Kontroll-ID (5/5): Beräkna lokalt om möjligt. Döljs annars.
-        // Input gör ID stabilt och kopplat till: kontrollvärde, kontrolltid och utfallet
         const controlIdInput = [
           "proofy-cert",
           verifieringsId,
@@ -1460,6 +1498,13 @@
           confirmedLocalPlain = fmtSePlain(confirmedAtUnix);
           confirmedUtcPlain = fmtUtc(confirmedAtUnix);
 
+          const pfConfirmedRow = $("pf_confirmedRow");
+          const pfConfirmedUtc = $("pf_confirmedUtc");
+          if (pfConfirmedRow && pfConfirmedUtc){
+            pfConfirmedUtc.textContent = confirmedUtcPlain;
+            pfConfirmedRow.style.display = "block";
+          }
+
           updateCaseNote({
             verifieringsId,
             controlId: hasControlId ? controlId : "—",
@@ -1479,6 +1524,9 @@
         } else {
           $("confirmedLocal").textContent = "—";
           $("confirmedUtc").textContent = "—";
+
+          const pfConfirmedRow = $("pf_confirmedRow");
+          if (pfConfirmedRow) pfConfirmedRow.style.display = "none";
 
           updateCaseNote({
             verifieringsId,
@@ -1512,9 +1560,63 @@
         }
       }
 
-      trySetFabSpace();
-      window.addEventListener("resize", trySetFabSpace, { passive:true });
-      setTimeout(trySetFabSpace, 400);
+      // Overlay-safe (robust): reserverar bottenutrymme för fixed widgets/FAB
+      (function overlaySafe(){
+        const root = document.documentElement;
+
+        const candidates = () => {
+          const els = [];
+          const byId1 = document.getElementById("chatWidget");
+          const byId2 = document.getElementById("chat-widget");
+          if (byId1) els.push(byId1);
+          if (byId2) els.push(byId2);
+
+          const maybe = Array.from(document.querySelectorAll("button, a, div, iframe"))
+            .filter(el => {
+              if (!el || !el.getBoundingClientRect) return false;
+              const cs = getComputedStyle(el);
+              if (cs.position !== "fixed") return false;
+              const r = el.getBoundingClientRect();
+              if (r.width < 40 || r.height < 40) return false;
+
+              const nearBottom = r.bottom > (window.innerHeight - 40);
+              const nearRight = r.right > (window.innerWidth - 120);
+              const nearLeft = r.left < 120;
+              return nearBottom && (nearRight || nearLeft);
+            });
+
+          for (const el of maybe) els.push(el);
+          return Array.from(new Set(els));
+        };
+
+        const compute = () => {
+          const list = candidates();
+          let extra = 0;
+
+          for (const el of list){
+            try{
+              const r = el.getBoundingClientRect();
+              if (r.height > extra) extra = r.height;
+            } catch {}
+          }
+
+          const px = extra > 0 ? Math.ceil(extra + 18) : 0;
+          root.style.setProperty("--proofy-fab-space", px + "px");
+        };
+
+        compute();
+        window.addEventListener("resize", () => compute(), { passive:true });
+
+        const obs = new MutationObserver(() => compute());
+        obs.observe(document.body, { childList:true, subtree:true, attributes:true });
+
+        let n = 0;
+        const t = setInterval(() => {
+          compute();
+          n++;
+          if (n > 8) clearInterval(t);
+        }, 180);
+      })();
 
       run();
     </script>
