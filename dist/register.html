@@ -334,11 +334,14 @@
 
                   <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
+                  <!-- ✅ NY: UTC för tidpunkt (endast om bekräftad) -->
+                  <div id="timeUtcOut" class="mono" style="margin-top:8px; opacity:.75; display:none;">—</div>
 
+                  <!-- ✅ Prio: Kopiera notering (primär), Öppna intyg (sekundär), Öppna verifiering (tertiär) -->
                   <div class="revActions" aria-label="Primära åtgärder">
-                    <a id="openVerifyBtn" class="revBtn primary" href="#" style="display:none;">Öppna verifiering</a>
+                    <button id="copyNoteTopBtn" class="revBtn primary" type="button" style="display:none;">Kopiera notering</button>
                     <a id="openCertBtn" class="revBtn" href="#" style="display:none;">Öppna intyg</a>
-                    <button id="copyNoteTopBtn" class="revBtn" type="button" style="display:none;">Kopiera notering</button>
+                    <a id="openVerifyBtn" class="revBtn" href="#" style="display:none;">Öppna verifiering</a>
                   </div>
 
                   <div class="small" style="margin-top:10px; opacity:.9;">
@@ -410,9 +413,10 @@
                       <span id="copyNotePill" class="pill" style="display:none;"></span>
                     </div>
 
+                    <!-- ✅ Mer professionellt språk -->
                     <div class="small" style="margin-top:10px; opacity:.9;">
-                      Ladda ner som .txt:
-                      <button class="inlineLinkBtn" id="downloadNoteLink" type="button">proofy-notering.txt</button>
+                      <button class="inlineLinkBtn" id="downloadNoteLink" type="button">Spara notering som textfil</button>
+                      <span class="meta" style="margin-left:8px; opacity:.85;">Filnamn: proofy-notering.txt</span>
                     </div>
 
                     <p class="meta" style="margin:10px 0 0; opacity:.9;">
@@ -575,6 +579,7 @@
 
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
+  const timeUtcOut = $("timeUtcOut"); // ✅ NY
   const submitterOut = $("submitterOut");
   const txOut = $("txOut");
   const debugOut = $("debugOut");
@@ -944,7 +949,10 @@
     lines.push(`Intygslänk: ${run.certLink || "—"}`);
     lines.push("");
     lines.push(`Status vid kontrolltillfället: ${run.statusLine || "—"}`);
+
     if (run.timeSe) lines.push(`Tidpunkt (endast om bekräftad): ${run.timeSe}`);
+    if (run.timeUtc) lines.push(`Tidpunkt (UTC, endast om bekräftad): ${run.timeUtc}`);
+
     if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
     lines.push("");
@@ -979,6 +987,7 @@
 
     if (regStatusOut) regStatusOut.textContent = "—";
     if (timeOut) timeOut.textContent = "—";
+    if (timeUtcOut){ timeUtcOut.textContent = "—"; timeUtcOut.style.display = "none"; } // ✅ NY reset
     if (submitterOut) submitterOut.textContent = "—";
     if (txOut) txOut.textContent = "—";
     if (debugOut) debugOut.textContent = "—";
@@ -1031,15 +1040,19 @@
   }
 
   function applyPrimaryButtons(){
-    if (openVerifyBtn){
-      if (currentLink && currentLink !== "—"){
-        openVerifyBtn.href = currentLink;
-        openVerifyBtn.style.display = "inline-flex";
+    // ✅ Prio 1: kopiera notering (om vi har lastRun)
+    if (copyNoteTopBtn){
+      if (lastRun){
+        copyNoteTopBtn.style.display = "inline-flex";
+        copyNoteTopBtn.onclick = async () => {
+          await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
+        };
       } else {
-        openVerifyBtn.style.display = "none";
+        copyNoteTopBtn.style.display = "none";
       }
     }
 
+    // ✅ Prio 2: öppna intyg
     if (openCertBtn){
       if (lastRun?.certLink){
         openCertBtn.href = lastRun.certLink;
@@ -1051,14 +1064,15 @@
       }
     }
 
-    if (copyNoteTopBtn){
-      if (lastRun){
-        copyNoteTopBtn.style.display = "inline-flex";
-        copyNoteTopBtn.onclick = async () => {
-          await copyWithFeedback({ text: buildNote(lastRun), pillEl: copyNotePill, okText:"Notering kopierad ✅" });
-        };
+    // ✅ Prio 3: öppna verifiering
+    if (openVerifyBtn){
+      if (currentLink && currentLink !== "—"){
+        openVerifyBtn.href = currentLink;
+        openVerifyBtn.target = "_blank";
+        openVerifyBtn.rel = "noopener";
+        openVerifyBtn.style.display = "inline-flex";
       } else {
-        copyNoteTopBtn.style.display = "none";
+        openVerifyBtn.style.display = "none";
       }
     }
   }
@@ -1076,7 +1090,18 @@
     debugOut.textContent = legal || "—";
 
     const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
+    const confirmedUtc = confirmedAt ? fmtUtcEpochSec(confirmedAt) : null;
+
     timeOut.textContent = confirmedSe || "—";
+    if (timeUtcOut){
+      if (confirmedUtc && confirmedUtc !== "—"){
+        timeUtcOut.textContent = confirmedUtc;
+        timeUtcOut.style.display = "block";
+      } else {
+        timeUtcOut.textContent = "—";
+        timeUtcOut.style.display = "none";
+      }
+    }
 
     const canonical = canonicalStatusFromCode(sc);
 
@@ -1104,6 +1129,7 @@
       checkedUtc: fmtUtcEpochSec(checkedEpoch),
       statusLine: canonical,
       timeSe: confirmedSe,
+      timeUtc: confirmedUtc,
       txHash: txHash,
       observedBlockNumber: observedBlockNumber
     };
@@ -1305,7 +1331,7 @@
     downloadNoteLink.addEventListener("click", () => {
       if (!lastRun) return;
       downloadTextFile("proofy-notering.txt", buildNote(lastRun));
-      showPill(copyNotePill, "Nerladdad ✅");
+      showPill(copyNotePill, "Sparad ✅");
       setTimeout(() => hidePill(copyNotePill), 1200);
     });
   }
