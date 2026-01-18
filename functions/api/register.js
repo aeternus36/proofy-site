@@ -289,21 +289,37 @@ async function sendRegisterTx({
 export async function onRequest({ request, env }) {
   const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
+  // ✅ 5/5: “extern” (server/edge) tid att visa i klient + notering
+  const serverTimeUnix = Math.floor(Date.now() / 1000);
+  const timeSource = "edge"; // Cloudflare edge / server-sida, inte extern tidsstämpling
+
   if (request.method === "OPTIONS") return corsPreflight(origin);
   if (request.method !== "POST") {
-    return json(405, { ok: false, error: "Method Not Allowed" }, origin);
+    return json(
+      405,
+      { ok: false, error: "Method Not Allowed", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return json(400, { ok: false, error: "Invalid JSON body" }, origin);
+    return json(
+      400,
+      { ok: false, error: "Invalid JSON body", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   const hash = String(body?.hash || "").trim();
   if (!isValidBytes32Hex(hash)) {
-    return json(400, { ok: false, error: "Invalid hash format" }, origin);
+    return json(
+      400,
+      { ok: false, error: "Invalid hash format", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
@@ -311,13 +327,25 @@ export async function onRequest({ request, env }) {
   const privateKey = normalizeHexWith0x(env.PROOFY_PRIVATE_KEY);
 
   if (!rpcUrl || !contractAddress || !privateKey) {
-    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration", serverTimeUnix, timeSource },
+      origin
+    );
   }
   if (!isAddress(contractAddress)) {
-    return json(500, { ok: false, error: "Bad contract address" }, origin);
+    return json(
+      500,
+      { ok: false, error: "Bad contract address", serverTimeUnix, timeSource },
+      origin
+    );
   }
   if (!isValidPrivateKeyHex(privateKey)) {
-    return json(500, { ok: false, error: "Bad private key" }, origin);
+    return json(
+      500,
+      { ok: false, error: "Bad private key", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   try {
@@ -346,6 +374,8 @@ export async function onRequest({ request, env }) {
             evidence: null,
             submission: null,
             legalText: "Fanns redan bekräftad notering.",
+            serverTimeUnix,
+            timeSource,
           },
           origin
         );
@@ -466,6 +496,8 @@ export async function onRequest({ request, env }) {
             legalText:
               "En registrering har behandlats men kunde inte bekräftas. Ingen slutsats om bekräftelse kan dras.",
             debug,
+            serverTimeUnix,
+            timeSource,
           },
           origin
         );
@@ -492,6 +524,8 @@ export async function onRequest({ request, env }) {
             submission: { txHash, submittedBy: account.address },
             legalText:
               "Det finns en bekräftad notering för detta kontrollvärde.",
+            serverTimeUnix,
+            timeSource,
           },
           origin
         );
@@ -523,6 +557,8 @@ export async function onRequest({ request, env }) {
         submission: { txHash, submittedBy: account.address },
         legalText: "En registrering har skickats in men är ännu inte bekräftad.",
         debug,
+        serverTimeUnix,
+        timeSource,
       },
       origin
     );
@@ -539,6 +575,8 @@ export async function onRequest({ request, env }) {
         submission: null,
         error: "Register temporarily unavailable",
         detail: sanitizeError(e),
+        serverTimeUnix,
+        timeSource,
       },
       origin
     );
