@@ -114,12 +114,14 @@
         line-height:1.02;
       }
 
+      /* 5/5: mer balanserat statusområde */
       .statusArea{
         display:flex;
         flex-direction:column;
-        align-items:flex-end;
+        align-items:stretch;
         gap:10px;
-        min-width:220px;
+        min-width:260px;
+        max-width:340px;
       }
 
       .statusBadge{
@@ -129,7 +131,7 @@
         font-weight:900;
         border:1px solid var(--border);
         background:rgba(255,255,255,.05);
-        min-width:220px;
+        width:100%;
         justify-content:center;
         text-align:center;
       }
@@ -168,7 +170,7 @@
       @media (max-width: 900px){
         .auditTop{ grid-template-columns:1fr; }
         h1{font-size:36px}
-        .statusArea{ align-items:stretch; }
+        .statusArea{ max-width:none; }
       }
 
       .card{
@@ -368,15 +370,12 @@
         line-height:1.45;
       }
 
-      /* Extra hård mobil-säkring mot FAB/keyboard */
       @media (max-width: 700px){
         :root{ --proofy-fab-space: 140px; }
       }
 
       /* Print footer (självbärande PDF) */
-      #printFooter{
-        display:none;
-      }
+      #printFooter{ display:none; }
 
       @media print{
         header, .actions, details.more { display:none !important; }
@@ -510,7 +509,7 @@
             </div>
 
             <div class="statusMeta">
-              <div class="label">Kontrolltid (denna kontroll)</div>
+              <div class="label">Kontrolltid (detta kontrolltillfälle)</div>
               <div class="mono" id="checkedTopLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="mono" id="checkedTopUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="small" style="margin-top:8px">
@@ -558,8 +557,9 @@
               </div>
             </div>
 
-            <div class="kv" style="margin-top:12px">
-              <div class="val">
+            <!-- 5/5: om Intygs-ID saknas döljs hela rutan + Intygslänk blir full bredd -->
+            <div class="kv" style="margin-top:12px" id="kvLinksRow">
+              <div class="val" id="certLinkVal">
                 <div class="label">Intygslänk (denna visning)</div>
                 <div class="row">
                   <div class="mono" id="certLinkInline">—</div>
@@ -570,7 +570,7 @@
                 </div>
               </div>
 
-              <div class="val">
+              <div class="val" id="certIdVal">
                 <div class="label">Intygs-ID (valfritt)</div>
                 <div class="row">
                   <div class="mono" id="certIdOut">—</div>
@@ -582,12 +582,23 @@
               </div>
             </div>
 
+            <!-- Kontroll-ID -->
+            <div class="val" style="margin-top:12px">
+              <div class="label">Kontroll-ID (detta kontrolltillfälle)</div>
+              <div class="row">
+                <div class="mono" id="controlIdOut">—</div>
+                <button class="copyBtn" id="copyControlId" type="button">Kopiera</button>
+              </div>
+              <div class="small" style="margin-top:8px">
+                Referens för ärendeakt: genereras från kontrollvärde + kontrolltid (+ ev. intygs-ID/kontext). Underlättar spårbar hänvisning till just detta kontrolltillfälle.
+              </div>
+            </div>
+
             <div class="note">
-              <b>Rekommenderad notering i ärendeakt:</b> Spara kontrollvärde (Verifierings-ID) och intygslänk.
+              <b>Rekommenderad notering i ärendeakt:</b> Spara kontrollvärde (Verifierings-ID), kontroll-ID och intygslänk.
               Vid efterhandsgranskning används verifieringslänk/QR för snabb kontroll.
             </div>
 
-            <!-- Notering för ärendeakt (kopiera + ladda ner) -->
             <div class="noteBox" aria-label="Notering för ärendeakt">
               <div class="label">Notering för ärendeakt (kopiera / spara)</div>
               <div class="noteText" id="caseNoteText" role="textbox" aria-label="Noteringstext" tabindex="0">—</div>
@@ -669,7 +680,8 @@
             • <b>Kontrollvärde (Verifierings-ID):</b> en unik identifierare för en bestämd filversion.<br/>
             • <b>Kontroll:</b> när denna sida hämtar status från Proofy.<br/>
             • <b>Bekräftad:</b> Proofy kan redovisa bekräftelse och tidpunkt för kontrollvärdet.<br/>
-            • <b>Kontrolltid:</b> tidpunkt som kommer från enheten som öppnar intyget.
+            • <b>Kontrolltid:</b> tidpunkt som kommer från enheten som öppnar intyget.<br/>
+            • <b>Kontroll-ID:</b> referens för just detta kontrolltillfälle (praktiskt för ärendeakt).
           </div>
 
           <details class="more" id="moreDetails">
@@ -701,7 +713,6 @@
       </section>
     </main>
 
-    <!-- Print footer (självbärande vid PDF/utskrift) -->
     <div id="printFooter" aria-hidden="true">
       <div><b>Verifieringsintyg – Proofy</b></div>
       <div style="margin-top:4px;">
@@ -711,19 +722,27 @@
         Kontrolltid (UTC): <span class="mono" id="pf_checkedUtc">—</span>
       </div>
       <div>
+        Status vid kontrollen: <span class="mono" id="pf_status">—</span>
+      </div>
+      <div>
+        Kontroll-ID: <span class="mono" id="pf_controlId">—</span>
+      </div>
+      <div>
         Verifieringslänk: <span class="mono" id="pf_verify">—</span>
       </div>
       <div>
         Intygslänk: <span class="mono" id="pf_cert">—</span>
       </div>
+      <div>
+        Version: <span class="mono" id="pf_ver">—</span>
+      </div>
     </div>
 
     <script>
-      /* Intern versionsrad (visas inte för mottagare) */
       const CERT_INTERNAL_VERSION = "certificate.html v2026-01-18 (SE audit/juridik)";
 
-      const ISSUER_LEGAL_NAME = "Proofy AB";   // ändra vid behov
-      const ISSUER_ORGNR = "";                 // valfritt: t.ex. "org.nr 556XXXX-XXXX"
+      const ISSUER_LEGAL_NAME = "Proofy AB";
+      const ISSUER_ORGNR = "";
 
       const $ = (id) => document.getElementById(id);
 
@@ -983,6 +1002,7 @@
         verifyLink,
         legalLine,
         certId,
+        controlId,
         internalA,
         internalB
       }){
@@ -999,8 +1019,9 @@
         if (legalLine) lines.push(`Kommentar: ${legalLine}`);
 
         lines.push("");
-        lines.push(`Kontrolltid (denna kontroll): ${checkedLocalText || "—"}`);
+        lines.push(`Kontrolltid (detta kontrolltillfälle): ${checkedLocalText || "—"}`);
         lines.push(`Kontrolltid (UTC): ${checkedUtcText || "—"}`);
+        if (controlId) lines.push(`Kontroll-ID: ${controlId}`);
         lines.push("Obs: Kontrolltiden kommer från enheten som öppnar intyget och är inte extern tidsstämpling.");
 
         lines.push("");
@@ -1029,11 +1050,10 @@
         }
 
         lines.push("");
-        lines.push("Slutsats: Noteringen visar utfallet av kontrollen vid kontrolltiden.");
+        lines.push("Slutsats: Noteringen visar utfallet av kontrollen vid kontrolltillfället.");
         return lines.join("\n");
       }
 
-      /* Mobil-säkring: försök läsa av ev. flytande widget och ge extra bottenutrymme */
       function trySetFabSpace(){
         try{
           const candidates = [
@@ -1071,6 +1091,27 @@
         }
       }
 
+      function bytesToHex(buf){
+        const b = new Uint8Array(buf);
+        let s = "";
+        for (let i=0;i<b.length;i++){
+          s += b[i].toString(16).padStart(2,"0");
+        }
+        return s;
+      }
+
+      async function sha256Hex(input){
+        try{
+          if (!window.crypto || !window.crypto.subtle) return "";
+          const enc = new TextEncoder();
+          const data = enc.encode(String(input));
+          const hash = await crypto.subtle.digest("SHA-256", data);
+          return bytesToHex(hash);
+        }catch{
+          return "";
+        }
+      }
+
       async function run(){
         hideWarn();
         setIssuer();
@@ -1081,8 +1122,9 @@
         const verifieringsId = (url.searchParams.get("hash") || "").trim();
         const optionalContext = (url.searchParams.get("tx") || "").trim();
         const certId = (url.searchParams.get("cert") || "").trim();
+        const certIdProvided = !!certId;
 
-        // Kontrolltid: om "checked" är gammal använder vi ny kontrolltid (för att undvika missvisning).
+        // Kontrolltid
         const checkedParam = (url.searchParams.get("checked") || "").trim();
         const checkedCandidate = Number(checkedParam);
         const now = nowSeconds();
@@ -1093,18 +1135,15 @@
 
         if (skew > STALE_SECONDS){
           checked = now;
-          showWarn(
-            `<b>Observera:</b> Den tid som fanns i länken var äldre. Intyget har därför gjort en ny kontroll nu och visar resultatet från denna kontroll.`
-          );
+          showWarn(`<b>Observera:</b> Den tid som fanns i länken var äldre. Intyget har därför gjort en ny kontroll nu och visar resultatet från denna kontroll.`);
           setTimeout(() => hideWarn(), 4500);
         }
 
         const certLink =
           `${location.origin}/certificate.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checked}` +
           (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "") +
-          (certId ? `&cert=${encodeURIComponent(certId)}` : "");
+          (certIdProvided ? `&cert=${encodeURIComponent(certId)}` : "");
 
-        // Verifieringslänk bär kontrolltid så att ärendeakt kan hänvisa till "vid den tidpunkten öppnades kontrollen".
         const verifyLink =
           `${location.origin}/verify.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checked}` +
           (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "");
@@ -1112,15 +1151,36 @@
         $("certLink").textContent = certLink;
         $("verifyLink").textContent = verifyLink;
         $("certLinkInline").textContent = certLink;
-
-        $("certIdOut").textContent = certId ? certId : "—";
         $("btnOpenVerify").href = verifyLink;
 
-        // Print footer values (självbärande)
+        // 5/5: dölj Intygs-ID-rutan helt om den saknas + gör intygslänk full bredd
+        const certIdVal = $("certIdVal");
+        const certLinkVal = $("certLinkVal");
+        if (!certIdProvided){
+          if (certIdVal) certIdVal.style.display = "none";
+          if (certLinkVal) certLinkVal.style.gridColumn = "1 / -1";
+        } else {
+          if (certIdVal) certIdVal.style.display = "block";
+          if (certLinkVal) certLinkVal.style.gridColumn = "";
+          $("certIdOut").textContent = certId;
+        }
+
+        // Kontroll-ID
+        let controlId = "—";
+        if (isValidVerifieringsId(verifieringsId)){
+          const basis = [verifieringsId, String(checked), certIdProvided ? certId : "", optionalContext || "", CERT_INTERNAL_VERSION].join("|");
+          const h = await sha256Hex(basis);
+          controlId = h ? ("sha256:" + h) : "—";
+        }
+        $("controlIdOut").textContent = controlId;
+
+        // Print footer
         $("pf_id").textContent = verifieringsId || "—";
         $("pf_checkedUtc").textContent = fmtUtc(checked);
         $("pf_verify").textContent = verifyLink;
         $("pf_cert").textContent = certLink;
+        $("pf_controlId").textContent = controlId;
+        $("pf_ver").textContent = CERT_INTERNAL_VERSION;
 
         $("btnPrint").onclick = () => window.print();
         $("btnRefresh").onclick = () => run();
@@ -1129,7 +1189,11 @@
         $("copyCert").onclick = async () => { if (await copyText(certLink)) toastCopied("Länk till intyg"); };
         $("copyVerify").onclick = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
         $("copyCertInline").onclick = async () => { if (await copyText(certLink)) toastCopied("Intygslänk"); };
-        $("copyCertId").onclick = async () => { if (await copyText(certId)) toastCopied("Intygs-ID"); };
+        $("copyControlId").onclick = async () => { if (await copyText(controlId)) toastCopied("Kontroll-ID"); };
+
+        if (certIdProvided){
+          $("copyCertId").onclick = async () => { if (await copyText(certId)) toastCopied("Intygs-ID"); };
+        }
 
         renderQR(verifyLink);
 
@@ -1151,6 +1215,7 @@
         $("legalLine").textContent = "—";
         $("confirmedLocal").textContent = "—";
         $("confirmedUtc").textContent = "—";
+        $("pf_status").textContent = "—";
 
         $("internalRefA").textContent = "—";
         $("internalRefB").textContent = "—";
@@ -1158,7 +1223,7 @@
 
         const contextHintEl = $("contextHint");
         if (contextHintEl){
-          if (certId){
+          if (certIdProvided){
             contextHintEl.innerHTML = `Intygs-ID: <span class="mono">${certId}</span>`;
           } else {
             contextHintEl.textContent = "Spara länken i ärendeakten. Använd verifieringslänk/QR för ny kontroll vid behov.";
@@ -1173,30 +1238,23 @@
           return note;
         };
 
-        // Kopiera/ladda ner notering
-        const copyNoteBtn = $("copyCaseNote");
-        const dlNoteBtn = $("downloadCaseNote");
-
-        if (copyNoteBtn){
-          copyNoteBtn.onclick = async () => {
-            const t = noteEl?.textContent || "";
-            if (await copyText(t)) toastCopied("Notering för ärendeakt");
-          };
-        }
-        if (dlNoteBtn){
-          dlNoteBtn.onclick = () => {
-            const t = noteEl?.textContent || "";
-            downloadTextFile("proofy-notering.txt", t);
-            showWarn("<b>Nerladdad:</b> proofy-notering.txt");
-            setTimeout(() => hideWarn(), 1200);
-          };
-        }
+        $("copyCaseNote").onclick = async () => {
+          const t = noteEl?.textContent || "";
+          if (await copyText(t)) toastCopied("Notering för ärendeakt");
+        };
+        $("downloadCaseNote").onclick = () => {
+          const t = noteEl?.textContent || "";
+          downloadTextFile("proofy-notering.txt", t);
+          showWarn("<b>Nerladdad:</b> proofy-notering.txt");
+          setTimeout(() => hideWarn(), 1200);
+        };
 
         if (!isValidVerifieringsId(verifieringsId)){
           setStatus("bad", "Kunde inte kontrolleras");
           $("idText").textContent = "Ogiltigt eller saknas (Verifierings-ID)";
           $("resultText").textContent = "Kunde inte kontrolleras: giltigt kontrollvärde (Verifierings-ID) saknas i länken.";
           $("legalLine").textContent = "Ingen slutsats kan dras utan giltigt kontrollvärde (Verifierings-ID).";
+          $("pf_status").textContent = "Kunde inte kontrolleras";
 
           updateCaseNote({
             verifieringsId: "—",
@@ -1208,21 +1266,18 @@
             certLink,
             verifyLink,
             legalLine: "Ingen slutsats kan dras utan giltigt kontrollvärde (Verifierings-ID).",
-            certId: certId || "",
+            certId: certIdProvided ? certId : "",
+            controlId: controlId !== "—" ? controlId : "",
             internalA: "—",
             internalB: "—"
           });
 
-          showWarn(`
-            <b>Fel:</b> Intyget saknar giltigt kontrollvärde (Verifierings-ID) i länken.<br/>
-            Exempel: <span class="mono">/certificate.html?hash=0x…</span>
-          `);
+          showWarn(`<b>Fel:</b> Intyget saknar giltigt kontrollvärde (Verifierings-ID) i länken.<br/>Exempel: <span class="mono">/certificate.html?hash=0x…</span>`);
           return;
         }
 
         $("idText").textContent = verifieringsId;
 
-        // Notering (preliminär)
         updateCaseNote({
           verifieringsId,
           statusText: "Kontrollerar…",
@@ -1233,7 +1288,8 @@
           certLink,
           verifyLink,
           legalLine: "Kontroll pågår.",
-          certId: certId || "",
+          certId: certIdProvided ? certId : "",
+          controlId: controlId !== "—" ? controlId : "",
           internalA: "—",
           internalB: "—"
         });
@@ -1248,6 +1304,7 @@
           setStatus("bad", "Kunde inte kontrolleras");
           $("resultText").textContent = "Kunde inte kontrolleras.";
           $("legalLine").textContent = "Detta kan vara ett tillfälligt fel. Försök igen.";
+          $("pf_status").textContent = "Kunde inte kontrolleras";
 
           updateCaseNote({
             verifieringsId,
@@ -1259,16 +1316,14 @@
             certLink,
             verifyLink,
             legalLine: "Tillfälligt fel. Försök igen.",
-            certId: certId || "",
+            certId: certIdProvided ? certId : "",
+            controlId: controlId !== "—" ? controlId : "",
             internalA: "—",
             internalB: "—"
           });
 
           updateMoreVisibility({ a:"—", b:"—", allow:false });
-          showWarn(`
-            <b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>
-            Försök igen eller öppna verifieringssidan: <a class="mutedLink" href="${verifyLink}">${verifyLink}</a>
-          `);
+          showWarn(`<b>Tillfälligt fel:</b> kontrollen kunde inte genomföras.<br/>Försök igen eller öppna verifieringssidan: <a class="mutedLink" href="${verifyLink}">${verifyLink}</a>`);
           return;
         }
 
@@ -1277,7 +1332,6 @@
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
-        // Valfria interna referenser (endast om tx finns eller debug=1)
         const internalA = safeText(v?.evidence?.observedBlockNumber, "—");
         const internalB = safeText(v?.submission?.txHash, "—");
         const allowInternals = !!optionalContext || debug;
@@ -1289,6 +1343,7 @@
         const pres = pickStatusPresentation(statusCode);
         setStatus(pres.tone, pres.badge);
         $("resultText").textContent = statusText;
+        $("pf_status").textContent = statusText;
 
         const finalLegalLine = (() => {
           if (legalText) return legalText;
@@ -1319,7 +1374,8 @@
             certLink,
             verifyLink,
             legalLine: finalLegalLine,
-            certId: certId || "",
+            certId: certIdProvided ? certId : "",
+            controlId: controlId !== "—" ? controlId : "",
             internalA: allowInternals ? internalA : "—",
             internalB: allowInternals ? internalB : "—"
           });
@@ -1340,7 +1396,8 @@
           certLink,
           verifyLink,
           legalLine: finalLegalLine,
-          certId: certId || "",
+          certId: certIdProvided ? certId : "",
+          controlId: controlId !== "—" ? controlId : "",
           internalA: allowInternals ? internalA : "—",
           internalB: allowInternals ? internalB : "—"
         });
