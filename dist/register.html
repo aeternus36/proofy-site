@@ -320,11 +320,16 @@
             <div class="revTop" id="revTop">
               <div class="revGrid">
                 <div>
-                  <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
-                  <div id="checkedSeOut" class="mono" style="margin-top:8px;">—</div>
-                  <div id="checkedUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
-                  <div class="small" style="margin-top:8px; opacity:.9;">
-                    Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.
+                  <div class="meta">Kontrolltid (server, detta kontrolltillfälle)</div>
+                  <div id="checkedServerSeOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="checkedServerUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
+
+                  <div class="meta" style="margin-top:12px;">Kontrolltid (enhet, kompletterande)</div>
+                  <div id="checkedDeviceSeOut" class="mono" style="margin-top:8px;">—</div>
+                  <div id="checkedDeviceUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
+
+                  <div class="small" style="margin-top:10px; opacity:.9;">
+                    Server-tid används i länkar/notering när den finns. Enhetstid visas som kompletterande uppgift.
                   </div>
                 </div>
 
@@ -334,10 +339,8 @@
 
                   <div class="meta" style="margin-top:10px;">Tidpunkt (endast om bekräftad)</div>
                   <div id="timeOut" class="mono" style="margin-top:8px;">—</div>
-                  <!-- ✅ NY: UTC för tidpunkt (endast om bekräftad) -->
                   <div id="timeUtcOut" class="mono" style="margin-top:8px; opacity:.75; display:none;">—</div>
 
-                  <!-- ✅ Prio: Kopiera notering (primär), Öppna intyg (sekundär), Öppna verifiering (tertiär) -->
                   <div class="revActions" aria-label="Primära åtgärder">
                     <button id="copyNoteTopBtn" class="revBtn primary" type="button" style="display:none;">Kopiera notering</button>
                     <a id="openCertBtn" class="revBtn" href="#" style="display:none;">Öppna intyg</a>
@@ -413,7 +416,6 @@
                       <span id="copyNotePill" class="pill" style="display:none;"></span>
                     </div>
 
-                    <!-- ✅ Mer professionellt språk -->
                     <div class="small" style="margin-top:10px; opacity:.9;">
                       <button class="inlineLinkBtn" id="downloadNoteLink" type="button">Spara notering som textfil</button>
                       <span class="meta" style="margin-left:8px; opacity:.85;">Filnamn: proofy-notering.txt</span>
@@ -579,7 +581,7 @@
 
   const regStatusOut = $("regStatusOut");
   const timeOut = $("timeOut");
-  const timeUtcOut = $("timeUtcOut"); // ✅ NY
+  const timeUtcOut = $("timeUtcOut");
   const submitterOut = $("submitterOut");
   const txOut = $("txOut");
   const debugOut = $("debugOut");
@@ -587,8 +589,11 @@
   const copyIdPill2 = $("copyIdPill2");
   const copyLinkPill = $("copyLinkPill");
 
-  const checkedSeOut = $("checkedSeOut");
-  const checkedUtcOut = $("checkedUtcOut");
+  // ✅ NYA tider (server + enhet)
+  const checkedServerSeOut = $("checkedServerSeOut");
+  const checkedServerUtcOut = $("checkedServerUtcOut");
+  const checkedDeviceSeOut = $("checkedDeviceSeOut");
+  const checkedDeviceUtcOut = $("checkedDeviceUtcOut");
 
   const noteBox = $("noteBox");
   const noteOut = $("noteOut");
@@ -608,8 +613,13 @@
 
   let currentFile = null;
   let currentId = null;
+
+  // Link + checked i länkar
   let currentLink = null;
-  let currentCheckedEpoch = null;
+
+  // ✅ två separata kontrolltider
+  let currentCheckedDeviceEpoch = null;
+  let currentCheckedServerEpoch = null;
 
   let busy = false;
   let opId = 0;
@@ -941,10 +951,15 @@
     lines.push(`Kontrollvärde (Verifierings-ID): ${run.id || "—"}`);
     if (run.fileName) lines.push(`Referensunderlag: ${run.fileName}`);
     lines.push("");
-    lines.push(`Kontrolltid (detta kontrolltillfälle): ${run.checkedSe || "—"}`);
-    lines.push(`Kontrolltid (UTC): ${run.checkedUtc || "—"}`);
-    lines.push("Tidpunkten hämtas från enheten och är inte en extern tidsstämpling.");
+
+    // ✅ 5/5: båda tiderna (server först)
+    lines.push(`Kontrolltid (server): ${run.checkedServerSe || "—"}`);
+    lines.push(`Kontrolltid (server, UTC): ${run.checkedServerUtc || "—"}`);
+    lines.push(`Kontrolltid (enhet): ${run.checkedDeviceSe || "—"}`);
+    lines.push(`Kontrolltid (enhet, UTC): ${run.checkedDeviceUtc || "—"}`);
+    lines.push("Obs: Server-tid används för kontrolltillfället när den finns. Enhetstid är kompletterande och kan vara fel vid fel klocka.");
     lines.push("");
+
     lines.push(`Verifieringslänk: ${run.link || "—"}`);
     lines.push(`Intygslänk: ${run.certLink || "—"}`);
     lines.push("");
@@ -987,13 +1002,17 @@
 
     if (regStatusOut) regStatusOut.textContent = "—";
     if (timeOut) timeOut.textContent = "—";
-    if (timeUtcOut){ timeUtcOut.textContent = "—"; timeUtcOut.style.display = "none"; } // ✅ NY reset
+    if (timeUtcOut){ timeUtcOut.textContent = "—"; timeUtcOut.style.display = "none"; }
+
     if (submitterOut) submitterOut.textContent = "—";
     if (txOut) txOut.textContent = "—";
     if (debugOut) debugOut.textContent = "—";
 
-    if (checkedSeOut) checkedSeOut.textContent = "—";
-    if (checkedUtcOut) checkedUtcOut.textContent = "—";
+    // ✅ reset tider
+    if (checkedServerSeOut) checkedServerSeOut.textContent = "—";
+    if (checkedServerUtcOut) checkedServerUtcOut.textContent = "—";
+    if (checkedDeviceSeOut) checkedDeviceSeOut.textContent = "—";
+    if (checkedDeviceUtcOut) checkedDeviceUtcOut.textContent = "—";
 
     if (openVerifyBtn) openVerifyBtn.style.display = "none";
     if (openCertBtn) openCertBtn.style.display = "none";
@@ -1040,7 +1059,6 @@
   }
 
   function applyPrimaryButtons(){
-    // ✅ Prio 1: kopiera notering (om vi har lastRun)
     if (copyNoteTopBtn){
       if (lastRun){
         copyNoteTopBtn.style.display = "inline-flex";
@@ -1052,7 +1070,6 @@
       }
     }
 
-    // ✅ Prio 2: öppna intyg
     if (openCertBtn){
       if (lastRun?.certLink){
         openCertBtn.href = lastRun.certLink;
@@ -1064,7 +1081,6 @@
       }
     }
 
-    // ✅ Prio 3: öppna verifiering
     if (openVerifyBtn){
       if (currentLink && currentLink !== "—"){
         openVerifyBtn.href = currentLink;
@@ -1077,7 +1093,7 @@
     }
   }
 
-  function applyStatusToUI({ id, checkedEpoch, data }){
+  function applyStatusToUI({ id, checkedEpochForLinks, data }){
     const sc = String(data?.statusCode || "");
     const legal = String(data?.legalText || "");
     const confirmedAt = data?.confirmedAtUnix ?? null;
@@ -1118,15 +1134,19 @@
     }
 
     const verifyLink = currentLink || "—";
-    const certLink = buildCertLink(id, checkedEpoch, txHash || "");
+    const certLink = buildCertLink(id, checkedEpochForLinks, txHash || "");
 
     lastRun = {
       id,
       link: verifyLink,
       certLink,
       fileName: currentFile?.name || "",
-      checkedSe: fmtSeEpochSec(checkedEpoch),
-      checkedUtc: fmtUtcEpochSec(checkedEpoch),
+
+      checkedServerSe: fmtSeEpochSec(currentCheckedServerEpoch),
+      checkedServerUtc: fmtUtcEpochSec(currentCheckedServerEpoch),
+      checkedDeviceSe: fmtSeEpochSec(currentCheckedDeviceEpoch),
+      checkedDeviceUtc: fmtUtcEpochSec(currentCheckedDeviceEpoch),
+
       statusLine: canonical,
       timeSe: confirmedSe,
       timeUtc: confirmedUtc,
@@ -1141,7 +1161,7 @@
     applyPrimaryButtons();
   }
 
-  async function pollTxAndVerify(myOp, id, txHash, checkedEpoch){
+  async function pollTxAndVerify(myOp, id, txHash, checkedEpochForLinks){
     stopPolling();
     pollStartAt = Date.now();
     pollTxHash = txHash;
@@ -1157,7 +1177,7 @@
       if (elapsed > maxMs) {
         stopPolling();
         debugOut.textContent = "Kontroll kunde inte visa bekräftelse inom tidsgränsen. Du kan verifiera igen senare.";
-        applyStatusToUI({ id, checkedEpoch, data: { statusCode:"NOT_CONFIRMED" } });
+        applyStatusToUI({ id, checkedEpochForLinks, data: { statusCode:"NOT_CONFIRMED" } });
         return;
       }
 
@@ -1170,9 +1190,9 @@
 
       if (!ver.ok || ver.data?.ok === false) {
         debugOut.textContent = "Status kunde inte kontrolleras just nu (tillfälligt fel).";
-        applyStatusToUI({ id, checkedEpoch, data: { statusCode:"UNKNOWN" } });
+        applyStatusToUI({ id, checkedEpochForLinks, data: { statusCode:"UNKNOWN" } });
       } else {
-        applyStatusToUI({ id, checkedEpoch, data: ver.data });
+        applyStatusToUI({ id, checkedEpochForLinks, data: ver.data });
         if (String(ver.data?.statusCode || "") === "CONFIRMED") {
           stopPolling();
           return;
@@ -1207,18 +1227,25 @@
     if (abortBtn) abortBtn.onclick = doAbort;
 
     try{
-      const checkedEpoch = Math.floor(Date.now() / 1000);
-      currentCheckedEpoch = checkedEpoch;
+      // ✅ Enhetstid tas direkt vid start (kompletterande)
+      const deviceEpoch = Math.floor(Date.now() / 1000);
+      currentCheckedDeviceEpoch = deviceEpoch;
 
-      if (checkedSeOut) checkedSeOut.textContent = fmtSeEpochSec(checkedEpoch);
-      if (checkedUtcOut) checkedUtcOut.textContent = fmtUtcEpochSec(checkedEpoch);
+      if (checkedDeviceSeOut) checkedDeviceSeOut.textContent = fmtSeEpochSec(deviceEpoch);
+      if (checkedDeviceUtcOut) checkedDeviceUtcOut.textContent = fmtUtcEpochSec(deviceEpoch);
+
+      // Server-tid okänd tills /api/register svarar
+      if (checkedServerSeOut) checkedServerSeOut.textContent = "—";
+      if (checkedServerUtcOut) checkedServerUtcOut.textContent = "—";
 
       const id = await sha256Hex(currentFile);
       if (myOp !== opId) return;
       if (!isIdFormat(id)) throw new Error("Det gick inte att skapa ett giltigt kontrollvärde.");
 
       currentId = id;
-      currentLink = buildVerifyLink(id, checkedEpoch, null);
+
+      // Tillfällig länk före server-tid (uppdateras efter /api/register)
+      currentLink = buildVerifyLink(id, deviceEpoch, null);
 
       if (emptyState) emptyState.style.display = "none";
       if (resultBox) resultBox.style.display = "block";
@@ -1246,19 +1273,37 @@
       }
 
       const data = reg.data || {};
-      applyStatusToUI({ id, checkedEpoch, data });
+
+      // ✅ Server-kontrolltid från backend (5/5)
+      const serverEpoch = Number(data?.serverTimeUnix);
+      if (Number.isFinite(serverEpoch) && serverEpoch > 0){
+        currentCheckedServerEpoch = Math.floor(serverEpoch);
+
+        if (checkedServerSeOut) checkedServerSeOut.textContent = fmtSeEpochSec(currentCheckedServerEpoch);
+        if (checkedServerUtcOut) checkedServerUtcOut.textContent = fmtUtcEpochSec(currentCheckedServerEpoch);
+      } else {
+        // fallback: om server inte skickar tid (ska inte hända)
+        currentCheckedServerEpoch = deviceEpoch;
+        if (checkedServerSeOut) checkedServerSeOut.textContent = fmtSeEpochSec(currentCheckedServerEpoch);
+        if (checkedServerUtcOut) checkedServerUtcOut.textContent = fmtUtcEpochSec(currentCheckedServerEpoch);
+      }
+
+      // ✅ “checked” i länkar ska vara server-tid när den finns
+      const checkedEpochForLinks = currentCheckedServerEpoch || deviceEpoch;
 
       const txHash = data?.submission?.txHash || null;
+
+      // Uppdatera verifieringslänk/QR med server-checked + ev tx
+      currentLink = buildVerifyLink(id, checkedEpochForLinks, txHash || null);
+      linkOut.textContent = currentLink;
+      linkOut.href = currentLink;
+      requestAnimationFrame(() => renderQr(qrBox, currentLink));
+
+      // Uppdatera status + notering
+      applyStatusToUI({ id, checkedEpochForLinks, data });
+
       if (txHash) {
-        currentLink = buildVerifyLink(id, checkedEpoch, txHash);
-
-        linkOut.textContent = currentLink;
-        linkOut.href = currentLink;
-
-        if (qrTap) qrTap.style.display = "grid";
-        requestAnimationFrame(() => renderQr(qrBox, currentLink));
-
-        pollTxAndVerify(myOp, id, txHash, checkedEpoch);
+        pollTxAndVerify(myOp, id, txHash, checkedEpochForLinks);
       }
 
       setPill("Klart ✅");
@@ -1280,7 +1325,10 @@
     currentFile = file || null;
     currentId = null;
     currentLink = null;
-    currentCheckedEpoch = null;
+
+    currentCheckedDeviceEpoch = null;
+    currentCheckedServerEpoch = null;
+
     resetReport();
 
     if (localIdBox) localIdBox.style.display = "none";
@@ -1370,6 +1418,7 @@
       return null;
     }
 
+    // Manuell: ingen server-kontrolltid (ingen backend-call). Vi använder enhetstid.
     const checkedEpoch = Math.floor(Date.now() / 1000);
     const link = buildVerifyLink(clean, checkedEpoch, null);
     manualCurrentLink = link;
