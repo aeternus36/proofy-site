@@ -1019,7 +1019,7 @@
       resultHeadline.style.background = "rgba(80,255,180,.06)";
     } else {
       left.className = "err";
-      left.textContent = "⚠️ Avvikelse";
+      left.textContent = "⚠️ Ändrat";
       right.textContent = "(annan filversion)";
       resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
       resultHeadline.style.background = "rgba(255,80,80,.06)";
@@ -1258,7 +1258,7 @@
     lines.push("Obs: Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
 
     lines.push("");
-    lines.push(`Resultat (filversion): ${run.match ? "Oförändrat underlag (samma filversion)" : "Avvikelse (annan filversion)"}`);
+    lines.push(`Resultat (filversion): ${run.match ? "Oförändrat underlag (samma filversion)" : "Ändrat underlag (annan filversion)"}`);
 
     lines.push("");
     lines.push("Bevisstatus vid kontrolltillfället (registerstatus):");
@@ -1396,7 +1396,7 @@
         outExplainTitle.textContent = "Filversionen stämmer med Verifierings-ID.";
         outExplainBody.textContent = "Kontrollen avser filversion och säger inget om dokumentets innehåll, giltighet eller äkthet.";
       } else {
-        outExplainTitle.textContent = "Filversionen avviker från Verifierings-ID.";
+        outExplainTitle.textContent = "Filversionen är ändrad jämfört med Verifierings-ID.";
         outExplainBody.textContent = "Det kan bero på att fel underlag valts eller att filen har skapats om/sparats på nytt (t.ex. ny export, omskanning eller omkomprimering).";
       }
 
