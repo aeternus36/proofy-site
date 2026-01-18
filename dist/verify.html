@@ -28,12 +28,10 @@
     }
 
     /*
-      ✅ Hardtest: bottenutrymme så widget/overlay inte täcker knappar.
-      Bas: 140px + safe-area + dynamiskt uppmätt overlay (JS sätter --proofy-fab-space)
+      ✅ Hardtest: bottenutrymme så widget/overlay inte täcker innehåll.
+      OBS: Ingen local override av --proofy-fab-space här (one source of truth).
+      JS (overlaySafe) kan sätta --proofy-fab-space på :root vid behov.
     */
-    :root{
-      --proofy-fab-space: 0px; /* uppdateras av JS */
-    }
     main{
       padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px) + var(--proofy-fab-space, 0px));
     }
@@ -88,7 +86,7 @@
       image-rendering: pixelated;
     }
 
-    /* ✅ Liten “Avbryt” som riktig knapp (inte naken länk) */
+    /* ✅ Liten “Avbryt” som riktig knapp */
     #abortBtn{ display:none; }
 
     /* ✅ Audit/version (neutral). Visas bara vid ?debug=1 */
@@ -110,13 +108,38 @@
       overflow-wrap:anywhere;
     }
 
-    /* ✅ Prioritera “Öppna intyg” högre upp och tydligare */
+    /* ✅ Resultat: top actions (även “Hoppa till notering”) */
     .resultTopActions{
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
       margin-top:12px;
+    }
+
+    /* ✅ Bevisstatus-ruta: tydlig separation mellan filresultat och registerstatus */
+    .proofyEvidenceBox{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.04);
+    }
+    .proofyEvidenceGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    @media (min-width: 921px){
+      .proofyEvidenceGrid{ grid-template-columns: 1fr 1fr; }
+    }
+
+    /* “Hoppa” ska kännas som knapp men utan att bli primär handling */
+    .btn.jump{
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.12);
+      color: rgba(234,240,255,.92);
     }
 
     @media print{
@@ -189,7 +212,6 @@
       <strong>Kontrollen sker lokalt. Underlaget lämnar inte din dator.</strong>
     </p>
 
-    <!-- ✅ 100% samsyn: identisk avgränsning/kärntext med register/cert -->
     <p class="meta" style="margin-top:-6px; opacity:.9; max-width:92ch;">
       Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
       Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
@@ -241,7 +263,6 @@
             Inget underlag valt.
           </div>
 
-          <!-- ✅ Färre klick: auto-kör när ID+fil finns. Knapp blir “Kontrollera igen” när resultat finns. -->
           <div class="actions" style="margin-top:14px">
             <div class="actionsRow">
               <button class="btn soft" id="verifyBtn" disabled>Kontrollera</button>
@@ -329,18 +350,7 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- ✅ “Öppna intyg” direkt efter rubrik (högre upp, syns alltid vid resultat) -->
-            <div class="resultTopActions">
-              <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
-              <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
-              <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
-            </div>
-
-            <div id="auditVerifyVersion">
-              <div class="meta" style="opacity:.9;">Systemversion (verify.html)</div>
-              <div class="mono" id="auditVerifyVersionValue">—</div>
-            </div>
-
+            <!-- ✅ 1) Kontrolltid flyttad upp: direkt efter rubrik -->
             <div style="margin-top:12px;">
               <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
               <div id="outCheckedSe" class="mono" style="margin-top:6px;">—</div>
@@ -350,48 +360,65 @@
               </div>
             </div>
 
-            <div style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04);">
-              <div class="small" style="line-height:1.45;">
-                <div><b>Bevisar:</b> Att denna filversion motsvarar kontrollvärdet (Verifierings-ID).</div>
-                <div style="margin-top:6px;"><b>Bevisar inte:</b> Dokumentets innehåll, riktighet, giltighet eller äkthet.</div>
+            <!-- ✅ 3) Bevisstatus-ruta (registerstatus vid kontrolltillfället) -->
+            <div class="proofyEvidenceBox" role="status" aria-live="polite" aria-atomic="true">
+              <div class="meta">Bevisstatus vid kontrolltillfället (registerstatus)</div>
+
+              <div class="proofyEvidenceGrid">
+                <div>
+                  <div class="meta" style="opacity:.9;">Status</div>
+                  <div id="outRegStatus" class="mono" style="margin-top:6px;">—</div>
+                </div>
+                <div>
+                  <div class="meta" style="opacity:.9;">Tidpunkt (endast om bekräftad)</div>
+                  <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
+                  <div id="outRegUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+                <div class="small" style="line-height:1.45;">
+                  <div><b>Avser:</b> Filversion (Verifierings-ID) och registerstatus vid kontrolltillfället.</div>
+                  <div style="margin-top:6px;"><b>Avser inte:</b> Dokumentets innehåll, riktighet, giltighet eller äkthet.</div>
+                </div>
               </div>
             </div>
 
-            <div style="margin-top:12px;">
-              <div class="meta">Status vid kontrolltillfället</div>
-              <div id="outRegStatus" class="mono" style="margin-top:6px;">—</div>
+            <!-- ✅ 2) Hoppa till notering + primära åtgärder (högst upp) -->
+            <div class="resultTopActions" aria-label="Primära åtgärder">
+              <a class="btn primary" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
+              <button class="btn jump" id="jumpToNoteBtn" type="button" style="display:none;">Hoppa till notering</button>
+              <button class="btn" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
+              <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Ladda ner notering (.txt)</button>
+            </div>
 
-              <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:10px;">
-                <div>
-                  <div class="meta">Tidpunkt (endast om bekräftad)</div>
-                  <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
-                </div>
-                <div>
-                  <div class="meta">Tidpunkt (endast om bekräftad) – UTC</div>
-                  <div id="outRegUtc" class="mono" style="margin-top:6px;">—</div>
-                </div>
-              </div>
+            <div id="auditVerifyVersion">
+              <div class="meta" style="opacity:.9;">Systemversion (verify.html)</div>
+              <div class="mono" id="auditVerifyVersionValue">—</div>
+            </div>
 
-              <div id="outExplain"
-                   style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
-                <div id="outExplainTitle" style="font-weight:900;"></div>
-                <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
-              </div>
+            <div id="outExplain"
+                 style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
+              <div id="outExplainTitle" style="font-weight:900;"></div>
+              <div id="outExplainBody" class="small" style="margin-top:6px; opacity:.95;"></div>
+            </div>
 
-              <p class="meta" style="margin-top:14px; opacity:.9;">
-                Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
-                Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
-              </p>
+            <p class="meta" style="margin-top:14px; opacity:.9;">
+              Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.
+              Kontrollen avser endast filversion och registerstatus vid angivet kontrolltillfälle.
+            </p>
 
-              <div class="hr" style="margin-top:14px;"></div>
+            <div class="hr" style="margin-top:14px;"></div>
 
-              <div class="meta">Notering (för ärendeakt)</div>
-              <pre class="mono" id="summaryOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
+            <!-- Anchor för “Hoppa till notering” -->
+            <div id="noteAnchor" style="height:1px;"></div>
 
-              <div class="actions" style="margin-top:12px;">
-                <div class="actionsMetaRow">
-                  <span id="copySummaryPill" class="pill" aria-live="polite" aria-atomic="true" role="status"> </span>
-                </div>
+            <div class="meta">Notering (för ärendeakt)</div>
+            <pre class="mono" id="summaryOut" style="white-space:pre-wrap; margin-top:8px;">—</pre>
+
+            <div class="actions" style="margin-top:12px;">
+              <div class="actionsMetaRow">
+                <span id="copySummaryPill" class="pill" aria-live="polite" aria-atomic="true" role="status"> </span>
               </div>
             </div>
           </div>
@@ -474,9 +501,16 @@
 
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
+
+  // ✅ Flyttat upp i HTML – men id behålls
+  const outCheckedSe = $("outCheckedSe");
+  const outCheckedUtc = $("outCheckedUtc");
+
+  // ✅ Bevisstatus-ruta (registerstatus)
   const outRegStatus = $("outRegStatus");
   const outRegSe = $("outRegSe");
   const outRegUtc = $("outRegUtc");
+
   const openCertBtn = $("openCertBtn");
 
   const outExplain = $("outExplain");
@@ -486,17 +520,16 @@
   const copySummaryBtn = $("copySummaryBtn");
   const copySummaryPill = $("copySummaryPill");
   const summaryOut = $("summaryOut");
-
   const downloadReportBtn = $("downloadReportBtn");
 
-  const errorBox = $("errorBox");
-  const errorMsg = $("errorMsg");
-
-  const outCheckedSe = $("outCheckedSe");
-  const outCheckedUtc = $("outCheckedUtc");
+  const jumpToNoteBtn = $("jumpToNoteBtn");
+  const noteAnchor = $("noteAnchor");
 
   const auditVerifyVersion = $("auditVerifyVersion");
   const auditVerifyVersionValue = $("auditVerifyVersionValue");
+
+  const errorBox = $("errorBox");
+  const errorMsg = $("errorMsg");
 
   let currentFile = null;
   let busy = false;
@@ -920,6 +953,7 @@
     if (copySummaryBtn) copySummaryBtn.style.display = "none";
     if (copySummaryPill) copySummaryPill.style.display = "none";
     if (downloadReportBtn) downloadReportBtn.style.display = "none";
+    if (jumpToNoteBtn) jumpToNoteBtn.style.display = "none";
 
     if (summaryOut) summaryOut.textContent = "—";
     lastRun = null;
@@ -943,10 +977,8 @@
   function setBusy(v){
     busy = v;
 
-    // ✅ Avbryt-knapp med UI
     if (abortBtn) abortBtn.style.display = v ? "inline-flex" : "none";
 
-    // ✅ verifyBtn: används mest för “Kontrollera igen”
     verifyBtn.disabled = v || !(currentFile && isValidId(hashInput.value));
     setVerifyBtnTone(!verifyBtn.disabled);
 
@@ -1068,11 +1100,9 @@
     setStatus("Redo");
     setBusy(false);
 
-    // ✅ Auto-start: när redo och inte redan kört för denna kombination
     const autoKey = `${id.toLowerCase()}::${currentFile.name}::${currentFile.size}::${currentFile.lastModified}`;
     if (autoKey !== lastAutoKey && !busy) {
       lastAutoKey = autoKey;
-      // Låt UI uppdatera innan start
       setTimeout(() => {
         if (!busy && currentFile && isValidId(hashInput.value)) verifyNow({ auto:true });
       }, 0);
@@ -1174,6 +1204,17 @@
     });
   }
 
+  // ✅ Hoppa till notering
+  if (jumpToNoteBtn){
+    jumpToNoteBtn.addEventListener("click", () => {
+      try{
+        (noteAnchor || summaryOut)?.scrollIntoView({ block:"start", behavior:"auto" });
+      } catch {
+        location.hash = "#noteAnchor";
+      }
+    });
+  }
+
   hashInput.addEventListener("input", () => {
     const v = hashInput.value.trim();
     const u = new URL(location.href);
@@ -1220,7 +1261,7 @@
     lines.push(`Resultat (filversion): ${run.match ? "Oförändrat underlag (samma filversion)" : "Avvikelse (annan filversion)"}`);
 
     lines.push("");
-    lines.push("Status vid kontrolltillfället:");
+    lines.push("Bevisstatus vid kontrolltillfället (registerstatus):");
     lines.push(`${run.statusText || "Kunde inte kontrolleras"}`);
 
     if (run.statusText === "Bekräftad") {
@@ -1267,7 +1308,7 @@
   if (abortBtn){
     abortBtn.addEventListener("click", () => {
       if (!busy) return;
-      opId++; // invalidates current run
+      opId++;
       busy = false;
       setStatus("Avbruten");
       setBusy(false);
@@ -1341,9 +1382,10 @@
 
       if (reportMeta) {
         reportMeta.style.display = "block";
-        reportMeta.textContent = `Kontrolltid (detta kontrolltillfälle): ${checkedSe}`;
+        reportMeta.textContent = `Rapport · kontrolltid: ${checkedSe}`;
       }
 
+      // ✅ Kontrolltid uppdateras (nu syns den högst upp)
       if (outCheckedSe) outCheckedSe.textContent = checkedSe;
       if (outCheckedUtc) outCheckedUtc.textContent = checkedUtc;
 
@@ -1381,21 +1423,20 @@
           outRegUtc.textContent = "—";
         }
 
-        // Nyansering utan att blanda ihop filresultat och registerstatus
         if (statusText === "Inskickad – ej bekräftad") {
           outExplainTitle.textContent = match
-            ? "Filversionen stämmer – men status är inskickad (ej bekräftad) vid kontrolltillfället."
-            : "Filversionen avviker – och status är inskickad (ej bekräftad) vid kontrolltillfället.";
+            ? "Filversionen stämmer – men bevisstatus är inskickad (ej bekräftad) vid kontrolltillfället."
+            : "Filversionen avviker – och bevisstatus är inskickad (ej bekräftad) vid kontrolltillfället.";
           outExplainBody.textContent = "En inskickad notering innebär inte bekräftelse. Status blir “Bekräftad” först när bekräftelse kan konstateras i registret.";
         } else if (statusText === "Ej bekräftad") {
           outExplainTitle.textContent = match
-            ? "Filversionen stämmer – men status är ej bekräftad vid kontrolltillfället."
-            : "Filversionen avviker – och status är ej bekräftad vid kontrolltillfället.";
+            ? "Filversionen stämmer – men bevisstatus är ej bekräftad vid kontrolltillfället."
+            : "Filversionen avviker – och bevisstatus är ej bekräftad vid kontrolltillfället.";
           outExplainBody.textContent = "Kontrollera att rätt Verifierings-ID används och försök igen vid behov.";
         } else if (statusText === "Kunde inte kontrolleras") {
           outExplainTitle.textContent = match
-            ? "Filversionen stämmer – men status kunde inte kontrolleras vid kontrolltillfället."
-            : "Filversionen avviker – och status kunde inte kontrolleras vid kontrolltillfället.";
+            ? "Filversionen stämmer – men bevisstatus kunde inte kontrolleras vid kontrolltillfället."
+            : "Filversionen avviker – och bevisstatus kunde inte kontrolleras vid kontrolltillfället.";
           outExplainBody.textContent = "Detta kan vara ett tillfälligt tekniskt fel. Försök igen.";
         }
       }
@@ -1425,11 +1466,15 @@
 
       if (copySummaryBtn) copySummaryBtn.style.display = "inline-flex";
       if (downloadReportBtn) downloadReportBtn.style.display = "inline-flex";
+      if (jumpToNoteBtn) jumpToNoteBtn.style.display = "inline-flex";
 
       hideAlert();
 
       setStatus("Klar ✅");
       setBusy(false);
+
+      // Om auto: lämna användaren där de redan är (ingen scroll).
+      // Om man vill kan man senare lägga in en policy: scrolla endast vid manuell körning.
 
     } catch (e){
       if (myOp !== opId) return;
@@ -1444,7 +1489,6 @@
   resetUI();
   setFile(null);
 
-  // debug-rad vid laddning om debug=1
   if (auditVerifyVersion && auditVerifyVersionValue) {
     if (DEBUG) {
       auditVerifyVersionValue.textContent = PROOFY_VERIFY_BUILD;
@@ -1453,14 +1497,13 @@
     }
   }
 
-  // URL/ID init + selflink init
   updateSelfLinkUI();
   updateValidationUI();
 
   /*
-    ✅ Overlay-safe (fix för det du ser i screenshots):
+    ✅ Overlay-safe:
     Mät “fixed” widget nere i hörn (t.ex. Fråga oss / chat widget) och reservera utrymme i main.
-    Robust: funkar även om widget renderas sent (observer + polling light).
+    Robust: funkar även om widget renderas sent (observer + light polling).
   */
   (function overlaySafe(){
     const root = document.documentElement;
@@ -1472,8 +1515,6 @@
       if (byId1) els.push(byId1);
       if (byId2) els.push(byId2);
 
-      // vanliga fall: en wrapper eller knapp skapas av chat-widget.js
-      // ta med allt som tydligt ligger "fixed" nära botten/höger
       const maybe = Array.from(document.querySelectorAll("button, a, div, iframe"))
         .filter(el => {
           if (!el || !el.getBoundingClientRect) return false;
@@ -1481,9 +1522,10 @@
           if (cs.position !== "fixed") return false;
           const r = el.getBoundingClientRect();
           if (r.width < 40 || r.height < 40) return false;
+
           const nearBottom = r.bottom > (window.innerHeight - 40);
           const nearRight = r.right > (window.innerWidth - 120);
-          const nearLeft = r.left < 120; // vissa widgets kan ligga vänster
+          const nearLeft = r.left < 120;
           return nearBottom && (nearRight || nearLeft);
         });
 
@@ -1502,22 +1544,16 @@
         } catch {}
       }
 
-      // Lägg på liten marginal så knappar aldrig hamnar under
       const px = extra > 0 ? Math.ceil(extra + 18) : 0;
       root.style.setProperty("--proofy-fab-space", px + "px");
     };
 
-    // första körning
     compute();
-
-    // vid resize/orientation
     window.addEventListener("resize", () => compute(), { passive:true });
 
-    // observer för sent inladdade widgets
     const obs = new MutationObserver(() => compute());
     obs.observe(document.body, { childList:true, subtree:true, attributes:true });
 
-    // lätt polling första sekunden (ifall styles/layout sätter sig)
     let n = 0;
     const t = setInterval(() => {
       compute();
