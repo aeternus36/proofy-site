@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- CERT-HARDTEST v2026-01-15 / audit+juridik 5/5 (SE) / no-tech-terms + case-note -->
+<!-- CERT-HARDTEST v2026-01-15 / audit+juridik 5/5 (SE) / no-tech-terms + case-note / overlay-safe -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
@@ -31,8 +31,8 @@
         --qr-frame: rgba(255,255,255,.10);
         --qr-shadow: 0 14px 42px rgba(0,0,0,.35);
 
-        /* Fallback-space så chat/FAB aldrig täcker innehåll på mobil */
-        --proofy-fab-space: 120px;
+        /* One source of truth: JS (overlaySafe) kan sätta detta vid behov */
+        --proofy-fab-space: 0px;
       }
 
       *{box-sizing:border-box}
@@ -78,7 +78,7 @@
         padding:
           10px
           18px
-          calc(48px + env(safe-area-inset-bottom) + var(--proofy-fab-space, 120px));
+          calc(48px + env(safe-area-inset-bottom) + var(--proofy-fab-space, 0px));
       }
 
       .pill{
@@ -368,11 +368,6 @@
         line-height:1.45;
       }
 
-      /* Extra hård mobil-säkring mot FAB/keyboard */
-      @media (max-width: 700px){
-        :root{ --proofy-fab-space: 140px; }
-      }
-
       @media print{
         header, .actions, details.more { display:none !important; }
         body{ background:#fff !important; color:#000 !important; }
@@ -569,7 +564,6 @@
               Vid efterhandsgranskning används verifieringslänk/QR för snabb kontroll.
             </div>
 
-            <!-- ✅ NYTT: Notering för ärendeakt (kopiera + ladda ner) -->
             <div class="noteBox" aria-label="Notering för ärendeakt">
               <div class="label">Notering för ärendeakt (kopiera / spara)</div>
               <div class="noteText" id="caseNoteText" role="textbox" aria-label="Noteringstext" tabindex="0">—</div>
@@ -687,8 +681,6 @@
       const CERT_HARDTEST_VERSION = "CERT-HARDTEST v2026-01-15 (SE audit/juridik, no-tech-terms + case-note)";
       const $ = (id) => document.getElementById(id);
 
-      // URL måste bära ett kontrollvärde (Verifierings-ID).
-      // Interna namn i koden påverkar inte UI. UI använder inga tekniska begrepp.
       function isValidVerifieringsId(s){
         return typeof s === "string" && /^0x[0-9a-fA-F]{64}$/.test(s.trim());
       }
@@ -717,6 +709,20 @@
           return `${se} (<span class="tz">${tz}</span>)`;
         }catch{
           return new Date(n*1000).toLocaleString("sv-SE") + " (lokal)";
+        }
+      }
+
+      function fmtSePlain(sec){
+        const n = Number(sec);
+        if(!Number.isFinite(n) || n <= 0) return "—";
+        try{
+          return new Intl.DateTimeFormat("sv-SE", {
+            timeZone:"Europe/Stockholm",
+            year:"numeric", month:"2-digit", day:"2-digit",
+            hour:"2-digit", minute:"2-digit", second:"2-digit"
+          }).format(new Date(n*1000)) + " (Europe/Stockholm)";
+        }catch{
+          return new Date(n*1000).toLocaleString("sv-SE");
         }
       }
 
@@ -956,7 +962,6 @@
           lines.push(`Intygs-ID (valfritt): ${certId}`);
         }
 
-        // Tidpunkt endast när bekräftad
         if (statusText === "Bekräftad" && confirmedLocalText && confirmedLocalText !== "—"){
           lines.push("");
           lines.push(`Tidpunkt (endast om bekräftad): ${confirmedLocalText}`);
@@ -964,7 +969,6 @@
           lines.push("Obs: Tidpunkten avser när Proofy kan redovisa bekräftelse för kontrollvärdet – inte när dokumentet upprättades eller användes.");
         }
 
-        // Valfria interna referenser (utan teknikspråk)
         const hasA = internalA && internalA !== "—" && !/^0+$/.test(String(internalA));
         const hasB = internalB && internalB !== "—" && !/^0+$/.test(String(internalB));
         if (hasA || hasB){
@@ -979,28 +983,61 @@
         return lines.join("\n");
       }
 
-      /* Mobil-säkring: försök läsa av ev. flytande widget och ge extra bottenutrymme */
-      function trySetFabSpace(){
-        try{
-          const candidates = [
-            document.querySelector('[data-proofy-fab]'),
-            document.querySelector('.proofy-chat-fab'),
-            document.querySelector('.chat-widget-fab'),
-            document.querySelector('#chatFab'),
-            document.querySelector('button[aria-label*="Fråga"]'),
-          ].filter(Boolean);
+      function overlaySafe(){
+        const root = document.documentElement;
 
-          if(!candidates.length) return;
+        const candidates = () => {
+          const els = [];
+          const byId1 = document.getElementById("chatWidget");
+          const byId2 = document.getElementById("chat-widget");
+          if (byId1) els.push(byId1);
+          if (byId2) els.push(byId2);
 
-          let maxH = 0;
-          for(const el of candidates){
-            const r = el.getBoundingClientRect();
-            if (r && r.height) maxH = Math.max(maxH, r.height);
+          const maybe = Array.from(document.querySelectorAll("button, a, div, iframe"))
+            .filter(el => {
+              if (!el || !el.getBoundingClientRect) return false;
+              const cs = getComputedStyle(el);
+              if (cs.position !== "fixed") return false;
+              const r = el.getBoundingClientRect();
+              if (r.width < 40 || r.height < 40) return false;
+
+              const nearBottom = r.bottom > (window.innerHeight - 40);
+              const nearRight = r.right > (window.innerWidth - 120);
+              const nearLeft = r.left < 120;
+              return nearBottom && (nearRight || nearLeft);
+            });
+
+          for (const el of maybe) els.push(el);
+          return Array.from(new Set(els));
+        };
+
+        const compute = () => {
+          const list = candidates();
+          let extra = 0;
+
+          for (const el of list){
+            try{
+              const r = el.getBoundingClientRect();
+              if (r.height > extra) extra = r.height;
+            } catch {}
           }
-          if(maxH > 0){
-            document.documentElement.style.setProperty('--proofy-fab-space', String(Math.ceil(maxH + 56)) + 'px');
-          }
-        }catch{}
+
+          const px = extra > 0 ? Math.ceil(extra + 18) : 0;
+          root.style.setProperty("--proofy-fab-space", px + "px");
+        };
+
+        compute();
+        window.addEventListener("resize", () => compute(), { passive:true });
+
+        const obs = new MutationObserver(() => compute());
+        obs.observe(document.body, { childList:true, subtree:true, attributes:true });
+
+        let n = 0;
+        const t = setInterval(() => {
+          compute();
+          n++;
+          if (n > 8) clearInterval(t);
+        }, 180);
       }
 
       async function run(){
@@ -1009,7 +1046,6 @@
 
         const url = new URL(location.href);
 
-        // Interna parameternamn (UI nämner inte tekniska ord)
         const verifieringsId = (url.searchParams.get("hash") || "").trim();
         const optionalContext = (url.searchParams.get("tx") || "").trim();
         const certId = (url.searchParams.get("cert") || "").trim();
@@ -1026,7 +1062,7 @@
           (certId ? `&cert=${encodeURIComponent(certId)}` : "");
 
         const verifyLink =
-          `${location.origin}/verify.html?hash=${encodeURIComponent(verifieringsId)}` +
+          `${location.origin}/verify.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checked}` +
           (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "");
 
         $("certLink").textContent = certLink;
@@ -1054,13 +1090,11 @@
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
         };
 
-        // Kontrolltid (topp)
         const checkedLocalHtml = fmtSeHtml(checked);
         const checkedUtcText = fmtUtc(checked);
         $("checkedTopLocal").innerHTML = checkedLocalHtml;
         $("checkedTopUtc").textContent = checkedUtcText;
 
-        // Reset innan kontroll
         $("resultText").textContent = "Kontrollerar…";
         $("legalLine").textContent = "—";
         $("confirmedLocal").textContent = "—";
@@ -1081,7 +1115,6 @@
           }
         }
 
-        // Förhandsbygg notering (innan vi vet status)
         const noteEl = $("caseNoteText");
         const updateCaseNote = (payload) => {
           const note = buildCaseNote(payload);
@@ -1089,27 +1122,23 @@
           return note;
         };
 
-        // Kopiera/ladda ner notering
         const copyNoteBtn = $("copyCaseNote");
         const dlNoteBtn = $("downloadCaseNote");
 
-        const wireNoteButtons = () => {
-          if (copyNoteBtn){
-            copyNoteBtn.onclick = async () => {
-              const t = noteEl?.textContent || "";
-              if (await copyText(t)) toastCopied("Notering för ärendeakt");
-            };
-          }
-          if (dlNoteBtn){
-            dlNoteBtn.onclick = () => {
-              const t = noteEl?.textContent || "";
-              downloadTextFile("proofy-notering.txt", t);
-              showWarn("<b>Nerladdad:</b> proofy-notering.txt");
-              setTimeout(() => hideWarn(), 1200);
-            };
-          }
-        };
-        wireNoteButtons();
+        if (copyNoteBtn){
+          copyNoteBtn.onclick = async () => {
+            const t = noteEl?.textContent || "";
+            if (await copyText(t)) toastCopied("Notering för ärendeakt");
+          };
+        }
+        if (dlNoteBtn){
+          dlNoteBtn.onclick = () => {
+            const t = noteEl?.textContent || "";
+            downloadTextFile("proofy-notering.txt", t);
+            showWarn("<b>Nerladdad:</b> proofy-notering.txt");
+            setTimeout(() => hideWarn(), 1200);
+          };
+        }
 
         if (!isValidVerifieringsId(verifieringsId)){
           setStatus("bad", "Kunde inte kontrolleras");
@@ -1141,7 +1170,6 @@
 
         $("idText").textContent = verifieringsId;
 
-        // Notering (preliminär)
         updateCaseNote({
           verifieringsId,
           statusText: "Kontrollerar…",
@@ -1196,7 +1224,6 @@
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
-        // Valfria interna referenser – presenteras som intern/spårning
         const internalA = safeText(v?.evidence?.observedBlockNumber, "—");
         const internalB = safeText(v?.submission?.txHash, "—");
         $("internalRefA").textContent = internalA;
@@ -1216,32 +1243,17 @@
         })();
         $("legalLine").textContent = finalLegalLine;
 
-        let confirmedLocalPlain = "—";
-        let confirmedUtcPlain = "—";
-
         if (statusCode === "CONFIRMED" && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
           $("confirmedLocal").innerHTML = fmtSeHtml(confirmedAtUnix);
           $("confirmedUtc").textContent = fmtUtc(confirmedAtUnix);
-
-          // För noteringen vill vi ha plain-text (utan HTML)
-          try{
-            confirmedLocalPlain = new Intl.DateTimeFormat("sv-SE", {
-              timeZone:"Europe/Stockholm",
-              year:"numeric", month:"2-digit", day:"2-digit",
-              hour:"2-digit", minute:"2-digit", second:"2-digit"
-            }).format(new Date(confirmedAtUnix*1000)) + " (Europe/Stockholm)";
-          }catch{
-            confirmedLocalPlain = (new Date(confirmedAtUnix*1000)).toLocaleString("sv-SE");
-          }
-          confirmedUtcPlain = fmtUtc(confirmedAtUnix);
 
           updateCaseNote({
             verifieringsId,
             statusText,
             checkedLocalText: $("checkedTopLocal")?.textContent || "—",
             checkedUtcText,
-            confirmedLocalText: confirmedLocalPlain,
-            confirmedUtcText: confirmedUtcPlain,
+            confirmedLocalText: fmtSePlain(confirmedAtUnix),
+            confirmedUtcText: fmtUtc(confirmedAtUnix),
             certLink,
             verifyLink,
             legalLine: finalLegalLine,
@@ -1285,10 +1297,7 @@
         showWarn(`<b>Kunde inte kontrolleras.</b><br/>Kontrollen kunde inte genomföras vid kontrolltillfället. Försök igen eller öppna verifieringssidan.`);
       }
 
-      trySetFabSpace();
-      window.addEventListener("resize", trySetFabSpace, { passive:true });
-      setTimeout(trySetFabSpace, 400);
-
+      overlaySafe();
       run();
     </script>
 
