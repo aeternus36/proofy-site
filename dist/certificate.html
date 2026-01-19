@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- CERTIFICATE v2026-01-19c / SE audit+juridik / HARDTEST 5/5 / Patch: serverTimeUnix primary + device fallback (UI source-safe) -->
+<!-- CERTIFICATE v2026-01-19d / SE audit+juridik / HARDTEST 5/5 / Patch: anti-misstolkning + clip-safe print footer (no new statuses, no new legal meaning) -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
@@ -137,6 +137,19 @@
       .statusBadge.good .dot{background:var(--good)}
       .statusBadge.bad .dot{background:var(--bad)}
       .statusBadge.warn .dot{background:var(--warn)}
+
+      /* Anti-misstolkning: text direkt intill statusrutan (skärmdumpsäkert) */
+      .interpretBox{
+        width:100%;
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:16px;
+        background:rgba(0,0,0,.18);
+        padding:10px 12px;
+        color:rgba(234,240,255,.90);
+        line-height:1.45;
+        font-size:12.5px;
+      }
+      .interpretBox b{ color:rgba(234,240,255,.96); }
 
       .statusMeta{
         width:100%;
@@ -412,7 +425,7 @@
         .printOnly{ display:block !important; }
 
         body{ background:#fff !important; color:#000 !important; }
-        main{ max-width:none !important; padding: 0 0 64px 0 !important; }
+        main{ max-width:none !important; padding: 0 0 76px 0 !important; }
         .hero, .card { box-shadow:none !important; border-color:#ddd !important; background:#fff !important; }
         .pill { display:none !important; }
 
@@ -420,7 +433,7 @@
         .statusBadge{ border-color:#ddd !important; background:#fff !important; min-width:auto !important; }
         .dot{ border:1px solid #999 !important; }
 
-        .val, .statusMeta, .noteBox, .noteText { border-color:#ddd !important; background:#fff !important; }
+        .val, .statusMeta, .noteBox, .noteText, .interpretBox { border-color:#ddd !important; background:#fff !important; }
         .label{ color:#111 !important; }
         .mono{ color:#111 !important; }
 
@@ -547,7 +560,7 @@
               <br/>
               <b>Avgränsning:</b> Uttalar sig inte om dokumentets innehåll/riktighet/äkthet och ersätter inte processkontroller.
               <br/>
-              <span style="opacity:.92">Kontrolltid baseras primärt på server-tid när den finns; enhetstid visas som kompletterande/fallback.</span>
+              <span style="opacity:.92">Kontrolltid baseras primärt på server-tid när den finns; enhetstid visas som tydligt markerad fallback/komplettering.</span>
             </div>
 
             <!-- Längre förklaring på skärm (ej i PDF) -->
@@ -572,6 +585,12 @@
             <div id="statusBadge" class="statusBadge warn" title="Status hos Proofy vid kontrollen">
               <span class="dot" aria-hidden="true"></span>
               <span id="statusText">—</span>
+            </div>
+
+            <!-- MÅSTE: Anti-misstolkning nära status (skärmdumpsäkert) -->
+            <div class="interpretBox" id="interpretBox" aria-label="Tolkning och avgränsning">
+              <b>Visar endast:</b> resultatet av en teknisk kontroll av registerstatus för kontrollvärdet vid angiven kontrolltid.<br/>
+              <b>Visar inte:</b> dokumentets innehåll, riktighet, giltighet eller äkthet.
             </div>
 
             <div class="statusMeta">
@@ -648,7 +667,8 @@
                 <div class="label">Kontroll-ID (detta kontrolltillfälle)</div>
                 <div class="mono" id="controlIdOut">—</div>
                 <div class="small screenOnly" style="margin-top:8px">
-                  Beräknas lokalt från kontrollvärde, kontrolltid och utfallet. Kan användas som intern referens. Döljs om miljön inte stödjer beräkning.
+                  Beräknas lokalt från kontrollvärde, kontrolltid och utfallet. Kan användas som intern referens.
+                  <b>Inte ett myndighets-ID</b> och påverkar inte intygets innebörd. Döljs om miljön inte stödjer beräkning.
                 </div>
               </div>
 
@@ -774,6 +794,14 @@
         <!-- Print footer (självbärande vid PDF/utskrift) -->
         <div id="printFooter" aria-hidden="true">
           <div><b>Verifieringsintyg – Proofy</b></div>
+
+          <!-- MÅSTE: klippsäker tolkningsrad i varje PDF-sida -->
+          <div style="margin-top:4px;">
+            <span class="mono">
+              Granskning: Kontrollvärde + Kontrolltid + Status (och ev. Kontroll-ID) ska framgå. Om någon uppgift saknas är detta ett utdrag.
+            </span>
+          </div>
+
           <div style="margin-top:4px;">
             Kontrollvärde: <span class="mono" id="pf_id">—</span>
           </div>
@@ -810,7 +838,7 @@
 
     <script>
       /* Intern versionsrad (visas inte för mottagare) */
-      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-19c (serverTime primary + device fallback, UI source-safe)";
+      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-19d (anti-misstolkning + clip-safe print footer, no status changes)";
 
       const ISSUER_LEGAL_NAME = "Proofy AB";   // ändra vid behov
       const ISSUER_ORGNR = "";                 // valfritt: t.ex. "org.nr 556XXXX-XXXX"
