@@ -153,6 +153,49 @@
       .proofyTimeGrid{ grid-template-columns: 1fr 1fr; }
     }
 
+    /* ✅ Klippsäkert bevisblock (för screenshot/print) */
+    .proofyClipBox{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.045);
+      display:none; /* visas efter genomförd kontroll */
+    }
+    .proofyClipGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    @media (min-width: 921px){
+      .proofyClipGrid{ grid-template-columns: 1fr 1fr; }
+    }
+    .proofyClipField .meta{ opacity:.9; }
+    .proofyClipField .mono{
+      margin-top:6px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.03);
+      overflow-wrap:anywhere;
+      word-break:break-word;
+      font-size:13px;
+      line-height:1.35;
+    }
+    .proofyClipField .mono.copy{
+      cursor:pointer;
+      user-select:text;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .proofyClipHint{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+    }
+
     /* “Hoppa” ska kännas som knapp men utan att bli primär handling */
     .btn.jump{
       background: rgba(255,255,255,.04);
@@ -171,6 +214,24 @@
         color:#111 !important;
       }
       #auditVerifyVersion .mono{ color:#000 !important; }
+
+      /* gör bevisblocket tydligt i print */
+      .proofyClipBox{
+        display:block !important;
+        border-color:#ddd !important;
+        background:#fff !important;
+        color:#111 !important;
+      }
+      .proofyClipField .mono{
+        border-color:#ddd !important;
+        background:#fff !important;
+        color:#000 !important;
+      }
+      .proofyClipHint{
+        border-color:#ddd !important;
+        background:#fff !important;
+        color:#111 !important;
+      }
     }
   </style>
 </head>
@@ -370,6 +431,58 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
+            <!-- ✅ Klippsäkert bevisblock: självbärande i screenshot/print -->
+            <div class="proofyClipBox" id="clipBox" role="status" aria-live="polite" aria-atomic="true">
+              <div class="meta">Bevisblock (för screenshot/print)</div>
+
+              <div class="proofyClipGrid">
+                <div class="proofyClipField">
+                  <div class="meta">Verifierings-ID</div>
+                  <div id="clipRefId" class="mono">—</div>
+                </div>
+
+                <div class="proofyClipField">
+                  <div class="meta">Bevisstatus vid kontrolltillfället</div>
+                  <div id="clipStatus" class="mono">—</div>
+                </div>
+
+                <div class="proofyClipField">
+                  <div class="meta">Kontrolltid (Proofy, UTC)</div>
+                  <div id="clipCheckedUtc" class="mono">—</div>
+                  <div id="clipCheckedNote" class="small" style="margin-top:8px; opacity:.85; display:none;">
+                    Obs: Proofy-tid är fallback till enhetstid (serverTimeUnix saknades).
+                  </div>
+                </div>
+
+                <div class="proofyClipField">
+                  <div class="meta">Verifieringslänk (klicka för att kopiera)</div>
+                  <div id="clipSelfLink" class="mono copy" role="button" tabindex="0" title="Klicka för att kopiera">—</div>
+                  <div class="small" id="clipSelfLinkPill" style="margin-top:8px; opacity:.9; display:none;">Länk kopierad ✅</div>
+                </div>
+
+                <div class="proofyClipField">
+                  <div class="meta">Intygslänk (klicka för att kopiera)</div>
+                  <div id="clipCertLink" class="mono copy" role="button" tabindex="0" title="Klicka för att kopiera">—</div>
+                  <div class="small" id="clipCertLinkPill" style="margin-top:8px; opacity:.9; display:none;">Länk kopierad ✅</div>
+                </div>
+
+                <div class="proofyClipField">
+                  <div class="meta">Referenser (om finns)</div>
+                  <div id="clipRefs" class="mono">—</div>
+                </div>
+              </div>
+
+              <div class="proofyClipHint">
+                <div class="small" style="line-height:1.45;">
+                  <div><b>Avser:</b> Filversion (Verifierings-ID) och registerstatus vid kontrolltillfället.</div>
+                  <div style="margin-top:6px;"><b>Avser inte:</b> Dokumentets innehåll, riktighet, giltighet eller äkthet.</div>
+                  <div style="margin-top:8px; opacity:.92;">
+                    Tips för ärendeakt: öppna <b>Intyg</b> och spara som PDF. Screenshots kan vara utdrag.
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- ✅ Kontrolltid (Proofy systemtid + enhet) -->
             <div class="proofyTimeBox" role="status" aria-live="polite" aria-atomic="true">
               <div class="meta">Kontrolltid vid kontrolltillfället</div>
@@ -556,6 +669,18 @@
 
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
+
+  // ✅ Klippsäkert bevisblock
+  const clipBox = $("clipBox");
+  const clipRefId = $("clipRefId");
+  const clipStatus = $("clipStatus");
+  const clipCheckedUtc = $("clipCheckedUtc");
+  const clipCheckedNote = $("clipCheckedNote");
+  const clipSelfLink = $("clipSelfLink");
+  const clipSelfLinkPill = $("clipSelfLinkPill");
+  const clipCertLink = $("clipCertLink");
+  const clipCertLinkPill = $("clipCertLinkPill");
+  const clipRefs = $("clipRefs");
 
   // ✅ Kontrolltid: Proofy systemtid + enhet
   const outCheckedServerSe = $("outCheckedServerSe");
@@ -1020,6 +1145,17 @@
     if (auditVerifyVersion) auditVerifyVersion.style.display = "none";
     if (auditVerifyVersionValue) auditVerifyVersionValue.textContent = "—";
 
+    if (clipBox) clipBox.style.display = "none";
+    if (clipRefId) clipRefId.textContent = "—";
+    if (clipStatus) clipStatus.textContent = "—";
+    if (clipCheckedUtc) clipCheckedUtc.textContent = "—";
+    if (clipCheckedNote) clipCheckedNote.style.display = "none";
+    if (clipSelfLink) clipSelfLink.textContent = "—";
+    if (clipSelfLinkPill) clipSelfLinkPill.style.display = "none";
+    if (clipCertLink) clipCertLink.textContent = "—";
+    if (clipCertLinkPill) clipCertLinkPill.style.display = "none";
+    if (clipRefs) clipRefs.textContent = "—";
+
     resultHeadline.textContent = "";
     outExplainTitle.textContent = "";
     outExplainBody.textContent = "";
@@ -1065,13 +1201,13 @@
 
     if (match) {
       left.className = "ok";
-      left.textContent = "✅ Oförändrat";
+      left.textContent = "✅ Filversion: oförändrad";
       right.textContent = "(samma filversion)";
       resultHeadline.style.borderColor = "rgba(80,255,180,.20)";
       resultHeadline.style.background = "rgba(80,255,180,.06)";
     } else {
       left.className = "err";
-      left.textContent = "⚠️ Ändrat";
+      left.textContent = "⚠️ Filversion: ändrad";
       right.textContent = "(annan filversion)";
       resultHeadline.style.borderColor = "rgba(255,80,80,.20)";
       resultHeadline.style.background = "rgba(255,80,80,.06)";
@@ -1245,6 +1381,26 @@
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doQrCopy(); }
     });
   }
+
+  // ✅ Klippsäkert bevisblock: klick-för-kopiera länkar
+  function bindClipCopy(el, pill){
+    if (!el) return;
+    const doCopy = async () => {
+      const t = String(el.textContent || "").trim();
+      if (!t || t === "—") return;
+      const ok = await copyTextToClipboard(t);
+      if (!pill) return;
+      pill.style.display = "block";
+      pill.textContent = ok ? "Länk kopierad ✅" : "Kunde inte kopiera";
+      setTimeout(() => { pill.style.display = "none"; pill.textContent = ""; }, 1200);
+    };
+    el.addEventListener("click", (e) => { e.preventDefault(); doCopy(); });
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+    });
+  }
+  bindClipCopy(clipSelfLink, clipSelfLinkPill);
+  bindClipCopy(clipCertLink, clipCertLinkPill);
 
   // ✅ Hoppa till notering
   if (jumpToNoteBtn){
@@ -1594,6 +1750,26 @@
         openCertBtn.rel = "noopener";
         openCertBtn.style.display = "inline-flex";
       }
+
+      // ✅ Uppdatera klippsäkert bevisblock (självbärande i screenshot/print)
+      if (clipBox) clipBox.style.display = "block";
+      if (clipRefId) clipRefId.textContent = refId;
+
+      if (clipStatus) clipStatus.textContent = statusText || "Kunde inte kontrolleras";
+      if (clipCheckedUtc) clipCheckedUtc.textContent = serverUtc || "—";
+      if (clipCheckedNote) clipCheckedNote.style.display = serverTimeWasFallback ? "block" : "none";
+
+      const selfLink = buildSelfLink(refId, checkedEpochForLinks, tx || "");
+      const certLink = buildCertLink(refId, checkedEpochForLinks, tx || "");
+      if (clipSelfLink) clipSelfLink.textContent = selfLink;
+      if (clipCertLink) clipCertLink.textContent = certLink;
+
+      const refs = [];
+      const txOut = (tx || txFromApi || "").trim();
+      if (txOut) refs.push(`tx: ${txOut}`);
+      if (requestId) refs.push(`requestId: ${requestId}`);
+      if (httpDateRaw) refs.push(`httpDate: ${httpDateRaw}`);
+      if (clipRefs) clipRefs.textContent = refs.length ? refs.join(" · ") : "—";
 
       lastRun = {
         refId,
