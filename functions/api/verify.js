@@ -8,7 +8,7 @@ import { ABI as PROOFY_ABI } from "./abi.js";
  * Juridik (kontraktssanning):
  * - Aldrig "Bekräftad" utan att kontraktets get() visar bekräftad notering.
  * - "Inskickad – ej bekräftad" endast om tx är känd och ännu inte har ett mined-resultat som gör den "Ej bekräftad".
- * - Vid tekniskt fel: "Kunde inte kontrolleras".
+ * - Vid tekniskt fel: "Kundeukde inte kontrolleras".
  *
  * Statuskoder (stabila):
  * - CONFIRMED
@@ -87,10 +87,7 @@ function getTimeoutMs(env) {
 
 function makeRequestId() {
   try {
-    if (
-      globalThis.crypto &&
-      typeof globalThis.crypto.randomUUID === "function"
-    ) {
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
       return globalThis.crypto.randomUUID();
     }
   } catch {
@@ -106,6 +103,22 @@ function makeRequestId() {
  * - NOT_CONFIRMED
  * - UNKNOWN
  */
+
+function statusUnknown({ hash, detail }) {
+  return {
+    ok: false,
+    statusCode: "UNKNOWN",
+    statusText: "Kunde inte kontrolleras",
+    hash: hash || null,
+    confirmedAtUnix: null,
+    evidence: null,
+    submission: null,
+    error: "Verify temporarily unavailable",
+    detail,
+    legalText:
+      "Status kunde inte kontrolleras på grund av tekniskt fel. Ingen slutsats kan dras utifrån detta svar.",
+  };
+}
 
 function statusConfirmed({
   hash,
@@ -130,12 +143,20 @@ function statusConfirmed({
   };
 }
 
+// ✅ Juridik-lås: SUBMITTED_UNCONFIRMED får aldrig returneras utan känd txHash
 function statusSubmittedUnconfirmed({
   hash,
   observedBlockNumber,
   txHash,
   txState,
 }) {
+  if (!txHash) {
+    return statusUnknown({
+      hash,
+      detail: "SUBMITTED_UNCONFIRMED requires a known txHash",
+    });
+  }
+
   return {
     ok: true,
     statusCode: "SUBMITTED_UNCONFIRMED",
@@ -143,7 +164,7 @@ function statusSubmittedUnconfirmed({
     hash,
     confirmedAtUnix: null,
     evidence: observedBlockNumber ? { observedBlockNumber } : null,
-    submission: txHash ? { txHash, txState: txState || null } : null,
+    submission: { txHash, txState: txState || null },
     legalText:
       "En transaktionsreferens är känd men bekräftelse kan ännu inte redovisas. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'.",
   };
@@ -161,22 +182,6 @@ function statusNotConfirmed({ hash, observedBlockNumber, txHash, reason }) {
     legalText:
       reason ||
       "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
-  };
-}
-
-function statusUnknown({ hash, detail }) {
-  return {
-    ok: false,
-    statusCode: "UNKNOWN",
-    statusText: "Kunde inte kontrolleras",
-    hash: hash || null,
-    confirmedAtUnix: null,
-    evidence: null,
-    submission: null,
-    error: "Verify temporarily unavailable",
-    detail,
-    legalText:
-      "Status kunde inte kontrolleras på grund av tekniskt fel. Ingen slutsats kan dras utifrån detta svar.",
   };
 }
 
@@ -206,16 +211,14 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   // ✅ Robust: håll blockNo som BigInt -> string (ingen Number-avrundning)
   let registeredBlockBig = 0n;
   try {
-    registeredBlockBig = typeof blockNo === "bigint" ? blockNo : BigInt(blockNo);
+    registeredBlockBig =
+      typeof blockNo === "bigint" ? blockNo : BigInt(blockNo);
   } catch {
     registeredBlockBig = 0n;
   }
 
   const exists =
-    Boolean(ok) &&
-    Number.isFinite(timestamp) &&
-    timestamp > 0 &&
-    registeredBlockBig > 0n;
+    Boolean(ok) && Number.isFinite(timestamp) && timestamp > 0 && registeredBlockBig > 0n;
 
   // "Observed" = vad denna RPC just nu ser, inte ett bevis om tx eller registreringsblock.
   const observedBlockNumber = await publicClient.getBlockNumber();
