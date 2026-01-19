@@ -320,7 +320,7 @@
             <div class="revTop" id="revTop">
               <div class="revGrid">
                 <div>
-                  <div class="meta">Kontrolltid (server, detta kontrolltillfälle)</div>
+                  <div class="meta">Kontrolltid (Proofy, detta kontrolltillfälle)</div>
                   <div id="checkedServerSeOut" class="mono" style="margin-top:8px;">—</div>
                   <div id="checkedServerUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
 
@@ -329,7 +329,11 @@
                   <div id="checkedDeviceUtcOut" class="mono" style="margin-top:8px; opacity:.75;">—</div>
 
                   <div class="small" style="margin-top:10px; opacity:.9;">
-                    Server-tid används i länkar/notering när den finns. Enhetstid visas som kompletterande uppgift.
+                    Proofy-tid kommer från serversvaret (<span class="mono">serverTimeUnix</span>). Enhetstid visas som kompletterande uppgift.
+                  </div>
+
+                  <div class="small" id="httpDateLine" style="margin-top:10px; opacity:.82; display:none;">
+                    HTTP Date (transport, kompletterande): <span class="mono" id="httpDateOut">—</span>
                   </div>
                 </div>
 
@@ -371,17 +375,17 @@
               </div>
 
               <div class="meta" style="margin-top:12px;">Verifieringslänk (delbar)</div>
-              <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
+              <div class="small hintline">Klicka i fältet för att kopiera. Öppna via “Öppna verifiering”.</div>
 
               <div style="position:relative; margin-top:6px;">
-                <a id="linkOut"
+                <!-- ✅ Gör länkrutan kopierbar (inte navigerande) -->
+                <div id="linkOut"
                    class="mono"
-                   href="#"
-                   target="_blank"
-                   rel="noopener"
-                   title="Tryck för att öppna · Långtryck för att kopiera"
-                   aria-label="Verifieringslänk (delbar)"
-                   style="display:block; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.03); cursor:pointer; user-select:text; text-decoration:none;">—</a>
+                   tabindex="0"
+                   role="button"
+                   title="Klicka för att kopiera"
+                   aria-label="Verifieringslänk (klicka för att kopiera)"
+                   style="display:block; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.03); cursor:pointer; user-select:text; text-decoration:none; overflow-wrap:anywhere; word-break:break-word;">—</div>
                 <span id="copyLinkPill" class="pill" style="display:none; margin-top:8px;"></span>
               </div>
 
@@ -445,6 +449,9 @@
 
                 <div class="meta" style="margin-top:10px;">Juridisk information (från kontroll)</div>
                 <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
+
+                <div class="meta" style="margin-top:10px;">Kontrollreferens (Proofy)</div>
+                <div id="requestIdOut" class="mono" style="margin-top:8px;">—</div>
               </details>
             </div>
           </div>
@@ -484,15 +491,15 @@
           <div>
             <div class="meta">Verifieringslänk (delbar)</div>
 
-            <a id="manualLinkOut"
+            <div id="manualLinkOut"
                class="mono"
-               href="#"
-               target="_blank"
-               rel="noopener"
-               title="Tryck för att öppna · Långtryck för att kopiera"
-               style="display:block; margin-top:8px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.03); text-decoration:none;">—</a>
+               tabindex="0"
+               role="button"
+               aria-label="Verifieringslänk (klicka för att kopiera)"
+               title="Klicka för att kopiera"
+               style="display:block; margin-top:8px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.03); text-decoration:none; cursor:pointer; user-select:text; overflow-wrap:anywhere; word-break:break-word;">—</div>
 
-            <div class="small hintline">Klicka i fältet för att kopiera (eller öppna i ny flik).</div>
+            <div class="small hintline">Klicka i fältet för att kopiera (öppna via knappen).</div>
 
             <div class="qrWrap" style="margin-top:12px;">
               <div>
@@ -585,15 +592,19 @@
   const submitterOut = $("submitterOut");
   const txOut = $("txOut");
   const debugOut = $("debugOut");
+  const requestIdOut = $("requestIdOut");
 
   const copyIdPill2 = $("copyIdPill2");
   const copyLinkPill = $("copyLinkPill");
 
-  // ✅ NYA tider (server + enhet)
+  // ✅ tider (Proofy + enhet)
   const checkedServerSeOut = $("checkedServerSeOut");
   const checkedServerUtcOut = $("checkedServerUtcOut");
   const checkedDeviceSeOut = $("checkedDeviceSeOut");
   const checkedDeviceUtcOut = $("checkedDeviceUtcOut");
+
+  const httpDateLine = $("httpDateLine");
+  const httpDateOut = $("httpDateOut");
 
   const noteBox = $("noteBox");
   const noteOut = $("noteOut");
@@ -633,6 +644,10 @@
   let pollTimer = null;
   let pollStartAt = 0;
   let pollTxHash = null;
+
+  // ✅ abort controllers
+  let registerAbort = null;
+  let verifyAbort = null;
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -717,32 +732,45 @@
   async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 25000){
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
+    const parentSignal = options?.signal;
+
+    const onAbort = () => controller.abort();
     try{
+      if (parentSignal) {
+        if (parentSignal.aborted) controller.abort();
+        else parentSignal.addEventListener("abort", onAbort, { once:true });
+      }
+
       const res = await fetch(url, { ...options, signal: controller.signal });
       const data = await res.json().catch(() => ({}));
-      return { res, data, aborted:false };
+      const dateHeader = res?.headers?.get ? (res.headers.get("Date") || "") : "";
+      return { res, data, aborted:false, dateHeader };
     } catch (e){
       const aborted = (e && e.name === "AbortError");
-      return { res: null, data: {}, aborted };
+      return { res: null, data: {}, aborted, dateHeader:"" };
     } finally {
       clearTimeout(t);
+      try { if (parentSignal) parentSignal.removeEventListener("abort", onAbort); } catch {}
     }
   }
 
-  async function safeRegisterRequest(hash){
+  async function safeRegisterRequest(hash, signal){
     const attempts = 3;
     const baseDelay = 650;
 
     for (let i = 0; i < attempts; i++){
-      const { res, data, aborted } = await fetchJsonWithTimeout(
+      const { res, data, aborted, dateHeader } = await fetchJsonWithTimeout(
         "/api/register",
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ hash })
+          body: JSON.stringify({ hash }),
+          signal
         },
         25000
       );
+
+      if (signal && signal.aborted) return { ok:false, res:null, data:{}, attempt:i+1, aborted:true, dateHeader:"" };
 
       if (aborted && i < attempts - 1) {
         const jitter = Math.floor(Math.random() * 180);
@@ -751,7 +779,7 @@
       }
 
       if (res && res.ok && data && data.ok !== false) {
-        return { ok: true, res, data, attempt: i + 1 };
+        return { ok: true, res, data, attempt: i + 1, dateHeader };
       }
 
       const status = res?.status || 0;
@@ -763,16 +791,16 @@
         continue;
       }
 
-      return { ok: false, res, data, attempt: i + 1, aborted };
+      return { ok: false, res, data, attempt: i + 1, aborted, dateHeader };
     }
 
-    return { ok: false, res: null, data: {}, attempt: attempts, aborted:false };
+    return { ok: false, res: null, data: {}, attempt: attempts, aborted:false, dateHeader:"" };
   }
 
-  async function safeGetJson(url){
-    const { res, data, aborted } = await fetchJsonWithTimeout(url, { method:"GET" }, 20000);
-    if (!res || !res.ok || aborted) return { ok:false, res, data, aborted };
-    return { ok:true, res, data, aborted:false };
+  async function safeGetJson(url, signal){
+    const { res, data, aborted, dateHeader } = await fetchJsonWithTimeout(url, { method:"GET", signal }, 20000);
+    if (!res || !res.ok || aborted) return { ok:false, res, data, aborted, dateHeader };
+    return { ok:true, res, data, aborted:false, dateHeader };
   }
 
   async function copyTextToClipboard(text){
@@ -939,11 +967,32 @@
     setTimeout(() => URL.revokeObjectURL(url), 1200);
   }
 
+  // ✅ canonical status lock (4 uttryck)
   function canonicalStatusFromCode(code){
     if (code === "CONFIRMED") return "Bekräftad";
     if (code === "SUBMITTED_UNCONFIRMED") return "Inskickad – ej bekräftad";
     if (code === "NOT_CONFIRMED") return "Ej bekräftad";
     return "Kunde inte kontrolleras";
+  }
+
+  function normalizeModel(data){
+    const sc = String(data?.statusCode || "");
+    const legal = String(data?.legalText || "");
+    const confirmedAtUnix = (data?.confirmedAtUnix != null) ? Number(data.confirmedAtUnix) : null;
+    const serverTimeUnix = (data?.serverTimeUnix != null) ? Number(data.serverTimeUnix) : null;
+    const requestId = String(data?.requestId || "").trim();
+
+    if (sc !== "CONFIRMED" && sc !== "SUBMITTED_UNCONFIRMED" && sc !== "NOT_CONFIRMED" && sc !== "UNKNOWN") {
+      return { statusCode:"UNKNOWN", legalText: legal, confirmedAtUnix: null, serverTimeUnix: null, requestId };
+    }
+
+    return {
+      statusCode: sc,
+      legalText: legal,
+      confirmedAtUnix: Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0 ? confirmedAtUnix : null,
+      serverTimeUnix: Number.isFinite(serverTimeUnix) && serverTimeUnix > 0 ? serverTimeUnix : null,
+      requestId
+    };
   }
 
   function buildNote(run){
@@ -955,15 +1004,15 @@
     if (run.fileName) lines.push(`Referensunderlag: ${run.fileName}`);
     lines.push("");
 
-    // ✅ 5/5: båda tiderna (server först)
-    lines.push(`Kontrolltid (server): ${run.checkedServerSe || "—"}`);
-    lines.push(`Kontrolltid (server, UTC): ${run.checkedServerUtc || "—"}`);
+    lines.push(`Kontrolltid (Proofy): ${run.checkedServerSe || "—"}`);
+    lines.push(`Kontrolltid (Proofy, UTC): ${run.checkedServerUtc || "—"}`);
+    if (run.httpDateRaw) lines.push(`HTTP Date (transport, kompletterande): ${run.httpDateRaw}`);
     if (run.serverTimeWasFallback) {
-      lines.push("Obs: Server-tid saknades i svaret. Server-tid ovan är fallback till enhetstid.");
+      lines.push("Obs: Proofy-tid saknades i svaret. Proofy-tid ovan är fallback till enhetstid.");
     }
     lines.push(`Kontrolltid (enhet): ${run.checkedDeviceSe || "—"}`);
     lines.push(`Kontrolltid (enhet, UTC): ${run.checkedDeviceUtc || "—"}`);
-    lines.push("Obs: Server-tid används för kontrolltillfället när den finns. Enhetstid är kompletterande och kan vara fel vid fel klocka.");
+    lines.push("Obs: Proofy-tid kommer från serversvaret (serverTimeUnix). Ingen av tiderna utgör extern tidsstämpling. Enhetstid är kompletterande och kan vara fel vid fel klocka.");
     lines.push("");
 
     lines.push(`Verifieringslänk: ${run.link || "—"}`);
@@ -976,6 +1025,8 @@
 
     if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
     if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
+    if (run.requestId) lines.push(`Kontrollreferens (Proofy): ${run.requestId}`);
+
     lines.push("");
     lines.push("Avgränsning: Proofy uttalar sig inte om dokumentets innehåll, riktighet, giltighet eller äkthet.");
     lines.push("Kontroll avser endast filversion och registerstatus vid angivet kontrolltillfälle.");
@@ -987,6 +1038,8 @@
     pollTimer = null;
     pollStartAt = 0;
     pollTxHash = null;
+    try { if (verifyAbort) verifyAbort.abort(); } catch {}
+    verifyAbort = null;
   }
 
   function setBusy(v){
@@ -1002,7 +1055,7 @@
     if (headline) headline.textContent = "";
     if (idOut) idOut.textContent = "—";
     if (linkOut) linkOut.textContent = "—";
-    if (linkOut) linkOut.href = "#";
+
     if (qrBox) qrBox.innerHTML = "";
     if (qrTap) qrTap.style.display = "none";
 
@@ -1013,12 +1066,15 @@
     if (submitterOut) submitterOut.textContent = "—";
     if (txOut) txOut.textContent = "—";
     if (debugOut) debugOut.textContent = "—";
+    if (requestIdOut) requestIdOut.textContent = "—";
 
-    // ✅ reset tider
     if (checkedServerSeOut) checkedServerSeOut.textContent = "—";
     if (checkedServerUtcOut) checkedServerUtcOut.textContent = "—";
     if (checkedDeviceSeOut) checkedDeviceSeOut.textContent = "—";
     if (checkedDeviceUtcOut) checkedDeviceUtcOut.textContent = "—";
+
+    if (httpDateLine) httpDateLine.style.display = "none";
+    if (httpDateOut) httpDateOut.textContent = "—";
 
     if (openVerifyBtn) openVerifyBtn.style.display = "none";
     if (openCertBtn) openCertBtn.style.display = "none";
@@ -1099,10 +1155,11 @@
     }
   }
 
-  function applyStatusToUI({ id, checkedEpochForLinks, data }){
-    const sc = String(data?.statusCode || "");
-    const legal = String(data?.legalText || "");
-    const confirmedAt = data?.confirmedAtUnix ?? null;
+  function applyStatusToUI({ id, checkedEpochForLinks, data, httpDateRaw }){
+    const norm = normalizeModel(data || {});
+    const sc = String(norm.statusCode || "");
+    const legal = String(norm.legalText || "");
+    const confirmedAt = norm.confirmedAtUnix;
 
     const txHash = data?.submission?.txHash || null;
     const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
@@ -1110,6 +1167,7 @@
     if (txOut) txOut.textContent = txHash || "—";
     if (submitterOut) submitterOut.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
     if (debugOut) debugOut.textContent = legal || "—";
+    if (requestIdOut) requestIdOut.textContent = norm.requestId || "—";
 
     const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
     const confirmedUtc = confirmedAt ? fmtUtcEpochSec(confirmedAt) : null;
@@ -1153,13 +1211,15 @@
       checkedDeviceSe: fmtSeEpochSec(currentCheckedDeviceEpoch),
       checkedDeviceUtc: fmtUtcEpochSec(currentCheckedDeviceEpoch),
 
+      httpDateRaw: httpDateRaw || "",
       serverTimeWasFallback: !!serverTimeWasFallback,
 
       statusLine: canonical,
       timeSe: confirmedSe,
       timeUtc: confirmedUtc,
       txHash: txHash,
-      observedBlockNumber: observedBlockNumber
+      observedBlockNumber: observedBlockNumber,
+      requestId: norm.requestId || ""
     };
 
     if (noteOut) noteOut.textContent = buildNote(lastRun);
@@ -1174,12 +1234,15 @@
     pollStartAt = Date.now();
     pollTxHash = txHash;
 
+    verifyAbort = new AbortController();
+
     const maxMs = 120000;
     let attempt = 0;
 
     const tick = async () => {
       if (myOp !== opId) return;
       if (!pollTxHash || pollTxHash !== txHash) return;
+      if (verifyAbort?.signal?.aborted) return;
 
       const elapsed = Date.now() - pollStartAt;
       if (elapsed > maxMs) {
@@ -1193,14 +1256,14 @@
       if (regStatusOut) regStatusOut.textContent = "Kontroll pågår…";
       if (txOut) txOut.textContent = txHash || "—";
 
-      const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
+      const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`, verifyAbort.signal);
       if (myOp !== opId) return;
 
       if (!ver.ok || ver.data?.ok === false) {
         if (debugOut) debugOut.textContent = "Status kunde inte kontrolleras just nu (tillfälligt fel).";
         applyStatusToUI({ id, checkedEpochForLinks, data: { statusCode:"UNKNOWN" } });
       } else {
-        applyStatusToUI({ id, checkedEpochForLinks, data: ver.data });
+        applyStatusToUI({ id, checkedEpochForLinks, data: ver.data, httpDateRaw: ver.dateHeader || "" });
         if (String(ver.data?.statusCode || "") === "CONFIRMED") {
           stopPolling();
           return;
@@ -1219,14 +1282,20 @@
 
     const myOp = ++opId;
     stopPolling();
+
+    try { if (registerAbort) registerAbort.abort(); } catch {}
+    registerAbort = new AbortController();
+
     setBusy(true);
     resetReport();
 
     setPill("Skapar kontrollvärde…");
 
     const doAbort = () => {
-      opId++;
+      try { if (registerAbort) registerAbort.abort(); } catch {}
+      registerAbort = null;
       stopPolling();
+      opId++;
       setBusy(false);
       setPill("Avbruten – välj underlag igen");
       markHeadline("warn", "Avbruten");
@@ -1242,10 +1311,13 @@
       if (checkedDeviceSeOut) checkedDeviceSeOut.textContent = fmtSeEpochSec(deviceEpoch);
       if (checkedDeviceUtcOut) checkedDeviceUtcOut.textContent = fmtUtcEpochSec(deviceEpoch);
 
-      // Server-tid okänd tills /api/register svarar
+      // Proofy-tid okänd tills /api/register svarar
       if (checkedServerSeOut) checkedServerSeOut.textContent = "—";
       if (checkedServerUtcOut) checkedServerUtcOut.textContent = "—";
       serverTimeWasFallback = false;
+
+      if (httpDateLine) httpDateLine.style.display = "none";
+      if (httpDateOut) httpDateOut.textContent = "—";
 
       const id = await sha256Hex(currentFile);
       if (myOp !== opId) return;
@@ -1253,7 +1325,7 @@
 
       currentId = id;
 
-      // Tillfällig länk före server-tid (uppdateras efter /api/register)
+      // Tillfällig länk före Proofy-tid (uppdateras efter /api/register)
       currentLink = buildVerifyLink(id, deviceEpoch, null);
 
       if (emptyState) emptyState.style.display = "none";
@@ -1263,10 +1335,7 @@
       if (localIdOut) localIdOut.textContent = id;
 
       if (idOut) idOut.textContent = id;
-      if (linkOut){
-        linkOut.textContent = currentLink;
-        linkOut.href = currentLink;
-      }
+      if (linkOut) linkOut.textContent = currentLink;
 
       if (qrTap) qrTap.style.display = "grid";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
@@ -1276,8 +1345,10 @@
       if (regStatusOut) regStatusOut.textContent = "Inskickad – ej bekräftad";
       markHeadline("warn", "Inskickad – ej bekräftad");
 
-      const reg = await safeRegisterRequest(id);
+      const reg = await safeRegisterRequest(id, registerAbort.signal);
       if (myOp !== opId) return;
+
+      if (reg.aborted || registerAbort?.signal?.aborted) return;
 
       if (!reg.ok){
         throw new Error("Registreringen kunde inte skickas in just nu. Kontrollvärde och länkar är skapade lokalt. Försök igen senare.");
@@ -1285,38 +1356,40 @@
 
       const data = reg.data || {};
 
-      // ✅ Server-kontrolltid från backend (5/5)
-      const serverEpoch = Number(data?.serverTimeUnix);
-      if (Number.isFinite(serverEpoch) && serverEpoch > 0){
-        currentCheckedServerEpoch = Math.floor(serverEpoch);
-        serverTimeWasFallback = false;
-
-        if (checkedServerSeOut) checkedServerSeOut.textContent = fmtSeEpochSec(currentCheckedServerEpoch);
-        if (checkedServerUtcOut) checkedServerUtcOut.textContent = fmtUtcEpochSec(currentCheckedServerEpoch);
-      } else {
-        // fallback: om server inte skickar tid (ska inte hända)
-        currentCheckedServerEpoch = deviceEpoch;
-        serverTimeWasFallback = true;
-
-        if (checkedServerSeOut) checkedServerSeOut.textContent = fmtSeEpochSec(currentCheckedServerEpoch);
-        if (checkedServerUtcOut) checkedServerUtcOut.textContent = fmtUtcEpochSec(currentCheckedServerEpoch);
+      // ✅ HTTP Date (transport)
+      const httpDateRaw = String(reg.dateHeader || "").trim();
+      if (httpDateRaw && httpDateLine && httpDateOut) {
+        httpDateOut.textContent = httpDateRaw;
+        httpDateLine.style.display = "block";
       }
 
-      // ✅ “checked” i länkar ska vara server-tid när den finns
+      // ✅ Proofy-kontrolltid från backend (serverTimeUnix)
+      const norm = normalizeModel(data || {});
+      const serverEpoch = norm.serverTimeUnix;
+
+      if (serverEpoch){
+        currentCheckedServerEpoch = Math.floor(serverEpoch);
+        serverTimeWasFallback = false;
+      } else {
+        currentCheckedServerEpoch = deviceEpoch;
+        serverTimeWasFallback = true;
+      }
+
+      if (checkedServerSeOut) checkedServerSeOut.textContent = fmtSeEpochSec(currentCheckedServerEpoch);
+      if (checkedServerUtcOut) checkedServerUtcOut.textContent = fmtUtcEpochSec(currentCheckedServerEpoch);
+
+      // ✅ “checked” i länkar ska vara Proofy-tid när den finns
       const checkedEpochForLinks = currentCheckedServerEpoch || deviceEpoch;
 
       const txHash = data?.submission?.txHash || null;
 
-      // Uppdatera verifieringslänk/QR med server-checked + ev tx
+      // Uppdatera verifieringslänk/QR med Proofy-checked + ev tx
       currentLink = buildVerifyLink(id, checkedEpochForLinks, txHash || null);
-      if (linkOut){
-        linkOut.textContent = currentLink;
-        linkOut.href = currentLink;
-      }
+      if (linkOut) linkOut.textContent = currentLink;
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
       // Uppdatera status + notering
-      applyStatusToUI({ id, checkedEpochForLinks, data });
+      applyStatusToUI({ id, checkedEpochForLinks, data, httpDateRaw });
 
       if (txHash) {
         pollTxAndVerify(myOp, id, txHash, checkedEpochForLinks);
@@ -1333,6 +1406,8 @@
 
       setPill("Klart (lokalt) ✅");
       setBusy(false);
+    } finally {
+      registerAbort = null;
     }
   }
 
@@ -1345,6 +1420,9 @@
     currentCheckedDeviceEpoch = null;
     currentCheckedServerEpoch = null;
     serverTimeWasFallback = false;
+
+    try { if (registerAbort) registerAbort.abort(); } catch {}
+    registerAbort = null;
 
     resetReport();
 
@@ -1366,7 +1444,7 @@
     beginAutoFlow();
   }
 
-  // Copy handlers (guardade för hardtest)
+  // Copy handlers
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Kopierat ✅" });
@@ -1382,6 +1460,25 @@
   if (idOut){
     idOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2, okText:"Kopierat ✅" });
+    });
+    idOut.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        await copyWithFeedback({ text: idOut.textContent, pillEl: copyIdPill2, okText:"Kopierat ✅" });
+      }
+    });
+  }
+
+  // ✅ länkfält: klick kopierar (öppna via top-knapp)
+  if (linkOut){
+    linkOut.addEventListener("click", async () => {
+      await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill, okText:"Länk kopierad ✅" });
+    });
+    linkOut.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        await copyWithFeedback({ text: linkOut.textContent, pillEl: copyLinkPill, okText:"Länk kopierad ✅" });
+      }
     });
   }
 
@@ -1433,21 +1530,18 @@
     if (!/^0x[0-9a-fA-F]{64}$/.test(clean)){
       manualCurrentLink = null;
       manualLinkOut.textContent = "—";
-      manualLinkOut.href = "#";
-      manualQrBox.innerHTML = "";
       if (manualQrTap) manualQrTap.style.display = "none";
       if (manualOpenVerifyBtn) manualOpenVerifyBtn.style.display = "none";
       setManualPill(clean ? "Ogiltigt ID" : "Klistra in ID");
       return null;
     }
 
-    // Manuell: ingen server-kontrolltid (ingen backend-call). Vi använder enhetstid.
+    // Manuell: ingen Proofy-tid (ingen backend-call). Vi använder enhetstid.
     const checkedEpoch = Math.floor(Date.now() / 1000);
     const link = buildVerifyLink(clean, checkedEpoch, null);
     manualCurrentLink = link;
 
     manualLinkOut.textContent = link;
-    manualLinkOut.href = link;
 
     if (manualOpenVerifyBtn){
       manualOpenVerifyBtn.href = link;
@@ -1461,7 +1555,19 @@
     return link;
   }
 
-  // Manual (guardad för hardtest)
+  // Manual: klick kopierar, QR kopierar
+  if (manualLinkOut){
+    manualLinkOut.addEventListener("click", async () => {
+      await copyWithFeedback({ text: manualLinkOut.textContent, pillEl: manualPill, okText:"Länk kopierad ✅" });
+    });
+    manualLinkOut.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        await copyWithFeedback({ text: manualLinkOut.textContent, pillEl: manualPill, okText:"Länk kopierad ✅" });
+      }
+    });
+  }
+
   attachQrCopyOnce(manualQrTap, () => manualCurrentLink, manualPill);
   if (manualId){
     manualId.addEventListener("input", () => setManualState(manualId.value));
