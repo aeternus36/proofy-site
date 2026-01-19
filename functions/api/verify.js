@@ -211,10 +211,18 @@ async function resolveTxState(publicClient, txHash) {
 export async function onRequest({ request, env }) {
   const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
+  // ✅ 5/5 audit: servergenererad tid (UTC epoch) i ALLA JSON-svar
+  const serverTimeUnix = Math.floor(Date.now() / 1000);
+  const timeSource = "server";
+
   if (request.method === "OPTIONS") return corsPreflight(origin);
 
   if (request.method !== "GET" && request.method !== "POST") {
-    return json(405, { ok: false, error: "Method Not Allowed" }, origin);
+    return json(
+      405,
+      { ok: false, error: "Method Not Allowed", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   let hash = "";
@@ -222,7 +230,9 @@ export async function onRequest({ request, env }) {
 
   if (request.method === "GET") {
     const url = new URL(request.url);
-    hash = String((url.searchParams.get("hash") || url.searchParams.get("id") || "").trim());
+    hash = String(
+      (url.searchParams.get("hash") || url.searchParams.get("id") || "").trim()
+    );
     tx = String((url.searchParams.get("tx") || "").trim());
   } else {
     const body = await request.json().catch(() => ({}));
@@ -233,7 +243,13 @@ export async function onRequest({ request, env }) {
   if (!isValidBytes32Hex(hash)) {
     return json(
       400,
-      { ok: false, error: "Invalid hash format", statusCode: "BAD_REQUEST" },
+      {
+        ok: false,
+        error: "Invalid hash format",
+        statusCode: "BAD_REQUEST",
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
@@ -244,12 +260,21 @@ export async function onRequest({ request, env }) {
   const contractAddress = String(env.PROOFY_CONTRACT_ADDRESS || "").trim();
 
   if (!rpcUrl || !contractAddress) {
-    return json(500, { ok: false, error: "Server misconfiguration" }, origin);
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration", serverTimeUnix, timeSource },
+      origin
+    );
   }
   if (!isAddress(contractAddress)) {
     return json(
       500,
-      { ok: false, error: "Server misconfiguration (bad contract address)" },
+      {
+        ok: false,
+        error: "Server misconfiguration (bad contract address)",
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
@@ -272,11 +297,15 @@ export async function onRequest({ request, env }) {
     if (proof.exists) {
       return json(
         200,
-        statusConfirmed({
-          hash,
-          timestamp: proof.timestamp,
-          observedBlockNumber: proof.observedBlockNumber,
-        }),
+        {
+          ...statusConfirmed({
+            hash,
+            timestamp: proof.timestamp,
+            observedBlockNumber: proof.observedBlockNumber,
+          }),
+          serverTimeUnix,
+          timeSource,
+        },
         origin
       );
     }
@@ -291,11 +320,15 @@ export async function onRequest({ request, env }) {
 
         return json(
           200,
-          statusSubmittedUnconfirmed({
-            hash,
-            observedBlockNumber,
-            submission: { txHash: tx },
-          }),
+          {
+            ...statusSubmittedUnconfirmed({
+              hash,
+              observedBlockNumber,
+              submission: { txHash: tx },
+            }),
+            serverTimeUnix,
+            timeSource,
+          },
           origin
         );
       }
@@ -303,13 +336,21 @@ export async function onRequest({ request, env }) {
 
     return json(
       200,
-      statusNotConfirmed({
-        hash,
-        observedBlockNumber: proof.observedBlockNumber,
-      }),
+      {
+        ...statusNotConfirmed({
+          hash,
+          observedBlockNumber: proof.observedBlockNumber,
+        }),
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   } catch (e) {
-    return json(503, statusUnknown({ hash, detail: sanitizeError(e) }), origin);
+    return json(
+      503,
+      { ...statusUnknown({ hash, detail: sanitizeError(e) }), serverTimeUnix, timeSource },
+      origin
+    );
   }
 }
