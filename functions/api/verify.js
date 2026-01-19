@@ -202,14 +202,20 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const blockNo = Array.isArray(res) ? res[2] : res?.blockNo ?? 0n;
 
   const timestamp = Number(ts);
-  const registeredBlock = Number(blockNo);
+
+  // ✅ Robust: håll blockNo som BigInt -> string (ingen Number-avrundning)
+  let registeredBlockBig = 0n;
+  try {
+    registeredBlockBig = typeof blockNo === "bigint" ? blockNo : BigInt(blockNo);
+  } catch {
+    registeredBlockBig = 0n;
+  }
 
   const exists =
     Boolean(ok) &&
     Number.isFinite(timestamp) &&
-    timestamp !== 0 &&
-    Number.isFinite(registeredBlock) &&
-    registeredBlock !== 0;
+    timestamp > 0 &&
+    registeredBlockBig > 0n;
 
   // "Observed" = vad denna RPC just nu ser, inte ett bevis om tx eller registreringsblock.
   const observedBlockNumber = await publicClient.getBlockNumber();
@@ -217,7 +223,7 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   return {
     exists,
     timestamp: exists ? timestamp : 0,
-    registeredBlockNumber: exists ? String(registeredBlock) : null,
+    registeredBlockNumber: exists ? registeredBlockBig.toString() : null,
     observedBlockNumber: observedBlockNumber.toString(),
   };
 }
