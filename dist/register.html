@@ -444,8 +444,13 @@
                 <div class="meta">Registreringsreferens (valfri)</div>
                 <div id="txOut" class="mono" style="margin-top:8px;">—</div>
 
-                <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfri)</div>
+                <div class="meta" style="margin-top:10px;">Observerat block (RPC, valfritt)</div>
                 <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
+
+                <div id="registeredBlockWrap" style="display:none;">
+                  <div class="meta" style="margin-top:10px;">Registerblock (endast om bekräftad)</div>
+                  <div id="registeredBlockOut" class="mono" style="margin-top:8px;">—</div>
+                </div>
 
                 <div class="meta" style="margin-top:10px;">Juridisk information (från kontroll)</div>
                 <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
@@ -593,6 +598,9 @@
   const txOut = $("txOut");
   const debugOut = $("debugOut");
   const requestIdOut = $("requestIdOut");
+
+  const registeredBlockWrap = $("registeredBlockWrap");
+  const registeredBlockOut = $("registeredBlockOut");
 
   const copyIdPill2 = $("copyIdPill2");
   const copyLinkPill = $("copyLinkPill");
@@ -1024,7 +1032,8 @@
     if (run.timeUtc) lines.push(`Tidpunkt (UTC, endast om bekräftad): ${run.timeUtc}`);
 
     if (run.txHash) lines.push(`Registreringsreferens (valfri): ${run.txHash}`);
-    if (run.observedBlockNumber) lines.push(`Kontrollpunkt (valfri): ${run.observedBlockNumber}`);
+    if (run.observedBlockNumber) lines.push(`Observerat block (RPC, valfritt): ${run.observedBlockNumber}`);
+    if (run.registeredBlockNumber) lines.push(`Registerblock (endast om bekräftad): ${run.registeredBlockNumber}`);
     if (run.requestId) lines.push(`Kontrollreferens (Proofy): ${run.requestId}`);
 
     lines.push("");
@@ -1067,6 +1076,9 @@
     if (txOut) txOut.textContent = "—";
     if (debugOut) debugOut.textContent = "—";
     if (requestIdOut) requestIdOut.textContent = "—";
+
+    if (registeredBlockOut) registeredBlockOut.textContent = "—";
+    if (registeredBlockWrap) registeredBlockWrap.style.display = "none";
 
     if (checkedServerSeOut) checkedServerSeOut.textContent = "—";
     if (checkedServerUtcOut) checkedServerUtcOut.textContent = "—";
@@ -1162,12 +1174,20 @@
     const confirmedAt = norm.confirmedAtUnix;
 
     const txHash = data?.submission?.txHash || null;
+
     const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
+    const registeredBlockNumber = data?.evidence?.registeredBlockNumber || null;
 
     if (txOut) txOut.textContent = txHash || "—";
     if (submitterOut) submitterOut.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
     if (debugOut) debugOut.textContent = legal || "—";
     if (requestIdOut) requestIdOut.textContent = norm.requestId || "—";
+
+    if (registeredBlockWrap && registeredBlockOut){
+      const show = (sc === "CONFIRMED") && registeredBlockNumber;
+      registeredBlockWrap.style.display = show ? "block" : "none";
+      registeredBlockOut.textContent = show ? String(registeredBlockNumber) : "—";
+    }
 
     const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
     const confirmedUtc = confirmedAt ? fmtUtcEpochSec(confirmedAt) : null;
@@ -1219,6 +1239,7 @@
       timeUtc: confirmedUtc,
       txHash: txHash,
       observedBlockNumber: observedBlockNumber,
+      registeredBlockNumber: (sc === "CONFIRMED") ? registeredBlockNumber : null,
       requestId: norm.requestId || ""
     };
 
