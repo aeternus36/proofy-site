@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- CERTIFICATE v2026-01-19a / SE audit+juridik / HARDTEST 5/5 / UI: no internal labels -->
+<!-- CERTIFICATE v2026-01-19b / SE audit+juridik / HARDTEST 5/5 / UI: no internal labels -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
@@ -265,6 +265,7 @@
         overflow:hidden;
         -webkit-tap-highlight-color: transparent;
         user-select:none;
+        cursor:pointer;
       }
       #qrcodeSurface{
         width:176px; height:176px;
@@ -472,7 +473,7 @@
       }
     </style>
 
-    <!-- QR: only once (fix: removed duplicate include) -->
+    <!-- QR: only once -->
     <script src="/assets/qr.min.js?v=2026-01-03a"></script>
 
     <script>
@@ -547,7 +548,7 @@
               <br/>
               <b>Avgränsning:</b> Uttalar sig inte om dokumentets innehåll/riktighet/äkthet och ersätter inte processkontroller.
               <br/>
-              <span style="opacity:.92">Kontrolltid kommer från enheten (ej extern tidsstämpling).</span>
+              <span style="opacity:.92">Kontrolltid (Proofy) kommer från serversvar när den finns. Enhetstid visas som kompletterande uppgift. Ingen extern tidsstämpling.</span>
             </div>
 
             <!-- Längre förklaring på skärm (ej i PDF) -->
@@ -563,7 +564,7 @@
               signering eller arkivering.
               <br/>
               <span style="opacity:.92">
-                Kontrolltiden kommer från den enhet som öppnar intyget och är inte extern tidsstämpling.
+                Kontrolltid (Proofy) kommer från serversvar när den finns. Enhetstid visas som kompletterande uppgift. Ingen extern tidsstämpling.
               </span>
             </div>
           </div>
@@ -575,16 +576,27 @@
             </div>
 
             <div class="statusMeta">
-              <div class="label">Kontrolltid (denna kontroll)</div>
+              <div class="label">Kontrolltid (Proofy, denna kontroll)</div>
               <div class="mono" id="checkedTopLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="mono" id="checkedTopUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
-              <div class="small screenOnly" style="margin-top:8px">
-                Kontrolltiden kommer från enheten och kan vara fel om enhetens klocka är fel. Den är inte extern tidsstämpling.
-              </div>
+
+              <div class="label" style="margin-top:10px">Kontrolltid (enhet, kompletterande)</div>
+              <div class="mono" id="checkedDeviceLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+              <div class="mono" id="checkedDeviceUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
 
               <div class="label" style="margin-top:10px">Bevisstatus vid kontrollen (registerstatus)</div>
               <div class="mono" id="resultText">—</div>
               <div class="small" id="legalLine" style="margin-top:8px">—</div>
+
+              <div class="label" style="margin-top:10px">Kontrollreferens (Proofy, valfri)</div>
+              <div class="mono" id="requestIdOut">—</div>
+              <div class="small" id="httpDateLine" style="margin-top:6px; display:none;">
+                HTTP Date (transport): <span class="mono" id="httpDateOut">—</span>
+              </div>
+
+              <div class="small screenOnly" style="margin-top:8px">
+                Kontrolltid (Proofy) kommer från serversvar när den finns. Enhetstid visas som kompletterande uppgift. Ingen extern tidsstämpling.
+              </div>
             </div>
           </div>
         </div>
@@ -691,13 +703,13 @@
             <div class="qrWrap">
               <div>
                 <div class="label" style="margin-bottom:8px">QR-kod (snabb kontroll)</div>
-                <div id="qrcodeTap" aria-label="QR-kod">
+                <div id="qrcodeTap" aria-label="QR-kod (klicka för att kopiera verifieringslänk)" title="Klicka för att kopiera verifieringslänk" role="button" tabindex="0">
                   <div id="qrcodeSurface">
                     <div id="qrcode" aria-label="QR-kod"></div>
                   </div>
                 </div>
                 <div class="small" style="margin-top:10px">
-                  Skanna med <b>annan enhet</b> för snabb kontroll.
+                  Skanna med <b>annan enhet</b> för snabb kontroll. Klick på QR kopierar verifieringslänk.
                 </div>
               </div>
 
@@ -794,12 +806,16 @@
 
     <script>
       /* Intern versionsrad (visas inte för mottagare) */
-      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-19a (SE audit/juridik, hardtest)";
+      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-19b (SE audit/juridik, hardtest, proofy-time+abort)";
 
       const ISSUER_LEGAL_NAME = "Proofy AB";   // ändra vid behov
       const ISSUER_ORGNR = "";                 // valfritt: t.ex. "org.nr 556XXXX-XXXX"
 
       const $ = (id) => document.getElementById(id);
+
+      // ✅ HARDTEST: förhindra race/överlapp vid "Kontrollera igen"
+      let runSeq = 0;
+      let verifyAbort = null;
 
       function isValidVerifieringsId(s){
         return typeof s === "string" && /^0x[0-9a-fA-F]{64}$/.test(s.trim());
@@ -1043,6 +1059,8 @@
         statusText,
         checkedLocalText,
         checkedUtcText,
+        checkedDeviceLocalText,
+        checkedDeviceUtcText,
         confirmedLocalText,
         confirmedUtcText,
         certLink,
@@ -1050,7 +1068,9 @@
         legalLine,
         certId,
         internalA,
-        internalB
+        internalB,
+        requestId,
+        httpDate
       }){
         const lines = [];
         lines.push("PROOFY – Notering (ärendeakt/granskningsunderlag)");
@@ -1062,9 +1082,24 @@
 
         lines.push(`Kontrollvärde (Verifierings-ID): ${verifieringsId || "—"}`);
         if (controlId && controlId !== "—") lines.push(`Kontroll-ID (detta kontrolltillfälle): ${controlId}`);
-        lines.push(`Kontrolltid (denna kontroll): ${checkedLocalText || "—"}`);
-        lines.push(`Kontrolltid (UTC): ${checkedUtcText || "—"}`);
-        lines.push("Obs: Kontrolltiden kommer från enheten som öppnar intyget och är inte extern tidsstämpling.");
+
+        lines.push(`Kontrolltid (Proofy, denna kontroll): ${checkedLocalText || "—"}`);
+        lines.push(`Kontrolltid (Proofy, UTC): ${checkedUtcText || "—"}`);
+
+        if (checkedDeviceLocalText || checkedDeviceUtcText){
+          lines.push(`Kontrolltid (enhet, kompletterande): ${checkedDeviceLocalText || "—"}`);
+          lines.push(`Kontrolltid (enhet, UTC): ${checkedDeviceUtcText || "—"}`);
+        }
+
+        lines.push("Obs: Ingen av tiderna är extern tidsstämpling.");
+
+        if (requestId && requestId !== "—"){
+          lines.push(`Kontrollreferens (Proofy): ${requestId}`);
+        }
+        if (httpDate && httpDate !== "—"){
+          lines.push(`HTTP Date (transport): ${httpDate}`);
+        }
+
         lines.push("");
         lines.push(`Bevisstatus vid kontrollen (registerstatus): ${statusText || "—"}`);
         if (legalLine) lines.push(`Kommentar: ${legalLine}`);
@@ -1144,7 +1179,16 @@
       async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 20000){
         const controller = new AbortController();
         const t = setTimeout(() => controller.abort(), timeoutMs);
+
+        const parentSignal = options?.signal;
+        const onAbort = () => controller.abort();
+
         try{
+          if (parentSignal){
+            if (parentSignal.aborted) controller.abort();
+            else parentSignal.addEventListener("abort", onAbort, { once:true });
+          }
+
           const sep = url.includes("?") ? "&" : "?";
           const bustUrl = url + sep + "t=" + Date.now();
           const r = await fetch(bustUrl, {
@@ -1155,24 +1199,28 @@
             ...options
           });
           const j = await r.json().catch(() => ({}));
-          return { ok: r.ok, status: r.status, data: j, aborted:false };
+          const dateHeader = (r && r.headers && typeof r.headers.get === "function") ? (r.headers.get("Date") || "") : "";
+          return { ok: r.ok, status: r.status, data: j, aborted:false, dateHeader };
         } catch (e){
           const aborted = (e && e.name === "AbortError");
-          return { ok:false, status:0, data:{}, aborted };
+          return { ok:false, status:0, data:{}, aborted, dateHeader:"" };
         } finally {
           clearTimeout(t);
+          try { if (parentSignal) parentSignal.removeEventListener("abort", onAbort); } catch {}
         }
       }
 
-      async function fetchVerify(hash, tx){
+      async function fetchVerify(hash, tx, signal){
         const base = `/api/verify?hash=${encodeURIComponent(hash)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}`;
         const attempts = 3;
         const baseDelay = 520;
 
         for (let i=0; i<attempts; i++){
-          const res = await fetchJsonWithTimeout(base, {}, 20000);
+          const res = await fetchJsonWithTimeout(base, { signal }, 20000);
 
-          if (res.ok) return { ok:true, data:res.data, status:res.status };
+          if (signal && signal.aborted) return { ok:false, data:{}, status:0, aborted:true, dateHeader:"" };
+
+          if (res.ok) return { ok:true, data:res.data, status:res.status, dateHeader: res.dateHeader || "" };
 
           const retryable = res.aborted || isRetryableStatus(res.status);
           if (i < attempts - 1 && retryable){
@@ -1180,9 +1228,9 @@
             await new Promise(r => setTimeout(r, baseDelay*(i+1) + jitter));
             continue;
           }
-          return { ok:false, data:res.data, status:res.status };
+          return { ok:false, data:res.data, status:res.status, dateHeader: res.dateHeader || "" };
         }
-        return { ok:false, data:{}, status:0 };
+        return { ok:false, data:{}, status:0, dateHeader:"" };
       }
 
       function setNoteButtonsEnabled(enabled){
@@ -1198,6 +1246,10 @@
       }
 
       async function run(){
+        const mySeq = ++runSeq;
+        try{ if (verifyAbort) verifyAbort.abort(); } catch {}
+        verifyAbort = new AbortController();
+
         hideWarn();
         setIssuer();
 
@@ -1213,12 +1265,19 @@
         const optionalContext = (url.searchParams.get("tx") || "").trim();
         const certId = (url.searchParams.get("cert") || "").trim();
 
-        // Kontrolltid: om "checked" är gammal använder vi ny kontrolltid (för att undvika missvisning).
+        // Enhetstid (kompletterande) tas direkt.
+        const deviceNow = nowSeconds();
+        if ($("checkedDeviceLocal")) $("checkedDeviceLocal").textContent = fmtSePlain(deviceNow);
+        if ($("checkedDeviceUtc")) $("checkedDeviceUtc").textContent = fmtUtc(deviceNow);
+
+        // Kontrolltid (Proofy): startar från "checked" i länken, men kan ersättas av serverTimeUnix från API-svaret.
         const checkedParam = (url.searchParams.get("checked") || "").trim();
         const checkedCandidate = Number(checkedParam);
-        const now = nowSeconds();
+        const now = deviceNow;
 
         let checked = (Number.isFinite(checkedCandidate) && checkedCandidate > 0) ? Math.floor(checkedCandidate) : now;
+
+        // Om checked i länken är gammal: gör ny kontroll nu och använd "nu" tills servern svarar.
         const skew = Math.abs(now - checked);
         const STALE_SECONDS = 15 * 60;
 
@@ -1228,26 +1287,18 @@
           setTimeout(() => hideWarn(), 4500);
         }
 
-        const certLink =
-          `${location.origin}/certificate.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checked}` +
-          (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "") +
-          (certId ? `&cert=${encodeURIComponent(certId)}` : "");
+        // Kontrolltid (topp) – preliminär tills serverTimeUnix ev. ersätter.
+        $("checkedTopLocal").innerHTML = fmtSeHtml(checked);
+        $("checkedTopUtc").textContent = fmtUtc(checked);
 
-        const verifyLink =
-          `${location.origin}/verify.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checked}` +
-          (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "");
+        // Reset (Proofy-referenser)
+        if ($("requestIdOut")) $("requestIdOut").textContent = "—";
+        if ($("httpDateLine")) $("httpDateLine").style.display = "none";
+        if ($("httpDateOut")) $("httpDateOut").textContent = "—";
 
-        $("certLinkInline").textContent = certLink;
-        $("verifyLink").textContent = verifyLink;
-
-        // Öppna verifiering
-        $("btnOpenVerify").href = verifyLink;
-
-        // Print footer values
+        // Print footer baseline
         $("pf_id").textContent = verifieringsId || "—";
         $("pf_checkedUtc").textContent = fmtUtc(checked);
-        $("pf_verify").textContent = verifyLink;
-        $("pf_cert").textContent = certLink;
 
         // Reset print-only status rows each run
         $("pf_status").textContent = "—";
@@ -1264,37 +1315,13 @@
           if (await copyText(verifieringsId)) toastCopied("Kontrollvärde (Verifierings-ID)");
         };
 
-        // Copy verifieringslänk (endast en tydlig plats)
-        const btnCopyVerifyLink = $("btnCopyVerifyLink");
-        if (btnCopyVerifyLink){
-          btnCopyVerifyLink.onclick = async () => {
-            if (await copyText(verifyLink)) toastCopied("Verifieringslänk");
-          };
-        }
-
-        renderQR(verifyLink);
-
-        // Kontrolltid (topp)
-        const checkedLocalHtml = fmtSeHtml(checked);
-        const checkedUtcText = fmtUtc(checked);
-        $("checkedTopLocal").innerHTML = checkedLocalHtml;
-        $("checkedTopUtc").textContent = checkedUtcText;
-
-        // CertID: visa text (inga copy-knappar; inga innerHTML)
-        if (certId){
-          $("certIdOut").textContent = certId;
-          $("certIdVal").style.display = "block";
-        } else {
-          $("certIdOut").textContent = "Ej angivet";
-        }
-
         // Default: dölj tidpunkt-rutan (ska bara visas om Bekräftad)
         const confirmedBox = $("confirmedBox");
         if (confirmedBox) confirmedBox.style.display = "none";
         $("confirmedLocal").textContent = "—";
         $("confirmedUtc").textContent = "—";
 
-        // Reset innan kontroll (statusfält ska inte visa andra ord än de fyra – använd "—" under laddning)
+        // Reset innan kontroll
         $("resultText").textContent = "—";
         $("legalLine").textContent = "—";
         setStatus("warn", "—");
@@ -1303,7 +1330,15 @@
         $("internalRefB").textContent = "—";
         updateMoreVisibility({ a:"—", b:"—", allow:false });
 
-        // Kontext-hint (textContent för att undvika injection)
+        // CertID: visa text
+        if (certId){
+          $("certIdOut").textContent = certId;
+          $("certIdVal").style.display = "block";
+        } else {
+          $("certIdOut").textContent = "Ej angivet";
+        }
+
+        // Kontext-hint (textContent)
         const contextHintEl = $("contextHint");
         if (contextHintEl){
           if (certId){
@@ -1315,7 +1350,7 @@
           }
         }
 
-        // Notering: byggs först när slutstatus finns (för att undvika mellanlägen i ärendeakt)
+        // Notering: byggs först när slutstatus finns
         const noteEl = $("caseNoteText");
         const updateCaseNote = (payload) => {
           const note = buildCaseNote(payload);
@@ -1355,6 +1390,48 @@
         $("controlIdVal").style.display = "block";
         $("pf_controlIdRow").style.display = "block";
 
+        // Placeholder för länkar innan verify-respons
+        const buildLinksFromChecked = (checkedEpoch) => {
+          const certLink =
+            `${location.origin}/certificate.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checkedEpoch}` +
+            (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "") +
+            (certId ? `&cert=${encodeURIComponent(certId)}` : "");
+
+          const verifyLink =
+            `${location.origin}/verify.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checkedEpoch}` +
+            (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "");
+
+          return { certLink, verifyLink };
+        };
+
+        let { certLink, verifyLink } = buildLinksFromChecked(checked);
+
+        // Sätt länkar (preliminärt)
+        $("certLinkInline").textContent = certLink;
+        $("verifyLink").textContent = verifyLink;
+        $("btnOpenVerify").href = verifyLink;
+        $("pf_verify").textContent = verifyLink;
+        $("pf_cert").textContent = certLink;
+
+        // Copy verifieringslänk
+        const btnCopyVerifyLink = $("btnCopyVerifyLink");
+        if (btnCopyVerifyLink){
+          btnCopyVerifyLink.onclick = async () => {
+            if (await copyText(verifyLink)) toastCopied("Verifieringslänk");
+          };
+        }
+
+        // QR + tap-to-copy
+        renderQR(verifyLink);
+        const qrTap = $("qrcodeTap");
+        if (qrTap){
+          const doCopy = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
+          qrTap.onclick = (e) => { e.preventDefault(); doCopy(); };
+          qrTap.onkeydown = (e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+          };
+        }
+
         if (!isValidVerifieringsId(verifieringsId)){
           const statusText = "Kunde inte kontrolleras";
           setStatus("bad", statusText);
@@ -1365,7 +1442,7 @@
 
           $("pf_status").textContent = statusText;
 
-          // Dölj Kontroll-ID (ska inte användas när vi inte ens har giltigt ID)
+          // Dölj Kontroll-ID
           $("controlIdVal").style.display = "none";
           $("pf_controlIdRow").style.display = "none";
 
@@ -1374,7 +1451,9 @@
             controlId: "—",
             statusText,
             checkedLocalText: fmtSePlain(checked),
-            checkedUtcText,
+            checkedUtcText: fmtUtc(checked),
+            checkedDeviceLocalText: fmtSePlain(deviceNow),
+            checkedDeviceUtcText: fmtUtc(deviceNow),
             confirmedLocalText: "—",
             confirmedUtcText: "—",
             certLink,
@@ -1382,7 +1461,9 @@
             legalLine,
             certId: certId || "",
             internalA: "—",
-            internalB: "—"
+            internalB: "—",
+            requestId: "—",
+            httpDate: "—"
           });
 
           setNoteButtonsEnabled(true);
@@ -1394,11 +1475,18 @@
 
         $("idText").textContent = verifieringsId;
 
-        // Meddela att kontroll sker (utan att använda andra statusord i statusfältet)
+        // Meddela att kontroll sker (utan nya statusord)
         showWarn("Kontroll pågår: hämtar registerstatus från Proofy…");
 
-        // Verify med timeout+retry
-        const verifyRes = await fetchVerify(verifieringsId, optionalContext || "");
+        // Verify med timeout+retry + abort
+        const verifyRes = await fetchVerify(verifieringsId, optionalContext || "", verifyAbort.signal);
+        if (mySeq !== runSeq) return;
+
+        if (verifyRes.aborted){
+          // Tyst avbryt (ny körning är på gång)
+          return;
+        }
+
         if (!verifyRes.ok){
           const statusText = "Kunde inte kontrolleras";
           setStatus("bad", statusText);
@@ -1417,7 +1505,9 @@
             controlId: "—",
             statusText,
             checkedLocalText: fmtSePlain(checked),
-            checkedUtcText,
+            checkedUtcText: fmtUtc(checked),
+            checkedDeviceLocalText: fmtSePlain(deviceNow),
+            checkedDeviceUtcText: fmtUtc(deviceNow),
             confirmedLocalText: "—",
             confirmedUtcText: "—",
             certLink,
@@ -1425,7 +1515,9 @@
             legalLine,
             certId: certId || "",
             internalA: "—",
-            internalB: "—"
+            internalB: "—",
+            requestId: "—",
+            httpDate: "—"
           });
 
           updateMoreVisibility({ a:"—", b:"—", allow:false });
@@ -1438,6 +1530,54 @@
         }
 
         const v = verifyRes.data || {};
+
+        // ✅ Proofy-kontrolltid (server) om den finns, tar över checked för konsekvens i länkar och notering.
+        const serverTimeUnix = (v?.serverTimeUnix != null) ? Number(v.serverTimeUnix) : null;
+        if (Number.isFinite(serverTimeUnix) && serverTimeUnix > 0){
+          checked = Math.floor(serverTimeUnix);
+        }
+
+        // Uppdatera topp-tid och print footer efter ev serverTimeUnix
+        $("checkedTopLocal").innerHTML = fmtSeHtml(checked);
+        $("checkedTopUtc").textContent = fmtUtc(checked);
+        $("pf_checkedUtc").textContent = fmtUtc(checked);
+
+        // Rebuild links med slutligt checked
+        ({ certLink, verifyLink } = buildLinksFromChecked(checked));
+
+        $("certLinkInline").textContent = certLink;
+        $("verifyLink").textContent = verifyLink;
+        $("btnOpenVerify").href = verifyLink;
+        $("pf_verify").textContent = verifyLink;
+        $("pf_cert").textContent = certLink;
+
+        // Uppdatera copy/qr-handlers med nya länken
+        if (btnCopyVerifyLink){
+          btnCopyVerifyLink.onclick = async () => {
+            if (await copyText(verifyLink)) toastCopied("Verifieringslänk");
+          };
+        }
+        renderQR(verifyLink);
+        if (qrTap){
+          const doCopy = async () => { if (await copyText(verifyLink)) toastCopied("Verifieringslänk"); };
+          qrTap.onclick = (e) => { e.preventDefault(); doCopy(); };
+          qrTap.onkeydown = (e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doCopy(); }
+          };
+        }
+
+        // ✅ Proofy-referenser (valfritt)
+        const requestId = String(v?.requestId || "").trim();
+        if ($("requestIdOut")) $("requestIdOut").textContent = requestId ? requestId : "—";
+
+        const httpDateRaw = String(verifyRes.dateHeader || "").trim();
+        if (httpDateRaw){
+          if ($("httpDateOut")) $("httpDateOut").textContent = httpDateRaw;
+          if ($("httpDateLine")) $("httpDateLine").style.display = "block";
+        } else {
+          if ($("httpDateLine")) $("httpDateLine").style.display = "none";
+        }
+
         const statusCode = safeText(v?.statusCode, "UNKNOWN");
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
@@ -1495,6 +1635,8 @@
         ].join("|");
 
         const controlIdHex = await sha256Hex(controlIdInput);
+        if (mySeq !== runSeq) return;
+
         const controlId = controlIdHex ? ("c_" + controlIdHex) : null;
 
         $("controlIdOut").textContent = controlId ? controlId : "—";
@@ -1530,13 +1672,15 @@
           if (pfConfirmedRow) pfConfirmedRow.style.display = "none";
         }
 
-        // Bygg notering först när vi har slutstatus (fyra ord)
+        // Bygg notering först när vi har slutstatus
         updateCaseNote({
           verifieringsId,
           controlId: hasControlId ? controlId : "—",
           statusText,
           checkedLocalText: fmtSePlain(checked),
-          checkedUtcText,
+          checkedUtcText: fmtUtc(checked),
+          checkedDeviceLocalText: fmtSePlain(deviceNow),
+          checkedDeviceUtcText: fmtUtc(deviceNow),
           confirmedLocalText: (statusText === "Bekräftad") ? confirmedLocalPlain : "—",
           confirmedUtcText: (statusText === "Bekräftad") ? confirmedUtcPlain : "—",
           certLink,
@@ -1544,7 +1688,9 @@
           legalLine: finalLegalLine,
           certId: certId || "",
           internalA: allowInternals ? internalA : "—",
-          internalB: allowInternals ? internalB : "—"
+          internalB: allowInternals ? internalB : "—",
+          requestId: requestId || "—",
+          httpDate: httpDateRaw || "—"
         });
 
         // Aktivera kopiera/ladda ner när intyget är revisions-säkert (slutstatus finns)
