@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- CERTIFICATE v2026-01-19b / SE audit+juridik / HARDTEST 5/5 / Patch: serverTimeUnix primary + device fallback -->
+<!-- CERTIFICATE v2026-01-19c / SE audit+juridik / HARDTEST 5/5 / Patch: serverTimeUnix primary + device fallback (UI source-safe) -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
@@ -575,16 +575,21 @@
             </div>
 
             <div class="statusMeta">
-              <div class="label">Kontrolltid (server, denna kontroll)</div>
+              <!-- ✅ UI-fix: undvik att antyda “server” om det är fallback -->
+              <div class="label">Kontrolltid (Proofy, denna kontroll)</div>
               <div class="mono" id="checkedServerLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="mono" id="checkedServerUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+              <div class="small" id="serverTimeSourceLine" style="margin-top:8px; display:none;">
+                Obs: <span class="mono">serverTimeUnix</span> saknades i svaret. Kontrolltiden ovan baseras på enhetstid (fallback).
+              </div>
 
               <div class="label" style="margin-top:10px">Kontrolltid (enhet, kompletterande)</div>
               <div class="mono" id="checkedDeviceLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="mono" id="checkedDeviceUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
 
               <div class="small screenOnly" style="margin-top:8px">
-                Server-tid används i intygslänk/verifieringslänk när den finns. Enhetstid visas som kompletterande och kan vara fel om enhetens klocka är fel.
+                Proofy-tid kommer från serversvaret (<span class="mono">serverTimeUnix</span>) när den finns.
+                Enhetstid visas som kompletterande och kan vara fel om enhetens klocka är fel.
               </div>
 
               <div class="label" style="margin-top:10px">Bevisstatus vid kontrollen (registerstatus)</div>
@@ -776,7 +781,7 @@
             Kontroll-ID: <span class="mono" id="pf_controlId">—</span>
           </div>
           <div>
-            Kontrolltid (server, UTC): <span class="mono" id="pf_checkedServerUtc">—</span>
+            Kontrolltid (Proofy, UTC): <span class="mono" id="pf_checkedServerUtc">—</span>
           </div>
           <div id="pf_checkedDeviceRow" style="display:none;">
             Kontrolltid (enhet, UTC): <span class="mono" id="pf_checkedDeviceUtc">—</span>
@@ -805,7 +810,7 @@
 
     <script>
       /* Intern versionsrad (visas inte för mottagare) */
-      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-19b (serverTime primary + device fallback)";
+      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-19c (serverTime primary + device fallback, UI source-safe)";
 
       const ISSUER_LEGAL_NAME = "Proofy AB";   // ändra vid behov
       const ISSUER_ORGNR = "";                 // valfritt: t.ex. "org.nr 556XXXX-XXXX"
@@ -1080,15 +1085,15 @@
         if (controlId && controlId !== "—") lines.push(`Kontroll-ID (detta kontrolltillfälle): ${controlId}`);
         lines.push("");
 
-        // 5/5: två tider (server först)
-        lines.push(`Kontrolltid (server): ${checkedServerLocalText || "—"}`);
-        lines.push(`Kontrolltid (server, UTC): ${checkedServerUtcText || "—"}`);
+        // 5/5: två tider (Proofy först)
+        lines.push(`Kontrolltid (Proofy): ${checkedServerLocalText || "—"}`);
+        lines.push(`Kontrolltid (Proofy, UTC): ${checkedServerUtcText || "—"}`);
         if (serverTimeWasFallback){
-          lines.push("Obs: Server-tid saknades i svaret. Server-tid ovan är fallback till enhetstid.");
+          lines.push("Obs: serverTimeUnix saknades i svaret. Kontrolltiden ovan baseras på enhetstid (fallback).");
         }
         lines.push(`Kontrolltid (enhet, kompletterande): ${checkedDeviceLocalText || "—"}`);
         lines.push(`Kontrolltid (enhet, UTC): ${checkedDeviceUtcText || "—"}`);
-        lines.push("Obs: Server-tid används i intygslänk/verifieringslänk när den finns. Enhetstid är kompletterande och kan vara fel vid fel klocka.");
+        lines.push("Obs: Proofy-tid kommer från serversvaret (serverTimeUnix) när den finns. Enhetstid är kompletterande och kan vara fel vid fel klocka.");
         lines.push("");
 
         lines.push(`Bevisstatus vid kontrollen (registerstatus): ${statusText || "—"}`);
@@ -1222,28 +1227,45 @@
         if (copyVerify) copyVerify.disabled = !enabled;
       }
 
-      function setTimeUI({ serverEpoch, deviceEpoch, serverFallback }){
-        // Server
-        const sLocal = serverEpoch ? fmtSeHtml(serverEpoch) : "—";
-        const sUtc = serverEpoch ? fmtUtc(serverEpoch) : "—";
-        $("checkedServerLocal").innerHTML = sLocal;
-        $("checkedServerUtc").textContent = sUtc;
+      // ✅ UI-fix: visar tydligt när Proofy-tid är fallback (enhetstid)
+      function setTimeUI({ proofyEpoch, deviceEpoch, proofyFallback }){
+        const sourceLine = $("serverTimeSourceLine");
 
-        // Device
+        // Proofy (primärt serverTimeUnix, annars fallback till device)
+        const proofyEpochForDisplay = proofyEpoch ? proofyEpoch : (deviceEpoch || null);
+
+        const pLocal = proofyEpochForDisplay ? fmtSeHtml(proofyEpochForDisplay) : "—";
+        const pUtc = proofyEpochForDisplay ? fmtUtc(proofyEpochForDisplay) : "—";
+
+        $("checkedServerLocal").innerHTML =
+          proofyFallback
+            ? `${pLocal} <span class="small" style="opacity:.85;">(fallback: enhetstid)</span>`
+            : pLocal;
+
+        $("checkedServerUtc").textContent =
+          proofyFallback
+            ? `${pUtc} (fallback: enhetstid)`
+            : pUtc;
+
+        if (sourceLine){
+          sourceLine.style.display = proofyFallback ? "block" : "none";
+        }
+
+        // Device (always)
         const dLocal = deviceEpoch ? fmtSeHtml(deviceEpoch) : "—";
         const dUtc = deviceEpoch ? fmtUtc(deviceEpoch) : "—";
         $("checkedDeviceLocal").innerHTML = dLocal;
         $("checkedDeviceUtc").textContent = dUtc;
 
         // Print footer
-        $("pf_checkedServerUtc").textContent = sUtc;
+        $("pf_checkedServerUtc").textContent = pUtc;
         const pfDevRow = $("pf_checkedDeviceRow");
         const pfDevUtc = $("pf_checkedDeviceUtc");
         const pfFallbackRow = $("pf_fallbackRow");
 
         if (pfDevUtc) pfDevUtc.textContent = dUtc;
 
-        if (serverFallback){
+        if (proofyFallback){
           if (pfFallbackRow) pfFallbackRow.style.display = "block";
           if (pfDevRow) pfDevRow.style.display = "block";
         } else {
@@ -1253,8 +1275,8 @@
         }
 
         return {
-          serverLocalPlain: serverEpoch ? fmtSePlain(serverEpoch) : "—",
-          serverUtcPlain: sUtc,
+          proofyLocalPlain: proofyEpochForDisplay ? fmtSePlain(proofyEpochForDisplay) : "—",
+          proofyUtcPlain: pUtc,
           deviceLocalPlain: deviceEpoch ? fmtSePlain(deviceEpoch) : "—",
           deviceUtcPlain: dUtc
         };
@@ -1273,48 +1295,47 @@
         const debug = (url.searchParams.get("debug") || "").trim() === "1";
 
         const verifieringsId = (url.searchParams.get("hash") || "").trim();
-        const optionalContext = (url.searchParams.get("tx") || "").trim();
+
+        // ✅ Micro-fix 2: tydliggör att detta faktiskt är tx
+        const tx = (url.searchParams.get("tx") || "").trim();
+
         const certId = (url.searchParams.get("cert") || "").trim();
 
         // Enhetstid tas direkt (kompletterande + fallback)
         const deviceEpoch = nowSeconds();
 
-        // Länkens checked (om någon skickat intygslänk vidare). Används inte som "kontrolltid",
-        // men vi kan varna om den skiljer sig mycket från server-tiden när den väl finns.
+        // Länkens checked (om någon skickat intygslänk vidare).
         const checkedParam = (url.searchParams.get("checked") || "").trim();
         const checkedCandidate = Number(checkedParam);
         const hasLinkChecked = Number.isFinite(checkedCandidate) && checkedCandidate > 0;
 
-        // Init: visa enhetstid som kompletterande direkt, server okänd tills /api/verify svarar.
-        // Vi använder enhetstid i server-fälten tills vi har serverTimeUnix (och markerar fallback om det kvarstår).
-        let serverEpoch = null;
-        let serverTimeWasFallback = true; // tills vi fått server-tid
+        // Init: visa tider med fallback (Proofy okänd tills /api/verify svarar)
+        let proofyEpoch = null;          // serverTimeUnix (om finns)
+        let proofyWasFallback = true;    // tills vi fått serverTimeUnix
 
-        // Init time UI (server=—, device=nu)
-        const tInit = setTimeUI({
-          serverEpoch: null,
+        const timesInit = setTimeUI({
+          proofyEpoch: null,
           deviceEpoch,
-          serverFallback: true
+          proofyFallback: true
         });
 
-        // Bygg länkar först när vi vet vilken kontrolltid som gäller (server primärt).
+        // Länkar byggs när vi vet vilken kontrolltid som gäller (Proofy primärt).
         let certLink = "—";
         let verifyLink = "—";
 
         const setLinks = (checkedEpochForLinks) => {
           certLink =
             `${location.origin}/certificate.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checkedEpochForLinks}` +
-            (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "") +
+            (tx ? `&tx=${encodeURIComponent(tx)}` : "") +
             (certId ? `&cert=${encodeURIComponent(certId)}` : "");
 
           verifyLink =
             `${location.origin}/verify.html?hash=${encodeURIComponent(verifieringsId)}&checked=${checkedEpochForLinks}` +
-            (optionalContext ? `&tx=${encodeURIComponent(optionalContext)}` : "");
+            (tx ? `&tx=${encodeURIComponent(tx)}` : "");
 
           $("certLinkInline").textContent = certLink;
           $("verifyLink").textContent = verifyLink;
 
-          // Öppna verifiering
           $("btnOpenVerify").href = verifyLink;
 
           // Print footer values
@@ -1336,12 +1357,10 @@
         $("btnPrint").onclick = () => window.print();
         $("btnRefresh").onclick = () => run();
 
-        // Copy-ID (Verifierings-ID)
         $("copyId").onclick = async () => {
           if (await copyText(verifieringsId)) toastCopied("Kontrollvärde (Verifierings-ID)");
         };
 
-        // Copy verifieringslänk
         const btnCopyVerifyLink = $("btnCopyVerifyLink");
         if (btnCopyVerifyLink){
           btnCopyVerifyLink.onclick = async () => {
@@ -1349,7 +1368,6 @@
           };
         }
 
-        // CertID
         if (certId){
           $("certIdOut").textContent = certId;
           $("certIdVal").style.display = "block";
@@ -1357,13 +1375,11 @@
           $("certIdOut").textContent = "Ej angivet";
         }
 
-        // Default: dölj tidpunkt-rutan (ska bara visas om Bekräftad)
         const confirmedBox = $("confirmedBox");
         if (confirmedBox) confirmedBox.style.display = "none";
         $("confirmedLocal").textContent = "—";
         $("confirmedUtc").textContent = "—";
 
-        // Reset innan kontroll
         $("resultText").textContent = "—";
         $("legalLine").textContent = "—";
         setStatus("warn", "—");
@@ -1372,19 +1388,17 @@
         $("internalRefB").textContent = "—";
         updateMoreVisibility({ a:"—", b:"—", allow:false });
 
-        // Kontext-hint (textContent för att undvika injection)
         const contextHintEl = $("contextHint");
         if (contextHintEl){
           if (certId){
             contextHintEl.textContent = `Intygs-ID: ${certId}`;
-          } else if (optionalContext){
+          } else if (tx){
             contextHintEl.textContent = "Kontext: tx angiven i länken (används vid kontroll).";
           } else {
             contextHintEl.textContent = "Spara intygslänken i ärendeakten. Använd verifieringslänk/QR för ny kontroll vid behov.";
           }
         }
 
-        // Notering: byggs först när slutstatus finns
         const noteEl = $("caseNoteText");
         const updateCaseNote = (payload) => {
           const note = buildCaseNote(payload);
@@ -1392,7 +1406,6 @@
           return note;
         };
 
-        // Kopiera/ladda ner notering
         const copyNoteBtn = $("copyCaseNote");
         const dlNoteBtn = $("downloadCaseNote");
         const topCopy = $("btnCopyCaseNoteTop");
@@ -1418,7 +1431,6 @@
           };
         }
 
-        // Kontroll-ID: init (visas först när vi vet utfallet)
         $("controlIdOut").textContent = "—";
         $("pf_controlId").textContent = "—";
         $("controlIdVal").style.display = "block";
@@ -1438,15 +1450,13 @@
 
           $("pf_status").textContent = statusText;
 
-          // Dölj Kontroll-ID (ska inte användas när vi inte ens har giltigt ID)
           $("controlIdVal").style.display = "none";
           $("pf_controlIdRow").style.display = "none";
 
-          // Uppdatera notering med tider (server fallback)
           const times = setTimeUI({
-            serverEpoch: deviceEpoch,
+            proofyEpoch: null,
             deviceEpoch,
-            serverFallback: true
+            proofyFallback: true
           });
 
           updateCaseNote({
@@ -1454,8 +1464,8 @@
             controlId: "—",
             statusText,
 
-            checkedServerLocalText: times.serverLocalPlain,
-            checkedServerUtcText: times.serverUtcPlain,
+            checkedServerLocalText: times.proofyLocalPlain,
+            checkedServerUtcText: times.proofyUtcPlain,
             checkedDeviceLocalText: times.deviceLocalPlain,
             checkedDeviceUtcText: times.deviceUtcPlain,
             serverTimeWasFallback: true,
@@ -1481,39 +1491,37 @@
 
         showWarn("Kontroll pågår: hämtar registerstatus från Proofy…");
 
-        // Verify med timeout+retry
-        const verifyRes = await fetchVerify(verifieringsId, optionalContext || "");
+        const verifyRes = await fetchVerify(verifieringsId, tx || "");
 
-        // Här försöker vi alltid sätta server-tid från svaret, om den finns (även vid ok:false kan den finnas i JSON).
+        // Sätt Proofy-tid från serverTimeUnix om den finns (även om ok:false kan JSON innehålla den)
         const vMaybe = verifyRes?.data || {};
         const apiServerTime = Number(vMaybe?.serverTimeUnix);
+
         if (Number.isFinite(apiServerTime) && apiServerTime > 0){
-          serverEpoch = Math.floor(apiServerTime);
-          serverTimeWasFallback = false;
+          proofyEpoch = Math.floor(apiServerTime);
+          proofyWasFallback = false;
         } else {
-          serverEpoch = deviceEpoch;
-          serverTimeWasFallback = true;
+          proofyEpoch = null;
+          proofyWasFallback = true;
         }
 
-        // Varning om länkens checked skiljer sig mycket (informativt, men kontrolltiden är "nu" på servern).
-        if (hasLinkChecked && !serverTimeWasFallback){
-          const skew = Math.abs(serverEpoch - Math.floor(checkedCandidate));
+        if (hasLinkChecked && !proofyWasFallback && proofyEpoch){
+          const skew = Math.abs(proofyEpoch - Math.floor(checkedCandidate));
           const STALE_SECONDS = 15 * 60;
           if (skew > STALE_SECONDS){
-            showWarn("Observera: Tiden i länken var äldre. Intyget visar kontrolltiden för denna kontroll (server).");
+            showWarn("Observera: Tiden i länken var äldre. Intyget visar kontrolltiden för denna kontroll (Proofy).");
             setTimeout(() => hideWarn(), 4500);
           }
         }
 
-        // Sätt tider i UI + print
         const times = setTimeUI({
-          serverEpoch,
+          proofyEpoch,
           deviceEpoch,
-          serverFallback: serverTimeWasFallback
+          proofyFallback: proofyWasFallback
         });
 
-        // Länkar/QR byggs på server-tid (eller fallback) för detta kontrolltillfälle
-        const checkedEpochForLinks = serverEpoch || deviceEpoch;
+        // Länkar/QR byggs på Proofy-tid (eller fallback)
+        const checkedEpochForLinks = (proofyEpoch || deviceEpoch);
         setLinks(checkedEpochForLinks);
 
         if (!verifyRes.ok){
@@ -1525,7 +1533,6 @@
 
           $("pf_status").textContent = statusText;
 
-          // Dölj Kontroll-ID helt i fel-läge
           $("controlIdVal").style.display = "none";
           $("pf_controlIdRow").style.display = "none";
 
@@ -1534,11 +1541,11 @@
             controlId: "—",
             statusText,
 
-            checkedServerLocalText: times.serverLocalPlain,
-            checkedServerUtcText: times.serverUtcPlain,
+            checkedServerLocalText: times.proofyLocalPlain,
+            checkedServerUtcText: times.proofyUtcPlain,
             checkedDeviceLocalText: times.deviceLocalPlain,
             checkedDeviceUtcText: times.deviceUtcPlain,
-            serverTimeWasFallback: serverTimeWasFallback,
+            serverTimeWasFallback: proofyWasFallback,
 
             confirmedLocalText: "—",
             confirmedUtcText: "—",
@@ -1564,27 +1571,23 @@
         const legalText = safeText(v?.legalText, "");
         const confirmedAtUnix = (v?.confirmedAtUnix != null) ? Number(v.confirmedAtUnix) : null;
 
-        // txKnown: krävs för att få visa "Inskickad – ej bekräftad"
         const txFromApi = safeText(v?.submission?.txHash, "");
-        const txKnown = !!optionalContext || (txFromApi && txFromApi !== "—");
+        const txKnown = !!tx || (txFromApi && txFromApi !== "—");
 
-        // Valfria interna referenser (endast om tx finns eller debug=1)
         const internalA = safeText(v?.evidence?.observedBlockNumber, "—");
         const internalB = safeText(v?.submission?.txHash, "—");
-        const allowInternals = !!optionalContext || debug;
+        const allowInternals = !!tx || debug;
 
         $("internalRefA").textContent = internalA;
         $("internalRefB").textContent = internalB;
         updateMoreVisibility({ a: internalA, b: internalB, allow: allowInternals });
 
-        // Status (fyra ord)
         const statusText = canonicalStatus(statusCode, txKnown);
         const pres = pickStatusPresentation(statusText);
         setStatus(pres.tone, pres.badge);
         $("resultText").textContent = statusText;
         $("pf_status").textContent = statusText;
 
-        // Legal line: tydlig begränsning, utan antaganden
         const finalLegalLine = (() => {
           if (legalText) return legalText;
 
@@ -1604,7 +1607,6 @@
         })();
         $("legalLine").textContent = finalLegalLine;
 
-        // Kontroll-ID: Beräkna lokalt om möjligt. Kontrolltid = server (primärt), annars enhet (fallback).
         const controlIdInput = [
           "proofy-cert",
           verifieringsId,
@@ -1613,7 +1615,7 @@
           (Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0) ? String(confirmedAtUnix) : "",
           certId || "",
           txKnown ? "tx:1" : "tx:0",
-          serverTimeWasFallback ? "tsrc:device" : "tsrc:server"
+          proofyWasFallback ? "tsrc:device" : "tsrc:server"
         ].join("|");
 
         const controlIdHex = await sha256Hex(controlIdInput);
@@ -1631,7 +1633,6 @@
           $("pf_controlIdRow").style.display = "block";
         }
 
-        // Tidpunkt: visas endast om Bekräftad och vi faktiskt fått en tid
         let confirmedLocalPlain = "—";
         let confirmedUtcPlain = "—";
 
@@ -1652,17 +1653,16 @@
           if (pfConfirmedRow) pfConfirmedRow.style.display = "none";
         }
 
-        // Bygg notering först när vi har slutstatus
         updateCaseNote({
           verifieringsId,
           controlId: hasControlId ? controlId : "—",
           statusText,
 
-          checkedServerLocalText: times.serverLocalPlain,
-          checkedServerUtcText: times.serverUtcPlain,
+          checkedServerLocalText: times.proofyLocalPlain,
+          checkedServerUtcText: times.proofyUtcPlain,
           checkedDeviceLocalText: times.deviceLocalPlain,
           checkedDeviceUtcText: times.deviceUtcPlain,
-          serverTimeWasFallback: serverTimeWasFallback,
+          serverTimeWasFallback: proofyWasFallback,
 
           confirmedLocalText: (statusText === "Bekräftad") ? confirmedLocalPlain : "—",
           confirmedUtcText: (statusText === "Bekräftad") ? confirmedUtcPlain : "—",
