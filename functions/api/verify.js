@@ -5,10 +5,16 @@ import { ABI as PROOFY_ABI } from "./abi.js";
 /**
  * Proofy /api/verify
  *
- * Juridik:
- * - Aldrig "bekräftad" utan att kontraktet visar bekräftad notering.
- * - Om ingen bekräftelse finns: "Ej bekräftad" eller "Inskickad – ej bekräftad" (om tx är känd).
+ * Juridik (kontraktssanning):
+ * - Aldrig "Bekräftad" utan att kontraktets get() visar bekräftad notering.
+ * - "Inskickad – ej bekräftad" endast om tx är känd och ännu inte har ett mined-resultat som gör den "Ej bekräftad".
  * - Vid tekniskt fel: "Kunde inte kontrolleras".
+ *
+ * Statuskoder (stabila):
+ * - CONFIRMED
+ * - SUBMITTED_UNCONFIRMED
+ * - NOT_CONFIRMED
+ * - UNKNOWN
  */
 
 function json(status, obj, origin) {
@@ -79,6 +85,17 @@ function getTimeoutMs(env) {
   return Number.isFinite(n) && n > 0 && n <= 60_000 ? Math.floor(n) : 20_000;
 }
 
+function makeRequestId() {
+  try {
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+      return globalThis.crypto.randomUUID();
+    }
+  } catch {
+    // ignore
+  }
+  return `req_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
 /**
  * statusCode:
  * - CONFIRMED
@@ -86,6 +103,7 @@ function getTimeoutMs(env) {
  * - NOT_CONFIRMED
  * - UNKNOWN
  */
+
 function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
   return {
     ok: true,
@@ -96,12 +114,11 @@ function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
     evidence: { observedBlockNumber },
     submission: null,
     legalText:
-      "Det finns en bekräftad notering för detta kontrollvärde. Uppgifterna ovan kan kontrolleras mot extern verifieringskälla vid behov.",
+      "Det finns en bekräftad notering för detta kontrollvärde.",
   };
 }
 
-function statusSubmittedUnconfirmed({ hash, observedBlockNumber, submission }) {
-  const txHash = submission?.txHash || null;
+function statusSubmittedUnconfirmed({ hash, observedBlockNumber, txHash, txState }) {
   return {
     ok: true,
     statusCode: "SUBMITTED_UNCONFIRMED",
@@ -109,14 +126,13 @@ function statusSubmittedUnconfirmed({ hash, observedBlockNumber, submission }) {
     hash,
     confirmedAtUnix: null,
     evidence: observedBlockNumber ? { observedBlockNumber } : null,
-    submission: txHash ? { txHash } : null,
+    submission: txHash ? { txHash, txState: txState || null } : null,
     legalText:
-      "En registrering har skickats in men är ännu inte bekräftad. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'.",
+      "En transaktionsreferens är känd men bekräftelse kan ännu inte redovisas. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'.",
   };
 }
 
-function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
-  const txHash = submission?.txHash || null;
+function statusNotConfirmed({ hash, observedBlockNumber, txHash, reason }) {
   return {
     ok: true,
     statusCode: "NOT_CONFIRMED",
@@ -126,6 +142,7 @@ function statusNotConfirmed({ hash, observedBlockNumber, submission }) {
     evidence: observedBlockNumber ? { observedBlockNumber } : null,
     submission: txHash ? { txHash } : null,
     legalText:
+      reason ||
       "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Detta är inte ett påstående om framtida bekräftelse.",
   };
 }
@@ -169,6 +186,7 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const timestamp = Number(ts);
   const exists = Boolean(ok) && timestamp !== 0;
 
+  // "Observed" = vad denna RPC just nu ser, inte ett bevis om tx.
   const observedBlockNumber = await publicClient.getBlockNumber();
 
   return {
@@ -181,6 +199,7 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
 async function resolveTxState(publicClient, txHash) {
   if (!txHash) return { known: false, state: "UNKNOWN" };
 
+  // 1) receipt => mined
   try {
     const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
     if (receipt) {
@@ -190,7 +209,7 @@ async function resolveTxState(publicClient, txHash) {
       return {
         known: true,
         state: "MINED",
-        receiptStatus: receipt.status || null,
+        receiptStatus: receipt.status || null, // "success" | "reverted" (viem)
         observedBlockNumber: blockNumber,
       };
     }
@@ -198,6 +217,7 @@ async function resolveTxState(publicClient, txHash) {
     // ignore
   }
 
+  // 2) tx => pending i mempool
   try {
     const tx = await publicClient.getTransaction({ hash: txHash });
     if (tx) return { known: true, state: "PENDING" };
@@ -214,13 +234,20 @@ export async function onRequest({ request, env }) {
   // ✅ 5/5 audit: servergenererad tid (UTC epoch) i ALLA JSON-svar
   const serverTimeUnix = Math.floor(Date.now() / 1000);
   const timeSource = "server";
+  const requestId = makeRequestId();
 
   if (request.method === "OPTIONS") return corsPreflight(origin);
 
   if (request.method !== "GET" && request.method !== "POST") {
     return json(
       405,
-      { ok: false, error: "Method Not Allowed", serverTimeUnix, timeSource },
+      {
+        ok: false,
+        error: "Method Not Allowed",
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
@@ -241,12 +268,21 @@ export async function onRequest({ request, env }) {
   }
 
   if (!isValidBytes32Hex(hash)) {
+    // Håll juridisk status inom de fyra statuskoderna.
     return json(
       400,
       {
         ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        errorCode: "BAD_REQUEST",
         error: "Invalid hash format",
-        statusCode: "BAD_REQUEST",
+        hash: null,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText: "Status kunde inte kontrolleras: ogiltigt kontrollvärde (Verifierings-ID).",
+        requestId,
         serverTimeUnix,
         timeSource,
       },
@@ -262,7 +298,15 @@ export async function onRequest({ request, env }) {
   if (!rpcUrl || !contractAddress) {
     return json(
       500,
-      { ok: false, error: "Server misconfiguration", serverTimeUnix, timeSource },
+      {
+        ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        error: "Server misconfiguration",
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
@@ -271,7 +315,10 @@ export async function onRequest({ request, env }) {
       500,
       {
         ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
         error: "Server misconfiguration (bad contract address)",
+        requestId,
         serverTimeUnix,
         timeSource,
       },
@@ -287,7 +334,7 @@ export async function onRequest({ request, env }) {
 
     await assertAmoyChain(publicClient);
 
-    // 1) Sanning: finns den i kontraktet?
+    // 1) Kontraktssanning: finns den i kontraktet?
     const proof = await readGetWithEvidence({
       publicClient,
       contractAddress,
@@ -303,6 +350,7 @@ export async function onRequest({ request, env }) {
             timestamp: proof.timestamp,
             observedBlockNumber: proof.observedBlockNumber,
           }),
+          requestId,
           serverTimeUnix,
           timeSource,
         },
@@ -310,30 +358,109 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // 2) Om inte bekräftad: om tx angavs, kolla om tx är känd (pending/mined)
+    // 2) Inte bekräftad i kontraktet: om tx angavs, skilj pending/mined-success/mined-reverted
     if (tx) {
       const txState = await resolveTxState(publicClient, tx);
 
-      if (txState.known) {
-        const observedBlockNumber =
-          txState.observedBlockNumber || proof.observedBlockNumber;
-
+      // Om tx inte är känd av RPC: då kan vi inte säga "inskickad".
+      if (!txState.known) {
         return json(
           200,
           {
-            ...statusSubmittedUnconfirmed({
+            ...statusNotConfirmed({
               hash,
-              observedBlockNumber,
-              submission: { txHash: tx },
+              observedBlockNumber: proof.observedBlockNumber,
+              txHash: null,
+              reason:
+                "Ingen bekräftad notering kunde konstateras. Angiven transaktionsreferens kunde inte verifieras vid kontrolltillfället.",
             }),
+            requestId,
             serverTimeUnix,
             timeSource,
           },
           origin
         );
       }
+
+      const observedBlockNumber =
+        txState.observedBlockNumber || proof.observedBlockNumber;
+
+      if (txState.state === "PENDING") {
+        return json(
+          200,
+          {
+            ...statusSubmittedUnconfirmed({
+              hash,
+              observedBlockNumber,
+              txHash: tx,
+              txState: "PENDING",
+            }),
+            requestId,
+            serverTimeUnix,
+            timeSource,
+          },
+          origin
+        );
+      }
+
+      // MINED: om reverted => Ej bekräftad (tx finns men gav ingen bekräftelse)
+      if (txState.state === "MINED" && txState.receiptStatus === "reverted") {
+        return json(
+          200,
+          {
+            ...statusNotConfirmed({
+              hash,
+              observedBlockNumber,
+              txHash: tx,
+              reason:
+                "Ingen bekräftad notering kunde konstateras. Angiven transaktionsreferens är minad men gav ingen bekräftelse för detta kontrollvärde.",
+            }),
+            requestId,
+            serverTimeUnix,
+            timeSource,
+          },
+          origin
+        );
+      }
+
+      // MINED success men fortfarande ej bekräftad i kontraktet => Ej bekräftad
+      if (txState.state === "MINED") {
+        return json(
+          200,
+          {
+            ...statusNotConfirmed({
+              hash,
+              observedBlockNumber,
+              txHash: tx,
+              reason:
+                "Ingen bekräftad notering kunde konstateras. Angiven transaktionsreferens är minad men bekräftelse för detta kontrollvärde kan inte redovisas.",
+            }),
+            requestId,
+            serverTimeUnix,
+            timeSource,
+          },
+          origin
+        );
+      }
+
+      // Fallback (bör ej nås)
+      return json(
+        200,
+        {
+          ...statusNotConfirmed({
+            hash,
+            observedBlockNumber,
+            txHash: tx,
+          }),
+          requestId,
+          serverTimeUnix,
+          timeSource,
+        },
+        origin
+      );
     }
 
+    // 3) Ingen tx och ej bekräftad i kontraktet
     return json(
       200,
       {
@@ -341,6 +468,7 @@ export async function onRequest({ request, env }) {
           hash,
           observedBlockNumber: proof.observedBlockNumber,
         }),
+        requestId,
         serverTimeUnix,
         timeSource,
       },
@@ -349,7 +477,12 @@ export async function onRequest({ request, env }) {
   } catch (e) {
     return json(
       503,
-      { ...statusUnknown({ hash, detail: sanitizeError(e) }), serverTimeUnix, timeSource },
+      {
+        ...statusUnknown({ hash, detail: sanitizeError(e) }),
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
