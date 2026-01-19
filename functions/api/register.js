@@ -137,7 +137,10 @@ function toJsonSafe(value) {
 
 function makeRequestId() {
   try {
-    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+    if (
+      globalThis.crypto &&
+      typeof globalThis.crypto.randomUUID === "function"
+    ) {
       return globalThis.crypto.randomUUID();
     }
   } catch {
@@ -179,7 +182,7 @@ async function readGet(publicClient, contractAddress, hash) {
   const blockNo = Array.isArray(res) ? res[2] : res?.blockNo ?? 0n;
 
   const tsNum = Number(ts);
-  const confirmed = Boolean(ok) && tsNum > 0;
+  const confirmed = Boolean(ok) && Number.isFinite(tsNum) && tsNum > 0;
 
   let registeredBlockNumber = null;
   try {
@@ -336,17 +339,29 @@ async function sendRegisterTx({
 export async function onRequest({ request, env }) {
   const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
+  // ✅ 5/5 audit: servergenererad tid (UTC epoch) i ALLA JSON-svar
   const serverTimeUnix = Math.floor(Date.now() / 1000);
   const timeSource = "server";
   const requestId = makeRequestId();
 
   if (request.method === "OPTIONS") return corsPreflight(origin);
+
+  // Juridik: håll dig inom de fyra statuskoderna även vid metodfel.
   if (request.method !== "POST") {
     return json(
       405,
       {
         ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        errorCode: "METHOD_NOT_ALLOWED",
         error: "Method Not Allowed",
+        hash: null,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: felaktig metod för registreringstjänsten.",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -363,7 +378,16 @@ export async function onRequest({ request, env }) {
       400,
       {
         ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        errorCode: "BAD_REQUEST",
         error: "Invalid JSON body",
+        hash: null,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: ogiltig begäran (JSON saknas eller kunde inte tolkas).",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -380,7 +404,16 @@ export async function onRequest({ request, env }) {
       400,
       {
         ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        errorCode: "BAD_REQUEST",
         error: "Invalid hash format",
+        hash: null,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: ogiltigt kontrollvärde (Verifierings-ID).",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -398,7 +431,15 @@ export async function onRequest({ request, env }) {
       500,
       {
         ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
         error: "Server misconfiguration",
+        hash,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: tjänsten är tillfälligt felkonfigurerad.",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -411,7 +452,15 @@ export async function onRequest({ request, env }) {
       500,
       {
         ok: false,
-        error: "Bad contract address",
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        error: "Server misconfiguration (bad contract address)",
+        hash,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: tjänsten är tillfälligt felkonfigurerad.",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -424,7 +473,15 @@ export async function onRequest({ request, env }) {
       500,
       {
         ok: false,
-        error: "Bad private key",
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        error: "Server misconfiguration (bad private key)",
+        hash,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: tjänsten är tillfälligt felkonfigurerad.",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -444,13 +501,13 @@ export async function onRequest({ request, env }) {
 
     const chainId = await assertAmoyChain(publicClient);
 
-    // observed block: diagnostik (inte bevis om registrering)
+    // Observed block: diagnostik (inte bevis om registrering)
     const observedBlockNumber = await publicClient
       .getBlockNumber()
       .then((b) => b.toString())
       .catch(() => null);
 
-    // 0) Om den redan finns: returnera CONFIRMED direkt.
+    // 0) Kontraktssanning: redan bekräftad? Då returnera CONFIRMED (ingen tx, ingen "inskickad").
     try {
       const existing = await readGet(publicClient, contractAddress, hash);
       if (existing.confirmed) {
@@ -476,7 +533,8 @@ export async function onRequest({ request, env }) {
         );
       }
     } catch {
-      // fortsätt
+      // Fortsätt till registreringsförsök.
+      // Juridik: kan inte dra slutsats om status om läsning misslyckas.
     }
 
     const fees = await pickFeesForDebug(publicClient, env);
@@ -509,7 +567,7 @@ export async function onRequest({ request, env }) {
       3.0
     );
 
-    // 1) Skicka tx
+    // 1) Skicka tx (registerIfMissing). (TxHash är nu känd => kan vara "Inskickad – ej bekräftad" vid timeout.)
     let attempt = 0;
     let txHash = await sendRegisterTx({
       publicClient,
@@ -573,11 +631,12 @@ export async function onRequest({ request, env }) {
         })
       : undefined;
 
-    // 4) MINED
+    // 4) MINED: avgör via kontraktssanning efter receipt.
     if (receiptInfo.kind === "MINED") {
       const minedBlockNumber =
         receiptInfo.receipt?.blockNumber?.toString?.() ?? null;
 
+      // receipt reverted => definitivt EJ bekräftad (ingen kontraktssanning kan uppstå från revert)
       if (receiptInfo.receipt?.status === "reverted") {
         const payload = {
           ok: true,
@@ -589,9 +648,9 @@ export async function onRequest({ request, env }) {
             observedBlockNumber,
             minedBlockNumber,
           },
-          submission: { txHash, submittedBy: account.address },
+          submission: { txHash, txState: "MINED_REVERTED" },
           legalText:
-            "En registrering har behandlats men kunde inte bekräftas. Ingen slutsats om bekräftelse kan dras.",
+            "Ingen bekräftad notering kunde konstateras. Angiven transaktionsreferens är minad men gav ingen bekräftelse för detta kontrollvärde.",
           requestId,
           serverTimeUnix,
           timeSource,
@@ -600,6 +659,7 @@ export async function onRequest({ request, env }) {
         return json(200, payload, origin);
       }
 
+      // receipt success: kontrollera kontraktet (definitiv sanning)
       const post = await readGet(publicClient, contractAddress, hash).catch(
         () => ({
           confirmed: false,
@@ -620,7 +680,7 @@ export async function onRequest({ request, env }) {
             observedBlockNumber,
             minedBlockNumber,
           },
-          submission: { txHash, submittedBy: account.address },
+          submission: { txHash, txState: "MINED_SUCCESS" },
           legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
           requestId,
           serverTimeUnix,
@@ -641,7 +701,7 @@ export async function onRequest({ request, env }) {
           observedBlockNumber,
           minedBlockNumber,
         },
-        submission: { txHash, submittedBy: account.address },
+        submission: { txHash, txState: "MINED_SUCCESS" },
         legalText:
           "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Angiven transaktionsreferens är minad men bekräftelse kan inte redovisas.",
         requestId,
@@ -659,9 +719,10 @@ export async function onRequest({ request, env }) {
       statusText: "Inskickad – ej bekräftad",
       hash,
       confirmedAtUnix: null,
-      evidence: { observedBlockNumber },
-      submission: { txHash, submittedBy: account.address, txState: "UNKNOWN" },
-      legalText: "En registrering har skickats in men är ännu inte bekräftad.",
+      evidence: observedBlockNumber ? { observedBlockNumber } : null,
+      submission: { txHash, txState: "PENDING_OR_UNKNOWN" },
+      legalText:
+        "En transaktionsreferens är känd men bekräftelse kan ännu inte redovisas. Ingen slutsats om bekräftelse kan dras innan status är 'Bekräftad'.",
       requestId,
       serverTimeUnix,
       timeSource,
@@ -685,6 +746,8 @@ export async function onRequest({ request, env }) {
       submission: null,
       error: "Register temporarily unavailable",
       detail: sanitizeError(e),
+      legalText:
+        "Status kunde inte kontrolleras på grund av tekniskt fel. Ingen slutsats kan dras utifrån detta svar.",
       requestId,
       serverTimeUnix,
       timeSource,
