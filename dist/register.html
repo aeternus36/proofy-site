@@ -1169,11 +1169,14 @@
 
   function applyStatusToUI({ id, checkedEpochForLinks, data, httpDateRaw }){
     const norm = normalizeModel(data || {});
-    const sc = String(norm.statusCode || "");
+    let sc = String(norm.statusCode || "");
     const legal = String(norm.legalText || "");
     const confirmedAt = norm.confirmedAtUnix;
 
     const txHash = data?.submission?.txHash || null;
+
+    // ✅ Juridik-lås: SUBMITTED_UNCONFIRMED kräver känd txHash, annars UNKNOWN
+    if (sc === "SUBMITTED_UNCONFIRMED" && !txHash) sc = "UNKNOWN";
 
     const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
     const registeredBlockNumber = data?.evidence?.registeredBlockNumber || null;
