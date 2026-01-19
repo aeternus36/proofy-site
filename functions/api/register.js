@@ -254,7 +254,9 @@ async function isTxDropped(publicClient, txHash) {
     .catch(() => null);
   if (receipt) return false;
 
-  const tx = await publicClient.getTransaction({ hash: txHash }).catch(() => null);
+  const tx = await publicClient
+    .getTransaction({ hash: txHash })
+    .catch(() => null);
   if (tx) return false;
 
   return true;
@@ -289,25 +291,37 @@ async function sendRegisterTx({
 export async function onRequest({ request, env }) {
   const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
-  // ✅ Extern kontrolltid (server)
+  // ✅ 5/5 audit: servergenererad tid (UTC epoch) i ALLA JSON-svar
   const serverTimeUnix = Math.floor(Date.now() / 1000);
   const timeSource = "server";
 
   if (request.method === "OPTIONS") return corsPreflight(origin);
   if (request.method !== "POST") {
-    return json(405, { ok: false, error: "Method Not Allowed", serverTimeUnix, timeSource }, origin);
+    return json(
+      405,
+      { ok: false, error: "Method Not Allowed", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return json(400, { ok: false, error: "Invalid JSON body", serverTimeUnix, timeSource }, origin);
+    return json(
+      400,
+      { ok: false, error: "Invalid JSON body", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   const hash = String(body?.hash || "").trim();
   if (!isValidBytes32Hex(hash)) {
-    return json(400, { ok: false, error: "Invalid hash format", serverTimeUnix, timeSource }, origin);
+    return json(
+      400,
+      { ok: false, error: "Invalid hash format", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   const rpcUrl = String(env.AMOY_RPC_URL || "").trim();
@@ -315,13 +329,25 @@ export async function onRequest({ request, env }) {
   const privateKey = normalizeHexWith0x(env.PROOFY_PRIVATE_KEY);
 
   if (!rpcUrl || !contractAddress || !privateKey) {
-    return json(500, { ok: false, error: "Server misconfiguration", serverTimeUnix, timeSource }, origin);
+    return json(
+      500,
+      { ok: false, error: "Server misconfiguration", serverTimeUnix, timeSource },
+      origin
+    );
   }
   if (!isAddress(contractAddress)) {
-    return json(500, { ok: false, error: "Bad contract address", serverTimeUnix, timeSource }, origin);
+    return json(
+      500,
+      { ok: false, error: "Bad contract address", serverTimeUnix, timeSource },
+      origin
+    );
   }
   if (!isValidPrivateKeyHex(privateKey)) {
-    return json(500, { ok: false, error: "Bad private key", serverTimeUnix, timeSource }, origin);
+    return json(
+      500,
+      { ok: false, error: "Bad private key", serverTimeUnix, timeSource },
+      origin
+    );
   }
 
   try {
@@ -410,10 +436,7 @@ export async function onRequest({ request, env }) {
     );
 
     // 3) Om den inte mined: försök resubmit om den bedöms droppad
-    while (
-      receiptInfo.kind !== "MINED" &&
-      attempt < resubmitMaxAttempts
-    ) {
+    while (receiptInfo.kind !== "MINED" && attempt < resubmitMaxAttempts) {
       const dropped = await isTxDropped(publicClient, txHash);
       if (!dropped) break;
 
@@ -498,8 +521,7 @@ export async function onRequest({ request, env }) {
                 receiptInfo.receipt.blockNumber?.toString?.() ?? null,
             },
             submission: { txHash, submittedBy: account.address },
-            legalText:
-              "Det finns en bekräftad notering för detta kontrollvärde.",
+            legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
             serverTimeUnix,
             timeSource,
           },
@@ -509,7 +531,7 @@ export async function onRequest({ request, env }) {
       // Om något märkligt: fallback till pending-svar
     }
 
-    // 5) Pending/timeout: returnera NOT_CONFIRMED med txHash
+    // 5) Pending/timeout: returnera NOT_CONFIRMED med txHash (UI kan poll:a /api/tx + /api/verify)
     const debug = toJsonSafe({
       chainId,
       contractAddress,
