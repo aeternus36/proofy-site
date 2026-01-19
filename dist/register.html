@@ -12,6 +12,19 @@
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
+    :root{
+      /* Fallback-space så chat/FAB aldrig täcker innehåll på mobil (JS kan justera) */
+      --proofy-fab-space: 120px;
+    }
+
+    /* Ge bottenutrymme för fixed widgets/FAB */
+    main#main{
+      padding-bottom: calc(48px + env(safe-area-inset-bottom) + var(--proofy-fab-space, 120px));
+    }
+    @media (max-width: 700px){
+      :root{ --proofy-fab-space: 140px; }
+    }
+
     .sr-only{
       position:absolute !important;
       width:1px !important;
@@ -737,19 +750,36 @@
     return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
   }
 
+  // ✅ HARDTEST: timeout + no-store + same-origin + cache-bust för GET
   async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 25000){
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
     const parentSignal = options?.signal;
 
     const onAbort = () => controller.abort();
+
     try{
       if (parentSignal) {
         if (parentSignal.aborted) controller.abort();
         else parentSignal.addEventListener("abort", onAbort, { once:true });
       }
 
-      const res = await fetch(url, { ...options, signal: controller.signal });
+      const method = String(options?.method || "GET").toUpperCase();
+      let reqUrl = String(url || "");
+
+      if (method === "GET") {
+        const sep = reqUrl.includes("?") ? "&" : "?";
+        reqUrl = reqUrl + sep + "t=" + Date.now();
+      }
+
+      const res = await fetch(reqUrl, {
+        cache: "no-store",
+        credentials: "same-origin",
+        ...options,
+        method,
+        signal: controller.signal
+      });
+
       const data = await res.json().catch(() => ({}));
       const dateHeader = res?.headers?.get ? (res.headers.get("Date") || "") : "";
       return { res, data, aborted:false, dateHeader };
@@ -1365,9 +1395,10 @@
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
       attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
 
+      // ✅ Visa inte "Inskickad – ej bekräftad" innan vi har txHash från backend
       setPill("Skickar registrering…");
-      if (regStatusOut) regStatusOut.textContent = "Inskickad – ej bekräftad";
-      markHeadline("warn", "Inskickad – ej bekräftad");
+      if (regStatusOut) regStatusOut.textContent = "Kontroll pågår…";
+      markHeadline("warn", "Kontroll pågår…");
 
       const reg = await safeRegisterRequest(id, registerAbort.signal);
       if (myOp !== opId) return;
@@ -1601,6 +1632,64 @@
   setFile(null);
   setBusy(false);
   setManualState("");
+
+  // Overlay-safe (robust): reserverar bottenutrymme för fixed widgets/FAB
+  (function overlaySafe(){
+    const root = document.documentElement;
+
+    const candidates = () => {
+      const els = [];
+      const byId1 = document.getElementById("chatWidget");
+      const byId2 = document.getElementById("chat-widget");
+      if (byId1) els.push(byId1);
+      if (byId2) els.push(byId2);
+
+      const maybe = Array.from(document.querySelectorAll("button, a, div, iframe"))
+        .filter(el => {
+          if (!el || !el.getBoundingClientRect) return false;
+          const cs = getComputedStyle(el);
+          if (cs.position !== "fixed") return false;
+          const r = el.getBoundingClientRect();
+          if (r.width < 40 || r.height < 40) return false;
+
+          const nearBottom = r.bottom > (window.innerHeight - 40);
+          const nearRight = r.right > (window.innerWidth - 120);
+          const nearLeft = r.left < 120;
+          return nearBottom && (nearRight || nearLeft);
+        });
+
+      for (const el of maybe) els.push(el);
+      return Array.from(new Set(els));
+    };
+
+    const compute = () => {
+      const list = candidates();
+      let extra = 0;
+
+      for (const el of list){
+        try{
+          const r = el.getBoundingClientRect();
+          if (r.height > extra) extra = r.height;
+        } catch {}
+      }
+
+      const px = extra > 0 ? Math.ceil(extra + 18) : 0;
+      root.style.setProperty("--proofy-fab-space", px + "px");
+    };
+
+    compute();
+    window.addEventListener("resize", () => compute(), { passive:true });
+
+    const obs = new MutationObserver(() => compute());
+    obs.observe(document.body, { childList:true, subtree:true, attributes:true });
+
+    let n = 0;
+    const t = setInterval(() => {
+      compute();
+      n++;
+      if (n > 8) clearInterval(t);
+    }, 180);
+  })();
 })();
 </script>
 
