@@ -135,6 +135,24 @@
       .proofyEvidenceGrid{ grid-template-columns: 1fr 1fr; }
     }
 
+    /* ✅ Kontrolltid box (server + enhet), revision-first */
+    .proofyTimeBox{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.04);
+    }
+    .proofyTimeGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    @media (min-width: 921px){
+      .proofyTimeGrid{ grid-template-columns: 1fr 1fr; }
+    }
+
     /* “Hoppa” ska kännas som knapp men utan att bli primär handling */
     .btn.jump{
       background: rgba(255,255,255,.04);
@@ -350,17 +368,31 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- ✅ 1) Kontrolltid flyttad upp: direkt efter rubrik -->
-            <div style="margin-top:12px;">
-              <div class="meta">Kontrolltid (detta kontrolltillfälle)</div>
-              <div id="outCheckedSe" class="mono" style="margin-top:6px;">—</div>
-              <div id="outCheckedUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
-              <div class="small" style="margin-top:8px; opacity:.9;">
-                Tidpunkten genereras i webbläsaren och kan vara fel om systemklockan är fel. Den utgör inte extern tidsstämpling.
+            <!-- ✅ Kontrolltid (server + enhet) -->
+            <div class="proofyTimeBox" role="status" aria-live="polite" aria-atomic="true">
+              <div class="meta">Kontrolltid vid kontrolltillfället</div>
+
+              <div class="proofyTimeGrid">
+                <div>
+                  <div class="meta" style="opacity:.9;">Server (från serversvar)</div>
+                  <div id="outCheckedServerSe" class="mono" style="margin-top:6px;">—</div>
+                  <div id="outCheckedServerUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
+                </div>
+
+                <div>
+                  <div class="meta" style="opacity:.9;">Enhet (kompletterande)</div>
+                  <div id="outCheckedDeviceSe" class="mono" style="margin-top:6px;">—</div>
+                  <div id="outCheckedDeviceUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
+                </div>
+              </div>
+
+              <div class="small" style="margin-top:10px; opacity:.9;">
+                Server-tid hämtas från serversvar (HTTP Date) när den finns. Ingen av tiderna utgör extern tidsstämpling.
+                Enhetstid kan vara fel om systemklockan är fel.
               </div>
             </div>
 
-            <!-- ✅ 3) Bevisstatus-ruta (registerstatus vid kontrolltillfället) -->
+            <!-- ✅ Bevisstatus-ruta (registerstatus vid kontrolltillfället) -->
             <div class="proofyEvidenceBox" role="status" aria-live="polite" aria-atomic="true">
               <div class="meta">Bevisstatus vid kontrolltillfället (registerstatus)</div>
 
@@ -372,7 +404,6 @@
                 <div>
                   <div class="meta" style="opacity:.9;">Tidpunkt (endast om bekräftad)</div>
                   <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
-                  <!-- ✅ Döljs helt om ej bekräftad -->
                   <div id="outRegUtc" class="mono" style="margin-top:6px; opacity:.75; display:none;">—</div>
                 </div>
               </div>
@@ -385,7 +416,7 @@
               </div>
             </div>
 
-            <!-- ✅ 2) Primära åtgärder (audit-prio): Kopiera notering först -->
+            <!-- ✅ Primära åtgärder -->
             <div class="resultTopActions" aria-label="Primära åtgärder">
               <button class="btn primary" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
               <a class="btn" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
@@ -415,7 +446,6 @@
 
             <div class="hr" style="margin-top:14px;"></div>
 
-            <!-- Anchor för “Hoppa till notering” -->
             <div id="noteAnchor" style="height:1px;"></div>
 
             <div class="meta">Notering (för ärendeakt)</div>
@@ -507,9 +537,11 @@
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
 
-  // ✅ Kontrolltid
-  const outCheckedSe = $("outCheckedSe");
-  const outCheckedUtc = $("outCheckedUtc");
+  // ✅ Kontrolltid: server + enhet
+  const outCheckedServerSe = $("outCheckedServerSe");
+  const outCheckedServerUtc = $("outCheckedServerUtc");
+  const outCheckedDeviceSe = $("outCheckedDeviceSe");
+  const outCheckedDeviceUtc = $("outCheckedDeviceUtc");
 
   // ✅ Bevisstatus-ruta (registerstatus)
   const outRegStatus = $("outRegStatus");
@@ -671,6 +703,14 @@
     }
   }
 
+  function parseHttpDateToEpochSeconds(dateHeader){
+    const s = String(dateHeader || "").trim();
+    if (!s) return null;
+    const t = Date.parse(s);
+    if (!Number.isFinite(t) || t <= 0) return null;
+    return Math.floor(t / 1000);
+  }
+
   // ✅ Språklås: exakt 4 canonical statusuttryck
   function canonicalStatusFromCode(statusCode){
     const sc = String(statusCode || "");
@@ -715,10 +755,11 @@
     try{
       const r = await fetch(url, { method:"GET", cache:"no-store", signal: controller.signal, credentials:"same-origin" });
       const j = await r.json().catch(() => ({}));
-      return { ok: r.ok, status: r.status, data: j, aborted:false };
+      const dateHeader = r?.headers?.get ? (r.headers.get("Date") || "") : "";
+      return { ok: r.ok, status: r.status, data: j, aborted:false, dateHeader };
     } catch (e){
       const aborted = (e && e.name === "AbortError");
-      return { ok:false, status:0, data:{}, aborted };
+      return { ok:false, status:0, data:{}, aborted, dateHeader:"" };
     } finally {
       clearTimeout(t);
     }
@@ -732,7 +773,7 @@
     for (let i=0; i<attempts; i++){
       const res = await fetchJsonWithTimeout(base, 20000);
 
-      if (res.ok) return { ok:true, data:res.data, status:res.status };
+      if (res.ok) return { ok:true, data:res.data, status:res.status, dateHeader: res.dateHeader };
 
       const retryable = res.aborted || isRetryableStatus(res.status);
       if (i < attempts - 1 && retryable){
@@ -741,10 +782,10 @@
         continue;
       }
 
-      return { ok:false, data:res.data, status:res.status };
+      return { ok:false, data:res.data, status:res.status, dateHeader: res.dateHeader };
     }
 
-    return { ok:false, data:{}, status:0 };
+    return { ok:false, data:{}, status:0, dateHeader:"" };
   }
 
   function setParamsInUrl({ hash, checked, tx }){
@@ -970,8 +1011,10 @@
     outRegUtc.textContent = "—";
     outRegUtc.style.display = "none";
 
-    if (outCheckedSe) outCheckedSe.textContent = "—";
-    if (outCheckedUtc) outCheckedUtc.textContent = "—";
+    if (outCheckedServerSe) outCheckedServerSe.textContent = "—";
+    if (outCheckedServerUtc) outCheckedServerUtc.textContent = "—";
+    if (outCheckedDeviceSe) outCheckedDeviceSe.textContent = "—";
+    if (outCheckedDeviceUtc) outCheckedDeviceUtc.textContent = "—";
 
     if (auditVerifyVersion) auditVerifyVersion.style.display = "none";
     if (auditVerifyVersionValue) auditVerifyVersionValue.textContent = "—";
@@ -1261,9 +1304,11 @@
     if (run.fileName) lines.push(`Underlag/filnamn: ${run.fileName}`);
 
     lines.push("");
-    lines.push(`Kontrolltid (detta kontrolltillfälle): ${run.verifySe || "—"}`);
-    if (run.verifyUtc) lines.push(`Kontrolltid (UTC): ${run.verifyUtc}`);
-    lines.push("Obs: Tidpunkten genereras i webbläsaren och utgör inte extern tidsstämpling.");
+    lines.push(`Kontrolltid (server): ${run.serverSe || "—"}`);
+    lines.push(`Kontrolltid (server, UTC): ${run.serverUtc || "—"}`);
+    lines.push(`Kontrolltid (enhet): ${run.deviceSe || "—"}`);
+    lines.push(`Kontrolltid (enhet, UTC): ${run.deviceUtc || "—"}`);
+    lines.push("Obs: Server-tid hämtas från serversvar (HTTP Date) när den finns. Ingen av tiderna utgör extern tidsstämpling. Enhetstid kan vara fel vid fel klocka.");
 
     lines.push("");
     lines.push(`Resultat (filversion): ${run.match ? "Oförändrat underlag (samma filversion)" : "Ändrat underlag (annan filversion)"}`);
@@ -1347,7 +1392,7 @@
     if (!currentFile) {
       showAlert(
         "⚠️ Välj ett underlag att kontrollera",
-        "Välj underlaget du vill kontrollera. Underlaget lämnar aldrig din dator.",
+        "Välj underlaget du vill kontrollera. Underlaget lämnar inte din dator.",
         "err"
       );
       setStatus("Välj underlag");
@@ -1357,11 +1402,19 @@
     const u = new URL(location.href);
     const tx = (u.searchParams.get("tx") || initialTx || "").trim();
 
-    const checkedEpoch = Math.floor(Date.now() / 1000);
-    setParamsInUrl({ hash: refId, checked: checkedEpoch, tx: tx || "" });
+    // ✅ Enhetstid (kompletterande)
+    const checkedDeviceEpoch = Math.floor(Date.now() / 1000);
 
-    const checkedSe = fmtSeEpoch(checkedEpoch);
-    const checkedUtc = fmtUtcEpoch(checkedEpoch);
+    // Vi sätter checked direkt (enhet) – uppdateras till server-tid om den finns.
+    setParamsInUrl({ hash: refId, checked: checkedDeviceEpoch, tx: tx || "" });
+
+    const deviceSe = fmtSeEpoch(checkedDeviceEpoch);
+    const deviceUtc = fmtUtcEpoch(checkedDeviceEpoch);
+
+    if (outCheckedDeviceSe) outCheckedDeviceSe.textContent = deviceSe;
+    if (outCheckedDeviceUtc) outCheckedDeviceUtc.textContent = deviceUtc;
+    if (outCheckedServerSe) outCheckedServerSe.textContent = "—";
+    if (outCheckedServerUtc) outCheckedServerUtc.textContent = "—";
 
     setStatus("Kontrollerar…");
     setBusy(true);
@@ -1388,14 +1441,25 @@
         }
       }
 
-      if (reportMeta) {
-        reportMeta.style.display = "block";
-        reportMeta.textContent = `Rapport · kontrolltid: ${checkedSe}`;
+      // ✅ Server-tid från Date-header (om finns)
+      const checkedServerEpoch = parseHttpDateToEpochSeconds(verifyRes.dateHeader);
+      const checkedEpochForLinks = checkedServerEpoch || checkedDeviceEpoch;
+
+      const serverSe = checkedServerEpoch ? fmtSeEpoch(checkedServerEpoch) : "—";
+      const serverUtc = checkedServerEpoch ? fmtUtcEpoch(checkedServerEpoch) : "—";
+
+      if (outCheckedServerSe) outCheckedServerSe.textContent = serverSe;
+      if (outCheckedServerUtc) outCheckedServerUtc.textContent = serverUtc;
+
+      // ✅ Uppdatera URL så selflink/QR/cert får server-checked när den finns
+      if (checkedServerEpoch) {
+        setParamsInUrl({ hash: refId, checked: checkedServerEpoch, tx: tx || "" });
       }
 
-      // ✅ Kontrolltid uppdateras (nu syns den högst upp)
-      if (outCheckedSe) outCheckedSe.textContent = checkedSe;
-      if (outCheckedUtc) outCheckedUtc.textContent = checkedUtc;
+      if (reportMeta) {
+        reportMeta.style.display = "block";
+        reportMeta.textContent = `Rapport · kontrolltid: ${checkedServerEpoch ? serverSe : deviceSe}`;
+      }
 
       setResultHeadline(match);
       setExplainTone(match);
@@ -1456,7 +1520,7 @@
       const confirmedUtc = (statusText === "Bekräftad" && confirmedAtUnix) ? fmtUtcEpoch(confirmedAtUnix) : null;
 
       if (openCertBtn) {
-        openCertBtn.href = buildCertLink(refId, checkedEpoch, tx || "");
+        openCertBtn.href = buildCertLink(refId, checkedEpochForLinks, tx || "");
         openCertBtn.target = "_blank";
         openCertBtn.rel = "noopener";
         openCertBtn.style.display = "inline-flex";
@@ -1469,9 +1533,13 @@
         statusText,
         confirmedSe,
         confirmedUtc,
-        verifySe: checkedSe,
-        verifyUtc: checkedUtc,
-        tx: tx || ""
+        tx: tx || "",
+
+        // tider till notering
+        serverSe: checkedServerEpoch ? serverSe : "—",
+        serverUtc: checkedServerEpoch ? serverUtc : "—",
+        deviceSe,
+        deviceUtc,
       };
 
       const summaryText = buildSummaryText(lastRun);
