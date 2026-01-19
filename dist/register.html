@@ -443,7 +443,7 @@
                 <div class="meta" style="margin-top:10px;">Kontrollpunkt (valfri)</div>
                 <div id="submitterOut" class="mono" style="margin-top:8px;">—</div>
 
-                <div class="meta" style="margin-top:10px;">Meddelande (om något)</div>
+                <div class="meta" style="margin-top:10px;">Juridisk information (från kontroll)</div>
                 <div id="debugOut" class="mono" style="margin-top:8px;">—</div>
               </details>
             </div>
@@ -553,7 +553,7 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const mainEl = $("main") || document.querySelector("main");
+  const mainEl = $("main") || document.querySelector("main"); // <main id="main"> => OK
 
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
@@ -621,6 +621,9 @@
   let currentCheckedDeviceEpoch = null;
   let currentCheckedServerEpoch = null;
 
+  // ✅ audit: om server-tid saknas och vi faller tillbaka på enhetstid
+  let serverTimeWasFallback = false;
+
   let busy = false;
   let opId = 0;
 
@@ -639,8 +642,8 @@
     } catch {}
   }
 
-  function setPill(text){ statusPill.textContent = text; }
-  function setManualPill(text){ manualPill.textContent = text; }
+  function setPill(text){ if (statusPill) statusPill.textContent = text; }
+  function setManualPill(text){ if (manualPill) manualPill.textContent = text; }
 
   function hidePill(p){
     if (!p) return;
@@ -955,6 +958,9 @@
     // ✅ 5/5: båda tiderna (server först)
     lines.push(`Kontrolltid (server): ${run.checkedServerSe || "—"}`);
     lines.push(`Kontrolltid (server, UTC): ${run.checkedServerUtc || "—"}`);
+    if (run.serverTimeWasFallback) {
+      lines.push("Obs: Server-tid saknades i svaret. Server-tid ovan är fallback till enhetstid.");
+    }
     lines.push(`Kontrolltid (enhet): ${run.checkedDeviceSe || "—"}`);
     lines.push(`Kontrolltid (enhet, UTC): ${run.checkedDeviceUtc || "—"}`);
     lines.push("Obs: Server-tid används för kontrolltillfället när den finns. Enhetstid är kompletterande och kan vara fel vid fel klocka.");
@@ -1101,14 +1107,14 @@
     const txHash = data?.submission?.txHash || null;
     const observedBlockNumber = data?.evidence?.observedBlockNumber || null;
 
-    txOut.textContent = txHash || "—";
-    submitterOut.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
-    debugOut.textContent = legal || "—";
+    if (txOut) txOut.textContent = txHash || "—";
+    if (submitterOut) submitterOut.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
+    if (debugOut) debugOut.textContent = legal || "—";
 
     const confirmedSe = confirmedAt ? fmtSeEpochSec(confirmedAt) : null;
     const confirmedUtc = confirmedAt ? fmtUtcEpochSec(confirmedAt) : null;
 
-    timeOut.textContent = confirmedSe || "—";
+    if (timeOut) timeOut.textContent = confirmedSe || "—";
     if (timeUtcOut){
       if (confirmedUtc && confirmedUtc !== "—"){
         timeUtcOut.textContent = confirmedUtc;
@@ -1123,14 +1129,14 @@
 
     if (sc === "CONFIRMED") {
       markHeadline("ok", "Bekräftad");
-      regStatusOut.textContent = "Bekräftad";
+      if (regStatusOut) regStatusOut.textContent = "Bekräftad";
     } else if (sc === "NOT_CONFIRMED" || sc === "SUBMITTED_UNCONFIRMED") {
       const isSubmitted = (sc === "SUBMITTED_UNCONFIRMED");
       markHeadline("warn", isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad");
-      regStatusOut.textContent = isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad";
+      if (regStatusOut) regStatusOut.textContent = isSubmitted ? "Inskickad – ej bekräftad" : "Ej bekräftad";
     } else {
       markHeadline("err", "Kunde inte kontrolleras");
-      regStatusOut.textContent = "Kunde inte kontrolleras";
+      if (regStatusOut) regStatusOut.textContent = "Kunde inte kontrolleras";
     }
 
     const verifyLink = currentLink || "—";
@@ -1146,6 +1152,8 @@
       checkedServerUtc: fmtUtcEpochSec(currentCheckedServerEpoch),
       checkedDeviceSe: fmtSeEpochSec(currentCheckedDeviceEpoch),
       checkedDeviceUtc: fmtUtcEpochSec(currentCheckedDeviceEpoch),
+
+      serverTimeWasFallback: !!serverTimeWasFallback,
 
       statusLine: canonical,
       timeSe: confirmedSe,
@@ -1176,20 +1184,20 @@
       const elapsed = Date.now() - pollStartAt;
       if (elapsed > maxMs) {
         stopPolling();
-        debugOut.textContent = "Kontroll kunde inte visa bekräftelse inom tidsgränsen. Du kan verifiera igen senare.";
+        if (debugOut) debugOut.textContent = "Kontroll kunde inte visa bekräftelse inom tidsgränsen. Du kan verifiera igen senare.";
         applyStatusToUI({ id, checkedEpochForLinks, data: { statusCode:"NOT_CONFIRMED" } });
         return;
       }
 
       attempt++;
-      regStatusOut.textContent = "Kontroll pågår…";
-      txOut.textContent = txHash || "—";
+      if (regStatusOut) regStatusOut.textContent = "Kontroll pågår…";
+      if (txOut) txOut.textContent = txHash || "—";
 
       const ver = await safeGetJson(`/api/verify?hash=${encodeURIComponent(id)}&tx=${encodeURIComponent(txHash)}`);
       if (myOp !== opId) return;
 
       if (!ver.ok || ver.data?.ok === false) {
-        debugOut.textContent = "Status kunde inte kontrolleras just nu (tillfälligt fel).";
+        if (debugOut) debugOut.textContent = "Status kunde inte kontrolleras just nu (tillfälligt fel).";
         applyStatusToUI({ id, checkedEpochForLinks, data: { statusCode:"UNKNOWN" } });
       } else {
         applyStatusToUI({ id, checkedEpochForLinks, data: ver.data });
@@ -1237,6 +1245,7 @@
       // Server-tid okänd tills /api/register svarar
       if (checkedServerSeOut) checkedServerSeOut.textContent = "—";
       if (checkedServerUtcOut) checkedServerUtcOut.textContent = "—";
+      serverTimeWasFallback = false;
 
       const id = await sha256Hex(currentFile);
       if (myOp !== opId) return;
@@ -1253,16 +1262,18 @@
       if (localIdBox) localIdBox.style.display = "block";
       if (localIdOut) localIdOut.textContent = id;
 
-      idOut.textContent = id;
-      linkOut.textContent = currentLink;
-      linkOut.href = currentLink;
+      if (idOut) idOut.textContent = id;
+      if (linkOut){
+        linkOut.textContent = currentLink;
+        linkOut.href = currentLink;
+      }
 
       if (qrTap) qrTap.style.display = "grid";
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
       attachQrCopyOnce(qrTap, () => currentLink, copyLinkPill);
 
       setPill("Skickar registrering…");
-      regStatusOut.textContent = "Inskickad – ej bekräftad";
+      if (regStatusOut) regStatusOut.textContent = "Inskickad – ej bekräftad";
       markHeadline("warn", "Inskickad – ej bekräftad");
 
       const reg = await safeRegisterRequest(id);
@@ -1278,12 +1289,15 @@
       const serverEpoch = Number(data?.serverTimeUnix);
       if (Number.isFinite(serverEpoch) && serverEpoch > 0){
         currentCheckedServerEpoch = Math.floor(serverEpoch);
+        serverTimeWasFallback = false;
 
         if (checkedServerSeOut) checkedServerSeOut.textContent = fmtSeEpochSec(currentCheckedServerEpoch);
         if (checkedServerUtcOut) checkedServerUtcOut.textContent = fmtUtcEpochSec(currentCheckedServerEpoch);
       } else {
         // fallback: om server inte skickar tid (ska inte hända)
         currentCheckedServerEpoch = deviceEpoch;
+        serverTimeWasFallback = true;
+
         if (checkedServerSeOut) checkedServerSeOut.textContent = fmtSeEpochSec(currentCheckedServerEpoch);
         if (checkedServerUtcOut) checkedServerUtcOut.textContent = fmtUtcEpochSec(currentCheckedServerEpoch);
       }
@@ -1295,8 +1309,10 @@
 
       // Uppdatera verifieringslänk/QR med server-checked + ev tx
       currentLink = buildVerifyLink(id, checkedEpochForLinks, txHash || null);
-      linkOut.textContent = currentLink;
-      linkOut.href = currentLink;
+      if (linkOut){
+        linkOut.textContent = currentLink;
+        linkOut.href = currentLink;
+      }
       requestAnimationFrame(() => renderQr(qrBox, currentLink));
 
       // Uppdatera status + notering
@@ -1328,6 +1344,7 @@
 
     currentCheckedDeviceEpoch = null;
     currentCheckedServerEpoch = null;
+    serverTimeWasFallback = false;
 
     resetReport();
 
@@ -1336,7 +1353,7 @@
     hidePill(copyIdPill);
 
     if (!currentFile){
-      fileInfo.textContent = "Inget underlag valt.";
+      if (fileInfo) fileInfo.textContent = "Inget underlag valt.";
       setPill("Välj underlag");
       setBusy(false);
       return;
@@ -1344,12 +1361,12 @@
 
     const sizeMb = (currentFile.size/1024/1024);
     const niceSize = (sizeMb < 10) ? sizeMb.toFixed(2) : sizeMb.toFixed(1);
-    fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
+    if (fileInfo) fileInfo.textContent = `Valt underlag: ${currentFile.name} (${niceSize} MB)`;
 
     beginAutoFlow();
   }
 
-  // Copy handlers
+  // Copy handlers (guardade för hardtest)
   if (localIdOut){
     localIdOut.addEventListener("click", async () => {
       await copyWithFeedback({ text: localIdOut.textContent, pillEl: copyIdPill, okText:"Kopierat ✅" });
@@ -1384,29 +1401,35 @@
     });
   }
 
-  fileInput.addEventListener("change", () => {
-    setFile(fileInput.files?.[0] || null);
-  });
+  if (fileInput){
+    fileInput.addEventListener("change", () => {
+      setFile(fileInput.files?.[0] || null);
+    });
+  }
 
-  dropZone.addEventListener("click", () => fileInput.click());
-  dropZone.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
+  if (dropZone && fileInput){
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+    dropZone.addEventListener("drop", (e) => {
       e.preventDefault();
-      fileInput.click();
-    }
-  });
-
-  dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag"); });
-  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
-  dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("drag");
-    const f = e.dataTransfer?.files?.[0];
-    if (f) setFile(f);
-  });
+      dropZone.classList.remove("drag");
+      const f = e.dataTransfer?.files?.[0];
+      if (f) setFile(f);
+    });
+  }
 
   function setManualState(id){
     const clean = (id || "").trim();
+    if (!manualLinkOut || !manualQrBox) return null;
+
     if (!/^0x[0-9a-fA-F]{64}$/.test(clean)){
       manualCurrentLink = null;
       manualLinkOut.textContent = "—";
@@ -1438,8 +1461,11 @@
     return link;
   }
 
+  // Manual (guardad för hardtest)
   attachQrCopyOnce(manualQrTap, () => manualCurrentLink, manualPill);
-  manualId.addEventListener("input", () => setManualState(manualId.value));
+  if (manualId){
+    manualId.addEventListener("input", () => setManualState(manualId.value));
+  }
 
   resetReport();
   setFile(null);
