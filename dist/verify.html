@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- VERIFY-HARDTEST v2026-01-19a / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe + serverTimeUnix) -->
+<!-- VERIFY-HARDTEST v2026-01-19b / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe + serverTimeUnix + block-evidence) -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -412,6 +412,15 @@
                   <div id="outRegSe" class="mono" style="margin-top:6px;">—</div>
                   <div id="outRegUtc" class="mono" style="margin-top:6px; opacity:.75; display:none;">—</div>
                 </div>
+
+                <!-- ✅ Block-evidence (revisionsstöd) -->
+                <div>
+                  <div class="meta" style="opacity:.9;">Registerblock (endast om bekräftad)</div>
+                  <div id="outRegisteredBlock" class="mono" style="margin-top:6px;">—</div>
+
+                  <div class="meta" style="opacity:.9; margin-top:10px;">Observerat block (RPC, valfritt)</div>
+                  <div id="outObservedBlock" class="mono" style="margin-top:6px;">—</div>
+                </div>
               </div>
 
               <div style="margin-top:12px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);">
@@ -501,7 +510,7 @@
   const $ = (id) => document.getElementById(id);
 
   // ✅ LOCKED build/version (neutral). Visas bara vid ?debug=1
-  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-19a / LOCKED 5/5";
+  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-19b / LOCKED 5/5";
 
   // --------- Hardtest: bind once ----------
   const BIND_KEY = "__proofy_verify_bound";
@@ -556,6 +565,10 @@
   const outRegStatus = $("outRegStatus");
   const outRegSe = $("outRegSe");
   const outRegUtc = $("outRegUtc");
+
+  // ✅ Block-evidence (revisionsstöd)
+  const outRegisteredBlock = $("outRegisteredBlock");
+  const outObservedBlock = $("outObservedBlock");
 
   const openCertBtn = $("openCertBtn");
 
@@ -983,6 +996,9 @@
     outRegUtc.textContent = "—";
     outRegUtc.style.display = "none";
 
+    if (outRegisteredBlock) outRegisteredBlock.textContent = "—";
+    if (outObservedBlock) outObservedBlock.textContent = "—";
+
     if (outCheckedServerSe) outCheckedServerSe.textContent = "—";
     if (outCheckedServerUtc) outCheckedServerUtc.textContent = "—";
     if (outCheckedDeviceSe) outCheckedDeviceSe.textContent = "—";
@@ -1291,6 +1307,13 @@
       if (run.confirmedUtc) lines.push(`Tidpunkt (endast om bekräftad) – UTC: ${run.confirmedUtc}`);
     }
 
+    if (run.registeredBlockNumber != null) {
+      lines.push(`Registerblock (endast om bekräftad): ${run.registeredBlockNumber}`);
+    }
+    if (run.observedBlockNumber != null) {
+      lines.push(`Observerat block (RPC, valfritt): ${run.observedBlockNumber}`);
+    }
+
     if (run.tx) {
       lines.push("");
       lines.push(`Registreringsreferens (valfri): ${run.tx}`);
@@ -1396,6 +1419,9 @@
     if (httpDateLine) httpDateLine.style.display = "none";
     if (httpDateOut) httpDateOut.textContent = "—";
 
+    if (outRegisteredBlock) outRegisteredBlock.textContent = "—";
+    if (outObservedBlock) outObservedBlock.textContent = "—";
+
     setStatus("Kontrollerar…");
     setBusy(true);
 
@@ -1470,12 +1496,20 @@
       let confirmedAtUnix = null;
       let requestId = "";
 
+      // ✅ evidence (valfritt) från backend
+      const evidence = (verifyRes && verifyRes.data && verifyRes.data.evidence) ? verifyRes.data.evidence : {};
+      const observedBlockNumber = (evidence && evidence.observedBlockNumber != null) ? evidence.observedBlockNumber : null;
+      const registeredBlockNumberRaw = (evidence && evidence.registeredBlockNumber != null) ? evidence.registeredBlockNumber : null;
+
       if (!verifyRes.ok || !norm) {
         statusText = "Kunde inte kontrolleras";
         outRegStatus.textContent = statusText;
         outRegSe.textContent = "—";
         outRegUtc.textContent = "—";
         outRegUtc.style.display = "none";
+
+        if (outObservedBlock) outObservedBlock.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
+        if (outRegisteredBlock) outRegisteredBlock.textContent = "—";
       } else {
         statusText = canonicalStatusFromCode(norm.statusCode);
         confirmedAtUnix = norm.confirmedAtUnix;
@@ -1491,6 +1525,15 @@
           outRegSe.textContent = "—";
           outRegUtc.textContent = "—";
           outRegUtc.style.display = "none";
+        }
+
+        // ✅ Block-evidence: visa alltid observerat block om finns, registerblock endast om bekräftad
+        if (outObservedBlock) {
+          outObservedBlock.textContent = (observedBlockNumber != null) ? String(observedBlockNumber) : "—";
+        }
+        if (outRegisteredBlock) {
+          const show = (statusText === "Bekräftad") && (registeredBlockNumberRaw != null);
+          outRegisteredBlock.textContent = show ? String(registeredBlockNumberRaw) : "—";
         }
 
         if (statusText === "Inskickad – ej bekräftad") {
@@ -1531,6 +1574,9 @@
         tx: tx || "",
         requestId: requestId || "",
         httpDateRaw: httpDateRaw || "",
+
+        observedBlockNumber: (observedBlockNumber != null) ? String(observedBlockNumber) : null,
+        registeredBlockNumber: (statusText === "Bekräftad" && registeredBlockNumberRaw != null) ? String(registeredBlockNumberRaw) : null,
 
         // tider till notering
         serverSe: proofyEpoch ? serverSe : "—",
