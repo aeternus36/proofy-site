@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- VERIFY-HARDTEST v2026-01-15 / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe) -->
+<!-- VERIFY-HARDTEST v2026-01-19a / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe + serverTimeUnix) -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -135,7 +135,7 @@
       .proofyEvidenceGrid{ grid-template-columns: 1fr 1fr; }
     }
 
-    /* ✅ Kontrolltid box (server + enhet), revision-first */
+    /* ✅ Kontrolltid box (Proofy systemtid + enhet), revision-first */
     .proofyTimeBox{
       margin-top:12px;
       padding:10px 12px;
@@ -309,6 +309,8 @@
           <div class="selfLinkRow">
             <div style="flex:1; min-width:260px;">
               <div style="position:relative; margin-top:6px;">
+
+                <!-- Ikonknapp borttagen (minskar dubbelkopiering). Klick på fältet kopierar. -->
                 <button type="button" id="copySelfLinkIconBtn"
                   aria-label="Kopiera verifieringslänk" title="Kopiera"
                   style="display:none; position:absolute; top:6px; right:6px; width:34px; height:30px;
@@ -329,7 +331,7 @@
                     border:1px solid rgba(255,255,255,.14);
                     background:rgba(255,255,255,.03);
                     cursor:pointer;
-                    padding-right:52px;
+                    padding-right:10px;
                     user-select:text;
                     overflow-wrap:anywhere;
                     word-break:break-word;
@@ -368,13 +370,13 @@
                  style="font-size:18px; font-weight:950; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);">
             </div>
 
-            <!-- ✅ Kontrolltid (server + enhet) -->
+            <!-- ✅ Kontrolltid (Proofy systemtid + enhet) -->
             <div class="proofyTimeBox" role="status" aria-live="polite" aria-atomic="true">
               <div class="meta">Kontrolltid vid kontrolltillfället</div>
 
               <div class="proofyTimeGrid">
                 <div>
-                  <div class="meta" style="opacity:.9;">Server (från serversvar)</div>
+                  <div class="meta" style="opacity:.9;">Proofy (från serversvar)</div>
                   <div id="outCheckedServerSe" class="mono" style="margin-top:6px;">—</div>
                   <div id="outCheckedServerUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
                 </div>
@@ -387,8 +389,12 @@
               </div>
 
               <div class="small" style="margin-top:10px; opacity:.9;">
-                Server-tid hämtas från serversvar (HTTP Date) när den finns. Ingen av tiderna utgör extern tidsstämpling.
+                Proofy-tid kommer från serversvaret (<span class="mono">serverTimeUnix</span>). Ingen av tiderna utgör extern tidsstämpling.
                 Enhetstid kan vara fel om systemklockan är fel.
+              </div>
+
+              <div class="small" id="httpDateLine" style="margin-top:10px; opacity:.82; display:none;">
+                HTTP Date (transport, kompletterande): <span class="mono" id="httpDateOut">—</span>
               </div>
             </div>
 
@@ -419,7 +425,7 @@
             <!-- ✅ Primära åtgärder -->
             <div class="resultTopActions" aria-label="Primära åtgärder">
               <button class="btn primary" id="copySummaryBtn" type="button" style="display:none;">Kopiera notering</button>
-              <a class="btn" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
+              <a class="btn soft" id="openCertBtn" href="/certificate.html" style="display:none;">Öppna intyg</a>
               <button class="btn soft" id="downloadReportBtn" type="button" style="display:none;">Spara notering som textfil</button>
               <button class="btn jump" id="jumpToNoteBtn" type="button" style="display:none;">Hoppa till notering</button>
             </div>
@@ -495,7 +501,7 @@
   const $ = (id) => document.getElementById(id);
 
   // ✅ LOCKED build/version (neutral). Visas bara vid ?debug=1
-  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-15 / LOCKED 5/5";
+  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-19a / LOCKED 5/5";
 
   // --------- Hardtest: bind once ----------
   const BIND_KEY = "__proofy_verify_bound";
@@ -514,7 +520,7 @@
   const idPill = $("idPill");
 
   const selfLinkOut = $("selfLinkOut");
-  const copySelfLinkIconBtn = $("copySelfLinkIconBtn");
+  const copySelfLinkIconBtn = $("copySelfLinkIconBtn"); // intentionally unused (kept hidden)
   const selfLinkPill = $("selfLinkPill");
 
   const selfQRTap = $("selfQRTap");
@@ -537,11 +543,14 @@
   const resultBox = $("resultBox");
   const resultHeadline = $("resultHeadline");
 
-  // ✅ Kontrolltid: server + enhet
+  // ✅ Kontrolltid: Proofy systemtid + enhet
   const outCheckedServerSe = $("outCheckedServerSe");
   const outCheckedServerUtc = $("outCheckedServerUtc");
   const outCheckedDeviceSe = $("outCheckedDeviceSe");
   const outCheckedDeviceUtc = $("outCheckedDeviceUtc");
+
+  const httpDateLine = $("httpDateLine");
+  const httpDateOut = $("httpDateOut");
 
   // ✅ Bevisstatus-ruta (registerstatus)
   const outRegStatus = $("outRegStatus");
@@ -576,6 +585,9 @@
 
   // ✅ Färre klick: autostart när ID+fil finns (men bara en gång per kombination)
   let lastAutoKey = "";
+
+  // ✅ Abort fetch
+  let fetchAbort = null;
 
   function isValidId(h){
     return /^0x[0-9a-fA-F]{64}$/.test((h || "").trim());
@@ -703,14 +715,6 @@
     }
   }
 
-  function parseHttpDateToEpochSeconds(dateHeader){
-    const s = String(dateHeader || "").trim();
-    if (!s) return null;
-    const t = Date.parse(s);
-    if (!Number.isFinite(t) || t <= 0) return null;
-    return Math.floor(t / 1000);
-  }
-
   // ✅ Språklås: exakt 4 canonical statusuttryck
   function canonicalStatusFromCode(statusCode){
     const sc = String(statusCode || "");
@@ -725,22 +729,17 @@
     const legal = String(data?.legalText || "");
     const confirmedAtUnix = (data?.confirmedAtUnix != null) ? Number(data.confirmedAtUnix) : null;
 
-    if (!sc) {
-      const exists = (typeof data?.exists === "boolean") ? data.exists : null;
-      const ts = data?.timestamp ? Number(data.timestamp) : 0;
-      if (exists === true || ts > 0) {
-        return { statusCode:"CONFIRMED", legalText: legal, confirmedAtUnix: ts > 0 ? ts : confirmedAtUnix };
-      }
-      if (exists === false) {
-        return { statusCode:"NOT_CONFIRMED", legalText: legal, confirmedAtUnix: null };
-      }
+    // Strikt: bara de fyra statuskoderna accepteras.
+    if (sc !== "CONFIRMED" && sc !== "SUBMITTED_UNCONFIRMED" && sc !== "NOT_CONFIRMED" && sc !== "UNKNOWN") {
       return { statusCode:"UNKNOWN", legalText: legal, confirmedAtUnix: null };
     }
 
     return {
       statusCode: sc,
       legalText: legal,
-      confirmedAtUnix: Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0 ? confirmedAtUnix : null
+      confirmedAtUnix: Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0 ? confirmedAtUnix : null,
+      serverTimeUnix: (data?.serverTimeUnix != null) ? Number(data.serverTimeUnix) : null,
+      requestId: String(data?.requestId || "").trim()
     };
   }
 
@@ -749,10 +748,17 @@
     return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
   }
 
-  async function fetchJsonWithTimeout(url, timeoutMs = 20000){
+  async function fetchJsonWithTimeout(url, timeoutMs = 20000, signal){
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
+    const onAbort = () => controller.abort();
+
     try{
+      if (signal) {
+        if (signal.aborted) controller.abort();
+        else signal.addEventListener("abort", onAbort, { once:true });
+      }
+
       const r = await fetch(url, { method:"GET", cache:"no-store", signal: controller.signal, credentials:"same-origin" });
       const j = await r.json().catch(() => ({}));
       const dateHeader = r?.headers?.get ? (r.headers.get("Date") || "") : "";
@@ -762,20 +768,23 @@
       return { ok:false, status:0, data:{}, aborted, dateHeader:"" };
     } finally {
       clearTimeout(t);
+      try { if (signal) signal.removeEventListener("abort", onAbort); } catch {}
     }
   }
 
-  async function fetchVerify(id, tx){
+  async function fetchVerify(id, tx, signal){
     const base = `/api/verify?hash=${encodeURIComponent(id)}${tx ? `&tx=${encodeURIComponent(tx)}` : ""}&t=${Date.now()}`;
     const attempts = 3;
     const baseDelay = 520;
 
     for (let i=0; i<attempts; i++){
-      const res = await fetchJsonWithTimeout(base, 20000);
+      const res = await fetchJsonWithTimeout(base, 20000, signal);
 
       if (res.ok) return { ok:true, data:res.data, status:res.status, dateHeader: res.dateHeader };
 
       const retryable = res.aborted || isRetryableStatus(res.status);
+      if (signal && signal.aborted) return { ok:false, data:{}, status:0, dateHeader:"" };
+
       if (i < attempts - 1 && retryable){
         const jitter = Math.floor(Math.random()*180);
         await new Promise(r => setTimeout(r, baseDelay*(i+1) + jitter));
@@ -827,43 +836,6 @@
     if (tx) u.searchParams.set("tx", String(tx));
     if (DEBUG) u.searchParams.set("debug", "1");
     return u.toString();
-  }
-
-  function applyCopyHover(fieldEl, iconBtnEl, enabled){
-    if (!fieldEl) return;
-
-    if (!enabled){
-      fieldEl.onmouseenter = null;
-      fieldEl.onmouseleave = null;
-      fieldEl.onfocus = null;
-      fieldEl.onblur = null;
-      if (iconBtnEl) iconBtnEl.style.display = "none";
-      return;
-    }
-
-    const onEnter = () => {
-      if (iconBtnEl) iconBtnEl.style.display = "inline-flex";
-      fieldEl.style.outline = "1px solid rgba(255,255,255,.14)";
-      fieldEl.style.outlineOffset = "2px";
-      fieldEl.style.background = "rgba(255,255,255,.05)";
-    };
-
-    const onLeave = () => {
-      if (iconBtnEl) iconBtnEl.style.display = "none";
-      fieldEl.style.outline = "";
-      fieldEl.style.outlineOffset = "";
-      fieldEl.style.background = "rgba(255,255,255,.03)";
-    };
-
-    fieldEl.onmouseenter = onEnter;
-    fieldEl.onmouseleave = onLeave;
-
-    fieldEl.onfocus = () => {
-      if (iconBtnEl) iconBtnEl.style.display = "inline-flex";
-      fieldEl.style.outline = "2px solid rgba(120, 180, 255, .25)";
-      fieldEl.style.outlineOffset = "2px";
-    };
-    fieldEl.onblur = () => onLeave();
   }
 
   async function copyWithPill({ text, pillEl, okText="Kopierad ✓", failText="Kunde inte kopiera" }){
@@ -1016,6 +988,9 @@
     if (outCheckedDeviceSe) outCheckedDeviceSe.textContent = "—";
     if (outCheckedDeviceUtc) outCheckedDeviceUtc.textContent = "—";
 
+    if (httpDateLine) httpDateLine.style.display = "none";
+    if (httpDateOut) httpDateOut.textContent = "—";
+
     if (auditVerifyVersion) auditVerifyVersion.style.display = "none";
     if (auditVerifyVersionValue) auditVerifyVersionValue.textContent = "—";
 
@@ -1089,7 +1064,6 @@
 
     if (!ok){
       selfLinkOut.textContent = "—";
-      applyCopyHover(selfLinkOut, copySelfLinkIconBtn, false);
       renderSelfQR("");
       return;
     }
@@ -1100,7 +1074,6 @@
 
     const link = buildSelfLink(id, checked || "", tx || "");
     selfLinkOut.textContent = link;
-    applyCopyHover(selfLinkOut, copySelfLinkIconBtn, true);
     renderSelfQR(link);
   }
 
@@ -1235,14 +1208,6 @@
     });
   }
 
-  if (copySelfLinkIconBtn){
-    copySelfLinkIconBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await copyWithPill({ text: selfLinkOut.textContent, pillEl: selfLinkPill, okText:"Länk kopierad ✅" });
-    });
-  }
-
   if (selfQRTap){
     const doQrCopy = async () => {
       const link = String(selfLinkOut?.textContent || "").trim();
@@ -1304,11 +1269,15 @@
     if (run.fileName) lines.push(`Underlag/filnamn: ${run.fileName}`);
 
     lines.push("");
-    lines.push(`Kontrolltid (server): ${run.serverSe || "—"}`);
-    lines.push(`Kontrolltid (server, UTC): ${run.serverUtc || "—"}`);
+    lines.push(`Kontrolltid (Proofy): ${run.serverSe || "—"}`);
+    lines.push(`Kontrolltid (Proofy, UTC): ${run.serverUtc || "—"}`);
     lines.push(`Kontrolltid (enhet): ${run.deviceSe || "—"}`);
     lines.push(`Kontrolltid (enhet, UTC): ${run.deviceUtc || "—"}`);
-    lines.push("Obs: Server-tid hämtas från serversvar (HTTP Date) när den finns. Ingen av tiderna utgör extern tidsstämpling. Enhetstid kan vara fel vid fel klocka.");
+    lines.push("Obs: Proofy-tid kommer från serversvaret (serverTimeUnix). Ingen av tiderna utgör extern tidsstämpling. Enhetstid kan vara fel vid fel klocka.");
+
+    if (run.httpDateRaw) {
+      lines.push(`HTTP Date (transport, kompletterande): ${run.httpDateRaw}`);
+    }
 
     lines.push("");
     lines.push(`Resultat (filversion): ${run.match ? "Oförändrat underlag (samma filversion)" : "Ändrat underlag (annan filversion)"}`);
@@ -1325,6 +1294,11 @@
     if (run.tx) {
       lines.push("");
       lines.push(`Registreringsreferens (valfri): ${run.tx}`);
+    }
+
+    if (run.requestId) {
+      lines.push("");
+      lines.push(`Kontrollreferens (Proofy): ${run.requestId}`);
     }
 
     if (DEBUG) {
@@ -1361,6 +1335,9 @@
   if (abortBtn){
     abortBtn.addEventListener("click", () => {
       if (!busy) return;
+      try { if (fetchAbort) fetchAbort.abort(); } catch {}
+      fetchAbort = null;
+
       opId++;
       busy = false;
       setStatus("Avbruten");
@@ -1405,7 +1382,7 @@
     // ✅ Enhetstid (kompletterande)
     const checkedDeviceEpoch = Math.floor(Date.now() / 1000);
 
-    // Vi sätter checked direkt (enhet) – uppdateras till server-tid om den finns.
+    // Vi sätter checked direkt (enhet) – uppdateras till Proofy-tid när den finns.
     setParamsInUrl({ hash: refId, checked: checkedDeviceEpoch, tx: tx || "" });
 
     const deviceSe = fmtSeEpoch(checkedDeviceEpoch);
@@ -1416,10 +1393,17 @@
     if (outCheckedServerSe) outCheckedServerSe.textContent = "—";
     if (outCheckedServerUtc) outCheckedServerUtc.textContent = "—";
 
+    if (httpDateLine) httpDateLine.style.display = "none";
+    if (httpDateOut) httpDateOut.textContent = "—";
+
     setStatus("Kontrollerar…");
     setBusy(true);
 
     const myOp = ++opId;
+
+    // Abortcontroller för fetch
+    try { if (fetchAbort) fetchAbort.abort(); } catch {}
+    fetchAbort = new AbortController();
 
     try{
       const localId = await makeControlValue(currentFile);
@@ -1427,7 +1411,7 @@
 
       const match = (localId.toLowerCase() === refId.toLowerCase());
 
-      const verifyRes = await fetchVerify(refId, tx || "");
+      const verifyRes = await fetchVerify(refId, tx || "", fetchAbort.signal);
       if (myOp !== opId) return;
 
       resultBox.style.display = "block";
@@ -1441,24 +1425,34 @@
         }
       }
 
-      // ✅ Server-tid från Date-header (om finns)
-      const checkedServerEpoch = parseHttpDateToEpochSeconds(verifyRes.dateHeader);
-      const checkedEpochForLinks = checkedServerEpoch || checkedDeviceEpoch;
+      // Normalisera (inkl serverTimeUnix + requestId)
+      let norm = null;
+      if (verifyRes.ok) norm = normalizeVerifyModel(verifyRes.data || {});
+      const proofyEpoch = (norm && Number.isFinite(norm.serverTimeUnix) && norm.serverTimeUnix > 0) ? norm.serverTimeUnix : null;
 
-      const serverSe = checkedServerEpoch ? fmtSeEpoch(checkedServerEpoch) : "—";
-      const serverUtc = checkedServerEpoch ? fmtUtcEpoch(checkedServerEpoch) : "—";
+      // HTTP Date (transport) – visas separat
+      const httpDateRaw = String(verifyRes.dateHeader || "").trim();
+      if (httpDateRaw && httpDateLine && httpDateOut) {
+        httpDateOut.textContent = httpDateRaw;
+        httpDateLine.style.display = "block";
+      }
+
+      const checkedEpochForLinks = proofyEpoch || checkedDeviceEpoch;
+
+      const serverSe = proofyEpoch ? fmtSeEpoch(proofyEpoch) : "—";
+      const serverUtc = proofyEpoch ? fmtUtcEpoch(proofyEpoch) : "—";
 
       if (outCheckedServerSe) outCheckedServerSe.textContent = serverSe;
       if (outCheckedServerUtc) outCheckedServerUtc.textContent = serverUtc;
 
-      // ✅ Uppdatera URL så selflink/QR/cert får server-checked när den finns
-      if (checkedServerEpoch) {
-        setParamsInUrl({ hash: refId, checked: checkedServerEpoch, tx: tx || "" });
+      // ✅ Uppdatera URL så selflink/QR/cert får Proofy-checked när den finns
+      if (proofyEpoch) {
+        setParamsInUrl({ hash: refId, checked: proofyEpoch, tx: tx || "" });
       }
 
       if (reportMeta) {
         reportMeta.style.display = "block";
-        reportMeta.textContent = `Rapport · kontrolltid: ${checkedServerEpoch ? serverSe : deviceSe}`;
+        reportMeta.textContent = `Rapport · kontrolltid: ${proofyEpoch ? serverSe : deviceSe}`;
       }
 
       setResultHeadline(match);
@@ -1474,17 +1468,18 @@
 
       let statusText = "Kunde inte kontrolleras";
       let confirmedAtUnix = null;
+      let requestId = "";
 
-      if (!verifyRes.ok) {
+      if (!verifyRes.ok || !norm) {
         statusText = "Kunde inte kontrolleras";
         outRegStatus.textContent = statusText;
         outRegSe.textContent = "—";
         outRegUtc.textContent = "—";
         outRegUtc.style.display = "none";
       } else {
-        const norm = normalizeVerifyModel(verifyRes.data || {});
         statusText = canonicalStatusFromCode(norm.statusCode);
         confirmedAtUnix = norm.confirmedAtUnix;
+        requestId = norm.requestId || "";
 
         outRegStatus.textContent = statusText;
 
@@ -1534,10 +1529,12 @@
         confirmedSe,
         confirmedUtc,
         tx: tx || "",
+        requestId: requestId || "",
+        httpDateRaw: httpDateRaw || "",
 
         // tider till notering
-        serverSe: checkedServerEpoch ? serverSe : "—",
-        serverUtc: checkedServerEpoch ? serverUtc : "—",
+        serverSe: proofyEpoch ? serverSe : "—",
+        serverUtc: proofyEpoch ? serverUtc : "—",
         deviceSe,
         deviceUtc,
       };
@@ -1561,6 +1558,8 @@
       errorMsg.textContent = e?.message || "Tekniskt fel.";
       setStatus("Åtgärd krävs");
       setBusy(false);
+    } finally {
+      fetchAbort = null;
     }
   }
 
