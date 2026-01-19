@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- VERIFY-HARDTEST v2026-01-19b / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe + serverTimeUnix + block-evidence) -->
+<!-- VERIFY-HARDTEST v2026-01-19c / LOCKED 5/5 (audit-lock + fewer-clicks + overlay-safe + serverTimeUnix primary + device fallback + tx-gated submitted) -->
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -388,9 +388,14 @@
                 </div>
               </div>
 
-              <div class="small" style="margin-top:10px; opacity:.9;">
+              <div class="small" id="timeNote" style="margin-top:10px; opacity:.9;">
                 Proofy-tid kommer från serversvaret (<span class="mono">serverTimeUnix</span>). Ingen av tiderna utgör extern tidsstämpling.
                 Enhetstid kan vara fel om systemklockan är fel.
+              </div>
+
+              <!-- ✅ 5/5: tydlig markering när serverTimeUnix saknas och Proofy-tid fallback:ar till enhetstid -->
+              <div class="small" id="timeFallbackNote" style="margin-top:8px; opacity:.85; display:none;">
+                Obs: <span class="mono">serverTimeUnix</span> saknades i svaret. Proofy-tid ovan är fallback till enhetstid.
               </div>
 
               <div class="small" id="httpDateLine" style="margin-top:10px; opacity:.82; display:none;">
@@ -510,7 +515,7 @@
   const $ = (id) => document.getElementById(id);
 
   // ✅ LOCKED build/version (neutral). Visas bara vid ?debug=1
-  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-19b / LOCKED 5/5";
+  const PROOFY_VERIFY_BUILD = "VERIFY-HARDTEST v2026-01-19c / LOCKED 5/5 (serverTime primary + device fallback + tx-gated submitted)";
 
   // --------- Hardtest: bind once ----------
   const BIND_KEY = "__proofy_verify_bound";
@@ -557,6 +562,8 @@
   const outCheckedServerUtc = $("outCheckedServerUtc");
   const outCheckedDeviceSe = $("outCheckedDeviceSe");
   const outCheckedDeviceUtc = $("outCheckedDeviceUtc");
+
+  const timeFallbackNote = $("timeFallbackNote");
 
   const httpDateLine = $("httpDateLine");
   const httpDateOut = $("httpDateOut");
@@ -729,10 +736,11 @@
   }
 
   // ✅ Språklås: exakt 4 canonical statusuttryck
-  function canonicalStatusFromCode(statusCode){
+  // ✅ 5/5: "Inskickad – ej bekräftad" kräver känd tx, annars "Kunde inte kontrolleras"
+  function canonicalStatusFromCode(statusCode, txKnown){
     const sc = String(statusCode || "");
     if (sc === "CONFIRMED") return "Bekräftad";
-    if (sc === "SUBMITTED_UNCONFIRMED") return "Inskickad – ej bekräftad";
+    if (sc === "SUBMITTED_UNCONFIRMED") return txKnown ? "Inskickad – ej bekräftad" : "Kunde inte kontrolleras";
     if (sc === "NOT_CONFIRMED") return "Ej bekräftad";
     return "Kunde inte kontrolleras";
   }
@@ -1003,6 +1011,8 @@
     if (outCheckedServerUtc) outCheckedServerUtc.textContent = "—";
     if (outCheckedDeviceSe) outCheckedDeviceSe.textContent = "—";
     if (outCheckedDeviceUtc) outCheckedDeviceUtc.textContent = "—";
+
+    if (timeFallbackNote) timeFallbackNote.style.display = "none";
 
     if (httpDateLine) httpDateLine.style.display = "none";
     if (httpDateOut) httpDateOut.textContent = "—";
@@ -1291,6 +1301,10 @@
     lines.push(`Kontrolltid (enhet, UTC): ${run.deviceUtc || "—"}`);
     lines.push("Obs: Proofy-tid kommer från serversvaret (serverTimeUnix). Ingen av tiderna utgör extern tidsstämpling. Enhetstid kan vara fel vid fel klocka.");
 
+    if (run.serverTimeWasFallback) {
+      lines.push("Obs: serverTimeUnix saknades i svaret. Proofy-tid ovan är fallback till enhetstid.");
+    }
+
     if (run.httpDateRaw) {
       lines.push(`HTTP Date (transport, kompletterande): ${run.httpDateRaw}`);
     }
@@ -1413,8 +1427,12 @@
 
     if (outCheckedDeviceSe) outCheckedDeviceSe.textContent = deviceSe;
     if (outCheckedDeviceUtc) outCheckedDeviceUtc.textContent = deviceUtc;
+
+    // init: server-rader fylls senare (nu: placeholder)
     if (outCheckedServerSe) outCheckedServerSe.textContent = "—";
     if (outCheckedServerUtc) outCheckedServerUtc.textContent = "—";
+
+    if (timeFallbackNote) timeFallbackNote.style.display = "none";
 
     if (httpDateLine) httpDateLine.style.display = "none";
     if (httpDateOut) httpDateOut.textContent = "—";
@@ -1454,7 +1472,15 @@
       // Normalisera (inkl serverTimeUnix + requestId)
       let norm = null;
       if (verifyRes.ok) norm = normalizeVerifyModel(verifyRes.data || {});
-      const proofyEpoch = (norm && Number.isFinite(norm.serverTimeUnix) && norm.serverTimeUnix > 0) ? norm.serverTimeUnix : null;
+
+      // ✅ tx-gate: känd tx krävs för att få visa "Inskickad – ej bekräftad"
+      const txFromApi = String(verifyRes?.data?.submission?.txHash || "").trim();
+      const txKnown = !!(tx || txFromApi);
+
+      // ✅ serverTimeUnix primary + fallback till enhetstid (5/5)
+      const proofyEpochRaw = (norm && Number.isFinite(norm.serverTimeUnix) && norm.serverTimeUnix > 0) ? norm.serverTimeUnix : null;
+      const serverTimeWasFallback = !proofyEpochRaw;
+      const proofyEpoch = proofyEpochRaw || checkedDeviceEpoch; // fallback: enhetstid
 
       // HTTP Date (transport) – visas separat
       const httpDateRaw = String(verifyRes.dateHeader || "").trim();
@@ -1463,22 +1489,24 @@
         httpDateLine.style.display = "block";
       }
 
-      const checkedEpochForLinks = proofyEpoch || checkedDeviceEpoch;
+      const checkedEpochForLinks = proofyEpoch;
 
-      const serverSe = proofyEpoch ? fmtSeEpoch(proofyEpoch) : "—";
-      const serverUtc = proofyEpoch ? fmtUtcEpoch(proofyEpoch) : "—";
+      const serverSe = fmtSeEpoch(proofyEpoch);
+      const serverUtc = fmtUtcEpoch(proofyEpoch);
 
       if (outCheckedServerSe) outCheckedServerSe.textContent = serverSe;
       if (outCheckedServerUtc) outCheckedServerUtc.textContent = serverUtc;
 
+      if (timeFallbackNote) timeFallbackNote.style.display = serverTimeWasFallback ? "block" : "none";
+
       // ✅ Uppdatera URL så selflink/QR/cert får Proofy-checked när den finns
-      if (proofyEpoch) {
-        setParamsInUrl({ hash: refId, checked: proofyEpoch, tx: tx || "" });
+      if (proofyEpochRaw) {
+        setParamsInUrl({ hash: refId, checked: proofyEpochRaw, tx: tx || "" });
       }
 
       if (reportMeta) {
         reportMeta.style.display = "block";
-        reportMeta.textContent = `Rapport · kontrolltid: ${proofyEpoch ? serverSe : deviceSe}`;
+        reportMeta.textContent = `Rapport · kontrolltid: ${serverSe}${serverTimeWasFallback ? " (fallback)" : ""}`;
       }
 
       setResultHeadline(match);
@@ -1511,7 +1539,7 @@
         if (outObservedBlock) outObservedBlock.textContent = observedBlockNumber != null ? String(observedBlockNumber) : "—";
         if (outRegisteredBlock) outRegisteredBlock.textContent = "—";
       } else {
-        statusText = canonicalStatusFromCode(norm.statusCode);
+        statusText = canonicalStatusFromCode(norm.statusCode, txKnown);
         confirmedAtUnix = norm.confirmedAtUnix;
         requestId = norm.requestId || "";
 
@@ -1547,10 +1575,13 @@
             : "Filversionen avviker – och bevisstatus är ej bekräftad vid kontrolltillfället.";
           outExplainBody.textContent = "Kontrollera att rätt Verifierings-ID används och försök igen vid behov.";
         } else if (statusText === "Kunde inte kontrolleras") {
+          // inkluderar även SUBMITTED_UNCONFIRMED utan känd tx
           outExplainTitle.textContent = match
             ? "Filversionen stämmer – men bevisstatus kunde inte kontrolleras vid kontrolltillfället."
             : "Filversionen avviker – och bevisstatus kunde inte kontrolleras vid kontrolltillfället.";
-          outExplainBody.textContent = "Detta kan vara ett tillfälligt tekniskt fel. Försök igen.";
+          outExplainBody.textContent = txKnown
+            ? "Detta kan vara ett tillfälligt tekniskt fel. Försök igen."
+            : "Status “Inskickad” kräver känd transaktionsreferens (tx). Öppna verifieringslänken med tx, eller försök igen via den källa som gav länken.";
         }
       }
 
@@ -1579,10 +1610,12 @@
         registeredBlockNumber: (statusText === "Bekräftad" && registeredBlockNumberRaw != null) ? String(registeredBlockNumberRaw) : null,
 
         // tider till notering
-        serverSe: proofyEpoch ? serverSe : "—",
-        serverUtc: proofyEpoch ? serverUtc : "—",
+        serverSe,
+        serverUtc,
         deviceSe,
         deviceUtc,
+
+        serverTimeWasFallback
       };
 
       const summaryText = buildSummaryText(lastRun);
