@@ -137,14 +137,12 @@ function toJsonSafe(value) {
 
 function makeRequestId() {
   try {
-    // Cloudflare Workers har crypto.randomUUID i praktiken
     if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
       return globalThis.crypto.randomUUID();
     }
   } catch {
     // ignore
   }
-  // fallback: tidsbaserat (inte kryptosäkert, men bättre än inget)
   return `req_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
@@ -165,7 +163,7 @@ async function assertAmoyChain(publicClient) {
 }
 
 /**
- * PATCH: läs ts + blockNo från kontraktets get(refId)
+ * Kontraktssanning:
  * get() -> (ok, ts, blockNo)
  */
 async function readGet(publicClient, contractAddress, hash) {
@@ -183,20 +181,20 @@ async function readGet(publicClient, contractAddress, hash) {
   const tsNum = Number(ts);
   const confirmed = Boolean(ok) && tsNum > 0;
 
-  const blockNoStr = (() => {
-    try {
-      const bn = BigInt(blockNo);
-      return bn > 0n ? bn.toString() : null;
-    } catch {
-      const n = Number(blockNo);
-      return Number.isFinite(n) && n > 0 ? String(n) : null;
-    }
-  })();
+  let registeredBlockNumber = null;
+  try {
+    const bn = BigInt(blockNo);
+    registeredBlockNumber = confirmed && bn > 0n ? bn.toString() : null;
+  } catch {
+    const n = Number(blockNo);
+    registeredBlockNumber =
+      confirmed && Number.isFinite(n) && n > 0 ? String(n) : null;
+  }
 
   return {
     confirmed,
     confirmedAtUnix: confirmed ? tsNum : null,
-    registeredBlockNumber: confirmed ? blockNoStr : null,
+    registeredBlockNumber,
   };
 }
 
@@ -273,11 +271,9 @@ function clampFeesToCaps({ maxFeePerGas, maxPriorityFeePerGas, caps }) {
 }
 
 function bumpFeeBigInt(valueWei, multiplier) {
-  // BigInt-säker bump: multiplier ~1.25 etc.
   const m = Number(multiplier);
   if (!Number.isFinite(m) || m <= 1) return valueWei;
 
-  // Använd 1000-dels fastpunkt: t.ex. 1.25 => 1250/1000
   const scaled = Math.floor(m * 1000);
   if (!Number.isFinite(scaled) || scaled <= 1000) return valueWei;
 
@@ -340,7 +336,6 @@ async function sendRegisterTx({
 export async function onRequest({ request, env }) {
   const origin = pickCorsOrigin(request?.headers?.get("Origin"), env);
 
-  // ✅ 5/5 audit: servergenererad tid (UTC epoch) i ALLA JSON-svar
   const serverTimeUnix = Math.floor(Date.now() / 1000);
   const timeSource = "server";
   const requestId = makeRequestId();
@@ -449,6 +444,12 @@ export async function onRequest({ request, env }) {
 
     const chainId = await assertAmoyChain(publicClient);
 
+    // observed block: diagnostik (inte bevis om registrering)
+    const observedBlockNumber = await publicClient
+      .getBlockNumber()
+      .then((b) => b.toString())
+      .catch(() => null);
+
     // 0) Om den redan finns: returnera CONFIRMED direkt.
     try {
       const existing = await readGet(publicClient, contractAddress, hash);
@@ -461,12 +462,10 @@ export async function onRequest({ request, env }) {
             statusText: "Bekräftad",
             hash,
             confirmedAtUnix: existing.confirmedAtUnix,
-            evidence: existing.registeredBlockNumber
-              ? {
-                  observedBlockNumber: existing.registeredBlockNumber,
-                  registeredBlockNumber: existing.registeredBlockNumber,
-                }
-              : null,
+            evidence: {
+              registeredBlockNumber: existing.registeredBlockNumber,
+              observedBlockNumber,
+            },
             submission: null,
             legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
             requestId,
@@ -477,8 +476,7 @@ export async function onRequest({ request, env }) {
         );
       }
     } catch {
-      // Om vi inte kan läsa, fortsätter vi till registreringsförsök.
-      // (Ingen antagen juridisk effekt av att read misslyckas.)
+      // fortsätt
     }
 
     const fees = await pickFeesForDebug(publicClient, env);
@@ -511,7 +509,7 @@ export async function onRequest({ request, env }) {
       3.0
     );
 
-    // 1) Skicka tx (fees är redan klampade mot caps)
+    // 1) Skicka tx
     let attempt = 0;
     let txHash = await sendRegisterTx({
       publicClient,
@@ -530,14 +528,13 @@ export async function onRequest({ request, env }) {
       waitForMiningMs
     );
 
-    // 3) Om den inte mined: försök resubmit om den bedöms droppad
+    // 3) Resubmit om droppad
     while (receiptInfo.kind !== "MINED" && attempt < resubmitMaxAttempts) {
       const dropped = await isTxDropped(publicClient, txHash);
       if (!dropped) break;
 
       attempt += 1;
 
-      // bump fees (BigInt-säkert) + klampa mot caps
       const bumped = clampFeesToCaps({
         maxFeePerGas: bumpFeeBigInt(fees.raw.maxFeePerGas, bumpMultiplier),
         maxPriorityFeePerGas: bumpFeeBigInt(
@@ -564,7 +561,6 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // Debug (endast om uttryckligen på)
     const debugBase = includeDebug
       ? toJsonSafe({
           chainId,
@@ -573,12 +569,13 @@ export async function onRequest({ request, env }) {
           waitForMiningMs,
           resubmits: attempt,
           fees: { picked: fees.picked, estimate: fees.estimate },
+          observedBlockNumber,
         })
       : undefined;
 
-    // 4) Om mined: verifiera state (sanning) och returnera CONFIRMED om den nu finns.
+    // 4) MINED
     if (receiptInfo.kind === "MINED") {
-      const minedBlockStr =
+      const minedBlockNumber =
         receiptInfo.receipt?.blockNumber?.toString?.() ?? null;
 
       if (receiptInfo.receipt?.status === "reverted") {
@@ -589,8 +586,8 @@ export async function onRequest({ request, env }) {
           hash,
           confirmedAtUnix: null,
           evidence: {
-            observedBlockNumber: minedBlockStr,
-            minedBlockNumber: minedBlockStr,
+            observedBlockNumber,
+            minedBlockNumber,
           },
           submission: { txHash, submittedBy: account.address },
           legalText:
@@ -603,7 +600,6 @@ export async function onRequest({ request, env }) {
         return json(200, payload, origin);
       }
 
-      // receipt success: kontrollera kontraktet (definitiv sanning)
       const post = await readGet(publicClient, contractAddress, hash).catch(
         () => ({
           confirmed: false,
@@ -620,9 +616,9 @@ export async function onRequest({ request, env }) {
           hash,
           confirmedAtUnix: post.confirmedAtUnix,
           evidence: {
-            observedBlockNumber: post.registeredBlockNumber || minedBlockStr,
             registeredBlockNumber: post.registeredBlockNumber,
-            minedBlockNumber: minedBlockStr,
+            observedBlockNumber,
+            minedBlockNumber,
           },
           submission: { txHash, submittedBy: account.address },
           legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
@@ -634,20 +630,20 @@ export async function onRequest({ request, env }) {
         return json(200, payload, origin);
       }
 
-      // Om receipt var success men state inte visar bekräftelse: behandla som inskickad men ej bekräftad.
+      // MINED success men ej bekräftad i state => EJ bekräftad (inte "inskickad")
       const payload = {
         ok: true,
-        statusCode: "SUBMITTED_UNCONFIRMED",
-        statusText: "Inskickad – ej bekräftad",
+        statusCode: "NOT_CONFIRMED",
+        statusText: "Ej bekräftad",
         hash,
         confirmedAtUnix: null,
         evidence: {
-          observedBlockNumber: minedBlockStr,
-          minedBlockNumber: minedBlockStr,
+          observedBlockNumber,
+          minedBlockNumber,
         },
         submission: { txHash, submittedBy: account.address },
         legalText:
-          "En registrering har skickats in men bekräftelse kunde inte redovisas vid kontrollen.",
+          "Ingen bekräftad notering kunde konstateras vid kontrolltillfället. Angiven transaktionsreferens är minad men bekräftelse kan inte redovisas.",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -656,15 +652,15 @@ export async function onRequest({ request, env }) {
       return json(200, payload, origin);
     }
 
-    // 5) Pending/timeout: returnera SUBMITTED_UNCONFIRMED med txHash
+    // 5) Pending/timeout: SUBMITTED_UNCONFIRMED kräver känd txHash (den finns här)
     const payload = {
       ok: true,
       statusCode: "SUBMITTED_UNCONFIRMED",
       statusText: "Inskickad – ej bekräftad",
       hash,
       confirmedAtUnix: null,
-      evidence: null,
-      submission: { txHash, submittedBy: account.address },
+      evidence: { observedBlockNumber },
+      submission: { txHash, submittedBy: account.address, txState: "UNKNOWN" },
       legalText: "En registrering har skickats in men är ännu inte bekräftad.",
       requestId,
       serverTimeUnix,
@@ -674,7 +670,7 @@ export async function onRequest({ request, env }) {
       payload.debug = {
         ...debugBase,
         note:
-          "Tx skickad men inte bekräftad inom väntetiden. Klient bör polla /api/tx och /api/verify.",
+          "Tx skickad men inte bekräftad inom väntetiden. Klient bör polla /api/verify (med tx) för ny kontroll.",
       };
     }
     return json(200, payload, origin);
