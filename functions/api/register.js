@@ -164,6 +164,10 @@ async function assertAmoyChain(publicClient) {
   return cid;
 }
 
+/**
+ * PATCH: läs ts + blockNo från kontraktets get(refId)
+ * get() -> (ok, ts, blockNo)
+ */
 async function readGet(publicClient, contractAddress, hash) {
   const res = await publicClient.readContract({
     address: contractAddress,
@@ -174,11 +178,26 @@ async function readGet(publicClient, contractAddress, hash) {
 
   const ok = Array.isArray(res) ? res[0] : res?.ok ?? false;
   const ts = Array.isArray(res) ? res[1] : res?.ts ?? 0n;
+  const blockNo = Array.isArray(res) ? res[2] : res?.blockNo ?? 0n;
 
   const tsNum = Number(ts);
   const confirmed = Boolean(ok) && tsNum > 0;
 
-  return { confirmed, confirmedAtUnix: confirmed ? tsNum : null };
+  const blockNoStr = (() => {
+    try {
+      const bn = BigInt(blockNo);
+      return bn > 0n ? bn.toString() : null;
+    } catch {
+      const n = Number(blockNo);
+      return Number.isFinite(n) && n > 0 ? String(n) : null;
+    }
+  })();
+
+  return {
+    confirmed,
+    confirmedAtUnix: confirmed ? tsNum : null,
+    registeredBlockNumber: confirmed ? blockNoStr : null,
+  };
 }
 
 async function pickFeesForDebug(publicClient, env) {
@@ -442,7 +461,12 @@ export async function onRequest({ request, env }) {
             statusText: "Bekräftad",
             hash,
             confirmedAtUnix: existing.confirmedAtUnix,
-            evidence: null,
+            evidence: existing.registeredBlockNumber
+              ? {
+                  observedBlockNumber: existing.registeredBlockNumber,
+                  registeredBlockNumber: existing.registeredBlockNumber,
+                }
+              : null,
             submission: null,
             legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
             requestId,
@@ -500,7 +524,11 @@ export async function onRequest({ request, env }) {
     });
 
     // 2) Vänta kort på receipt
-    let receiptInfo = await tryWaitForReceipt(publicClient, txHash, waitForMiningMs);
+    let receiptInfo = await tryWaitForReceipt(
+      publicClient,
+      txHash,
+      waitForMiningMs
+    );
 
     // 3) Om den inte mined: försök resubmit om den bedöms droppad
     while (receiptInfo.kind !== "MINED" && attempt < resubmitMaxAttempts) {
@@ -512,7 +540,10 @@ export async function onRequest({ request, env }) {
       // bump fees (BigInt-säkert) + klampa mot caps
       const bumped = clampFeesToCaps({
         maxFeePerGas: bumpFeeBigInt(fees.raw.maxFeePerGas, bumpMultiplier),
-        maxPriorityFeePerGas: bumpFeeBigInt(fees.raw.maxPriorityFeePerGas, bumpMultiplier),
+        maxPriorityFeePerGas: bumpFeeBigInt(
+          fees.raw.maxPriorityFeePerGas,
+          bumpMultiplier
+        ),
         caps: fees.caps,
       });
 
@@ -526,7 +557,11 @@ export async function onRequest({ request, env }) {
         maxPriorityFeePerGas: bumped.maxPriorityFeePerGas,
       });
 
-      receiptInfo = await tryWaitForReceipt(publicClient, txHash, waitForMiningMs);
+      receiptInfo = await tryWaitForReceipt(
+        publicClient,
+        txHash,
+        waitForMiningMs
+      );
     }
 
     // Debug (endast om uttryckligen på)
@@ -543,6 +578,9 @@ export async function onRequest({ request, env }) {
 
     // 4) Om mined: verifiera state (sanning) och returnera CONFIRMED om den nu finns.
     if (receiptInfo.kind === "MINED") {
+      const minedBlockStr =
+        receiptInfo.receipt?.blockNumber?.toString?.() ?? null;
+
       if (receiptInfo.receipt?.status === "reverted") {
         const payload = {
           ok: true,
@@ -551,7 +589,8 @@ export async function onRequest({ request, env }) {
           hash,
           confirmedAtUnix: null,
           evidence: {
-            observedBlockNumber: receiptInfo.receipt.blockNumber?.toString?.() ?? null,
+            observedBlockNumber: minedBlockStr,
+            minedBlockNumber: minedBlockStr,
           },
           submission: { txHash, submittedBy: account.address },
           legalText:
@@ -565,10 +604,13 @@ export async function onRequest({ request, env }) {
       }
 
       // receipt success: kontrollera kontraktet (definitiv sanning)
-      const post = await readGet(publicClient, contractAddress, hash).catch(() => ({
-        confirmed: false,
-        confirmedAtUnix: null,
-      }));
+      const post = await readGet(publicClient, contractAddress, hash).catch(
+        () => ({
+          confirmed: false,
+          confirmedAtUnix: null,
+          registeredBlockNumber: null,
+        })
+      );
 
       if (post.confirmed) {
         const payload = {
@@ -578,7 +620,9 @@ export async function onRequest({ request, env }) {
           hash,
           confirmedAtUnix: post.confirmedAtUnix,
           evidence: {
-            observedBlockNumber: receiptInfo.receipt.blockNumber?.toString?.() ?? null,
+            observedBlockNumber: post.registeredBlockNumber || minedBlockStr,
+            registeredBlockNumber: post.registeredBlockNumber,
+            minedBlockNumber: minedBlockStr,
           },
           submission: { txHash, submittedBy: account.address },
           legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
@@ -598,7 +642,8 @@ export async function onRequest({ request, env }) {
         hash,
         confirmedAtUnix: null,
         evidence: {
-          observedBlockNumber: receiptInfo.receipt.blockNumber?.toString?.() ?? null,
+          observedBlockNumber: minedBlockStr,
+          minedBlockNumber: minedBlockStr,
         },
         submission: { txHash, submittedBy: account.address },
         legalText:
