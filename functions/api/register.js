@@ -135,6 +135,25 @@ function toJsonSafe(value) {
   return value;
 }
 
+function makeRequestId() {
+  try {
+    // Cloudflare Workers har crypto.randomUUID i praktiken
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+      return globalThis.crypto.randomUUID();
+    }
+  } catch {
+    // ignore
+  }
+  // fallback: tidsbaserat (inte kryptosäkert, men bättre än inget)
+  return `req_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function shouldIncludeDebug(env, body) {
+  const envDebug = String(env.DEBUG || "").trim() === "1";
+  const bodyDebug = body && body.debug === true;
+  return envDebug || bodyDebug;
+}
+
 async function assertAmoyChain(publicClient) {
   const cid = await publicClient.getChainId();
   if (cid !== polygonAmoy.id) {
@@ -210,6 +229,7 @@ async function pickFeesForDebug(publicClient, env) {
       tipCapGwei,
       minTipGwei,
     },
+    caps: { capWei, tipCapWei, minTipWei },
     estimate: {
       maxFeePerGas: suggestedMaxFee ? weiToGweiNumber(suggestedMaxFee) : null,
       maxPriorityFeePerGas: suggestedPriority
@@ -221,11 +241,28 @@ async function pickFeesForDebug(publicClient, env) {
   };
 }
 
-function bumpFee(valueWei, multiplier) {
-  // multiplier ~1.25 etc. Vi gör heltal och minst +1 wei.
+function clampFeesToCaps({ maxFeePerGas, maxPriorityFeePerGas, caps }) {
+  let mf = maxFeePerGas;
+  let tip = maxPriorityFeePerGas;
+
+  if (mf > caps.capWei) mf = caps.capWei;
+  if (tip > caps.tipCapWei) tip = caps.tipCapWei;
+  if (tip < caps.minTipWei) tip = caps.minTipWei;
+  if (tip > mf) tip = mf;
+
+  return { maxFeePerGas: mf, maxPriorityFeePerGas: tip };
+}
+
+function bumpFeeBigInt(valueWei, multiplier) {
+  // BigInt-säker bump: multiplier ~1.25 etc.
   const m = Number(multiplier);
   if (!Number.isFinite(m) || m <= 1) return valueWei;
-  const bumped = BigInt(Math.floor(Number(valueWei) * m));
+
+  // Använd 1000-dels fastpunkt: t.ex. 1.25 => 1250/1000
+  const scaled = Math.floor(m * 1000);
+  if (!Number.isFinite(scaled) || scaled <= 1000) return valueWei;
+
+  const bumped = (valueWei * BigInt(scaled)) / 1000n;
   if (bumped <= valueWei) return valueWei + 1n;
   return bumped;
 }
@@ -239,24 +276,17 @@ async function tryWaitForReceipt(publicClient, txHash, waitMs) {
     });
     return { kind: "MINED", receipt };
   } catch (e) {
-    // timeout eller RPC-fel – hanteras av caller
     return { kind: "TIMEOUT_OR_ERROR", error: sanitizeError(e) };
   }
 }
 
 async function isTxDropped(publicClient, txHash) {
-  // Dropped-heuristik:
-  // - Ingen receipt
-  // - Och getTransaction hittar den inte
-  // => sannolikt droppad / aldrig propagaterad längre
   const receipt = await publicClient
     .getTransactionReceipt({ hash: txHash })
     .catch(() => null);
   if (receipt) return false;
 
-  const tx = await publicClient
-    .getTransaction({ hash: txHash })
-    .catch(() => null);
+  const tx = await publicClient.getTransaction({ hash: txHash }).catch(() => null);
   if (tx) return false;
 
   return true;
@@ -294,12 +324,19 @@ export async function onRequest({ request, env }) {
   // ✅ 5/5 audit: servergenererad tid (UTC epoch) i ALLA JSON-svar
   const serverTimeUnix = Math.floor(Date.now() / 1000);
   const timeSource = "server";
+  const requestId = makeRequestId();
 
   if (request.method === "OPTIONS") return corsPreflight(origin);
   if (request.method !== "POST") {
     return json(
       405,
-      { ok: false, error: "Method Not Allowed", serverTimeUnix, timeSource },
+      {
+        ok: false,
+        error: "Method Not Allowed",
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
@@ -310,16 +347,30 @@ export async function onRequest({ request, env }) {
   } catch {
     return json(
       400,
-      { ok: false, error: "Invalid JSON body", serverTimeUnix, timeSource },
+      {
+        ok: false,
+        error: "Invalid JSON body",
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
+
+  const includeDebug = shouldIncludeDebug(env, body);
 
   const hash = String(body?.hash || "").trim();
   if (!isValidBytes32Hex(hash)) {
     return json(
       400,
-      { ok: false, error: "Invalid hash format", serverTimeUnix, timeSource },
+      {
+        ok: false,
+        error: "Invalid hash format",
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
@@ -331,21 +382,39 @@ export async function onRequest({ request, env }) {
   if (!rpcUrl || !contractAddress || !privateKey) {
     return json(
       500,
-      { ok: false, error: "Server misconfiguration", serverTimeUnix, timeSource },
+      {
+        ok: false,
+        error: "Server misconfiguration",
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
   if (!isAddress(contractAddress)) {
     return json(
       500,
-      { ok: false, error: "Bad contract address", serverTimeUnix, timeSource },
+      {
+        ok: false,
+        error: "Bad contract address",
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
   if (!isValidPrivateKeyHex(privateKey)) {
     return json(
       500,
-      { ok: false, error: "Bad private key", serverTimeUnix, timeSource },
+      {
+        ok: false,
+        error: "Bad private key",
+        requestId,
+        serverTimeUnix,
+        timeSource,
+      },
       origin
     );
   }
@@ -370,12 +439,13 @@ export async function onRequest({ request, env }) {
           {
             ok: true,
             statusCode: "CONFIRMED",
-            statusText: "Bekräftad (fanns redan)",
+            statusText: "Bekräftad",
             hash,
             confirmedAtUnix: existing.confirmedAtUnix,
             evidence: null,
             submission: null,
-            legalText: "Fanns redan bekräftad notering.",
+            legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
+            requestId,
             serverTimeUnix,
             timeSource,
           },
@@ -383,7 +453,8 @@ export async function onRequest({ request, env }) {
         );
       }
     } catch {
-      // ignore
+      // Om vi inte kan läsa, fortsätter vi till registreringsförsök.
+      // (Ingen antagen juridisk effekt av att read misslyckas.)
     }
 
     const fees = await pickFeesForDebug(publicClient, env);
@@ -416,7 +487,7 @@ export async function onRequest({ request, env }) {
       3.0
     );
 
-    // 1) Skicka tx
+    // 1) Skicka tx (fees är redan klampade mot caps)
     let attempt = 0;
     let txHash = await sendRegisterTx({
       publicClient,
@@ -429,11 +500,7 @@ export async function onRequest({ request, env }) {
     });
 
     // 2) Vänta kort på receipt
-    let receiptInfo = await tryWaitForReceipt(
-      publicClient,
-      txHash,
-      waitForMiningMs
-    );
+    let receiptInfo = await tryWaitForReceipt(publicClient, txHash, waitForMiningMs);
 
     // 3) Om den inte mined: försök resubmit om den bedöms droppad
     while (receiptInfo.kind !== "MINED" && attempt < resubmitMaxAttempts) {
@@ -442,12 +509,12 @@ export async function onRequest({ request, env }) {
 
       attempt += 1;
 
-      // bump fees (men respektera original caps: vi bump:ar *inom* dina MAX_*)
-      const bumpedMaxFee = bumpFee(fees.raw.maxFeePerGas, bumpMultiplier);
-      const bumpedTip = bumpFee(fees.raw.maxPriorityFeePerGas, bumpMultiplier);
-
-      // Se till att tip inte överstiger maxFee
-      const finalTip = bumpedTip > bumpedMaxFee ? bumpedMaxFee : bumpedTip;
+      // bump fees (BigInt-säkert) + klampa mot caps
+      const bumped = clampFeesToCaps({
+        maxFeePerGas: bumpFeeBigInt(fees.raw.maxFeePerGas, bumpMultiplier),
+        maxPriorityFeePerGas: bumpFeeBigInt(fees.raw.maxPriorityFeePerGas, bumpMultiplier),
+        caps: fees.caps,
+      });
 
       txHash = await sendRegisterTx({
         publicClient,
@@ -455,128 +522,132 @@ export async function onRequest({ request, env }) {
         account,
         contractAddress,
         hash,
-        maxFeePerGas: bumpedMaxFee,
-        maxPriorityFeePerGas: finalTip,
+        maxFeePerGas: bumped.maxFeePerGas,
+        maxPriorityFeePerGas: bumped.maxPriorityFeePerGas,
       });
 
-      receiptInfo = await tryWaitForReceipt(
-        publicClient,
-        txHash,
-        waitForMiningMs
-      );
+      receiptInfo = await tryWaitForReceipt(publicClient, txHash, waitForMiningMs);
     }
 
-    // 4) Om mined: verifiera state (sanning) och returnera CONFIRMED om den nu finns.
-    if (receiptInfo.kind === "MINED") {
-      // Om tx reverted: vi säger inte "bekräftad"
-      if (receiptInfo.receipt?.status === "reverted") {
-        const debug = toJsonSafe({
+    // Debug (endast om uttryckligen på)
+    const debugBase = includeDebug
+      ? toJsonSafe({
           chainId,
           contractAddress,
           txHash,
-          receiptStatus: receiptInfo.receipt.status,
+          waitForMiningMs,
           resubmits: attempt,
-          fees: { picked: fees.picked, estimate: fees.estimate, raw: fees.raw },
-        });
+          fees: { picked: fees.picked, estimate: fees.estimate },
+        })
+      : undefined;
 
-        return json(
-          200,
-          {
-            ok: true,
-            statusCode: "NOT_CONFIRMED",
-            statusText: "Ej bekräftad",
-            hash,
-            confirmedAtUnix: null,
-            evidence: {
-              observedBlockNumber:
-                receiptInfo.receipt.blockNumber?.toString?.() ?? null,
-            },
-            submission: { txHash, submittedBy: account.address },
-            legalText:
-              "En registrering har behandlats men kunde inte bekräftas. Ingen slutsats om bekräftelse kan dras.",
-            debug,
-            serverTimeUnix,
-            timeSource,
+    // 4) Om mined: verifiera state (sanning) och returnera CONFIRMED om den nu finns.
+    if (receiptInfo.kind === "MINED") {
+      if (receiptInfo.receipt?.status === "reverted") {
+        const payload = {
+          ok: true,
+          statusCode: "NOT_CONFIRMED",
+          statusText: "Ej bekräftad",
+          hash,
+          confirmedAtUnix: null,
+          evidence: {
+            observedBlockNumber: receiptInfo.receipt.blockNumber?.toString?.() ?? null,
           },
-          origin
-        );
+          submission: { txHash, submittedBy: account.address },
+          legalText:
+            "En registrering har behandlats men kunde inte bekräftas. Ingen slutsats om bekräftelse kan dras.",
+          requestId,
+          serverTimeUnix,
+          timeSource,
+        };
+        if (includeDebug) payload.debug = debugBase;
+        return json(200, payload, origin);
       }
 
       // receipt success: kontrollera kontraktet (definitiv sanning)
-      const post = await readGet(publicClient, contractAddress, hash).catch(
-        () => ({ confirmed: false, confirmedAtUnix: null })
-      );
+      const post = await readGet(publicClient, contractAddress, hash).catch(() => ({
+        confirmed: false,
+        confirmedAtUnix: null,
+      }));
 
       if (post.confirmed) {
-        return json(
-          200,
-          {
-            ok: true,
-            statusCode: "CONFIRMED",
-            statusText: "Bekräftad",
-            hash,
-            confirmedAtUnix: post.confirmedAtUnix,
-            evidence: {
-              observedBlockNumber:
-                receiptInfo.receipt.blockNumber?.toString?.() ?? null,
-            },
-            submission: { txHash, submittedBy: account.address },
-            legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
-            serverTimeUnix,
-            timeSource,
+        const payload = {
+          ok: true,
+          statusCode: "CONFIRMED",
+          statusText: "Bekräftad",
+          hash,
+          confirmedAtUnix: post.confirmedAtUnix,
+          evidence: {
+            observedBlockNumber: receiptInfo.receipt.blockNumber?.toString?.() ?? null,
           },
-          origin
-        );
+          submission: { txHash, submittedBy: account.address },
+          legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
+          requestId,
+          serverTimeUnix,
+          timeSource,
+        };
+        if (includeDebug) payload.debug = debugBase;
+        return json(200, payload, origin);
       }
-      // Om något märkligt: fallback till pending-svar
-    }
 
-    // 5) Pending/timeout: returnera NOT_CONFIRMED med txHash (UI kan poll:a /api/tx + /api/verify)
-    const debug = toJsonSafe({
-      chainId,
-      contractAddress,
-      txHash,
-      waitForMiningMs,
-      resubmits: attempt,
-      fees: { picked: fees.picked, estimate: fees.estimate, raw: fees.raw },
-      note:
-        "Tx skickad men inte bekräftad inom väntetiden. Klient bör polla /api/tx och /api/verify.",
-    });
-
-    return json(
-      200,
-      {
+      // Om receipt var success men state inte visar bekräftelse: behandla som inskickad men ej bekräftad.
+      const payload = {
         ok: true,
-        statusCode: "NOT_CONFIRMED",
-        statusText: "Ej bekräftad",
+        statusCode: "SUBMITTED_UNCONFIRMED",
+        statusText: "Inskickad – ej bekräftad",
         hash,
         confirmedAtUnix: null,
-        evidence: null,
+        evidence: {
+          observedBlockNumber: receiptInfo.receipt.blockNumber?.toString?.() ?? null,
+        },
         submission: { txHash, submittedBy: account.address },
-        legalText: "En registrering har skickats in men är ännu inte bekräftad.",
-        debug,
+        legalText:
+          "En registrering har skickats in men bekräftelse kunde inte redovisas vid kontrollen.",
+        requestId,
         serverTimeUnix,
         timeSource,
-      },
-      origin
-    );
+      };
+      if (includeDebug) payload.debug = debugBase;
+      return json(200, payload, origin);
+    }
+
+    // 5) Pending/timeout: returnera SUBMITTED_UNCONFIRMED med txHash
+    const payload = {
+      ok: true,
+      statusCode: "SUBMITTED_UNCONFIRMED",
+      statusText: "Inskickad – ej bekräftad",
+      hash,
+      confirmedAtUnix: null,
+      evidence: null,
+      submission: { txHash, submittedBy: account.address },
+      legalText: "En registrering har skickats in men är ännu inte bekräftad.",
+      requestId,
+      serverTimeUnix,
+      timeSource,
+    };
+    if (includeDebug) {
+      payload.debug = {
+        ...debugBase,
+        note:
+          "Tx skickad men inte bekräftad inom väntetiden. Klient bör polla /api/tx och /api/verify.",
+      };
+    }
+    return json(200, payload, origin);
   } catch (e) {
-    return json(
-      503,
-      {
-        ok: false,
-        statusCode: "UNKNOWN",
-        statusText: "Kunde inte kontrolleras",
-        hash: hash || null,
-        confirmedAtUnix: null,
-        evidence: null,
-        submission: null,
-        error: "Register temporarily unavailable",
-        detail: sanitizeError(e),
-        serverTimeUnix,
-        timeSource,
-      },
-      origin
-    );
+    const payload = {
+      ok: false,
+      statusCode: "UNKNOWN",
+      statusText: "Kunde inte kontrolleras",
+      hash: hash || null,
+      confirmedAtUnix: null,
+      evidence: null,
+      submission: null,
+      error: "Register temporarily unavailable",
+      detail: sanitizeError(e),
+      requestId,
+      serverTimeUnix,
+      timeSource,
+    };
+    return json(503, payload, origin);
   }
 }
