@@ -87,7 +87,10 @@ function getTimeoutMs(env) {
 
 function makeRequestId() {
   try {
-    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+    if (
+      globalThis.crypto &&
+      typeof globalThis.crypto.randomUUID === "function"
+    ) {
       return globalThis.crypto.randomUUID();
     }
   } catch {
@@ -104,21 +107,35 @@ function makeRequestId() {
  * - UNKNOWN
  */
 
-function statusConfirmed({ hash, timestamp, observedBlockNumber }) {
+function statusConfirmed({
+  hash,
+  timestamp,
+  registeredBlockNumber,
+  observedBlockNumber,
+}) {
   return {
     ok: true,
     statusCode: "CONFIRMED",
     statusText: "Bekräftad",
     hash,
     confirmedAtUnix: timestamp,
-    evidence: { observedBlockNumber },
+    evidence: {
+      // Register-evidens (kontraktssanning)
+      registeredBlockNumber: registeredBlockNumber || null,
+      // Observed = vad denna RPC just nu ser (diagnostik, ej registreringsbevis)
+      observedBlockNumber: observedBlockNumber || null,
+    },
     submission: null,
-    legalText:
-      "Det finns en bekräftad notering för detta kontrollvärde.",
+    legalText: "Det finns en bekräftad notering för detta kontrollvärde.",
   };
 }
 
-function statusSubmittedUnconfirmed({ hash, observedBlockNumber, txHash, txState }) {
+function statusSubmittedUnconfirmed({
+  hash,
+  observedBlockNumber,
+  txHash,
+  txState,
+}) {
   return {
     ok: true,
     statusCode: "SUBMITTED_UNCONFIRMED",
@@ -182,16 +199,25 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
 
   const ok = Array.isArray(res) ? res[0] : res?.ok ?? false;
   const ts = Array.isArray(res) ? res[1] : res?.ts ?? 0n;
+  const blockNo = Array.isArray(res) ? res[2] : res?.blockNo ?? 0n;
 
   const timestamp = Number(ts);
-  const exists = Boolean(ok) && timestamp !== 0;
+  const registeredBlock = Number(blockNo);
 
-  // "Observed" = vad denna RPC just nu ser, inte ett bevis om tx.
+  const exists =
+    Boolean(ok) &&
+    Number.isFinite(timestamp) &&
+    timestamp !== 0 &&
+    Number.isFinite(registeredBlock) &&
+    registeredBlock !== 0;
+
+  // "Observed" = vad denna RPC just nu ser, inte ett bevis om tx eller registreringsblock.
   const observedBlockNumber = await publicClient.getBlockNumber();
 
   return {
     exists,
     timestamp: exists ? timestamp : 0,
+    registeredBlockNumber: exists ? String(registeredBlock) : null,
     observedBlockNumber: observedBlockNumber.toString(),
   };
 }
@@ -239,11 +265,21 @@ export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") return corsPreflight(origin);
 
   if (request.method !== "GET" && request.method !== "POST") {
+    // Håll juridisk status inom de fyra statuskoderna.
     return json(
       405,
       {
         ok: false,
+        statusCode: "UNKNOWN",
+        statusText: "Kunde inte kontrolleras",
+        errorCode: "METHOD_NOT_ALLOWED",
         error: "Method Not Allowed",
+        hash: null,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: felaktig metod för verifieringstjänsten.",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -281,7 +317,8 @@ export async function onRequest({ request, env }) {
         confirmedAtUnix: null,
         evidence: null,
         submission: null,
-        legalText: "Status kunde inte kontrolleras: ogiltigt kontrollvärde (Verifierings-ID).",
+        legalText:
+          "Status kunde inte kontrolleras: ogiltigt kontrollvärde (Verifierings-ID).",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -303,6 +340,12 @@ export async function onRequest({ request, env }) {
         statusCode: "UNKNOWN",
         statusText: "Kunde inte kontrolleras",
         error: "Server misconfiguration",
+        hash,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: tjänsten är tillfälligt felkonfigurerad.",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -318,6 +361,12 @@ export async function onRequest({ request, env }) {
         statusCode: "UNKNOWN",
         statusText: "Kunde inte kontrolleras",
         error: "Server misconfiguration (bad contract address)",
+        hash,
+        confirmedAtUnix: null,
+        evidence: null,
+        submission: null,
+        legalText:
+          "Status kunde inte kontrolleras: tjänsten är tillfälligt felkonfigurerad.",
         requestId,
         serverTimeUnix,
         timeSource,
@@ -348,6 +397,7 @@ export async function onRequest({ request, env }) {
           ...statusConfirmed({
             hash,
             timestamp: proof.timestamp,
+            registeredBlockNumber: proof.registeredBlockNumber,
             observedBlockNumber: proof.observedBlockNumber,
           }),
           requestId,
