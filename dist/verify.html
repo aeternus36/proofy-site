@@ -487,6 +487,10 @@
             <div class="proofyTimeBox" role="status" aria-live="polite" aria-atomic="true">
               <div class="meta">Kontrolltid vid kontrolltillfället</div>
 
+              <div class="small" id="checkedMeaningLine" style="margin-top:8px; opacity:.86;">
+                Kontrolltid avser tidpunkten för denna kontroll (denna körning/visning).
+              </div>
+
               <div class="proofyTimeGrid">
                 <div>
                   <div class="meta" style="opacity:.9;">Proofy (från serversvar)</div>
@@ -494,7 +498,8 @@
                   <div id="outCheckedServerUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
                 </div>
 
-                <div>
+                <!-- ✅ Döljs i UI som standard. Visas bara vid fallback eller debug. -->
+                <div id="deviceTimeCol" style="display:none;">
                   <div class="meta" style="opacity:.9;">Enhet (kompletterande)</div>
                   <div id="outCheckedDeviceSe" class="mono" style="margin-top:6px;">—</div>
                   <div id="outCheckedDeviceUtc" class="mono" style="margin-top:6px; opacity:.75;">—</div>
@@ -502,8 +507,9 @@
               </div>
 
               <div class="small" id="timeNote" style="margin-top:10px; opacity:.9;">
-                Proofy-tid kommer från serversvaret (<span class="mono">serverTimeUnix</span>). Ingen av tiderna utgör extern tidsstämpling.
-                Enhetstid kan vara fel om systemklockan är fel.
+                Proofy-tid kommer från serversvaret (<span class="mono">serverTimeUnix</span>) när den finns.
+                Enhetstid visas endast vid fallback (när <span class="mono">serverTimeUnix</span> saknas) eller i debug-läge.
+                Ingen av tiderna utgör extern tidsstämpling.
               </div>
 
               <!-- ✅ 5/5: tydlig markering när serverTimeUnix saknas och Proofy-tid fallback:ar till enhetstid -->
@@ -682,11 +688,12 @@
   const clipCertLinkPill = $("clipCertLinkPill");
   const clipRefs = $("clipRefs");
 
-  // ✅ Kontrolltid: Proofy systemtid + enhet
+  // ✅ Kontrolltid: Proofy systemtid + (ev) enhet
   const outCheckedServerSe = $("outCheckedServerSe");
   const outCheckedServerUtc = $("outCheckedServerUtc");
   const outCheckedDeviceSe = $("outCheckedDeviceSe");
   const outCheckedDeviceUtc = $("outCheckedDeviceUtc");
+  const deviceTimeCol = $("deviceTimeCol");
 
   const timeFallbackNote = $("timeFallbackNote");
 
@@ -1137,6 +1144,8 @@
     if (outCheckedDeviceSe) outCheckedDeviceSe.textContent = "—";
     if (outCheckedDeviceUtc) outCheckedDeviceUtc.textContent = "—";
 
+    if (deviceTimeCol) deviceTimeCol.style.display = "none";
+
     if (timeFallbackNote) timeFallbackNote.style.display = "none";
 
     if (httpDateLine) httpDateLine.style.display = "none";
@@ -1453,9 +1462,15 @@
     lines.push("");
     lines.push(`Kontrolltid (Proofy): ${run.serverSe || "—"}`);
     lines.push(`Kontrolltid (Proofy, UTC): ${run.serverUtc || "—"}`);
-    lines.push(`Kontrolltid (enhet): ${run.deviceSe || "—"}`);
-    lines.push(`Kontrolltid (enhet, UTC): ${run.deviceUtc || "—"}`);
-    lines.push("Obs: Proofy-tid kommer från serversvaret (serverTimeUnix). Ingen av tiderna utgör extern tidsstämpling. Enhetstid kan vara fel vid fel klocka.");
+    lines.push("Obs: Kontrolltid avser tidpunkten för denna kontroll (denna körning/visning).");
+    lines.push("Obs: Proofy-tid kommer från serversvaret (serverTimeUnix) när den finns. Ingen av tiderna utgör extern tidsstämpling.");
+
+    // ✅ Endast i notering vid fallback eller debug
+    if (run.serverTimeWasFallback || run.debugUsed) {
+      lines.push(`Kontrolltid (enhet, kompletterande): ${run.deviceSe || "—"}`);
+      lines.push(`Kontrolltid (enhet, UTC, kompletterande): ${run.deviceUtc || "—"}`);
+      lines.push("Obs: Enhetstid är kompletterande och kan vara fel om systemklockan är fel.");
+    }
 
     if (run.serverTimeWasFallback) {
       lines.push("Obs: serverTimeUnix saknades i svaret. Proofy-tid ovan är fallback till enhetstid.");
@@ -1584,6 +1599,9 @@
     if (outCheckedDeviceSe) outCheckedDeviceSe.textContent = deviceSe;
     if (outCheckedDeviceUtc) outCheckedDeviceUtc.textContent = deviceUtc;
 
+    // Döljs i UI som standard, men visas om debug under pågående kontroll
+    if (deviceTimeCol) deviceTimeCol.style.display = DEBUG ? "block" : "none";
+
     // init: server-rader fylls senare (nu: placeholder)
     if (outCheckedServerSe) outCheckedServerSe.textContent = "—";
     if (outCheckedServerUtc) outCheckedServerUtc.textContent = "—";
@@ -1650,10 +1668,15 @@
       const serverSe = fmtSeEpoch(proofyEpoch);
       const serverUtc = fmtUtcEpoch(proofyEpoch);
 
-      if (outCheckedServerSe) outCheckedServerSe.textContent = serverSe;
-      if (outCheckedServerUtc) outCheckedServerUtc.textContent = serverUtc;
+      // ✅ Markera fallback direkt i värdet (UI-säkert för granskning)
+      if (outCheckedServerSe) outCheckedServerSe.textContent = serverTimeWasFallback ? (serverSe + " (fallback: enhetstid)") : serverSe;
+      if (outCheckedServerUtc) outCheckedServerUtc.textContent = serverTimeWasFallback ? (serverUtc + " (fallback: enhetstid)") : serverUtc;
 
       if (timeFallbackNote) timeFallbackNote.style.display = serverTimeWasFallback ? "block" : "none";
+
+      // ✅ Dölj enhetstid i UI om inte fallback eller debug
+      const showDevice = serverTimeWasFallback || DEBUG;
+      if (deviceTimeCol) deviceTimeCol.style.display = showDevice ? "block" : "none";
 
       // ✅ Uppdatera URL så selflink/QR/cert får Proofy-checked när den finns
       if (proofyEpochRaw) {
@@ -1791,7 +1814,8 @@
         deviceSe,
         deviceUtc,
 
-        serverTimeWasFallback
+        serverTimeWasFallback,
+        debugUsed: DEBUG
       };
 
       const summaryText = buildSummaryText(lastRun);
