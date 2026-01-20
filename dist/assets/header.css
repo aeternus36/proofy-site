@@ -22,32 +22,53 @@
 
 /* Span.logo i din HTML */
 .logo{
-  display:inline-block; /* gör att width/height gäller på <span> */
+  display:inline-block;
   width: 28px;
   height: 28px;
   border-radius: 10px;
   position: relative;
   flex: 0 0 auto;
 
-  /* ===== NYTT: använd SVG-loggan ===== */
-  background-image: url("/assets/logo/proofy-mark.svg");
+  /*
+    Använd SVG-loggan som bakgrund.
+    Viktigt: background-size: contain + center ger stabilt utseende.
+  */
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
 
-  /* Om SVG inte laddar av någon anledning (fallback) */
-  background-color: transparent;
+  /*
+    Primär sökväg:
+    - om du lagt filen i: dist/assets/logo/proofy-mark.svg
+  */
+  background-image: url("/assets/logo/proofy-mark.svg");
 
-  /* Behåll en diskret kant så den står mot mörk bakgrund */
-  border: 1px solid rgba(255,255,255,.18);
+  /*
+    SVG + liten storlek:
+    undvik extra border/box-shadow som kan ge "konstig" kant eller optisk skevhet
+    när SVG redan har egen form.
+  */
+  border: none;
+  box-shadow: none;
 
-  /* mjuk skugga (inte "glow") */
-  box-shadow: 0 8px 22px rgba(0,0,0,.28);
+  /*
+    Om SVG skulle faila att ladda:
+    en diskret bakgrund så du inte får "tomt hål" i navbar.
+    (Den syns bara om bilden inte laddas.)
+  */
+  background-color: rgba(255,255,255,.06);
 }
+
+/*
+  Fallback om du råkar ha lagt filen i en underkatalog.
+  (Denna rad påverkar bara om första url:en inte finns och du byter manuellt i Git senare.)
+  Om du VET exakt var din fil ligger kan du ta bort den här kommentaren och sätta rätt path.
+*/
+/* .logo{ background-image: url("/assets/logo/logo/proofy-mark.svg"); } */
 
 /* Ta bort gamla CSS-"P" helt */
 .logo::after{
-  content: "";
+  content: none;
 }
 
 /* Lite tightare på mobil */
