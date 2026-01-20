@@ -8,7 +8,7 @@ import { ABI as PROOFY_ABI } from "./abi.js";
  * Juridik (kontraktssanning):
  * - Aldrig "Bekräftad" utan att kontraktets get() visar bekräftad notering.
  * - "Inskickad – ej bekräftad" endast om tx är känd och ännu inte har ett mined-resultat som gör den "Ej bekräftad".
- * - Vid tekniskt fel: "Kundeukde inte kontrolleras".
+ * - Vid tekniskt fel: "Kunde inte kontrolleras".
  *
  * Statuskoder (stabila):
  * - CONFIRMED
@@ -217,8 +217,9 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
     registeredBlockBig = 0n;
   }
 
-  const exists =
-    Boolean(ok) && Number.isFinite(timestamp) && timestamp > 0 && registeredBlockBig > 0n;
+  // ✅ FIX (MÅSTE): matcha register.js — bekräftelse kräver ok=true och ts>0.
+  // BlockNo är evidens om det finns, men får inte vara ett krav för "Bekräftad".
+  const exists = Boolean(ok) && Number.isFinite(timestamp) && timestamp > 0;
 
   // "Observed" = vad denna RPC just nu ser, inte ett bevis om tx eller registreringsblock.
   const observedBlockNumber = await publicClient.getBlockNumber();
@@ -226,7 +227,8 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   return {
     exists,
     timestamp: exists ? timestamp : 0,
-    registeredBlockNumber: exists ? registeredBlockBig.toString() : null,
+    registeredBlockNumber:
+      exists && registeredBlockBig > 0n ? registeredBlockBig.toString() : null,
     observedBlockNumber: observedBlockNumber.toString(),
   };
 }
