@@ -5,7 +5,6 @@
 /* =========================
    BRAND / LOGO (audit-friendly)
    - tydlig i liten storlek
-   - mindre "flashig"
    - konsekvent på alla sidor
 ========================= */
 
@@ -30,39 +29,31 @@
   position: relative;
   flex: 0 0 auto;
 
-  /* lugnare gradient (proffsig, mindre neon) */
-  background: linear-gradient(135deg,
-    rgba(110,168,255,.80),
-    rgba(124,241,198,.62)
-  );
+  /* ===== NYTT: använd SVG-loggan ===== */
+  background-image: url("/assets/logo/proofy-mark.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 
-  /* tydlig kant för igenkänning */
+  /* Om SVG inte laddar av någon anledning (fallback) */
+  background-color: transparent;
+
+  /* Behåll en diskret kant så den står mot mörk bakgrund */
   border: 1px solid rgba(255,255,255,.18);
 
   /* mjuk skugga (inte "glow") */
   box-shadow: 0 8px 22px rgba(0,0,0,.28);
 }
 
-/* monogram för igenkänning i liten storlek */
+/* Ta bort gamla CSS-"P" helt */
 .logo::after{
-  content: "P";
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight: 950;
-  font-size: 15px;
-  letter-spacing: -0.6px;
-  color: rgba(8,16,30,.92);
-  text-shadow: 0 1px 0 rgba(255,255,255,.30);
+  content: "";
 }
 
 /* Lite tightare på mobil */
 @media (max-width: 920px){
   .brand{ gap: 9px; font-size: 15.5px; }
   .logo{ width: 27px; height: 27px; }
-  .logo::after{ font-size: 14.5px; }
 }
 
 /* SÄKER “last-wins” försäkring (begränsad):
