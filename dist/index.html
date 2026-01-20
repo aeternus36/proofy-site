@@ -47,6 +47,21 @@
       body{ background-image:none !important; }
     }
 
+    /* NYTT: Säkerställ att navbar-loggan blir SVG (och att ev. gammal CSS-badge inte “tar över”) */
+    .brand .logo{
+      width: 28px;
+      height: 28px;
+      display: inline-block;
+      flex: 0 0 auto;
+      border-radius: 10px;
+      background: none !important;
+      box-shadow: none !important;
+      border: 0 !important;
+    }
+    .brand img.logo{
+      object-fit: contain;
+    }
+
     /* status-pill ska vara tyst tills vi behöver visa något */
     #demoStatus { display:none; }
 
@@ -169,7 +184,8 @@
   <div class="wrap">
     <div class="nav">
       <a class="brand" href="/" aria-label="Proofy">
-        <span class="logo" aria-hidden="true"></span>
+        <!-- NYTT: riktig SVG-logga i navbar -->
+        <img class="logo" src="/assets/logo/proofy-mark.svg" width="28" height="28" alt="" aria-hidden="true" decoding="async" />
         <span>Proofy</span>
       </a>
 
