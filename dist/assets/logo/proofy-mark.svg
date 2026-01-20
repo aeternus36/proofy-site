@@ -10,8 +10,8 @@
   <!-- Background -->
   <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#proofyGradient)"/>
 
-  <!-- Optiskt centrerad P (justerad åt vänster) -->
-  <g transform="translate(-28, 2)">
+  <!-- Optiskt centrerad P (justerad mer åt vänster) -->
+  <g transform="translate(-36, 2)">
     <path d="M232 148h92c52 0 84 28 84 72s-32 72-84 72h-48v72h-44V148zm92 108c28 0 44-14 44-36s-16-36-44-36h-48v72h48z" fill="#FFFFFF"/>
   </g>
 </svg>
