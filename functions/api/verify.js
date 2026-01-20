@@ -133,7 +133,7 @@ function statusConfirmed({
     hash,
     confirmedAtUnix: timestamp,
     evidence: {
-      // Register-evidens (kontraktssanning)
+      // Register-evidens (kontraktssanning). Kan vara null om kontraktet inte exponerar blockNo.
       registeredBlockNumber: registeredBlockNumber || null,
       // Observed = vad denna RPC just nu ser (diagnostik, ej registreringsbevis)
       observedBlockNumber: observedBlockNumber || null,
@@ -194,6 +194,11 @@ async function assertAmoyChain(publicClient) {
   }
 }
 
+/**
+ * Kontraktssanning:
+ * - CONFIRMED baseras på: ok === true och ts > 0
+ * - blockNo ska aldrig vara ett krav för bekräftelse (kan vara 0/saknas beroende på kontraktversion)
+ */
 async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const res = await publicClient.readContract({
     address: contractAddress,
@@ -206,19 +211,19 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   const ts = Array.isArray(res) ? res[1] : res?.ts ?? 0n;
   const blockNo = Array.isArray(res) ? res[2] : res?.blockNo ?? 0n;
 
+  // ts är unixsekunder i bigint -> Number (säker inom rimliga datum)
   const timestamp = Number(ts);
 
-  // ✅ Robust: håll blockNo som BigInt -> string (ingen Number-avrundning)
-  let registeredBlockBig = 0n;
+  // blockNo är diagnostik: håll som BigInt -> string när möjligt, annars null
+  let registeredBlockNumber = null;
   try {
-    registeredBlockBig =
-      typeof blockNo === "bigint" ? blockNo : BigInt(blockNo);
+    const b = typeof blockNo === "bigint" ? blockNo : BigInt(blockNo);
+    if (b > 0n) registeredBlockNumber = b.toString();
   } catch {
-    registeredBlockBig = 0n;
+    registeredBlockNumber = null;
   }
 
-  // ✅ FIX (MÅSTE): matcha register.js — bekräftelse kräver ok=true och ts>0.
-  // BlockNo är evidens om det finns, men får inte vara ett krav för "Bekräftad".
+  // ✅ VIKTIGT: bekräftelse kräver INTE blockNo
   const exists = Boolean(ok) && Number.isFinite(timestamp) && timestamp > 0;
 
   // "Observed" = vad denna RPC just nu ser, inte ett bevis om tx eller registreringsblock.
@@ -227,8 +232,7 @@ async function readGetWithEvidence({ publicClient, contractAddress, hash }) {
   return {
     exists,
     timestamp: exists ? timestamp : 0,
-    registeredBlockNumber:
-      exists && registeredBlockBig > 0n ? registeredBlockBig.toString() : null,
+    registeredBlockNumber, // null om saknas/0
     observedBlockNumber: observedBlockNumber.toString(),
   };
 }
@@ -315,7 +319,6 @@ export async function onRequest({ request, env }) {
   }
 
   if (!isValidBytes32Hex(hash)) {
-    // Håll juridisk status inom de fyra statuskoderna.
     return json(
       400,
       {
