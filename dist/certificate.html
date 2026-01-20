@@ -590,7 +590,8 @@
             <!-- MÅSTE: Anti-misstolkning nära status (skärmdumpsäkert) -->
             <div class="interpretBox" id="interpretBox" aria-label="Tolkning och avgränsning">
               <b>Visar endast:</b> resultatet av en teknisk kontroll av registerstatus för kontrollvärdet vid angiven kontrolltid.<br/>
-              <b>Visar inte:</b> dokumentets innehåll, riktighet, giltighet eller äkthet.
+              <b>Visar inte:</b> dokumentets innehåll, riktighet, giltighet eller äkthet.<br/>
+              <b>Viktigt:</b> Ny kontroll görs varje gång intyget öppnas. Spara som PDF för en oföränderlig kopia av detta kontrolltillfälle.
             </div>
 
             <div class="statusMeta">
@@ -602,7 +603,7 @@
                 Obs: <span class="mono">serverTimeUnix</span> saknades i svaret. Kontrolltiden ovan baseras på enhetstid (fallback).
               </div>
 
-              <div class="label" style="margin-top:10px">Kontrolltid (enhet, kompletterande)</div>
+              <div class="label" style="margin-top:10px">Kontrolltid (enhet, vid öppning – kompletterande)</div>
               <div class="mono" id="checkedDeviceLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="mono" id="checkedDeviceUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
 
@@ -811,6 +812,14 @@
           <div>
             Kontrolltid (Proofy, UTC): <span class="mono" id="pf_checkedServerUtc">—</span>
           </div>
+          <div>
+            Kontrolltid (Proofy, Unix): <span class="mono" id="pf_checkedServerUnix">—</span>
+          </div>
+
+          <div id="pf_timeSourceRow" style="display:none;">
+            <span class="mono">Tidkälla: <span class="mono" id="pf_timeSource">—</span></span>
+          </div>
+
           <div id="pf_checkedDeviceRow" style="display:none;">
             Kontrolltid (enhet, UTC): <span class="mono" id="pf_checkedDeviceUtc">—</span>
           </div>
@@ -1119,7 +1128,7 @@
         if (serverTimeWasFallback){
           lines.push("Obs: serverTimeUnix saknades i svaret. Kontrolltiden ovan baseras på enhetstid (fallback).");
         }
-        lines.push(`Kontrolltid (enhet, kompletterande): ${checkedDeviceLocalText || "—"}`);
+        lines.push(`Kontrolltid (enhet, vid öppning – kompletterande): ${checkedDeviceLocalText || "—"}`);
         lines.push(`Kontrolltid (enhet, UTC): ${checkedDeviceUtcText || "—"}`);
         lines.push("Obs: Proofy-tid kommer från serversvaret (serverTimeUnix) när den finns. Enhetstid är kompletterande och kan vara fel vid fel klocka.");
         lines.push("");
@@ -1287,6 +1296,19 @@
 
         // Print footer
         $("pf_checkedServerUtc").textContent = pUtc;
+
+        const pfUnix = $("pf_checkedServerUnix");
+        if (pfUnix){
+          pfUnix.textContent = proofyEpochForDisplay ? String(proofyEpochForDisplay) : "—";
+        }
+
+        const pfSrcRow = $("pf_timeSourceRow");
+        const pfSrc = $("pf_timeSource");
+        if (pfSrcRow && pfSrc){
+          pfSrcRow.style.display = "block";
+          pfSrc.textContent = proofyFallback ? "enhetstid (fallback)" : "serverTimeUnix (server)";
+        }
+
         const pfDevRow = $("pf_checkedDeviceRow");
         const pfDevUtc = $("pf_checkedDeviceUtc");
         const pfFallbackRow = $("pf_fallbackRow");
