@@ -1,1 +1,19 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Proofy logomark">
 
+  <defs>
+    <linearGradient id="proofyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6EA8FF"></stop>
+      <stop offset="100%" stop-color="#7CF1C6"></stop>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#proofyGradient)"></rect>
+
+  <!-- Optically centered P (final) -->
+  <!-- Extra left compensation for bowl weight -->
+  <g transform="translate(-18, 4)">
+    <path d="M232 148h92c52 0 84 28 84 72s-32 72-84 72h-48v72h-44V148zm92 108c28 0 44-14 44-36s-16-36-44-36h-48v72h48z" fill="#FFFFFF"></path>
+  </g>
+</svg>
