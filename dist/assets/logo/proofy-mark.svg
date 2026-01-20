@@ -11,8 +11,7 @@
   <!-- Background -->
   <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#proofyGradient)"></rect>
 
-  <!-- Optically centered P (final) -->
-  <!-- Extra left compensation for bowl weight -->
+  <!-- Optically centered P -->
   <g transform="translate(-18, 4)">
     <path d="M232 148h92c52 0 84 28 84 72s-32 72-84 72h-48v72h-44V148zm92 108c28 0 44-14 44-36s-16-36-44-36h-48v72h48z" fill="#FFFFFF"></path>
   </g>
