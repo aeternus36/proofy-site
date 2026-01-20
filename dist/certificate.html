@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- CERTIFICATE v2026-01-19d / SE audit+juridik / HARDTEST 5/5 / Patch: anti-misstolkning + clip-safe print footer (no new statuses, no new legal meaning) -->
+<!-- CERTIFICATE v2026-01-19e / SE audit+juridik / HARDTEST 5/5 / Patch: tydligare tidshierarki + minska förvirring (ingen ny juridisk innebörd, inga nya statusar) -->
 <html lang="sv">
   <head>
     <meta charset="utf-8" />
@@ -560,7 +560,7 @@
               <br/>
               <b>Avgränsning:</b> Uttalar sig inte om dokumentets innehåll/riktighet/äkthet och ersätter inte processkontroller.
               <br/>
-              <span style="opacity:.92">Kontrolltid baseras primärt på server-tid när den finns; enhetstid visas som tydligt markerad fallback/komplettering.</span>
+              <span style="opacity:.92">Kontrolltid avser när kontrollen utfördes (uppdateras per kontroll). Registertidpunkt (om Bekräftad) avser när bekräftelsen kan redovisas i registret (ändras inte).</span>
             </div>
 
             <!-- Längre förklaring på skärm (ej i PDF) -->
@@ -576,7 +576,7 @@
               signering eller arkivering.
               <br/>
               <span style="opacity:.92">
-                Kontrolltid baseras primärt på server-tid när den finns; enhetstid visas som kompletterande och kan vara fel vid fel klocka.
+                Kontrolltid avser när kontrollen utfördes (uppdateras per kontroll). Registertidpunkt (om Bekräftad) avser när bekräftelsen kan redovisas i registret (ändras inte).
               </span>
             </div>
           </div>
@@ -590,12 +590,10 @@
             <!-- MÅSTE: Anti-misstolkning nära status (skärmdumpsäkert) -->
             <div class="interpretBox" id="interpretBox" aria-label="Tolkning och avgränsning">
               <b>Visar endast:</b> resultatet av en teknisk kontroll av registerstatus för kontrollvärdet vid angiven kontrolltid.<br/>
-              <b>Visar inte:</b> dokumentets innehåll, riktighet, giltighet eller äkthet.<br/>
-              <b>Viktigt:</b> Ny kontroll görs varje gång intyget öppnas. Spara som PDF för en oföränderlig kopia av detta kontrolltillfälle.
+              <b>Visar inte:</b> dokumentets innehåll, riktighet, giltighet eller äkthet.
             </div>
 
             <div class="statusMeta">
-              <!-- ✅ UI-fix: undvik att antyda “server” om det är fallback -->
               <div class="label">Kontrolltid (Proofy, denna kontroll)</div>
               <div class="mono" id="checkedServerLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
               <div class="mono" id="checkedServerUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
@@ -603,13 +601,25 @@
                 Obs: <span class="mono">serverTimeUnix</span> saknades i svaret. Kontrolltiden ovan baseras på enhetstid (fallback).
               </div>
 
-              <div class="label" style="margin-top:10px">Kontrolltid (enhet, vid öppning – kompletterande)</div>
-              <div class="mono" id="checkedDeviceLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
-              <div class="mono" id="checkedDeviceUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+              <!-- ✅ Patch 19e: visa registertidpunkt nära status (minskar missförstånd) -->
+              <div id="confirmedTopBox" style="display:none; margin-top:10px;">
+                <div class="label">Registertidpunkt (endast om status är Bekräftad)</div>
+                <div class="mono" id="confirmedTopLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+                <div class="mono" id="confirmedTopUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+                <div class="small screenOnly" style="margin-top:8px">
+                  Avser när Proofy kan redovisa bekräftelse för kontrollvärdet i sitt register – inte när dokumentet upprättades, signerades eller användes.
+                </div>
+              </div>
 
-              <div class="small screenOnly" style="margin-top:8px">
-                Proofy-tid kommer från serversvaret (<span class="mono">serverTimeUnix</span>) när den finns.
-                Enhetstid visas som kompletterande och kan vara fel om enhetens klocka är fel.
+              <!-- ✅ Patch 19e: enhetstid visas endast vid behov (fallback eller stor avvikelse) -->
+              <div id="deviceTimeBlock" style="display:none; margin-top:10px;">
+                <div class="label">Kontrolltid (enhet, kompletterande)</div>
+                <div class="mono" id="checkedDeviceLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+                <div class="mono" id="checkedDeviceUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
+
+                <div class="small screenOnly" style="margin-top:8px">
+                  Visas endast när server-tid saknas (fallback) eller när enhetens klocka avviker tydligt. Enhetstid är kompletterande och kan vara fel vid fel klocka.
+                </div>
               </div>
 
               <div class="label" style="margin-top:10px">Bevisstatus vid kontrollen (registerstatus)</div>
@@ -619,7 +629,6 @@
           </div>
         </div>
 
-        <!-- 5/5-prio: en primär åtgärd. Övrigt ligger bakom "Fler åtgärder". -->
         <div class="actions" aria-label="Åtgärder">
           <button class="btn primary" id="btnPrint" type="button">Skriv ut / Spara som PDF</button>
         </div>
@@ -652,13 +661,13 @@
                 </div>
               </div>
 
-              <!-- Visas ENDAST när status är Bekräftad -->
+              <!-- Behåll även här (ärendeakt) – samma registertidpunkt som visas nära status -->
               <div class="val" id="confirmedBox" style="display:none;">
-                <div class="label">Tidpunkt (endast om status är Bekräftad)</div>
+                <div class="label">Registertidpunkt (endast om status är Bekräftad)</div>
                 <div class="mono" id="confirmedLocal" style="word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="mono" id="confirmedUtc" style="margin-top:6px;color:rgba(234,240,255,.72); word-break:normal; overflow-wrap:normal; white-space:normal;">—</div>
                 <div class="small screenOnly" style="margin-top:8px">
-                  Tidpunkten avser när Proofy kan redovisa bekräftelse för kontrollvärdet i sitt register – inte när dokumentet upprättades, signerades, godkändes eller kommunicerades.
+                  Avser när Proofy kan redovisa bekräftelse för kontrollvärdet i sitt register – inte när dokumentet upprättades eller användes.
                 </div>
               </div>
             </div>
@@ -690,7 +699,6 @@
               </div>
             </div>
 
-            <!-- Notering för ärendeakt -->
             <div class="noteBox screenOnly" aria-label="Notering för ärendeakt">
               <div class="label">Notering för ärendeakt (rekommenderad)</div>
               <div class="noteText" id="caseNoteText" role="textbox" aria-label="Noteringstext" tabindex="0">—</div>
@@ -758,8 +766,8 @@
           <div class="fine" style="border-top:0; padding-top:0; margin-top:0;">
             <b>Sammanfattning (självbärande)</b><br/>
             • Intyget redovisar status för kontrollvärdet i Proofys register vid kontrollen.<br/>
-            • Tidpunkt redovisas endast om status är <b>Bekräftad</b>.<br/>
-            • Tidpunkten avser bekräftelse av kontrollvärdet i Proofys register – inte när dokumentet upprättades eller användes.<br/>
+            • Kontrolltid avser när kontrollen utfördes (uppdateras per kontroll).<br/>
+            • Registertidpunkt redovisas endast om status är <b>Bekräftad</b> och avser bekräftelse i registret (ändras inte).<br/>
             • Intyget ersätter inte signering, arkivering, behörighetsloggar eller processkontroller.<br/>
             • Bevisvärde bedöms i sitt sammanhang (process, åtkomst, versionshantering och dokumentationskedja).<br/>
             • Utfallet kan ändras vid en senare kontroll om registerstatus uppdateras.
@@ -792,11 +800,9 @@
           </div>
         </div>
 
-        <!-- Print footer (självbärande vid PDF/utskrift) -->
         <div id="printFooter" aria-hidden="true">
           <div><b>Verifieringsintyg – Proofy</b></div>
 
-          <!-- MÅSTE: klippsäker tolkningsrad i varje PDF-sida -->
           <div style="margin-top:4px;">
             <span class="mono">
               Granskning: Kontrollvärde + Kontrolltid + Status (och ev. Kontroll-ID) ska framgå. Om någon uppgift saknas är detta ett utdrag.
@@ -812,14 +818,6 @@
           <div>
             Kontrolltid (Proofy, UTC): <span class="mono" id="pf_checkedServerUtc">—</span>
           </div>
-          <div>
-            Kontrolltid (Proofy, Unix): <span class="mono" id="pf_checkedServerUnix">—</span>
-          </div>
-
-          <div id="pf_timeSourceRow" style="display:none;">
-            <span class="mono">Tidkälla: <span class="mono" id="pf_timeSource">—</span></span>
-          </div>
-
           <div id="pf_checkedDeviceRow" style="display:none;">
             Kontrolltid (enhet, UTC): <span class="mono" id="pf_checkedDeviceUtc">—</span>
           </div>
@@ -830,7 +828,7 @@
             Status vid kontrollen: <span class="mono" id="pf_status">—</span>
           </div>
           <div id="pf_confirmedRow" style="display:none;">
-            Tidpunkt (UTC, endast om Bekräftad): <span class="mono" id="pf_confirmedUtc">—</span>
+            Registertidpunkt (UTC, endast om Bekräftad): <span class="mono" id="pf_confirmedUtc">—</span>
           </div>
           <div style="margin-top:4px;">
             Verifieringslänk: <span class="mono" id="pf_verify">—</span>
@@ -847,7 +845,7 @@
 
     <script>
       /* Intern versionsrad (visas inte för mottagare) */
-      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-19d (anti-misstolkning + clip-safe print footer, no status changes)";
+      const CERT_INTERNAL_VERSION = "certificate.html v2026-01-19e (tidshierarki + mindre förvirring, ingen ny juridisk innebörd)";
 
       const ISSUER_LEGAL_NAME = "Proofy AB";   // ändra vid behov
       const ISSUER_ORGNR = "";                 // valfritt: t.ex. "org.nr 556XXXX-XXXX"
@@ -1122,13 +1120,12 @@
         if (controlId && controlId !== "—") lines.push(`Kontroll-ID (detta kontrolltillfälle): ${controlId}`);
         lines.push("");
 
-        // 5/5: två tider (Proofy först)
         lines.push(`Kontrolltid (Proofy): ${checkedServerLocalText || "—"}`);
         lines.push(`Kontrolltid (Proofy, UTC): ${checkedServerUtcText || "—"}`);
         if (serverTimeWasFallback){
           lines.push("Obs: serverTimeUnix saknades i svaret. Kontrolltiden ovan baseras på enhetstid (fallback).");
         }
-        lines.push(`Kontrolltid (enhet, vid öppning – kompletterande): ${checkedDeviceLocalText || "—"}`);
+        lines.push(`Kontrolltid (enhet, kompletterande): ${checkedDeviceLocalText || "—"}`);
         lines.push(`Kontrolltid (enhet, UTC): ${checkedDeviceUtcText || "—"}`);
         lines.push("Obs: Proofy-tid kommer från serversvaret (serverTimeUnix) när den finns. Enhetstid är kompletterande och kan vara fel vid fel klocka.");
         lines.push("");
@@ -1143,9 +1140,9 @@
 
         if (statusText === "Bekräftad" && confirmedLocalText && confirmedLocalText !== "—"){
           lines.push("");
-          lines.push(`Tidpunkt (endast om Bekräftad): ${confirmedLocalText}`);
-          if (confirmedUtcText && confirmedUtcText !== "—") lines.push(`Tidpunkt (UTC): ${confirmedUtcText}`);
-          lines.push("Obs: Tidpunkten avser när Proofy kan redovisa bekräftelse för kontrollvärdet – inte när dokumentet upprättades eller användes.");
+          lines.push(`Registertidpunkt (endast om Bekräftad): ${confirmedLocalText}`);
+          if (confirmedUtcText && confirmedUtcText !== "—") lines.push(`Registertidpunkt (UTC): ${confirmedUtcText}`);
+          lines.push("Obs: Registertidpunkt avser när Proofy kan redovisa bekräftelse för kontrollvärdet – inte när dokumentet upprättades eller användes.");
         }
 
         lines.push("");
@@ -1203,7 +1200,6 @@
         }
       }
 
-      // HARDTEST: timeout + retry
       function isRetryableStatus(status){
         return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
       }
@@ -1264,11 +1260,18 @@
         if (copyVerify) copyVerify.disabled = !enabled;
       }
 
-      // ✅ UI-fix: visar tydligt när Proofy-tid är fallback (enhetstid)
+      // ✅ Patch 19e: enhetstid visas bara vid fallback eller tydlig avvikelse
+      function shouldShowDeviceTime({ proofyEpoch, deviceEpoch, proofyFallback }){
+        if (proofyFallback) return true;
+        const p = Number(proofyEpoch);
+        const d = Number(deviceEpoch);
+        if (!Number.isFinite(p) || !Number.isFinite(d) || p <= 0 || d <= 0) return false;
+        return Math.abs(p - d) > 90; // 90s tröskel (kan justeras)
+      }
+
       function setTimeUI({ proofyEpoch, deviceEpoch, proofyFallback }){
         const sourceLine = $("serverTimeSourceLine");
 
-        // Proofy (primärt serverTimeUnix, annars fallback till device)
         const proofyEpochForDisplay = proofyEpoch ? proofyEpoch : (deviceEpoch || null);
 
         const pLocal = proofyEpochForDisplay ? fmtSeHtml(proofyEpochForDisplay) : "—";
@@ -1288,27 +1291,18 @@
           sourceLine.style.display = proofyFallback ? "block" : "none";
         }
 
-        // Device (always)
         const dLocal = deviceEpoch ? fmtSeHtml(deviceEpoch) : "—";
         const dUtc = deviceEpoch ? fmtUtc(deviceEpoch) : "—";
-        $("checkedDeviceLocal").innerHTML = dLocal;
-        $("checkedDeviceUtc").textContent = dUtc;
 
-        // Print footer
+        const showDevice = shouldShowDeviceTime({ proofyEpoch: proofyEpochForDisplay, deviceEpoch, proofyFallback });
+        const devBlock = $("deviceTimeBlock");
+        if (devBlock) devBlock.style.display = showDevice ? "block" : "none";
+
+        if ($("checkedDeviceLocal")) $("checkedDeviceLocal").innerHTML = dLocal;
+        if ($("checkedDeviceUtc")) $("checkedDeviceUtc").textContent = dUtc;
+
+        // Print footer (oförändrat beteende: visa enhetstid endast vid fallback)
         $("pf_checkedServerUtc").textContent = pUtc;
-
-        const pfUnix = $("pf_checkedServerUnix");
-        if (pfUnix){
-          pfUnix.textContent = proofyEpochForDisplay ? String(proofyEpochForDisplay) : "—";
-        }
-
-        const pfSrcRow = $("pf_timeSourceRow");
-        const pfSrc = $("pf_timeSource");
-        if (pfSrcRow && pfSrc){
-          pfSrcRow.style.display = "block";
-          pfSrc.textContent = proofyFallback ? "enhetstid (fallback)" : "serverTimeUnix (server)";
-        }
-
         const pfDevRow = $("pf_checkedDeviceRow");
         const pfDevUtc = $("pf_checkedDeviceUtc");
         const pfFallbackRow = $("pf_fallbackRow");
@@ -1320,7 +1314,6 @@
           if (pfDevRow) pfDevRow.style.display = "block";
         } else {
           if (pfFallbackRow) pfFallbackRow.style.display = "none";
-          // Visa enhetstid i print endast om vi faller back (kompakt PDF)
           if (pfDevRow) pfDevRow.style.display = "none";
         }
 
@@ -1345,31 +1338,24 @@
         const debug = (url.searchParams.get("debug") || "").trim() === "1";
 
         const verifieringsId = (url.searchParams.get("hash") || "").trim();
-
-        // ✅ Micro-fix 2: tydliggör att detta faktiskt är tx
         const tx = (url.searchParams.get("tx") || "").trim();
-
         const certId = (url.searchParams.get("cert") || "").trim();
 
-        // Enhetstid tas direkt (kompletterande + fallback)
         const deviceEpoch = nowSeconds();
 
-        // Länkens checked (om någon skickat intygslänk vidare).
         const checkedParam = (url.searchParams.get("checked") || "").trim();
         const checkedCandidate = Number(checkedParam);
         const hasLinkChecked = Number.isFinite(checkedCandidate) && checkedCandidate > 0;
 
-        // Init: visa tider med fallback (Proofy okänd tills /api/verify svarar)
-        let proofyEpoch = null;          // serverTimeUnix (om finns)
-        let proofyWasFallback = true;    // tills vi fått serverTimeUnix
+        let proofyEpoch = null;
+        let proofyWasFallback = true;
 
-        const timesInit = setTimeUI({
+        setTimeUI({
           proofyEpoch: null,
           deviceEpoch,
           proofyFallback: true
         });
 
-        // Länkar byggs när vi vet vilken kontrolltid som gäller (Proofy primärt).
         let certLink = "—";
         let verifyLink = "—";
 
@@ -1388,16 +1374,13 @@
 
           $("btnOpenVerify").href = verifyLink;
 
-          // Print footer values
           $("pf_id").textContent = verifieringsId || "—";
           $("pf_verify").textContent = verifyLink;
           $("pf_cert").textContent = certLink;
 
-          // QR
           renderQR(verifyLink);
         };
 
-        // Reset print-only status rows each run
         $("pf_status").textContent = "—";
         const pfConfirmedRow = $("pf_confirmedRow");
         if (pfConfirmedRow) pfConfirmedRow.style.display = "none";
@@ -1426,9 +1409,14 @@
         }
 
         const confirmedBox = $("confirmedBox");
+        const confirmedTopBox = $("confirmedTopBox");
         if (confirmedBox) confirmedBox.style.display = "none";
+        if (confirmedTopBox) confirmedTopBox.style.display = "none";
+
         $("confirmedLocal").textContent = "—";
         $("confirmedUtc").textContent = "—";
+        if ($("confirmedTopLocal")) $("confirmedTopLocal").textContent = "—";
+        if ($("confirmedTopUtc")) $("confirmedTopUtc").textContent = "—";
 
         $("resultText").textContent = "—";
         $("legalLine").textContent = "—";
@@ -1487,8 +1475,6 @@
         $("pf_controlIdRow").style.display = "block";
 
         if (!isValidVerifieringsId(verifieringsId)){
-          // Ingen backend-call => ingen serverTimeUnix.
-          // Bygg länkar med enhetstid som fallback.
           setLinks(deviceEpoch);
 
           const statusText = "Kunde inte kontrolleras";
@@ -1543,7 +1529,6 @@
 
         const verifyRes = await fetchVerify(verifieringsId, tx || "");
 
-        // Sätt Proofy-tid från serverTimeUnix om den finns (även om ok:false kan JSON innehålla den)
         const vMaybe = verifyRes?.data || {};
         const apiServerTime = Number(vMaybe?.serverTimeUnix);
 
@@ -1570,7 +1555,6 @@
           proofyFallback: proofyWasFallback
         });
 
-        // Länkar/QR byggs på Proofy-tid (eller fallback)
         const checkedEpochForLinks = (proofyEpoch || deviceEpoch);
         setLinks(checkedEpochForLinks);
 
@@ -1688,11 +1672,19 @@
 
         if (statusText === "Bekräftad" && Number.isFinite(confirmedAtUnix) && confirmedAtUnix > 0){
           if (confirmedBox) confirmedBox.style.display = "block";
-          $("confirmedLocal").innerHTML = fmtSeHtml(confirmedAtUnix);
-          $("confirmedUtc").textContent = fmtUtc(confirmedAtUnix);
+          if (confirmedTopBox) confirmedTopBox.style.display = "block";
+
+          const localHtml = fmtSeHtml(confirmedAtUnix);
+          const utcTxt = fmtUtc(confirmedAtUnix);
+
+          $("confirmedLocal").innerHTML = localHtml;
+          $("confirmedUtc").textContent = utcTxt;
+
+          if ($("confirmedTopLocal")) $("confirmedTopLocal").innerHTML = localHtml;
+          if ($("confirmedTopUtc")) $("confirmedTopUtc").textContent = utcTxt;
 
           confirmedLocalPlain = fmtSePlain(confirmedAtUnix);
-          confirmedUtcPlain = fmtUtc(confirmedAtUnix);
+          confirmedUtcPlain = utcTxt;
 
           if (pfConfirmedRow){
             $("pf_confirmedUtc").textContent = confirmedUtcPlain;
@@ -1700,6 +1692,7 @@
           }
         } else {
           if (confirmedBox) confirmedBox.style.display = "none";
+          if (confirmedTopBox) confirmedTopBox.style.display = "none";
           if (pfConfirmedRow) pfConfirmedRow.style.display = "none";
         }
 
@@ -1728,7 +1721,7 @@
         if (statusArea) statusArea.setAttribute("aria-busy","false");
 
         if (statusText === "Inskickad – ej bekräftad"){
-          showWarn("Notera: Tidpunkt kan inte redovisas innan status är Bekräftad.");
+          showWarn("Notera: Registertidpunkt kan inte redovisas innan status är Bekräftad.");
           return;
         }
         if (statusText === "Ej bekräftad"){
@@ -1742,7 +1735,6 @@
         }
       }
 
-      // Overlay-safe (robust): reserverar bottenutrymme för fixed widgets/FAB
       (function overlaySafe(){
         const root = document.documentElement;
 
