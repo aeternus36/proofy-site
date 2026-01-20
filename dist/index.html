@@ -4,20 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proofy – Verifiera filversioner för redovisningsbyråer</title>
-  <meta name="description" content="Proofy hjälper redovisningsbyråer att visa att ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
+  <meta name="description" content="Proofy hjälper redovisningsbyråer att visa om en fil matchar en fastställd referens vid kontroll – utan att lagra filinnehåll." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/" />
   <meta name="theme-color" content="#0b1220" />
 
+  <!-- 5/5 hardtest: integritet/säkerhetsmeta (lågrisk). CSP bör sättas via HTTP-header. -->
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()" />
+
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Proofy" />
   <meta property="og:title" content="Proofy – Verifiera filversioner för redovisningsbyråer" />
-  <meta property="og:description" content="Verifiera om ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
+  <meta property="og:description" content="Verifiera om en fil matchar en fastställd referens vid kontroll – utan att lagra filinnehåll." />
   <meta property="og:url" content="https://proofy.se/" />
 
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Proofy – Verifiera filversioner för redovisningsbyråer" />
-  <meta name="twitter:description" content="Verifiera om ett underlag är oförändrat jämfört med en fastställd referens – utan att lagra filinnehåll." />
+  <meta name="twitter:description" content="Verifiera om en fil matchar en fastställd referens vid kontroll – utan att lagra filinnehåll." />
 
   <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-10a" />
   <link rel="stylesheet" href="/assets/header.css?v=2026-01-10a" />
@@ -132,13 +136,22 @@
     }
   </style>
 
+  <!-- 5/5: korrekt entity-typ (inte “juridik”-tjänst). -->
   <script type="application/ld+json">
   {
     "@context":"https://schema.org",
-    "@type":"Organization",
+    "@type":"SoftwareApplication",
     "name":"Proofy",
+    "applicationCategory":"BusinessApplication",
+    "operatingSystem":"Web",
     "url":"https://proofy.se/",
-    "email":"kontakt@proofy.se"
+    "description":"Teknisk verifiering av filversioner mot fastställd referens (kontrollvärde) utan att lagra filinnehåll.",
+    "publisher":{
+      "@type":"Organization",
+      "name":"Proofy",
+      "email":"kontakt@proofy.se",
+      "url":"https://proofy.se/"
+    }
   }
   </script>
 </head>
@@ -186,19 +199,20 @@
   <div class="wrap">
     <div class="badge">För redovisningsbyråer · revision · granskning</div>
 
-    <h1 class="pageTitle">Visa att underlag är oförändrat – när det faktiskt prövas i efterhand.</h1>
+    <h1 class="pageTitle">Verifiera filversioner mot fastställd referens – när kontrollen faktiskt görs.</h1>
 
     <p class="lead">
-      När ett bokslut, avtal eller beslut ifrågasätts senare behöver ni kunna visa att filen ni hänvisar till är
-      <strong>samma filversion som referensen</strong> – även om den flyttats mellan system, personer och lagringsplatser.
-      Proofy gör det möjligt <strong>utan att lagra filinnehåll</strong>.
+      När ett bokslut, avtal eller beslut granskas i efterhand behöver ni kunna visa om filen ni kontrollerar
+      <strong>matchar samma filversion som en tidigare fastställd referens</strong> – även om den flyttats mellan system, personer och lagringsplatser.
+      Proofy möjliggör detta <strong>utan att lagra filinnehåll</strong>.
     </p>
 
     <!-- EN (1) auktoritativ avgränsning. Inga dubletter på resten av sidan. -->
     <p class="small" style="margin-top:10px; max-width:92ch;">
-      <b>Avgränsning (viktig):</b> Proofy är ett <b>tekniskt verifieringsunderlag</b> för filversioner (tekniskt fingeravtryck).
-      Tjänsten visar endast om en fil <b>matchar en fastställd referens</b> vid kontroll.
-      Proofy ersätter inte professionellt omdöme, internkontroll, revision, arkivering, e-signering eller juridisk bedömning.
+      <b>Avgränsning (viktig):</b> Proofy är ett <b>tekniskt verifieringsunderlag</b> för filversioner (kontrollvärde/fingeravtryck).
+      Tjänsten visar endast om en fil <b>matchar en fastställd referens vid kontrolltillfället</b>.
+      Proofy avgör inte dokumentets innehåll, riktighet, äkthet, giltighet eller signering och ersätter inte
+      professionellt omdöme, internkontroll, revision, arkivering, e-signering eller juridisk bedömning.
     </p>
 
     <div class="card heroCard">
@@ -266,16 +280,21 @@
         <div class="noteBox" id="proofyNoteBox">
 <pre id="proofyNoteText">PROOFY – Verifieringsnotering (ärende)
 Verifierings-ID: [ange]
-Referens: Fastställd filversion registrerad hos Proofy.
+Referens: Fastställd filversion (kontrollvärde) registrerad hos Proofy.
 Kontroll: Underlaget verifieras vid behov (t.ex. intern kvalitetskontroll/efterhandsgranskning).
-Resultat: [match/ingen match]  Datum/tid: [ange]
-Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bedömning av innehållets saklighet/riktighet.</pre>
+
+Kontrolltid (Proofy, när kontroll görs): [ange]
+Kontrolltid (UTC): [ange]
+Obs: Kontrolltid är tidpunkten för kontrolltillfället (ej extern tidsstämpling). Bevisvärde bedöms i sitt sammanhang.
+
+Resultat vid kontrolltillfället: [matchar / matchar inte / kunde inte kontrolleras]
+Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bedömning av innehållets saklighet/riktighet/äkthet.</pre>
           <div class="noteActions">
             <button class="btn soft" type="button" id="copyNoteBtn">Kopiera notering</button>
             <a class="btn ghost" href="/register.html">Skapa Verifierings-ID</a>
             <a class="btn ghost" href="/verify.html">Verifiera underlag</a>
           </div>
-          <span class="small" id="copyNoteStatus" style="display:none; margin-top:8px;" aria-live="polite"></span>
+          <span class="small" id="copyNoteStatus" style="display:none; margin-top:8px;" aria-live="polite" role="status"></span>
         </div>
       </div>
     </section>
@@ -285,13 +304,14 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
       <div class="card content">
         <p>
           Proofy är byggt för byråers vardag: många ärenden, många versioner och hög kostnad när ett underlag ifrågasätts i efterhand.
-          Ni får ett <strong>Verifierings-ID</strong> att spara i ärendet, som gör det enkelt att visa om filen ni kontrollerar är samma filversion som den registrerade referensen.
+          Ni får ett <strong>Verifierings-ID</strong> att spara i ärendet, som gör det enkelt att visa om filen ni kontrollerar
+          <strong>matchar samma filversion som den registrerade referensen</strong> vid kontroll.
         </p>
 
         <div class="grid3" style="margin-top:14px;">
           <div class="tile">
             <b>Varför det behövs</b>
-            <span class="small">Filer flyttas, byter namn och skickas mellan system. Proofy ger ett tekniskt sätt att visa om en fil är oförändrad jämfört med en fastställd referens.</span>
+            <span class="small">Filer flyttas, byter namn och skickas mellan system. Proofy ger ett tekniskt sätt att visa om en fil matchar en fastställd referens vid kontroll.</span>
           </div>
           <div class="tile">
             <b>Vad ni får</b>
@@ -311,7 +331,8 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           </p>
 
           <p>
-            2) Om underlaget behöver styrkas senare verifierar ni filen på några sekunder och ser om den är <strong>oförändrad</strong> jämfört med referensen.
+            2) Om underlaget behöver styrkas senare verifierar ni filen på några sekunder och ser om den
+            <strong>matchar referensen vid kontrolltillfället</strong>.
           </p>
         </div>
 
@@ -320,11 +341,11 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           <div class="grid3" style="margin-top:12px;">
             <div class="tile">
               <b>Bokslut &amp; rapporter</b>
-              <span class="small">Visa att den filversion som låg till grund för beslut/rapportering inte har ändrats i efterhand.</span>
+              <span class="small">Visa om den filversion som låg till grund för beslut/rapportering matchar referensen vid kontroll i efterhand.</span>
             </div>
             <div class="tile">
               <b>Beslut &amp; avtal</b>
-              <span class="small">Styrk att dokumentet i ärendet är samma filversion som vid fastställande, även efter systembyten eller överlämningar.</span>
+              <span class="small">Visa om dokumentet i ärendet matchar samma filversion som vid fastställande, även efter systembyten eller överlämningar.</span>
             </div>
             <div class="tile">
               <b>Kvalitetskontroll</b>
@@ -333,7 +354,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           </div>
 
           <p class="small" style="margin-top:12px; margin-bottom:0;">
-            Passar när ni behöver ett objektivt sätt att visa att ett underlag (en fil) inte ändrats efter ett visst datum.
+            Passar när ni behöver ett objektivt sätt att visa om ett underlag (en fil) matchar en fastställd referens vid kontroll i efterhand.
           </p>
         </div>
       </div>
@@ -403,7 +424,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
           <div class="formActions">
             <button class="btn primary" id="demoSubmitBtn" type="submit">Skicka förfrågan</button>
             <a class="btn" href="/pilot.html">Se pilotupplägg</a>
-            <span id="demoStatus" class="pill" style="margin-left:12px;" aria-live="polite"></span>
+            <span id="demoStatus" class="pill" style="margin-left:12px;" aria-live="polite" role="status"></span>
           </div>
 
           <div class="fineprint">
@@ -443,6 +464,51 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
   const copyBtn = document.getElementById("copyNoteBtn");
   const noteText = document.getElementById("proofyNoteText");
   const copyStatus = document.getElementById("copyNoteStatus");
+
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  function isRetryableStatus(status){
+    return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
+  }
+
+  async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 20000){
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+
+    try{
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        cache: "no-store",
+        credentials: "same-origin"
+      });
+      const data = await res.json().catch(() => ({}));
+      const dateHeader = res?.headers?.get ? (res.headers.get("Date") || "") : "";
+      return { ok: res.ok, status: res.status, data, aborted:false, dateHeader };
+    } catch (e){
+      const aborted = (e && e.name === "AbortError");
+      return { ok:false, status: 0, data:{}, aborted, dateHeader:"" };
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async function fetchWithRetry(url, options, timeoutMs, attempts = 3){
+    const baseDelay = 550;
+    for (let i=0; i<attempts; i++){
+      const res = await fetchJsonWithTimeout(url, options, timeoutMs);
+      if (res.ok) return res;
+
+      const retryable = res.aborted || isRetryableStatus(res.status);
+      if (i < attempts - 1 && retryable){
+        const jitter = Math.floor(Math.random() * 180);
+        await sleep(baseDelay * (i + 1) + jitter);
+        continue;
+      }
+      return res;
+    }
+    return { ok:false, status:0, data:{}, aborted:false, dateHeader:"" };
+  }
 
   async function copyToClipboard(text){
     try{
@@ -547,18 +613,16 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
   async function initAntiSpamToken(){
     const t = document.getElementById("proofy_token");
     const ts = document.getElementById("proofy_ts");
-    try {
-      const res = await fetch("/api/form-token", { credentials: "same-origin", cache: "no-store" });
-      const data = await res.json();
-      if (data && data.ok === true && data.token) {
-        if (t) t.value = data.token;
-        if (ts) ts.value = String(Date.now());
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
+
+    const res = await fetchWithRetry("/api/form-token", { method:"GET" }, 15000, 3);
+    const data = res.data || {};
+
+    if (res.ok && data && data.ok === true && data.token) {
+      if (t) t.value = data.token;
+      if (ts) ts.value = String(Date.now());
+      return true;
     }
+    return false;
   }
 
   initAntiSpamToken().then(ok => {
@@ -600,22 +664,29 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
       const body = new URLSearchParams();
       for (const [k, v] of fd.entries()) body.append(k, String(v));
 
-      const res = await fetch(form.action, {
+      const send = await fetchWithRetry(form.action, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString(),
-        credentials: "same-origin"
-      });
+        body: body.toString()
+      }, 20000, 2);
 
-      const data = await res.json().catch(() => ({}));
+      const data = send.data || {};
+      const httpStatus = send.status || 0;
 
-      if (!res.ok || data.ok !== true || data.sent !== true){
+      if (!send.ok || data.ok !== true || data.sent !== true){
         if (data.ignored === true){
           setStatus("Förfrågan kunde inte skickas. Ladda om sidan och försök igen, eller mejla kontakt@proofy.se.", "err");
           disableForm(false);
           return;
         }
-        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se.`;
+
+        if (send.aborted){
+          setStatus("Timeout: kunde inte skicka just nu. Försök igen eller mejla kontakt@proofy.se.", "err");
+          disableForm(false);
+          return;
+        }
+
+        const msg = data.error || `Kunde inte skickas (HTTP ${httpStatus || "?"}). Försök igen eller mejla kontakt@proofy.se.`;
         setStatus(msg, "err");
         disableForm(false);
         return;
