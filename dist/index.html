@@ -241,6 +241,30 @@
       color: rgba(234,240,255,.88);
       font-weight: 900;
     }
+
+    /* =========================
+       FOOTER (logo + disclaimer som verify)
+    ========================= */
+    .footBrand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom: 6px;
+    }
+    .footLogo{
+      width: 22px;
+      height: 22px;
+      display:inline-block;
+      flex: 0 0 auto;
+      border-radius: 8px;
+    }
+    .footDisclaimer{
+      margin-top: 10px;
+      max-width: 92ch;
+      color: rgba(234,240,255,.72);
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
   </style>
 
   <!-- 5/5: korrekt entity-typ (inte “juridik”-tjänst). -->
@@ -526,7 +550,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
             ></textarea>
             <div class="help" id="messageHelp">
               <b>Alternativ:</b> mejla kontakt@proofy.se. (Skriv gärna 2–3 rader om ert scenario.)
-            </div>
+            ></div>
           </div>
 
           <!-- UI-FIX: bättre layout kring knappar + meta + status -->
@@ -562,9 +586,19 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
   <div class="wrap">
     <div class="foot">
       <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        <div class="footBrand">
+          <img class="footLogo" src="/assets/logo/proofy-mark.svg" width="22" height="22" alt="" aria-hidden="true" decoding="async" />
+          <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        </div>
+
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
+
+        <!-- Disclaimern som på verify-sidan -->
+        <div class="footDisclaimer">
+          Proofy tillhandahåller teknisk kontroll av filversioner. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets giltighet.
+        </div>
       </div>
+
       <div class="links">
         <a href="/security.html">Säkerhet</a>
         <a href="/privacy.html">Integritet</a>
