@@ -155,13 +155,28 @@
   <div class="wrap">
     <div class="foot">
       <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        <!-- Logga + Proofy (som på verify) -->
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+          <img
+            src="/assets/logo/proofy-mark.svg"
+            width="22"
+            height="22"
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            style="width:22px; height:22px; display:inline-block; flex:0 0 auto; border-radius:8px;"
+          />
+          <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        </div>
+
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer.
-          Tjänsten utgör inte juridisk rådgivning och avgör inte filens rättsliga giltighet.
+
+        <!-- Disclaimer (som på verify) -->
+        <div style="margin-top:10px; max-width:92ch; color: rgba(234,240,255,.72); font-size:12.5px; line-height:1.5;">
+          Proofy tillhandahåller teknisk kontroll av filversioner. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets giltighet.
         </div>
       </div>
+
       <div class="links">
         <a href="/security.html">Säkerhet</a>
         <a href="/privacy.html">Integritet</a>
@@ -172,6 +187,7 @@
     </div>
   </div>
 </footer>
+
 
 <script src="/assets/header-toggle.js?v=2026-01-05" defer></script>
 <script src="/chat-widget.js?v=2026-01-05" defer></script>
