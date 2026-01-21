@@ -155,6 +155,92 @@
       flex-wrap:wrap;
       align-items:center;
     }
+
+    /* =========================
+       KONTAKT / CTA (UI 5/5)
+       - bättre rytm runt knapparna
+       - status-pill ska inte skapa “skev” radbrytning
+       - mobil: fullbredds-knappar, status på egen rad
+    ========================= */
+    #kontakt .help{
+      margin-top: 8px;
+      color: rgba(234,240,255,.78);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    #kontakt .formActions{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top: 14px;
+    }
+
+    #kontakt .ctaGroup{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    #kontakt .ctaMeta{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width: 240px;
+      flex: 1 1 320px;
+      color: rgba(234,240,255,.82);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    #kontakt .ctaMeta b{
+      color: rgba(234,240,255,.92);
+      font-weight: 900;
+    }
+
+    #kontakt #demoStatus{
+      margin-left: 0 !important;
+      display:none; /* visas via JS när det finns text */
+      align-self:flex-start;
+    }
+
+    /* Mobil: knappar och status blir lättlästa och jämna */
+    @media (max-width: 720px){
+      #kontakt .formActions{
+        flex-direction: column;
+        align-items: stretch;
+      }
+      #kontakt .ctaGroup{
+        width: 100%;
+      }
+      #kontakt .ctaGroup .btn{
+        width: 100%;
+        justify-content: center;
+      }
+      #kontakt #demoStatus{
+        width: 100%;
+      }
+      #kontakt .ctaMeta{
+        min-width: 0;
+      }
+    }
+
+    /* Små förbättringar för juridik/revision: fintext blir tydlig, inte “vägg” */
+    #kontakt .fineprint{
+      margin-top: 12px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      padding-top: 12px;
+      color: rgba(234,240,255,.74);
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+    #kontakt .fineprint b{
+      color: rgba(234,240,255,.88);
+      font-weight: 900;
+    }
   </style>
 
   <!-- 5/5: korrekt entity-typ (inte “juridik”-tjänst). -->
@@ -386,7 +472,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
       <h2>Kontakta oss</h2>
       <div class="card content">
         <p class="lead" style="font-size:16px; margin:0 0 10px;">
-          Be om en kort demo (10–15 min) eller starta en pilot. Ni får svar inom 1 arbetsdag.
+          Be om en kort demo (10–15 min) eller starta en pilot. Ni får svar normalt inom 1 arbetsdag.
         </p>
 
         <form class="form" id="demoForm" action="/api/contact" method="POST" novalidate>
@@ -439,20 +525,30 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
               placeholder="Exempel: bokslutsunderlag, beslut, avtal eller kundunderlag som kan ifrågasättas senare. Skriv gärna ett kort scenario (när, varför och vem som brukar fråga)."
             ></textarea>
             <div class="help" id="messageHelp">
-              Vi återkommer normalt inom 1 arbetsdag. Du kan också mejla <b>kontakt@proofy.se</b>.
+              <b>Alternativ:</b> mejla kontakt@proofy.se. (Skriv gärna 2–3 rader om ert scenario.)
             </div>
           </div>
 
+          <!-- UI-FIX: bättre layout kring knappar + meta + status -->
           <div class="formActions">
-            <button class="btn primary" id="demoSubmitBtn" type="submit">Skicka förfrågan</button>
-            <a class="btn" href="/pilot.html">Se pilotupplägg</a>
-            <span id="demoStatus" class="pill" style="margin-left:12px;" aria-live="polite" role="status"></span>
+            <div class="ctaGroup" aria-label="Åtgärder">
+              <button class="btn primary" id="demoSubmitBtn" type="submit">Skicka förfrågan</button>
+              <a class="btn soft" href="/pilot.html">Se pilotupplägg</a>
+            </div>
+
+            <div class="ctaMeta">
+              <div><b>Svarstid:</b> normalt inom 1 arbetsdag.</div>
+              <div><b>Tips:</b> undvik personnummer eller andra känsliga personuppgifter i fritext.</div>
+            </div>
+
+            <span id="demoStatus" class="pill" aria-live="polite" role="status"></span>
           </div>
 
+          <!-- Juridik + dataminimering: tydligt men inte “överförklarat” -->
           <div class="fineprint">
-            Genom att skicka formuläret behandlar vi dina kontaktuppgifter för att hantera din förfrågan (demo/pilot).
-            Vi sparar uppgifterna endast så länge det behövs för uppföljning och dokumentation. Läs mer i <a href="/privacy.html">Integritetspolicyn</a>.
-            Inga dokument bifogas via formuläret.
+            <b>Dataminimering:</b> Formuläret tar emot kontaktuppgifter och er beskrivning för att hantera förfrågan (demo/pilot).
+            <b>Inga dokument eller filer</b> bifogas eller överförs via formuläret.
+            Uppgifter hanteras enligt <a href="/privacy.html">Integritetspolicyn</a> och sparas endast så länge det behövs för återkoppling och dokumentation.
           </div>
         </form>
 
