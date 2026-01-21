@@ -2,24 +2,29 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <!-- Favicons (Proofy) -->
-<link rel="icon" href="/assets/logo/favicon/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/favicon/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/logo/favicon/favicon-16x16.png">
-<link rel="apple-touch-icon" href="/assets/logo/favicon/apple-touch-icon.png">
-<link rel="manifest" href="/assets/logo/favicon/site.webmanifest">
-<meta name="theme-color" content="#0b1220">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pilot (30 dagar) – Proofy</title>
   <meta name="description" content="Starta en 30-dagars pilot med Proofy. Fast pris, faktura och support. Testa dokumentverifiering i verkliga ärenden – utan att lagra filinnehåll." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/pilot.html" />
+
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- ✅ Synka version med register/verify så layouten inte “byter” stil -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
+  <!-- Hardtest (lågrisk). CSP bör sättas via HTTP-header. -->
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()" />
+
+  <!-- Favicons (Proofy) -->
+  <link rel="icon" href="/assets/logo/favicon/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/favicon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/logo/favicon/favicon-16x16.png" />
+  <link rel="apple-touch-icon" href="/assets/logo/favicon/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/logo/favicon/site.webmanifest" />
+
+  <!-- ✅ Synka version med index/register/verify så layouten inte “byter” stil -->
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-10a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-10a" />
 
   <style>
     /* Dölj status-pill tills vi faktiskt har något att säga (skickar/fel/skickat) */
@@ -71,6 +76,97 @@
       font-size: 12.5px;
       line-height: 1.35;
       color: rgba(234,240,255,.76);
+    }
+
+    /* =========================
+       ✅ NYTT: Stabil CTA-sektion för “Begär pilot”
+       - snyggt, revisionsvänligt
+       - inga “flytande” texter runt knappen
+       - status i egen rad (layout-robust)
+    ========================= */
+
+    .pilotActions{
+      margin-top: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.02);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    .pilotActionsTop{
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap: 12px;
+      flex-wrap:wrap;
+    }
+
+    .pilotActionsTop .btn.primary{
+      min-height: 44px;
+      padding-left: 16px;
+      padding-right: 16px;
+      border-radius: 14px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .pilotActionsHelp{
+      color: rgba(234,240,255,.78);
+      font-size: 13.5px;
+      line-height: 1.35;
+      flex: 1 1 320px;
+      min-width: 240px;
+    }
+
+    .pilotActionsStatus{
+      margin-top: 10px;
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Status-pill får aldrig “hänga” med margin-left inline */
+    #pilotStatus{
+      margin-left: 0 !important;
+    }
+
+    .pilotInfoBox{
+      margin-top: 12px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      padding-top: 10px;
+      display:grid;
+      gap: 8px;
+    }
+
+    .pilotInfoLine{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: baseline;
+      color: rgba(234,240,255,.78);
+      font-size: 13.5px;
+      line-height: 1.35;
+    }
+    .pilotInfoLine b{
+      color: rgba(234,240,255,.90);
+    }
+
+    @media (max-width: 700px){
+      .pilotActionsTop{
+        align-items: stretch;
+      }
+      .pilotActionsTop .btn.primary{
+        width: 100%;
+      }
+      .pilotActionsHelp{
+        min-width: 0;
+      }
+    }
+
+    @media print{
+      /* Print/PDF: håll piloten ren från chat/fixed och onödiga status-rader */
+      #pilotStatus{ display:none !important; }
     }
   </style>
 </head>
@@ -298,21 +394,28 @@
           <div class="fieldHint">Tips: skriv gärna 1–2 exempelärenden – det räcker.</div>
         </div>
 
-        <div class="formActions">
-          <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
-          <span class="small">Vi återkommer normalt inom 1–2 arbetsdagar.</span>
-          <span id="pilotStatus" class="pill" style="margin-left:12px;" aria-live="polite" aria-atomic="true" role="status"></span>
+        <!-- ✅ NYTT: Stabil actions-box (fixar “runt knappen”) -->
+        <div class="pilotActions" aria-label="Skicka pilotförfrågan">
+          <div class="pilotActionsTop">
+            <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
+            <div class="pilotActionsHelp">
+              Vi återkommer normalt inom <b>1–2 arbetsdagar</b>.
+            </div>
+          </div>
+
+          <div class="pilotActionsStatus">
+            <span id="pilotStatus" class="pill" aria-live="polite" aria-atomic="true" role="status"></span>
+          </div>
+
+          <div class="pilotInfoBox" aria-label="Vad som skickas">
+            <div class="pilotInfoLine"><b>Det här skickas:</b> kontaktuppgifter och ev. beskrivning.</div>
+            <div class="pilotInfoLine"><b>Det här skickas inte:</b> inga filer/underlag.</div>
+            <div class="pilotInfoLine">
+              <b>Nästa steg:</b> Vi återkommer med uppstartsförslag och bekräftar startdatum samt fakturauppgifter.
+              Om ni vill snabba på: mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och skriv <b>“Pilot”</b> i ämnesraden.
+            </div>
+          </div>
         </div>
-
-        <p class="small" style="margin:10px 0 0;">
-          <b>Det här skickas:</b> kontaktuppgifter och ev. beskrivning.<br />
-          <b>Det här skickas inte:</b> inga filer/underlag.
-        </p>
-
-        <p class="small" style="margin:10px 0 0;">
-          <b>Nästa steg:</b> Vi återkommer med uppstartsförslag och bekräftar startdatum samt fakturauppgifter.
-          Om ni vill snabba på: mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och skriv <b>“Pilot”</b> i ämnesraden.
-        </p>
       </form>
 
       <div class="hr"></div>
@@ -434,7 +537,6 @@
 
   function isValidEmail(v){
     const s = String(v || "").trim();
-    // enkel, praktisk validering
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
   }
 
@@ -503,7 +605,6 @@
       return;
     }
 
-    // Hämta nytt token/ts och säkerställ att det faktiskt skickas
     const okToken = await refreshToken();
     if (!okToken){
       disableForm(false);
@@ -514,7 +615,7 @@
       disableForm(true);
       setStatus("Skickar…", "wait");
 
-      // ✅ Skapa FormData EFTER att token/ts uppdaterats
+      // Skapa FormData EFTER att token/ts uppdaterats
       const fd = new FormData(form);
 
       const body = new URLSearchParams();
@@ -550,18 +651,15 @@
     }
   });
 
-  // Lätt “live”-validering efter att användaren börjat interagera
   ["blur", "input"].forEach(evt => {
     Object.values(fields).forEach(el => {
       if (!el) return;
       el.addEventListener(evt, () => {
-        // Visa inte allt aggressivt på första tecken – men rensa fel när det blir rätt
         const wasInvalid = el.getAttribute("aria-invalid") === "true";
         if (!wasInvalid && evt === "input") return;
 
         clearFieldHints();
-        validate(); // sätter om felen korrekt
-        // Om allt är ok: låt status-pill vara orörd
+        validate();
       });
     });
   });
@@ -570,8 +668,7 @@
 })();
 </script>
 
-<!-- ✅ Synka även dessa -->
-<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
-<script src="/chat-widget.js?v=2026-01-03a" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-10a" defer></script>
+<script src="/chat-widget.js?v=2026-01-10a" defer></script>
 </body>
 </html>
