@@ -2,171 +2,41 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
+  <!-- Favicons (Proofy) -->
+  <link rel="icon" href="/assets/logo/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/logo/favicon/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="/assets/logo/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="/assets/logo/favicon/site.webmanifest">
+  <meta name="theme-color" content="#0b1220">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pilot (30 dagar) – Proofy</title>
   <meta name="description" content="Starta en 30-dagars pilot med Proofy. Fast pris, faktura och support. Testa dokumentverifiering i verkliga ärenden – utan att lagra filinnehåll." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://proofy.se/pilot.html" />
 
-  <meta name="theme-color" content="#0b1220" />
-
-  <!-- Hardtest (lågrisk). CSP bör sättas via HTTP-header. -->
-  <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()" />
-
-  <!-- Favicons (Proofy) -->
-  <link rel="icon" href="/assets/logo/favicon/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/favicon/favicon-32x32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/assets/logo/favicon/favicon-16x16.png" />
-  <link rel="apple-touch-icon" href="/assets/logo/favicon/apple-touch-icon.png" />
-  <link rel="manifest" href="/assets/logo/favicon/site.webmanifest" />
-
-  <!-- ✅ Synka version med index/register/verify så layouten inte “byter” stil -->
-  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-10a" />
-  <link rel="stylesheet" href="/assets/header.css?v=2026-01-10a" />
+  <link rel="stylesheet" href="/assets/proofy.css?v=2026-01-03a" />
+  <link rel="stylesheet" href="/assets/header.css?v=2026-01-03a" />
 
   <style>
-    /* Dölj status-pill tills vi faktiskt har något att säga (skickar/fel/skickat) */
-    #pilotStatus { display:none; }
+    #pilotStatus{ display:none; }
 
-    /* ✅ Failsafe ifall grid/tile-stilar ändras i proofy.css */
-    .grid3{
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-    @media (max-width: 900px){
-      .grid3{ grid-template-columns: 1fr; }
-    }
-    .tile{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
+    .infoBox{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.035);
       border-radius: 16px;
-      padding: 12px 14px;
-    }
-    .tile b{ display:block; margin-bottom:6px; }
-
-    /* Minimal a11y-failsafe (om global .sr-only saknas) */
-    .sr-only{
-      position:absolute !important;
-      width:1px !important;
-      height:1px !important;
-      padding:0 !important;
-      margin:-1px !important;
-      overflow:hidden !important;
-      clip:rect(0,0,0,0) !important;
-      white-space:nowrap !important;
-      border:0 !important;
-    }
-
-    /* Inline-fel (failsafe om globala saknas) */
-    .fieldError{
-      margin-top:6px;
-      font-size: 12.5px;
-      line-height: 1.35;
-      color: rgba(255, 170, 170, .95);
-      display:none;
-    }
-    .fieldError[data-show="1"]{ display:block; }
-
-    /* Hjälptext */
-    .fieldHint{
-      margin-top:6px;
-      font-size: 12.5px;
-      line-height: 1.35;
-      color: rgba(234,240,255,.76);
-    }
-
-    /* =========================
-       ✅ NYTT: Stabil CTA-sektion för “Begär pilot”
-       - snyggt, revisionsvänligt
-       - inga “flytande” texter runt knappen
-       - status i egen rad (layout-robust)
-    ========================= */
-
-    .pilotActions{
+      padding: 14px 16px;
       margin-top: 14px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.02);
-      border-radius: 16px;
-      padding: 12px;
     }
-
-    .pilotActionsTop{
-      display:flex;
-      align-items:center;
-      justify-content:flex-start;
-      gap: 12px;
-      flex-wrap:wrap;
+    .infoBox h3{
+      margin:0 0 6px;
+      font-size:15px;
+      font-weight:900;
     }
-
-    .pilotActionsTop .btn.primary{
-      min-height: 44px;
-      padding-left: 16px;
-      padding-right: 16px;
-      border-radius: 14px;
-      font-weight: 950;
-      white-space: nowrap;
-    }
-
-    .pilotActionsHelp{
-      color: rgba(234,240,255,.78);
-      font-size: 13.5px;
-      line-height: 1.35;
-      flex: 1 1 320px;
-      min-width: 240px;
-    }
-
-    .pilotActionsStatus{
-      margin-top: 10px;
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    /* Status-pill får aldrig “hänga” med margin-left inline */
-    #pilotStatus{
-      margin-left: 0 !important;
-    }
-
-    .pilotInfoBox{
-      margin-top: 12px;
-      border-top: 1px solid rgba(255,255,255,.10);
-      padding-top: 10px;
-      display:grid;
-      gap: 8px;
-    }
-
-    .pilotInfoLine{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: baseline;
-      color: rgba(234,240,255,.78);
-      font-size: 13.5px;
-      line-height: 1.35;
-    }
-    .pilotInfoLine b{
-      color: rgba(234,240,255,.90);
-    }
-
-    @media (max-width: 700px){
-      .pilotActionsTop{
-        align-items: stretch;
-      }
-      .pilotActionsTop .btn.primary{
-        width: 100%;
-      }
-      .pilotActionsHelp{
-        min-width: 0;
-      }
-    }
-
-    @media print{
-      /* Print/PDF: håll piloten ren från chat/fixed och onödiga status-rader */
-      #pilotStatus{ display:none !important; }
+    .infoBox p{
+      margin:6px 0 0;
     }
   </style>
 </head>
@@ -185,7 +55,6 @@
       <div class="navActions" id="navActionsDesktop">
         <a class="btn" href="/verify.html">Verifiera underlag</a>
         <a class="btn" href="/register.html">Skapa Verifierings-ID</a>
-        <!-- På pilotsidan: låt formuläret vara primär CTA. -->
         <a class="btn soft" href="/#kontakt">Boka kort demo</a>
       </div>
 
@@ -198,17 +67,6 @@
           <a class="mnavLink" href="/verify.html">Verifiera underlag</a>
           <a class="mnavLink" href="/register.html">Skapa Verifierings-ID</a>
           <a class="mnavLink mnavLinkPrimary" href="/#kontakt">Boka kort demo</a>
-
-          <div class="mnavMeta">
-            <!-- policy-länkar i mobilmenyn -->
-            <a class="mnavLink" href="/security.html">Säkerhet</a>
-            <a class="mnavLink" href="/privacy.html">Integritet</a>
-            <a class="mnavLink" href="/terms.html">Villkor</a>
-            <a class="mnavLink" href="/cookies.html">Cookies</a>
-
-            <div class="mnavNote">Pilot · revision · granskning</div>
-            <a class="mnavMail" href="mailto:kontakt@proofy.se">kontakt@proofy.se</a>
-          </div>
         </nav>
       </details>
     </div>
@@ -222,216 +80,86 @@
     <h1 class="pageTitle">Pilot i 30 dagar</h1>
 
     <p class="lead">
-      Testa Proofy i verkliga ärenden – med fast upplägg, support och faktura. Tydliga ramar, ingen bindning efter pilot.
+      Piloten är avsedd för professionell användning i revisions- och redovisningsprocesser.
+      Upplägget är strukturerat, tidsbegränsat och utan automatisk fortsättning.
     </p>
 
-    <div class="grid3" style="margin-top:14px;">
-      <div class="tile">
-        <b>Ingår</b>
-        <span class="small">
-          Registrering + verifiering, Verifierings-ID samt support under pilotperioden.
-        </span>
-      </div>
-      <div class="tile">
-        <b>Upplägg</b>
-        <span class="small">
-          Vi sätter en rutin: när ni skapar ID, var ni sparar det och hur ni verifierar vid granskning.
-        </span>
-      </div>
-      <div class="tile">
-        <b>Tryggt</b>
-        <span class="small">
-          Fast pris, faktura. Ingen fortsättning utan separat offert/avtal efter pilot om ni inte vill.
-        </span>
-      </div>
-    </div>
-
-    <div class="card content" style="margin-top:14px;">
-      <h2>Pris &amp; betalning</h2>
-
-      <div class="grid3" style="margin-top:12px;">
-        <div class="tile">
-          <b>Pilot (30 dagar)</b>
-          <span class="small">
-            <b>4 900 kr</b> exkl. moms.
-          </span>
-        </div>
-        <div class="tile">
-          <b>Betalning</b>
-          <span class="small">
-            Faktura (B2B). Startdatum bekräftas vid uppstart.
-          </span>
-        </div>
-        <div class="tile">
-          <b>Efter pilot</b>
-          <span class="small">
-            Fortsättning sker på offert/avtal (ingen automatisk bindning via webben).
-          </span>
-        </div>
-      </div>
-
-      <div class="hr"></div>
-
-      <h2>Rekommenderad rutin i byrån</h2>
-      <ol style="margin:10px 0 0; padding-left:18px;">
-        <li>Fastställ referensversionen och skapa Verifierings-ID (t.ex. bokslut, rapport, beslut, avtal).</li>
-        <li>Spara Verifierings-ID i ärendet (t.ex. som registreringsnotering).</li>
-        <li>Vid granskning/efterhandskontroll: verifiera filen och dokumentera match/avvikelse.</li>
-      </ol>
-
-      <div class="hr"></div>
+    <div class="card content">
 
       <h2>Starta pilot</h2>
 
-      <div class="grid3" style="margin-top:12px;">
-        <div class="tile">
-          <b>Integritet</b>
-          <span class="small">
-            <b>Underlag lämnar aldrig datorn.</b> Proofy beräknar ett <b>kontrollvärde</b> lokalt (Verifierings-ID) så att ni kan kontrollera om en filversion är oförändrad –
-            <b>inga filer laddas upp</b>.
-          </span>
-        </div>
-        <div class="tile">
-          <b>Dokumentation</b>
-          <span class="small">
-            Läs mer: <a href="/security.html">Säkerhet</a> och <a href="/privacy.html">Integritet</a>.
-          </span>
-        </div>
-        <div class="tile">
-          <b>Supportväg</b>
-          <span class="small">
-            Mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> om ni har frågor inför start.
-          </span>
-        </div>
-      </div>
+      <form name="pilot" id="pilotForm" action="/api/pilot" method="POST" novalidate>
 
-      <form name="pilot" id="pilotForm" action="/api/pilot" method="POST" novalidate style="margin-top:14px;">
-        <!-- Honeypot (gamla) -->
-        <p style="display:none;">
-          <label>Don’t fill this out: <input name="bot-field" autocomplete="off" tabindex="-1" /></label>
-        </p>
-
-        <!-- Honeypot (nya) -->
-        <input
-          type="text"
-          name="company_website"
-          tabindex="-1"
-          autocomplete="off"
-          inputmode="none"
-          aria-hidden="true"
-          style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"
-        />
-
-        <!-- Anti-spam tokenfält (fylls av JS) -->
-        <input type="hidden" name="proofy_token" id="proofy_token" value="" />
-        <input type="hidden" name="proofy_ts" id="proofy_ts" value="" />
+        <!-- Honeypots -->
+        <input type="text" name="company_website" tabindex="-1" autocomplete="off"
+               style="position:absolute;left:-10000px;width:1px;height:1px;" />
+        <input type="hidden" name="proofy_token" id="proofy_token" />
+        <input type="hidden" name="proofy_ts" id="proofy_ts" />
 
         <div class="formGrid">
           <div>
             <label class="label" for="p-name">Namn <span class="req">*</span></label>
-            <input
-              id="p-name"
-              name="name"
-              type="text"
-              required
-              data-required="true"
-              autocomplete="name"
-              aria-describedby="p-name-err"
-            />
-            <div id="p-name-err" class="fieldError" data-show="0">Fyll i namn.</div>
+            <input id="p-name" name="name" type="text" required />
           </div>
 
           <div>
             <label class="label" for="p-email">E-post <span class="req">*</span></label>
-            <input
-              id="p-email"
-              name="email"
-              type="email"
-              required
-              data-required="true"
-              autocomplete="email"
-              inputmode="email"
-              aria-describedby="p-email-err"
-            />
-            <div id="p-email-err" class="fieldError" data-show="0">Fyll i en giltig e-postadress.</div>
+            <input id="p-email" name="email" type="email" required />
           </div>
 
           <div>
-            <label class="label" for="p-company">Byrå/Företag <span class="req">*</span></label>
-            <input
-              id="p-company"
-              name="company"
-              type="text"
-              required
-              data-required="true"
-              autocomplete="organization"
-              aria-describedby="p-company-err"
-            />
-            <div id="p-company-err" class="fieldError" data-show="0">Fyll i byrå/företag.</div>
+            <label class="label" for="p-company">Byrå / Företag <span class="req">*</span></label>
+            <input id="p-company" name="company" type="text" required />
           </div>
 
           <div>
-            <label class="label" for="p-role">Roll</label>
-            <input
-              id="p-role"
-              name="role"
-              type="text"
-              autocomplete="organization-title"
-              placeholder="t.ex. revisor, redovisningskonsult, partner"
-            />
-            <div class="fieldHint">Valfritt – hjälper oss att anpassa uppstarten.</div>
+            <label class="label" for="p-role">Roll (valfritt)</label>
+            <input id="p-role" name="role" type="text"
+                   placeholder="t.ex. revisor, redovisningskonsult, partner" />
           </div>
         </div>
 
         <div style="margin-top:12px;">
-          <label class="label" for="p-message">Kort om ert behov (valfritt)</label>
-          <textarea
-            id="p-message"
-            name="message"
-            rows="5"
-            placeholder="Vilka underlag vill ni kunna verifiera (t.ex. bokslut, rapporter, avtal) och var i processen uppstår behovet? Ange gärna önskat startdatum eller tider för en kort genomgång."
-          ></textarea>
-          <div class="fieldHint">Tips: skriv gärna 1–2 exempelärenden – det räcker.</div>
+          <label class="label" for="p-message">Kort beskrivning (valfritt)</label>
+          <textarea id="p-message" name="message" rows="4"
+            placeholder="Vilken typ av underlag vill ni kunna verifiera och i vilket skede uppstår behovet?"></textarea>
         </div>
 
-        <!-- ✅ NYTT: Stabil actions-box (fixar “runt knappen”) -->
-        <div class="pilotActions" aria-label="Skicka pilotförfrågan">
-          <div class="pilotActionsTop">
-            <button class="btn primary" type="submit" id="pilotSubmitBtn">Begär pilot</button>
-            <div class="pilotActionsHelp">
-              Vi återkommer normalt inom <b>1–2 arbetsdagar</b>.
-            </div>
-          </div>
+        <!-- ✅ NY, JURIDISKT OPTIMERAD INFORMATION -->
+        <div class="infoBox">
+          <h3>Handläggning vid pilotförfrågan</h3>
 
-          <div class="pilotActionsStatus">
-            <span id="pilotStatus" class="pill" aria-live="polite" aria-atomic="true" role="status"></span>
-          </div>
+          <p class="small">
+            <b>Information som lämnas:</b><br />
+            Kontaktuppgifter samt eventuell frivillig beskrivning av behov eller användningsområde.
+          </p>
 
-          <div class="pilotInfoBox" aria-label="Vad som skickas">
-            <div class="pilotInfoLine"><b>Det här skickas:</b> kontaktuppgifter och ev. beskrivning.</div>
-            <div class="pilotInfoLine"><b>Det här skickas inte:</b> inga filer/underlag.</div>
-            <div class="pilotInfoLine">
-              <b>Nästa steg:</b> Vi återkommer med uppstartsförslag och bekräftar startdatum samt fakturauppgifter.
-              Om ni vill snabba på: mejla <a href="mailto:kontakt@proofy.se">kontakt@proofy.se</a> och skriv <b>“Pilot”</b> i ämnesraden.
-            </div>
-          </div>
+          <p class="small">
+            <b>Information som inte lämnas:</b><br />
+            Inga dokument, filer eller affärsunderlag överförs i samband med pilotförfrågan.
+          </p>
+
+          <p class="small">
+            <b>Nästa steg:</b><br />
+            Proofy återkommer med förslag på uppstart, inklusive preliminärt startdatum,
+            praktiskt upplägg och faktureringsinformation.
+            Pilot påbörjas först efter uttrycklig bekräftelse från båda parter.
+          </p>
         </div>
+
+        <div class="formActions">
+          <button class="btn primary" type="submit" id="pilotSubmitBtn">
+            Begär pilot
+          </button>
+          <span id="pilotStatus" class="pill" aria-live="polite"></span>
+        </div>
+
+        <p class="fineprint" style="margin-top:10px;">
+          Proofy tillhandahåller ett tekniskt verifieringsverktyg.
+          Tjänsten ersätter inte professionellt omdöme, intern kontroll eller juridisk bedömning.
+        </p>
+
       </form>
-
-      <div class="hr"></div>
-
-      <h2>Användning &amp; avgränsning</h2>
-      <p class="small" style="margin-top:10px;">
-        Piloten är avsedd för professionell användning i byråprocess, inklusive support och tydliga ramar för användning.
-        Proofy är ett tekniskt verktyg för verifiering av filversioner och ersätter inte professionellt omdöme, internkontroller eller juridisk bedömning.
-      </p>
-
-      <div class="hr"></div>
-
-      <p class="fineprint">
-        <b>Juridisk avgränsning:</b> Proofy tillhandahåller teknisk verifiering.
-        Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
-      </p>
     </div>
   </div>
 </main>
@@ -440,235 +168,20 @@
   <div class="wrap">
     <div class="foot">
       <div>
-        <div style="color: rgba(234,240,255,.86); font-weight:800;">Proofy</div>
+        <div style="font-weight:800;">Proofy</div>
         <div class="small">© 2026 Proofy. Alla rättigheter förbehållna.</div>
-        <div class="small" style="margin-top:8px; max-width:92ch;">
-          Proofy tillhandahåller teknisk tidsstämpling och verifiering av filer. Tjänsten utgör inte juridisk rådgivning och avgör inte dokumentets rättsliga giltighet.
-        </div>
       </div>
       <div class="links">
         <a href="/security.html">Säkerhet</a>
         <a href="/privacy.html">Integritet</a>
         <a href="/terms.html">Villkor</a>
         <a href="/cookies.html">Cookies</a>
-        <a href="/#kontakt">Kontakt</a>
       </div>
     </div>
   </div>
 </footer>
 
-<script>
-(() => {
-  const form = document.getElementById("pilotForm");
-  if (!form) return;
-
-  const statusEl = document.getElementById("pilotStatus");
-  const submitBtn = document.getElementById("pilotSubmitBtn");
-  const tokenEl = document.getElementById("proofy_token");
-  const tsEl = document.getElementById("proofy_ts");
-
-  const fields = {
-    name: document.getElementById("p-name"),
-    email: document.getElementById("p-email"),
-    company: document.getElementById("p-company"),
-  };
-
-  const errors = {
-    name: document.getElementById("p-name-err"),
-    email: document.getElementById("p-email-err"),
-    company: document.getElementById("p-company-err"),
-  };
-
-  function setStatus(text, tone){
-    if (!statusEl) return;
-
-    statusEl.style.display = "inline-block";
-    statusEl.textContent = text;
-
-    statusEl.style.fontWeight = "800";
-    statusEl.style.border = "1px solid rgba(255,255,255,.14)";
-    statusEl.style.background = "rgba(255,255,255,.06)";
-    statusEl.style.color = "rgba(234,240,255,.92)";
-
-    if (tone === "ok"){
-      statusEl.style.background = "rgba(50, 205, 50, .10)";
-      statusEl.style.border = "1px solid rgba(50, 205, 50, .25)";
-    } else if (tone === "err"){
-      statusEl.style.background = "rgba(255, 80, 80, .10)";
-      statusEl.style.border = "1px solid rgba(255, 80, 80, .25)";
-    } else if (tone === "wait"){
-      statusEl.style.background = "rgba(120, 180, 255, .10)";
-      statusEl.style.border = "1px solid rgba(120, 180, 255, .25)";
-    }
-  }
-
-  function disableForm(disabled){
-    if (submitBtn) submitBtn.disabled = disabled;
-    const all = form.querySelectorAll("input, textarea, select, button");
-    all.forEach(el => {
-      if (el === submitBtn) return;
-      el.disabled = disabled;
-    });
-  }
-
-  function clearFieldHints(){
-    const hinted = form.querySelectorAll("[data-proofy-hint='1']");
-    hinted.forEach(el => {
-      el.style.outline = "";
-      el.style.outlineOffset = "";
-      el.setAttribute("data-proofy-hint", "0");
-      el.removeAttribute("aria-invalid");
-    });
-
-    Object.values(errors).forEach(errEl => {
-      if (!errEl) return;
-      errEl.setAttribute("data-show", "0");
-    });
-  }
-
-  function hintField(el, errEl){
-    if (!el) return;
-    el.style.outline = "2px solid rgba(255,80,80,.6)";
-    el.style.outlineOffset = "2px";
-    el.setAttribute("data-proofy-hint", "1");
-    el.setAttribute("aria-invalid", "true");
-    if (errEl) errEl.setAttribute("data-show", "1");
-  }
-
-  function isValidEmail(v){
-    const s = String(v || "").trim();
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-  }
-
-  function validate(){
-    const name = String(fields.name?.value || "").trim();
-    const email = String(fields.email?.value || "").trim();
-    const company = String(fields.company?.value || "").trim();
-
-    let firstBad = null;
-
-    if (!name){
-      hintField(fields.name, errors.name);
-      firstBad = firstBad || fields.name;
-    }
-    if (!email || !isValidEmail(email)){
-      hintField(fields.email, errors.email);
-      firstBad = firstBad || fields.email;
-    }
-    if (!company){
-      hintField(fields.company, errors.company);
-      firstBad = firstBad || fields.company;
-    }
-
-    return { ok: !firstBad, firstBad };
-  }
-
-  async function refreshToken(){
-    try{
-      const now = Date.now();
-      if (tsEl) tsEl.value = String(now);
-
-      const res = await fetch("/api/form-token", { method: "GET", cache: "no-store" });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || data.ok !== true || !data.token){
-        setStatus("Kunde inte initiera formuläret. Ladda om sidan och försök igen. Alternativt: mejla kontakt@proofy.se (ämne: Pilot).", "err");
-        return false;
-      }
-
-      if (tokenEl) tokenEl.value = String(data.token);
-      return true;
-    } catch (e){
-      setStatus("Kunde inte initiera formuläret. Kontrollera nätet och försök igen. Alternativt: mejla kontakt@proofy.se (ämne: Pilot).", "err");
-      return false;
-    }
-  }
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    clearFieldHints();
-
-    const v = validate();
-    if (!v.ok){
-      v.firstBad?.focus();
-      setStatus("Kontrollera att namn, e-post och byrå/företag är korrekt ifyllda.", "err");
-      return;
-    }
-
-    // Honeypots
-    const fdCheck = new FormData(form);
-    const hpOld = fdCheck.get("bot-field");
-    const hpNew = fdCheck.get("company_website");
-    if (String(hpOld || "").trim() || String(hpNew || "").trim()){
-      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).", "err");
-      disableForm(false);
-      return;
-    }
-
-    const okToken = await refreshToken();
-    if (!okToken){
-      disableForm(false);
-      return;
-    }
-
-    try{
-      disableForm(true);
-      setStatus("Skickar…", "wait");
-
-      // Skapa FormData EFTER att token/ts uppdaterats
-      const fd = new FormData(form);
-
-      const body = new URLSearchParams();
-      for (const [k, v] of fd.entries()) body.append(k, String(v));
-
-      const res = await fetch(form.action, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString()
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || data.ok !== true || data.sent !== true){
-        if (data.ignored === true){
-          setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).", "err");
-          disableForm(false);
-          return;
-        }
-        const msg = data.error || `Kunde inte skickas (HTTP ${res.status}). Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).`;
-        setStatus(msg, "err");
-        disableForm(false);
-        return;
-      }
-
-      setStatus("Skickat ✅ Vi återkommer inom 1–2 arbetsdagar.", "ok");
-      form.reset();
-      setTimeout(() => { window.location.href = "/thanks.html?sent=1"; }, 700);
-
-    } catch (err){
-      setStatus("Kunde inte skickas. Försök igen eller mejla kontakt@proofy.se (ämne: Pilot).", "err");
-      disableForm(false);
-    }
-  });
-
-  ["blur", "input"].forEach(evt => {
-    Object.values(fields).forEach(el => {
-      if (!el) return;
-      el.addEventListener(evt, () => {
-        const wasInvalid = el.getAttribute("aria-invalid") === "true";
-        if (!wasInvalid && evt === "input") return;
-
-        clearFieldHints();
-        validate();
-      });
-    });
-  });
-
-  refreshToken();
-})();
-</script>
-
-<script src="/assets/header-toggle.js?v=2026-01-10a" defer></script>
-<script src="/chat-widget.js?v=2026-01-10a" defer></script>
+<script src="/assets/header-toggle.js?v=2026-01-03a" defer></script>
+<script src="/chat-widget.js?v=2026-01-03a" defer></script>
 </body>
 </html>
