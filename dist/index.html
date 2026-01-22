@@ -157,6 +157,36 @@
     }
 
     /* =========================
+       FAQ (revision-first)
+    ========================= */
+    .faq{
+      margin-top: 12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.02);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .faq details{
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding: 10px 14px;
+    }
+    .faq details:first-child{ border-top: 0; }
+    .faq summary{
+      cursor: pointer;
+      font-weight: 900;
+      list-style: none;
+      outline: none;
+    }
+    .faq summary::-webkit-details-marker{ display:none; }
+    .faq .faqBody{
+      margin-top: 8px;
+      color: rgba(234,240,255,.86);
+      font-size: 13px;
+      line-height: 1.55;
+      max-width: 92ch;
+    }
+
+    /* =========================
        KONTAKT / CTA (UI 5/5)
        - bättre rytm runt knapparna
        - status-pill ska inte skapa “skev” radbrytning
@@ -402,6 +432,25 @@
           </div>
         </div>
 
+        <!-- NYTT: revisionskritisk förklaring som stoppar invändningen direkt -->
+        <div class="faq" aria-label="Vanliga frågor">
+          <details>
+            <summary>Blir det avvikelse om någon byter namn på filen?</summary>
+            <div class="faqBody">
+              Nej. Proofy jämför <b>filens innehåll (filversion)</b> – inte filnamn eller var den ligger sparad.
+              En fil kan byta namn, flyttas mellan mappar/system eller mejlas vidare utan att verifieringen påverkas,
+              så länge filens innehåll är oförändrat.
+            </div>
+          </details>
+          <details>
+            <summary>Vad räknas som en ändring som ger avvikelse?</summary>
+            <div class="faqBody">
+              Ny export/omsparning, konvertering, omkomprimering eller omskanning skapar ofta en <b>ny filversion</b>.
+              Då ska verifieringen visa avvikelse – vilket är poängen vid efterhandskontroll.
+            </div>
+          </details>
+        </div>
+
         <div class="hr"></div>
 
         <h3>Notering att klistra in i ärendet (valfritt)</h3>
@@ -443,7 +492,10 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
         <div class="grid3" style="margin-top:14px;">
           <div class="tile">
             <b>Varför det behövs</b>
-            <span class="small">Filer flyttas, byter namn och skickas mellan system. Proofy ger ett tekniskt sätt att visa om en fil matchar en fastställd referens vid kontroll.</span>
+            <span class="small">
+              Filer flyttas, <b>byter namn</b> och skickas mellan system. Filnamn är inte bevis.
+              Proofy ger ett tekniskt sätt att visa om en fil <b>matchar en fastställd referens</b> vid kontroll.
+            </span>
           </div>
           <div class="tile">
             <b>Vad ni får</b>
@@ -550,7 +602,7 @@ Avgränsning: Proofy visar endast om filversionen matchar referensen. Ingen bed�
             ></textarea>
             <div class="help" id="messageHelp">
               <b>Alternativ:</b> mejla kontakt@proofy.se. (Skriv gärna 2–3 rader om ert scenario.)
-            ></div>
+            </div>
           </div>
 
           <!-- UI-FIX: bättre layout kring knappar + meta + status -->
